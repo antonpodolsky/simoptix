@@ -162,7 +162,9 @@ namespace fake_pvr {
             );
 
             const Quat& cant = kEyeCant[0];  // the image is the left eye
+            const PvrFov& fov = kFov[0];
             fprintf(log_, "eyecant,%.7f,%.7f,%.7f,%.7f\n", cant.x, cant.y, cant.z, cant.w);
+            fprintf(log_, "eyefov,%.7f,%.7f,%.7f,%.7f\n", fov.leftTan, fov.rightTan, fov.upTan, fov.downTan);
         }
 
         poseThread_ = std::thread([this] {

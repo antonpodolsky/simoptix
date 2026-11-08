@@ -80,7 +80,7 @@ Two environment variables:
 ## Known limits
 
 - The app stabilizes rotation only. Head translation (leaning) is not stabilized.
-- The game eye is always the left eye. The view is centred on that eye's axis, which is turned about 2°
-  outward, so the wheel appears a few degrees right of centre.
+- The game eye is always the left eye. The view looks at the middle of that eye's image, about 2.3°
+  outward of straight ahead, so the wheel appears a few degrees right of centre.
 - The game eye is a half-size copy of what the game renders. It grows with Pimax Play's Render
   Quality, at the game's GPU cost (`vr_mirror\obs_plugin\README.md`).

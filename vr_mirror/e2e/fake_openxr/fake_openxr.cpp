@@ -208,9 +208,18 @@ namespace {
                 );
 
                 const Quat& c = kEyeCant[0];
+                const openxr_share::Fov& fov = kLeftFov;
 
-                // the picture is the left eye
+                // the picture is the left eye; its field of view as tangents, as the OpenXR source reads it
                 fprintf(log_, "eyecant,%.7f,%.7f,%.7f,%.7f\n", c.x, c.y, c.z, c.w);
+                fprintf(
+                    log_,
+                    "eyefov,%.7f,%.7f,%.7f,%.7f\n",
+                    std::tan(-fov.left),
+                    std::tan(fov.right),
+                    std::tan(fov.up),
+                    std::tan(-fov.down)
+                );
             }
 
             return CreateDevice();

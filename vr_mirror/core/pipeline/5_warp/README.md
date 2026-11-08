@@ -1,8 +1,10 @@
 # Stage 5: warp
 
 This stage turns the view chosen for an output frame into the numbers the host's shader needs to
-draw it. For every output pixel, the shader rotates the ray of the view's camera into the eye camera
-that the shown frame was drawn from, through the eye's 2° cant, and looks it up in the eye image.
+draw it. The view's camera looks at the middle of the eye image, halfway between its edges, and is
+levelled itself while the view is stabilized. For every output pixel, the shader rotates the ray of that
+camera into the eye camera that the shown frame was drawn from, through the eye's 2° cant, and looks it
+up in the eye image.
 Where the ray falls outside the image, the shader draws black. The per-pixel half is `warp.hlsli`,
 which each host wraps in its own shader (the mirror app) or effect (the OBS plugin).
 

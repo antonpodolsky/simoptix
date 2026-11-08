@@ -9,7 +9,7 @@ three numbers, unless a row says otherwise.
 
 ## The latest runs (2026-11-08)
 
-Four runs of the whole suite, with LMU, OBS and Pimax Play closed.
+Six runs of the whole suite. LMU, OBS and Pimax Play were closed for runs 1 to 4.
 
 **Run 1: the build with the OpenXR source** (branch `claude/openxr-source-cf46ca`). All 54 scenarios
 pass.
@@ -56,6 +56,29 @@ The whole suite took 787 s. 53 of 54 scenarios pass.
 - Compared with Instant, two of the four known OpenXR horizon comparisons failed (below):
   `openxr_stabilization` Smooth and Smoothest 0.279 and 0.290° against 0.226°, and
   `openxr_black_borders` Smoothest 0.777° against 0.703°. With the rerun, the other 16 passed.
+
+**Runs 5 and 6: the view at the image's middle, with its camera levelled** (the fix for #5). LMU
+was closed and OBS open. Whether Pimax Play ran was not checked.
+- **Run 5, with the aim and before the camera was levelled:** 51 of 54 passed.
+  - `openxr_black_borders` tilted 2.01 / 2.10 / 2.11° at its worst, which the levelling fixed
+    (`findings\pipeline.md`, "Fixed: the same zoom showed a narrower view").
+  - `openxr_stabilization` at Instant ran at 45 fps, skipping every other frame. It passed at 90 fps
+    in the runs just before and after.
+  - `black_borders_low_zoom` at Instant had one stall. It had none in run 6.
+- **Run 6, the final build:** all 54 scenarios and all 18 comparisons with Instant pass, in 786 s.
+  - `stabilization` 0.41 / 0.014 / 0.011 of the head's shake, `dropped_frames` 0.52 / 0.024 / 0.025,
+    `replay_queued_late_frames` 7.8 / 4.2 / 7.8% from the wrong pose, the featureless replay 1.50 /
+    0.32 / 0.33%, and `game_starts_late` 4.8 runtime calls/s idle.
+  - Recorded view jitter: `stabilization` 0.130 / 0.116 / 0.118°, `dropped_frames` 0.184 / 0.159 /
+    0.161°.
+  - The view's width is 0.07–0.14° off what its zoom asks for in all 27 scenarios that read it
+    (limit 0.2°).
+  - **The four OpenXR horizon comparisons pass.** Worst tilt, Instant / Smooth / Smoothest:
+    `openxr_stabilization` 0.191 / 0.173 / 0.183°, `openxr_dropped_frames` 0.240 / 0.159 / 0.160°,
+    `openxr_game_behind` 0.150 / 0.158 / 0.168°, `openxr_black_borders` 0.183 / 0.170 / 0.164°. The
+    Pimax scenarios: `stabilization` 0.125 / 0.103 / 0.106° (0.21–0.23° before).
+  - `black_borders` still tilts 1.13–1.15° at its worst, at level pitch. It is 0.31° looking up or
+    down.
 
 **The OpenXR scenarios** (the fake game with the layer's frames), from run 1:
 
@@ -152,7 +175,7 @@ window at zoom 1.5, by smoothing. Lower is better in every column.
   predictions and no presentation. Which part of the look-ahead's path the fit leaves was not looked
   into.
 
-## Proven to fail (2026-10-25, the last row 2026-11-05)
+## Proven to fail (2026-10-25, the last rows 2026-11-08)
 
 Each test, run with what it checks broken, against the build of the time. "Broken" is a setting, a fake
 that draws less, or the build that had the bug, made from its commit and run with `--tool`.
@@ -185,6 +208,10 @@ that draws less, or the build that had the bug, made from its commit and run wit
 | replay_false_retiming_short_hiccup | the build whose gate opened on two drops | 7.4%, worst 0.37° | 0% |
 | replay_false_retiming_featureless_cockpit | the build before featureless texels were left out | 3.4% (Instant limit 2.5%), worst 1.39° | 1.3–1.4% |
 | replay_late_frame_same_slot, _smooth, _smoothest | the arrival timing rounding to the nearest slot (the build of 2026-11-05) | 1 frame from the wrong pose (0.10–0.11%, limit 0), the late frame, 0.170° off: fails at all three | 0 frames, 0.000° |
+| stabilization (view width, 2026-11-08) | the build before the view looked at the image's middle (`main` at e58e8fe, zoom 1.5) | width 42.64° against 43.07° asked: 0.44° off (limit 0.2°): fails | 0.08° off |
+| openxr_stabilization (view width and direction, 2026-11-08) | the same build | width 40.04° against 43.47° asked: 3.43° off: fails. Image/pose mismatch 2.02° rms (limit 1.5°): fails | 0.08° off, 0.05° rms |
+| black_borders (tilt looking up or down, 2026-11-08) | the same build | 1.21° (limit 0.5°): fails | 0.31° |
+| openxr_black_borders (the same) | the same build | 0.64°: fails. With the aim at the image's middle and the camera not levelled: 2.01° (Smooth 2.10°) | 0.11° |
 
 `head_still` first passed broken too. Its head's tremor was all at 5–8 Hz, which the jitter measure
 barely sees: a quadratic fit over ±50 ms takes up 90% of 8 Hz and more below, 61% of 12 Hz and 29% of

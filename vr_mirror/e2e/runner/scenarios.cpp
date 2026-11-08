@@ -103,6 +103,11 @@ namespace {
             c.seconds = 13;  // one 12 s cycle of edge_test
             c.limits.maxBlackEdgePct = 0;
             c.limits.maxStalls = 0;
+
+            // The screen looks along the head turned by the eye's cant and the aim at the image's middle,
+            // so it tilts as the head pitches unless that camera itself is levelled: 1.22° here with the
+            // Pimax eye's 2° cant, 0.29° levelled. (Its worst tilt at level pitch, 1.1°, is another matter.)
+            c.limits.maxPitchedRollDeg = 0.5;
             AddEverySmoothing(c, out, [](Scenario& v) {
                 if (v.smoothing) {
                     v.limits.maxSmoothedRatio = 1.0;  // ~0.24 (Instant: 1.8-2.8)
@@ -278,6 +283,7 @@ namespace {
             c.seconds = 13;
             c.limits.maxBlackEdgePct = 0;
             c.limits.maxStalls = 0;
+            c.limits.maxPitchedRollDeg = 0.5;  // as in black_borders (2.0° with the aim, unlevelled)
             AddEverySmoothing(OnOpenXr(c), out, [](Scenario& v) {
                 if (v.smoothing) {
                     v.limits.maxSmoothedRatio = 1.0;

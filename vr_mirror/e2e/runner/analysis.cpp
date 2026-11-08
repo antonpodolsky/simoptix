@@ -14,7 +14,7 @@ void IntendedSeries(const ToolTrace& tt, const FakeLog& log, double delay, Serie
         }
         const double t = tt.presented[i];
         intended->t.push_back(t);
-        intended->dir.push_back(Forward(Mul(tt.view[i], log.eyeCant)));
+        intended->dir.push_back(Forward(Mul(tt.view[i], log.outputAxis)));
         eye->t.push_back(t);
         eye->dir.push_back(Forward(log.EyeAt(t - delay)));
     }
@@ -40,7 +40,7 @@ Matched MatchCaptures(
         int best = -1;
         double bestAngle = 1e9;
         for (int p = newest; p >= 0 && p >= newest - 4; p--) {
-            const double a = AngleDeg(c.forward, Forward(Mul(tt.view[p], log.eyeCant)));
+            const double a = AngleDeg(c.forward, Forward(Mul(tt.view[p], log.outputAxis)));
             if (a < bestAngle) {
                 bestAngle = a;
                 best = p;
@@ -58,7 +58,7 @@ Matched MatchCaptures(
         m.seen.t.push_back(t);
         m.seen.dir.push_back(c.forward);
         m.intended.t.push_back(t);
-        m.intended.dir.push_back(Forward(Mul(tt.view[best], log.eyeCant)));
+        m.intended.dir.push_back(Forward(Mul(tt.view[best], log.outputAxis)));
         m.eye.t.push_back(t);
         m.eye.dir.push_back(Forward(log.EyeAt(t - delay)));
         m.roll.push_back(RollDeg(c.right));
@@ -320,7 +320,7 @@ int WrongPoseFrames(const FakeLog& log, const ToolTrace& tt, int* considered) {
     return int(std::count_if(errors.begin(), errors.end(), [](double e) { return e > 0.02; }));
 }
 
-Series RecordedSeries(const ToolTrace& tt, const Quat& eyeCant, double fps, double phase) {
+Series RecordedSeries(const ToolTrace& tt, const Quat& outputAxis, double fps, double phase) {
     Series s;
     const auto& p = tt.presented;
     if (p.size() < 10) {
@@ -332,17 +332,17 @@ Series RecordedSeries(const ToolTrace& tt, const Quat& eyeCant, double fps, doub
             continue;
         }
         s.t.push_back(t);
-        s.dir.push_back(Forward(Mul(tt.view[i], eyeCant)));
+        s.dir.push_back(Forward(Mul(tt.view[i], outputAxis)));
     }
 
     return s;
 }
 
-double RecordedJitterDeg(const ToolTrace& tt, const Quat& eyeCant, double fps) {
+double RecordedJitterDeg(const ToolTrace& tt, const Quat& outputAxis, double fps) {
     const int kPhases = 6;
     double sum = 0;
     for (int k = 0; k < kPhases; k++) {
-        sum += JitterDeg(RecordedSeries(tt, eyeCant, fps, double(k) / kPhases));
+        sum += JitterDeg(RecordedSeries(tt, outputAxis, fps, double(k) / kPhases));
     }
     return sum / kPhases;
 }

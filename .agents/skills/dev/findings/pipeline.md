@@ -102,6 +102,11 @@ display time the game drew them for, and its pose.
   - It isn't tied to the head's speed. A four times smaller fake image (less averaging in the store)
     doesn't change it.
   - Not explained.
+  - With the view's camera levelled itself (below, "Fixed: the same zoom showed a narrower view"), all
+    four comparisons passed in one full run: worst tilts 0.15–0.24° at every smoothing
+    (`reference\e2e_results.md`, run 6). The fake OpenXR eye is turned 1°, so the old camera tilted
+    with the head's pitch, and the look-ahead's pitch differs from Instant's. That is the likely cause.
+    One run only, so not settled.
   - The full run of 2026-11-08 showed the same, with `openxr_game_behind` failing too (0.175 / 0.259
     / 0.256°). Which look-ahead setting is worst changes from run to run (`openxr_dropped_frames`
     0.198 / 0.314 / 0.221°). See `reference\e2e_results.md`.
@@ -239,6 +244,45 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 - The image is warped from the pose the game drew it with, not from the measured head
   (`findings\e2e.md`, "The slot check": "Fixed (the mirror app and the OBS plugin): when LMU falls
   behind, frames were warped from a pose that is too new").
+
+### Fixed: the same zoom showed a narrower view through OpenXR than through Pimax (2026-11-08)
+
+- **Seen:** a recording with OpenXR Mirror at zoom 1.25 and Smooth looked more zoomed in than one with
+  Pimax Mirror at the same settings (#5). The frame trace confirmed zoom 1.25 on every frame.
+- **Cause:** the view looked along the eye's own axis and was as wide as the image's narrower side
+  allows, divided by the zoom (`GeometryFor`). The two sources describe the same left eye image from
+  different axes:
+  - Pimax gives its tangents from the eye turned 2.0° outward: 50.1° out and 49.6° in.
+  - LMU through OpenXR gives the game's own field of view, from straight ahead: 52.6° out and 47.6° in.
+  - Turned by the 2.0°, Pimax's are 52.1° out and 47.6° in, the same image within 0.5°.
+  - At zoom 1.25 the Pimax view was 86.4° wide, looking 2.0° outward. The OpenXR view was 82.4° wide,
+    looking straight ahead, with 11.4° of room outward and 6.4° inward.
+- **Fix:** the view looks at the middle of the image, halfway between its edges (`ImageMiddle`, applied
+  in `ViewToEye`), and is the image's mean half-angle over the zoom on each side. At zoom 1.25: Pimax
+  86.9° wide, 2.26° outward, OpenXR 87.5° wide, 2.5° outward, each with 6.37° of room on both sides.
+  The inner side keeps the room it had, and Pimax's outer side has 0.5° less.
+- **Test:** the e2e view-width check (`vr_mirror\e2e\README.md`, "Measures"), proven to fail on the build
+  before (`reference\e2e_results.md`, "Proven to fail"). The test was written after the fix, against
+  the dev skill's order (#7).
+- **The horizon while looking up or down.** The smoothing levels the head's view, but the screen looks
+  along the head turned by the eye's cant and the aim. A camera turned sideways from the head tilts as
+  the head pitches, by about the turn times the sine of the pitch. The first full e2e run with the aim
+  found it: `openxr_black_borders` tilted 2.01–2.11° at every smoothing (the fake's 1° cant plus the
+  2.5° aim), against 0.64–0.78° before.
+  - Pimax had it all along from its 2° cant: `black_borders` 1.22° on frames pitched over 15° on
+    `main`.
+  - Fixed by levelling the camera itself while stabilization is on (`ViewToEye`). With Smoothing at 0
+    the view keeps the headset's roll.
+  - Pitched over 15°: Pimax 1.21° → 0.31°, OpenXR 0.64° → 0.11°. This time the test (the tilt
+    looking up or down, limit 0.5°) was written and seen to fail before the fix.
+  - Left as it was: Pimax's worst tilt at level pitch in `black_borders`, 1.1° on `main` and with the
+    fix, during the motion's fast head tilts. OpenXR's exact poses don't show it, so the Pimax frames'
+    pose error is the likely cause. Not looked into.
+- **Not measured again:** the zoom limits from the real-pose study (`findings\mirror_app.md`, "Core's
+  pipeline on the same poses": nothing reaches the edge at 1.29, one frame in 750–1,300 planned at
+  1.2). They were measured with the outer side's extra 0.5°.
+- **Not known:** whether LMU's OpenXR views carry the eye's turn. The fix doesn't depend on it, because
+  the image's middle is the same either way.
 
 ## Picture room
 

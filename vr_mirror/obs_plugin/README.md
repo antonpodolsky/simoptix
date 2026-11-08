@@ -80,7 +80,7 @@ Both sources have the same four settings:
 | Setting | What it does |
 |---|---|
 | **Smoothing** | A slider from 0 to 3 that sets how the camera follows the head (below). 3, Smoothest, is the default |
-| **Zoom** | A slider from 1 to 3, 1.25 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below) |
+| **Zoom** | A slider from 1 to 3, 1.25 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
 | **Record races automatically** | OBS records each race by itself, from the start lights to 5 s after the car stops past the finish ("Recording races automatically", below). Off by default |
 | **Debug** | Stamps frame numbers on the view and writes a frame trace, for checking a recording frame by frame ("Debug: stamp and frame trace", below) |
 
@@ -140,13 +140,19 @@ About 2 s after the first game frame, the OBS log says the delay the source sett
 
 More zoom means a calmer camera on big head movements. Less zoom means more detail and a wider view.
 
+The view looks at the middle of the eye image, halfway between its edges, so it has the same room on
+each side. At zoom 1.25 it is about 87° wide, with about 6.4° of room each way, in both sources. The
+view looks 2.3° (Pimax) to 2.5° (OpenXR) outward of straight ahead, because LMU's left eye image
+reaches further outward than inward.
+
 - With Smooth and Smoothest, a lower zoom costs less calm. The source sees each edge coming in the time
   it runs behind, and eases the view towards the head ahead of time instead of stopping it at the
   edge.
 - With Instant, the view catches up faster near the edge, and stops at it as a last resort.
 - On real head motion, the edge is never reached at zoom 1.29, and touched on about one frame in a
   thousand at 1.2. At 1.1 the view gets shakier than with Instant. So don't go below about 1.2 with
-  Smooth or Smoothest.
+  Smooth or Smoothest. These were measured with the Pimax source, with 0.5° more room on the view's
+  outer side than it has now, and not measured again.
 - The source draws on OBS's clock, so each OBS frame shows a game frame drawn for a slightly later
   moment, or the previous one again. The smoothing keeps the view inside that frame's image and plans
   ahead for it.
@@ -205,10 +211,17 @@ source then shows every game frame exactly once, so motion is even.
 **The OpenXR source** keeps each frame's image at the size the canvas shows it 1:1, and never above the
 game's own size. So it is native at the canvas's size whenever the game's image is large enough.
 - LMU's left eye has about 2115 pixels per unit of view tangent. That is enough for 1440p at any zoom
-  up to 1.8, and for 4K up to 1.2.
-- All stored images together may take at most 4 GB of video memory. With Smoothest (about 95 of them)
-  each is then at most about 3550 pixels wide. So 1440p at zoom 1.25 is just native, and 4K is drawn
-  from an image about 70% of native.
+  up to 1.98, and for 4K up to 1.32.
+- All stored images together may take at most 4 GB of video memory, which caps each stored image's
+  width:
+
+  | Smoothing | Stored images | Widest image | Native canvas at zoom 1.25 | 4K native up to zoom |
+  |---|---|---|---|---|
+  | Smooth | about 52 | about 4840 px | about 3860 px wide | 1.26 |
+  | Smoothest | about 95 | about 3580 px | about 2850 px wide | none (74% of native at 1.25) |
+
+  So with Smooth, a 3840x2160 canvas is native at zoom 1.25. With Smoothest, 2560x1440 is native up to
+  zoom 1.39.
 - These sizes are worked out, not measured in a recording.
 
 **The Pimax game eye** (LMU) has about 1059 source pixels per unit of view tangent. A 16:9 recording is
@@ -216,7 +229,7 @@ native at:
 
 | Recording | Zoom | Stabilization room (side to side) |
 |---|---|---|
-| **1920x1080** | **1.29** | about 7.5° each way |
+| **1920x1080** | **1.31** | about 7.7° each way |
 | 1660x930 (soft) | 1.5 | about 11.5° each way |
 
 At Pimax Play's default Render Quality 1.0, 1440p and 4K can't be native from the Pimax game eye. Even
@@ -229,9 +242,9 @@ recording is native at:
 
 | Recording | Zoom | Stabilization room (side to side) |
 |---|---|---|
-| 1920x1080 | 1.6 | about 13.5° each way |
-| 2400x1350 | 1.29 | about 7.5° each way |
-| 2560x1440 | 1.21 | about 5.5° each way |
+| 1920x1080 | 1.63 | about 13.8° each way |
+| 2400x1350 | 1.31 | about 7.7° each way |
+| 2560x1440 | 1.22 | about 5.7° each way |
 
 The price is the game's: LMU draws 1.56× the pixels at 1.25. Restart LMU after changing Render Quality,
 because it picks its render size at start. The Pimax runtime has no size, crop or field-of-view option
