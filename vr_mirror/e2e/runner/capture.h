@@ -41,7 +41,10 @@ struct ViewSample {
     bool decoded = false;  // the patches were read
     bool valid = false;    // the view's direction could be read (center and quarter patches)
     Vec3 forward, right;   // world directions at the output center and toward its right edge
-    int noCode = 0;        // bit per Patch: shows no direction code (black, or not the fake's code)
+    // The angle between the quarter patches' directions (degrees): the view's width, which a rotation
+    // leaves as it is. They sit a quarter of the window either side of the centre, at outW / 2 of tangent.
+    double quarterSpanDeg = 0;
+    int noCode = 0;  // bit per Patch: shows no direction code (black, or not the fake's code)
 };
 
 class WindowCapture {
@@ -365,6 +368,7 @@ private:
         const Vec3& a = dir[kQuarterLeft];
         const Vec3& b = dir[kQuarterRight];
         out->right = Normalized({b.x - a.x, b.y - a.y, b.z - a.z});
+        out->quarterSpanDeg = AngleDeg(a, b);
     }
 
     HWND hwnd_ = nullptr;

@@ -76,6 +76,15 @@ namespace {
         return dir;
     }
 
+    // The tool window's width / height (--output, else the scenario's size).
+    double OutputAspect(const Scenario& sc) {
+        const std::string& size = g_outputSize.empty() ? sc.output : g_outputSize;
+        const size_t x = size.find('x');
+        const double width = std::atof(size.substr(0, x).c_str());
+        const double height = x != std::string::npos ? std::atof(size.substr(x + 1).c_str()) : 0;
+        return height > 0 ? width / height : 16.0 / 9.0;
+    }
+
     bool UsesOpenXr(const Scenario& sc) {
         const auto source = sc.settings.find("frame_source");
         return source != sc.settings.end() && source->second == "openxr";
@@ -322,7 +331,7 @@ namespace {
         Check(
             r,
             "recorded view jitter",
-            RecordedJitterDeg(d.tools, d.log.eyeCant, 60),
+            RecordedJitterDeg(d.tools, d.log.outputAxis, 60),
             sc.limits.maxRecordedJitterDeg,
             "deg rms (60 fps)"
         );
@@ -412,12 +421,21 @@ namespace {
             return;
         }
 
-        double sumSq = 0, maxMismatch = 0, maxRoll = 0;
+        // A camera turned sideways from the head tilts as the head pitches unless it is levelled itself,
+        // so the tilt is also graded where the view looks well up or down.
+        constexpr double kPitchedDeg = 15;
+        double sumSq = 0, maxMismatch = 0, maxRoll = 0, maxPitchedRoll = 0;
+
         for (size_t i = 0; i < m.seen.t.size(); i++) {
             const double a = AngleDeg(m.seen.dir[i], m.intended.dir[i]);
+            const double roll = std::fabs(m.roll[i]);
             sumSq += a * a;
             maxMismatch = std::max(maxMismatch, a);
-            maxRoll = std::max(maxRoll, std::fabs(m.roll[i]));
+            maxRoll = std::max(maxRoll, roll);
+
+            if (std::fabs(PitchDeg(m.seen.dir[i])) > kPitchedDeg) {
+                maxPitchedRoll = std::max(maxPitchedRoll, roll);
+            }
         }
 
         double seenJitter = JitterDeg(m.seen), seenEyeJitter = JitterDeg(m.eye);
@@ -439,6 +457,38 @@ namespace {
         );
 
         Check(r, "max horizon tilt", maxRoll, sc.limits.maxRollDeg, "deg");
+        Check(
+            r,
+            "  looking up or down",
+            maxPitchedRoll,
+            sc.limits.maxPitchedRollDeg,
+            "deg (pitch over 15 deg)"
+        );
+    }
+
+    // The view's width on screen against the one its zoom asks for: the image's half-angle on each side
+    // of its middle, over the zoom (FakeLog::QuarterSpanDeg). The direction it looks is graded with the
+    // image/pose mismatch, which compares it with the middle of the image.
+    void CheckViewWidth(const Scenario& sc, const Measured& d, Result& r) {
+        std::vector<double> spans;
+        for (const auto& c : d.caps) {
+            if (c.valid) {
+                spans.push_back(c.quarterSpanDeg);
+            }
+        }
+
+        if (spans.empty() || d.tools.zoom.empty()) {
+            return;
+        }
+
+        std::vector<float> zooms = d.tools.zoom;
+        std::nth_element(spans.begin(), spans.begin() + spans.size() / 2, spans.end());
+        std::nth_element(zooms.begin(), zooms.begin() + zooms.size() / 2, zooms.end());
+        const double seen = spans[spans.size() / 2];
+        const double asked = d.log.QuarterSpanDeg(zooms[zooms.size() / 2], OutputAspect(sc));
+
+        Check(r, "view width (between the quarter patches)", seen, -1, "deg (median)");
+        Check(r, "  off its zoom", std::fabs(seen - asked), sc.limits.maxViewWidthErrorDeg, "deg");
     }
 
     // Black borders: any of the scenario's edge and corner patches showing no direction code, in
@@ -512,6 +562,9 @@ namespace {
             CheckPoses(sc, d, r);
         }
         CheckOnScreen(sc, d, r);
+        if (sc.viewOnScreen) {
+            CheckViewWidth(sc, d, r);
+        }
         if (sc.borderPatches) {
             CheckBorders(sc, d, r);
         }
