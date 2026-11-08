@@ -1,0 +1,75 @@
+# Copyright (C) 2026 Anton Podolsky
+# SPDX-License-Identifier: GPL-2.0-or-later
+# The layout of SimOptix's C++ and HLSL. The code style skill (.agents\skills\code-style\SKILL.md) has the
+# rules a formatter can't apply.
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: c++17
+ColumnLimit: 110
+IndentWidth: 4
+ContinuationIndentWidth: 4
+UseTab: Never
+LineEnding: LF
+InsertNewlineAtEOF: true
+MaxEmptyLinesToKeep: 1
+KeepEmptyLines:
+  AtStartOfBlock: false
+  AtStartOfFile: false
+
+BreakBeforeBraces: Attach
+InsertBraces: true
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortLambdasOnASingleLine: All
+AllowShortEnumsOnASingleLine: true
+
+NamespaceIndentation: All
+FixNamespaceComments: false
+IndentCaseLabels: true
+AccessModifierOffset: -4
+EmptyLineBeforeAccessModifier: LogicalBlock
+EmptyLineAfterAccessModifier: Never
+IndentPPDirectives: None
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+SpacesBeforeTrailingComments: 2
+AlignTrailingComments:
+  Kind: Always
+ReflowComments: true
+
+AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+BinPackParameters: OnePerLine
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+PackConstructorInitializers: CurrentLine
+AlignEscapedNewlines: Left
+AlwaysBreakTemplateDeclarations: Yes
+
+SortIncludes: CaseInsensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<windows\.h>$'
+    Priority: 1
+    SortPriority: 1
+  - Regex: '^<.*\.h>$'
+    Priority: 1
+    SortPriority: 2
+  - Regex: '^<.*>$'
+    Priority: 2
+    SortPriority: 3
+  - Regex: '^".*"$'
+    Priority: 3
+    SortPriority: 4
+PenaltyBreakAssignment: 1000
+PenaltyBreakBeforeFirstCallParameter: 0
+PenaltyBreakBeforeMemberAccess: 1000
+Cpp11BracedListStyle: FunctionCall

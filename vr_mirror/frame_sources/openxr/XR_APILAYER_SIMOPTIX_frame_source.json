@@ -1,0 +1,11 @@
+{
+    "file_format_version": "1.0.0",
+    "api_layer": {
+        "name": "XR_APILAYER_SIMOPTIX_frame_source",
+        "library_path": ".\\XR_APILAYER_SIMOPTIX_frame_source.dll",
+        "api_version": "1.0",
+        "implementation_version": "1",
+        "description": "SimOptix: VR Mirror's frame source for Le Mans Ultimate. Passes every call through in other programs.",
+        "disable_environment": "DISABLE_XR_APILAYER_SIMOPTIX_frame_source"
+    }
+}

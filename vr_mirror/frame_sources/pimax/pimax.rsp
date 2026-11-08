@@ -1,0 +1,3 @@
+..\frame_sources\pimax\pimax_source.cpp
+..\frame_sources\pimax\pvr_session.cpp
+..\frame_sources\pimax\pvr_mirror.cpp

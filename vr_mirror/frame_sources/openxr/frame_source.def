@@ -1,0 +1,6 @@
+; Copyright (C) 2026 Anton Podolsky
+; SPDX-License-Identifier: GPL-2.0-or-later
+; The only function the OpenXR loader looks up in a layer; everything else comes through it.
+LIBRARY XR_APILAYER_SIMOPTIX_frame_source
+EXPORTS
+    xrNegotiateLoaderApiLayerInterface

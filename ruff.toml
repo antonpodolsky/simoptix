@@ -1,0 +1,5 @@
+# Copyright (C) 2026 Anton Podolsky
+# SPDX-License-Identifier: GPL-2.0-or-later
+# The layout of SimOptix's Python scripts: ruff format's defaults, at the C++ code's line length.
+line-length = 110
+extend-exclude = ["third_party"]
