@@ -190,10 +190,10 @@ int WrongPoseFrames(const FakeLog& log, const ToolTrace& tt, int* considered);
 // each tick (from a second in, plus `phase` of a tick), the view of the newest frame presented
 // before it. A frame held over because the game dropped one, or presented late, shows as it would
 // in a recording.
-Series RecordedSeries(const ToolTrace& tt, const Quat& eyeCant, double fps, double phase);
+Series RecordedSeries(const ToolTrace& tt, const Quat& outputAxis, double fps, double phase);
 // Its jitter (JitterDeg), averaged over evenly spread phases: where a recording's ticks fall
 // against the tool's frames is chance, and with dropped frames it moved one run's value by 15%.
-double RecordedJitterDeg(const ToolTrace& tt, const Quat& eyeCant, double fps);
+double RecordedJitterDeg(const ToolTrace& tt, const Quat& outputAxis, double fps);
 // Jitter: what's left after fitting a smooth curve (a local quadratic over +-50 ms), rms degrees.
 double JitterDeg(const Series& s);
 // View stalling mid-turn and then catching up.

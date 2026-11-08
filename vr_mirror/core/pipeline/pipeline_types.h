@@ -99,14 +99,31 @@ inline FrameTimes MomentTimes(uint64_t serial, double moment) {
     return t;
 }
 
+// The middle of `eye`'s image, as the turn from the eye's camera to a camera that looks at it: halfway
+// between the image's left and right edges, then halfway between its top and bottom, with no roll of its
+// own. The view looks there, with as much image on each side. Frame sources describe the same image
+// from different axes (Pimax: from the eye turned 2° outward, 50.1° out and 49.6° in; LMU through OpenXR:
+// from straight ahead, 52.6° out and 47.6° in), and its middle is the same for all of them.
+inline Quat ImageMiddle(const EyeInfo& eye) {
+    const float yaw = (std::atan(eye.rightTan) - std::atan(eye.leftTan)) / 2;  // radians, towards +x
+    const float pitch = (std::atan(eye.upTan) - std::atan(eye.downTan)) / 2;   // radians, towards +y
+    const Quat turn = {0, -std::sin(yaw / 2), 0, std::cos(yaw / 2)};           // -yaw about +y: -z to +x
+    const Quat tilt = {std::sin(pitch / 2), 0, 0, std::cos(pitch / 2)};        // about +x: -z to +y
+    return Mul(turn, tilt);
+}
+
 // The output's view and the eye image it is cut from, for one frame: the eye's half-FOV tangents
-// (left, right, up, down, positive), the output's half-FOV tangents (outW, outH: as wide as the eye
-// allows divided by the zoom, at the output's aspect ratio, never taller than the eye) and the eye's
-// orientation in the head (its cant), and whether the picture is sRGB-encoded twice (EyeInfo).
+// (left, right, up, down, positive), the eye's orientation in the head (its cant), the view's camera in
+// the eye's (aim: the image's middle), the output's half-FOV tangents around it (outW, outH: the image's
+// half-angle on each side divided by the zoom, at the output's aspect ratio, never taller than the
+// image), whether the view's camera is held level (stabilization on), and whether the picture is
+// sRGB-encoded twice (EyeInfo).
 struct ViewGeometry {
     float left = 1, right = 1, up = 1, down = 1;
     float outW = 1, outH = 1;
     Quat hmdToEye;
+    Quat aim;
+    bool level = false;
     bool encodedTwice = false;
 };
 
@@ -115,30 +132,48 @@ inline ViewGeometry GeometryFor(const EyeInfo& eye, const MirrorSettings& s, flo
     ViewGeometry g;
     g.left = eye.leftTan, g.right = eye.rightTan;
     g.up = eye.upTan, g.down = eye.downTan;
-    g.outW = std::min(g.left, g.right) / s.zoom;
+    g.hmdToEye = eye.hmdToEye;
+    g.aim = ImageMiddle(eye);
+    g.level = Stabilizes(s);  // off: the headset's view as it is, roll included
+    g.encodedTwice = eye.encodedTwice;
+
+    // Seen from its middle, the image reaches the mean of its two half-angles on each side.
+    const float wide = std::tan((std::atan(g.left) + std::atan(g.right)) / 2);
+    const float tall = std::tan((std::atan(g.up) + std::atan(g.down)) / 2);
+    g.outW = wide / s.zoom;
     g.outH = g.outW / aspect;
-    if (g.outH > std::min(g.up, g.down) / s.zoom) {
-        g.outH = std::min(g.up, g.down) / s.zoom;
+
+    if (g.outH > tall / s.zoom) {
+        g.outH = tall / s.zoom;
         g.outW = g.outH * aspect;
     }
 
-    g.hmdToEye = eye.hmdToEye;
-    g.encodedTwice = eye.encodedTwice;
     return g;
 }
 
 // How wide (pixels) a picture of `eye` must be for an output `outputWidth` pixels wide (at `aspect`) to
-// show it 1:1 in its middle: the output spans 2 outW of view tangent, the picture left + right.
+// show it 1:1 in its middle: the output spans 2 outW of view tangent, the picture left + right. (The
+// view's middle is a few degrees off the eye's axis, where the picture is denser by under 0.3%.)
 inline float NativePictureWidth(const EyeInfo& eye, const MirrorSettings& s, int outputWidth, float aspect) {
     const ViewGeometry g = GeometryFor(eye, s, aspect);
     return float(outputWidth) * (g.left + g.right) / (2 * g.outW);
 }
 
+// `v` with its roll removed: looking the same way, world +Y up (the horizon kept level). Not exactly
+// idempotent in float, so a view is levelled once.
+inline Quat LevelHorizon(const Quat& v) {
+    return LookRotation(Rotate(v, {0, 0, -1}));
+}
+
 // Output ray (the view's camera) -> the eye camera of a picture drawn at head pose `picture`, as a
-// row-major 3x3 matrix.
+// row-major 3x3 matrix. The view's camera is the head at `view`, turned by the eye's cant and then to
+// the image's middle. With the view held level, that camera is levelled itself: a camera turned sideways
+// from the head tilts whenever the head pitches, by about the turn times the sine of the pitch (2.0° at
+// 3.5° and 35°).
 inline void ViewToEye(const Quat& picture, const Quat& view, const ViewGeometry& g, float rm[3][3]) {
-    const Quat delta = Mul(Conj(picture), view);
-    ToMatrix(Mul(Mul(Conj(g.hmdToEye), delta), g.hmdToEye), rm);
+    const Quat turned = Mul(Mul(view, g.hmdToEye), g.aim);
+    const Quat camera = g.level ? LevelHorizon(turned) : turned;
+    ToMatrix(Mul(Conj(Mul(picture, g.hmdToEye)), camera), rm);
 }
 
 // The pipeline's previous output, which a smoothing with state follows on from: its drawn pose
@@ -148,9 +183,3 @@ struct PreviousView {
     bool has = false;
     Quat picture, view;
 };
-
-// `v` with its roll removed: looking the same way, world +Y up (the horizon kept level). Not exactly
-// idempotent in float, so a view is levelled once.
-inline Quat LevelHorizon(const Quat& v) {
-    return LookRotation(Rotate(v, {0, 0, -1}));
-}

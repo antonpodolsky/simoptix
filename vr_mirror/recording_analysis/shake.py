@@ -11,7 +11,7 @@ path: its position against a quadratic through the 7 frames either side, the fra
 
 usage: python -I shake.py <grid.f32> <out.npz> [--start s]   (--start: video time of the first frame)
 Conventions: angles in degrees of view rotation; screen sizes in pixels of the 1920x1080 picture
-the user sees (17.9 px per degree at the centre at zoom 1.25); frame i is video time (i + 1) / 90.
+the user sees (17.7 px per degree at the centre at zoom 1.25); frame i is video time (i + 1) / 90.
 """
 
 import argparse
@@ -20,10 +20,12 @@ import numpy as np
 
 COLS, ROWS, GX, GY, SX, SY, PW, PH = 11, 8, 32, 32, 80, 60, 48, 32  # grid_shift.cpp's grid
 W, H = 960, 540
-K = (W / 2) / (1.173 / 1.25)  # px per unit tangent at 960 px: the eye's half-FOV over zoom 1.25
+# px per unit tangent at 960 px: the Pimax eye's half-FOV seen from the image's middle, over zoom 1.25
+# (vr_mirror\core\pipeline\pipeline_types.h GeometryFor; 1.173, its narrower side, before 2026-11-08)
+K = (W / 2) / (1.1838 / 1.25)
 TO_1080 = 2.0  # 960 px -> 1920 px
 DEG = np.pi / 180
-PX_PER_DEG = K * DEG * TO_1080  # px of the 1920x1080 picture per degree at the centre (17.9)
+PX_PER_DEG = K * DEG * TO_1080  # px of the 1920x1080 picture per degree at the centre (17.7)
 HALF = 7  # frames either side for the smooth path
 
 

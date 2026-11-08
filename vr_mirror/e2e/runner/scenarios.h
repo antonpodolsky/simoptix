@@ -26,6 +26,8 @@ struct Limits {
     // replays only: frames whose pose error changed visibly from the frame before
     double maxPoseJumpPct = -1;
     double maxPoseDriftDeg = -1;  // the pose error's mean over the run: no drift
+    // the view's width on screen against the one its zoom asks for (degrees between the quarter patches)
+    double maxViewWidthErrorDeg = 0.2;
     double maxBlackEdgePct = 0;   // captured frames with black at an edge (view outside the game image)
     double maxEdgeClampPct = -1;  // frames where the last-resort edge limit acted
     int maxStalls = -1;           // view slowing to a near stop and speeding up again mid-turn
@@ -34,9 +36,11 @@ struct Limits {
     double maxMissedPct = 1;      // game frames the tool never showed
     // longest gap between the tool's frames (informational: the fake can be late too)
     double maxToolGapMs = -1;
-    double maxObsRepeatPct = -1;     // 60 fps window-capture repeats (a Windows capture limit; informational)
-    double maxTrackErrorDeg = -1;    // stabilization off: view vs head after best time alignment
-    double maxRollDeg = -1;          // roll lock on: horizon tilt of the view
+    double maxObsRepeatPct = -1;   // 60 fps window-capture repeats (a Windows capture limit; informational)
+    double maxTrackErrorDeg = -1;  // stabilization off: view vs head after best time alignment
+    double maxRollDeg = -1;        // roll lock on: horizon tilt of the view
+    // ...on the frames where the view looks more than 15° up or down (kPitchedDeg, runner.cpp)
+    double maxPitchedRollDeg = -1;
     double minValidPct = 95;         // frames whose colors decoded to a valid direction
     double maxIdleCallsPerSec = -1;  // game_start_s: calls into the runtime per second while no game ran
     int maxStartMissed = -1;         // game_start_s: the game's first frames the tool didn't show

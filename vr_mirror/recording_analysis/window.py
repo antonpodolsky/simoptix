@@ -74,7 +74,9 @@ def main():
     ap.add_argument("--zoom", type=float, default=1.3)
     args = ap.parse_args()
     W, H = 960, 540
-    scale = (W / 2) / (1.173 / args.zoom)  # px per unit tangent: the eye's half-FOV over the zoom
+    # px per unit tangent: the Pimax eye's half-FOV seen from the image's middle, over the zoom
+    # (vr_mirror\core\pipeline\pipeline_types.h GeometryFor; 1.173, its narrower side, before 2026-11-08)
+    scale = (W / 2) / (1.1838 / args.zoom)
 
     log = ReadObsLog(args.log)
     rec_start, _ = Recording(log, args.video)
