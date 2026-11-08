@@ -131,7 +131,7 @@ end-to-end tests with a simulated headset and game, and on decisions made from m
 ## Licence
 
 ```
-SimOptix: stabilized VR footage of sim racing, and game telemetry drawn over it, as OBS plugins.
+SimOptix is a set of sim racing tools for capturing stabilized VR footage and overlays.
 Copyright (C) 2026 Anton Podolsky
 
 This program is free software; you can redistribute it and/or modify
