@@ -1,0 +1,153 @@
+# SimOptix
+
+SimOptix is a set of sim racing tools for capturing stabilized VR footage and overlays.
+The tools are available as OBS Studio plugins: VR Mirror adds sources with the stabilized headset
+view, and Overlays adds a G-meter source. Both work with Le Mans Ultimate (LMU) and Pimax headsets.
+
+## What you get
+
+- **SimOptix: VR Mirror** adds two OBS sources that show the stabilized view. They differ in where
+  the game's image comes from:
+  - **SimOptix: Pimax Mirror** takes the copy of the left eye that Pimax Play makes for other
+    programs. It is half the size the game draws, 2508×2084 in LMU at Render Quality 1.0, and grows
+    with Render Quality.
+  - **SimOptix: OpenXR Mirror** takes the game's own left eye at full size, 5084×4168 in LMU, with
+    the exact head pose each frame was drawn with. It needs an API layer in the game, which is
+    experimental and works offline only (below).
+- **Smoothing** trades delay for calm. Smoothest runs about a second behind the game, sees where the
+  head goes next, and is meant for recording. Smooth runs half a second behind. Instant adds no delay,
+  for live streams. OBS's audio, the G-meter and race auto-record follow the delay, so they stay in
+  sync with the view.
+- **Race auto-record** makes OBS record each LMU race by itself, from the start lights to 5 s after
+  the car stops past the finish.
+- **SimOptix: Overlays** adds the **SimOptix: G-Meter Overlay** source. It also works over a normal
+  capture of a flat-screen game, and plays a demo lap so you can try it without the game.
+
+## Status
+
+SimOptix is early software. There are no ready-made downloads, so you build it from source.
+
+- **Headsets:** Pimax, through Pimax Play. Measured on one headset, a Pimax Dream Air. OpenXR Mirror
+  uses no Pimax software, so any OpenXR headset should work with it. It has been tried only with
+  Pimax's runtime.
+- **Games:** LMU. The stabilized view has been measured with LMU, and the G-meter's live values and
+  race auto-record read LMU's telemetry.
+- **OBS:** built against OBS Studio 32.2.2. Other versions haven't been tried.
+- **OpenXR Mirror** and its API layer (`vr_mirror\frame_sources\openxr\`) are experimental. They work
+  in LMU started without Easy Anti-Cheat. Whether a layer signed with a certificate Windows trusts
+  gets past Easy Anti-Cheat is not known.
+
+## SimOptix and Easy Anti-Cheat
+
+LMU runs Easy Anti-Cheat, so SimOptix gets the game's frames and data only through official
+interfaces.
+
+- **Pimax Mirror, the G-meter and race auto-record** run in OBS, outside the game. Pimax Mirror asks
+  Pimax Play for its copy of the game's left eye, a signal for each new frame, and the head poses. The
+  G-meter and race auto-record read the telemetry that LMU publishes for outside tools. Both stay out
+  of the game's process and files.
+- **OpenXR Mirror** needs an API layer that OpenXR loads into LMU when the game starts. The layer
+  copies the left eye image after each frame has gone to the headset, and only while an OpenXR Mirror
+  source is shown in OBS. It passes every OpenXR call on unchanged, except that it asks the runtime for
+  one time-conversion extension. Its README has the details (`vr_mirror\frame_sources\openxr\README.md`).
+
+**Don't install the API layer on a PC used for online racing.** Easy Anti-Cheat refuses the unsigned
+layer that this repo builds. With the layer installed, LMU started the usual way showed Easy
+Anti-Cheat's "Untrusted system file" warning, and online play was disabled. The layer works in LMU
+started without Easy Anti-Cheat, which means offline. `vr_mirror\frame_sources\openxr\uninstall.bat`
+removes it.
+
+## Requirements
+
+To run:
+- 64-bit Windows (developed on Windows 11)
+- OBS Studio 32 (built against 32.2.2)
+- For Pimax Mirror: a Pimax headset with Pimax Play running
+- For OpenXR Mirror: the API layer installed, and LMU started without Easy Anti-Cheat
+- For live game data (the G-meter's values and race auto-record): LMU
+
+To build:
+- Visual Studio 2019 or later, or its Build Tools, with the C++ tools. Only 2019 has been tried.
+- For reading LMU: LMU's telemetry headers. The build finds them in the game's folder, in any Steam
+  library, and `LMU_SDK` can name their folder instead. Without them, the build says so, and both
+  plugins build and read no game. The G-meter's demo lap still plays.
+
+## Install
+
+1. Close OBS.
+2. Run `vr_mirror\obs_plugin\build.bat install` and `overlays\obs_plugin\build.bat install`. Each
+   builds its plugin and copies it to OBS's plugin folder
+   (`C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`). Install both from one build, because
+   they share the game's data and check that they match.
+3. For OpenXR Mirror, also install the API layer. Read the warning above first, close LMU, and run
+   `vr_mirror\frame_sources\openxr\install.bat`. It builds the layer and installs it with
+   administrator rights, which Windows asks for.
+4. Start OBS and add a **SimOptix: Pimax Mirror**, **SimOptix: OpenXR Mirror** or **SimOptix: G-Meter
+   Overlay** source. Each plugin's README describes its settings: `vr_mirror\obs_plugin\README.md`
+   and `overlays\README.md`.
+
+To remove a plugin, close OBS and delete the plugin's folder in `C:\ProgramData\obs-studio\plugins\`.
+
+## Folders
+
+| Folder | What |
+|---|---|
+| `vr_mirror\` | SimOptix: VR Mirror |
+| `vr_mirror\obs_plugin\` | The OBS sources Pimax Mirror and OpenXR Mirror, and race auto-record (`race_auto_record\`) |
+| `vr_mirror\frame_sources\` | Where the game's frames and head poses come from: `pimax\` through Pimax Play, and `openxr\` through the API layer, with its reader and its check program |
+| `vr_mirror\core\` | The stabilization itself, the same in OBS and in the desktop window |
+| `vr_mirror\mirror_app\` | VR Mirror in a desktop window, which the end-to-end tests run |
+| `vr_mirror\e2e\` | End-to-end tests: the desktop window against a simulated Pimax headset and game, or a simulated game with the API layer |
+| `vr_mirror\recording_analysis\` | Scripts that check a recording frame by frame, and turn a moment of it into a test |
+| `overlays\` | SimOptix: Overlays: the G-meter (`gmeter\`, its image layers in `gmeter\design\`) and what any overlay can reuse (`common\`) |
+| `shared\` | Code compiled into both plugins: logging, CPU counters, crash dumps, the view's delay, and the list of OBS functions they call (`obs_lib\`). `build\` finds Visual Studio for every build |
+| `shared\telemetry\` | One reader of the game's telemetry for all of OBS, and the G-meter's demo lap. `games\lmu\fake\` makes up LMU telemetry, to test without the game |
+| `third_party\` | libobs 32.2.2 and the OpenXR headers, as published |
+
+Each part's README describes what it does, its settings and its files:
+- `vr_mirror\obs_plugin\README.md`
+- `vr_mirror\core\README.md`, and a README for each stage of the pipeline in `vr_mirror\core\pipeline\`
+- `vr_mirror\frame_sources\README.md` and `vr_mirror\frame_sources\openxr\README.md`
+- `vr_mirror\mirror_app\README.md`
+- `vr_mirror\e2e\README.md`
+- `vr_mirror\recording_analysis\README.md`
+- `overlays\README.md` and `overlays\gmeter\design\README.md`
+- `shared\telemetry\README.md`
+
+## Contributing
+
+`CONTRIBUTING.md` explains how to build, test and send a change. `.agents\skills\dev\` holds the rules
+for the code and the same way of working in full, written for AI coding agents and people alike, with
+what was measured and tried so far. `.agents\skills\docs\` holds the rules for writing the docs.
+`AGENTS.md` points every coding agent at these skills.
+
+## How SimOptix is built
+
+SimOptix's development is AI-assisted, using software engineering best practices. It has a strict dev
+workflow, code and product quality/correctness gates, and the author reviews the code. The work rests on
+end-to-end tests with a simulated headset and game, and on decisions made from measurements.
+`HOW_SIMOPTIX_IS_BUILT.md` describes these practices.
+
+## Licence
+
+```
+SimOptix: stabilized VR footage of sim racing, and game telemetry drawn over it, as OBS plugins.
+Copyright (C) 2026 Anton Podolsky
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, see <https://www.gnu.org/licenses/>.
+```
+
+Each source file carries the copyright line and `SPDX-License-Identifier: GPL-2.0-or-later`, which
+points to this notice. The licence is GPL-2.0-or-later (`LICENSE`), and the OBS plugins build on OBS's
+own GPL code. `THIRD_PARTY_NOTICES.md` lists the third-party code included.

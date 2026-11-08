@@ -1,0 +1,21 @@
+# Build output (each build.bat writes obj\ beside it, and what it builds to bin\ or beside it)
+obj/
+bin/
+*.obj
+*.exe
+*.dll
+*.lib
+*.ilk
+*.pdb
+*.map
+*.exp
+__pycache__/
+
+# Test runs
+vr_mirror/e2e/out/
+
+# The mirror app's local settings
+vr_mirror/mirror_app/simoptix_vr_mirror.ini
+
+# Git worktrees of parallel work sessions (each has its own build output)
+.claude/worktrees/

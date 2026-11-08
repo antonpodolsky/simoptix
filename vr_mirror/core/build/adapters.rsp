@@ -1,0 +1,4 @@
+..\core\adapters\d3d\frame_copy.cpp
+..\core\adapters\d3d\thumbnail.cpp
+..\core\adapters\d3d\drawn_pose_feed.cpp
+..\core\adapters\system\trace_writer.cpp

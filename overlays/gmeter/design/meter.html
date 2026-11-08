@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Anton Podolsky -->
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>G-meter static layers</title>
+<style>
+html, body { margin: 0; background: transparent; }
+#board { width: 480px; height: 480px; position: relative; overflow: hidden; font-family: Bahnschrift, sans-serif; color: #ffffff; }
+body.preview #board { background: linear-gradient(180deg, #7f93a8 0%, #aab6c0 44%, #6a6e72 45%, #3c3f43 100%); }
+/* Layers: .base (everything that never moves; the ring labels are drawn live by the plugin) and .glass
+   (the feathered reflection). #preview shows both over a backdrop, for checking only. */
+body.glass .base { display: none; }
+body.base .glass { display: none; }
+</style>
+</head>
+<body>
+<div id="board">
+<div class="base" style="position: absolute; left: 30px; top: 30px; width: 420px; height: 420px; border-radius: 50%; background: linear-gradient(180deg, #26282b, #141517); box-shadow: 0 22px 44px -10px rgba(0,0,0,0.6), 0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -2px 3px rgba(0,0,0,0.5)"></div>
+<div class="base" style="position: absolute; left: 62px; top: 62px; width: 356px; height: 356px; border-radius: 50%; background: linear-gradient(180deg, #0c0d0f, #1b1d20); box-shadow: inset 0 1px 0 rgba(255,255,255,0.18)"></div>
+<div class="base" style="position: absolute; left: 68px; top: 68px; width: 344px; height: 344px; border-radius: 50%; background: radial-gradient(120% 120% at 50% 30%, #1d2024 0%, #0b0c0e 60%); box-shadow: inset 0 8px 18px rgba(0,0,0,0.85), inset 0 0 0 1px rgba(0,0,0,0.9)"></div>
+<svg class="base" viewBox="0 0 400 400" width="400" height="400" style="position: absolute; left: 40px; top: 40px; overflow: visible">
+<path d="M89.3 358.1A193 193 0 0 1 89.3 41.9" fill="none" stroke="#000000" stroke-opacity="0.6" stroke-width="10" stroke-linecap="round"></path>
+<path d="M310.7 358.1A193 193 0 0 0 310.7 41.9" fill="none" stroke="#000000" stroke-opacity="0.6" stroke-width="10" stroke-linecap="round"></path>
+<circle cx="200" cy="200" r="37.3" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="0.8"></circle>
+<path d="M174 270.03A74.7 74.7 0 1 1 226 270.03" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="0.8"></path>
+<circle cx="200" cy="200" r="112" fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="1.1"></circle>
+<path d="M88 200H312M200 88V259M200 291V312" stroke="#ffffff" stroke-opacity="0.06" stroke-width="0.6"></path>
+<path d="M258.25 99.11L260.75 94.78M300.89 141.75L305.22 139.25M300.89 258.25L305.22 260.75M258.25 300.89L260.75 305.22M141.75 300.89L139.25 305.22M99.11 258.25L94.78 260.75M99.11 141.75L94.78 139.25M141.75 99.11L139.25 94.78" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.2"></path>
+</svg>
+<div class="base" style="position: absolute; left: 217px; top: 302.7px; width: 46px; height: 24px; box-sizing: border-box; border-radius: 7px; background: rgba(0,0,0,0.45); box-shadow: inset 0 1px 3px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.06)"></div>
+<svg class="glass" viewBox="0 0 400 400" width="400" height="400" style="position: absolute; left: 40px; top: 40px">
+<defs>
+<clipPath id="crFaceF"><circle cx="200" cy="200" r="171"></circle></clipPath>
+<filter id="crSoft2" x="-0.2" y="-0.2" width="1.4" height="1.4"><feGaussianBlur stdDeviation="2"></feGaussianBlur></filter>
+<linearGradient id="crFeather" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#ffffff" stop-opacity="0.24"></stop>
+<stop offset="0.5" stop-color="#ffffff" stop-opacity="0.09"></stop>
+<stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
+</linearGradient>
+</defs>
+<g clip-path="url(#crFaceF)">
+<path d="M28.15 192.8A172 172 0 0 1 371.85 192.8A420 420 0 0 0 28.15 192.8Z" transform="rotate(-20 200 200)" fill="url(#crFeather)" filter="url(#crSoft2)"></path>
+</g>
+</svg>
+</div>
+<script>
+document.body.className = (location.hash || '#preview').slice(1);
+</script>
+</body>
+</html>
