@@ -36,6 +36,18 @@ EYE = dict(L=1.195, R=1.173, U=0.984, D=0.984)  # eye 0 (the OBS log)
 CANT = np.array([0.0, 0.0175, 0.0, 0.9998])  # eye 0's orientation in the head
 ASPECT = 16 / 9
 
+# The view looks at the image's middle, with the mean of its half-angles on each side
+# (vr_mirror\core\pipeline\pipeline_types.h ImageMiddle and GeometryFor, from 2026-11-08; before, it
+# looked along the eye's axis and was as wide as the narrower side).
+_YAW = (np.arctan(EYE["R"]) - np.arctan(EYE["L"])) / 2
+_PITCH = (np.arctan(EYE["U"]) - np.arctan(EYE["D"])) / 2
+AIM = Qmul(
+    np.array([0.0, -np.sin(_YAW / 2), 0.0, np.cos(_YAW / 2)]),
+    np.array([np.sin(_PITCH / 2), 0.0, 0.0, np.cos(_PITCH / 2)]),
+)
+WIDE = np.tan((np.arctan(EYE["L"]) + np.arctan(EYE["R"])) / 2)
+TALL = np.tan((np.arctan(EYE["U"]) + np.arctan(EYE["D"])) / 2)
+
 # vr_mirror\core\pipeline\picture_room\picture_room.h kStopShare (before 2026-11-05: 5_edges kEdge)
 EDGE = 0.95
 LAGS = np.arange(-3, 2)  # candidate true slots, display periods from the slot the frame arrived for
@@ -65,11 +77,11 @@ def Matrix(q):
 # ---- the plugin's edge test (vr_mirror\core\pipeline\picture_room\, before 2026-11-05 5_edges\), vectorised
 # ----
 def Fits(picture, view, zoom):
-    tw = min(EYE["L"], EYE["R"]) / zoom
+    tw = WIDE / zoom
     th = tw / ASPECT
-    th, tw = (np.minimum(th, min(EYE["U"], EYE["D"]) / zoom), tw)
+    th, tw = (np.minimum(th, TALL / zoom), tw)
     delta = Qmul(Conj(picture), view)
-    rm = Matrix(Qmul(Qmul(Conj(CANT), delta), CANT))
+    rm = Matrix(Qmul(Qmul(Qmul(Conj(CANT), delta), CANT), AIM))
     ok = np.ones(picture.shape[:-1], bool)
     for cx in (-1, 1):
         for cy in (-1, 1):
@@ -168,7 +180,7 @@ def Run(shake_npz, rows, trace, rec, video_name, out):
     clamp_here = have & (clamps - num[prev, 21] > 0)
     planned_here = have & (planned - num[prev, 23] > 0)
     zoom0 = float(np.median(zoom[have]))
-    K = (960 / 2) / (min(EYE["L"], EYE["R"]) / zoom0)
+    K = (960 / 2) / (WIDE / zoom0)
     px_per_deg = K * np.pi / 180 * 2.0
 
     # Kind of tick, exactly: a new game frame, the same one again, or one skipped over.
@@ -187,7 +199,7 @@ def Run(shake_npz, rows, trace, rec, video_name, out):
     stand_in = np.where(followed < 0, by_pose, names_frame & have & (followed != T[:, 2]))
 
     # The view's own path on screen (T = img: the warp right) and its calibration against the video.
-    hc = np.broadcast_to(CANT, view.shape)
+    hc = np.broadcast_to(Qmul(CANT, AIM), view.shape)  # the view's camera in the head
     Qv = Qmul(Qmul(Conj(hc), Conj(view)), hc)  # tracking -> screen when the warp pose is right
     Rv = Qmul(Qv[1:], Conj(Qv[:-1]))
     rv = np.r_[np.zeros((1, 3)), RotVec(Rv)]
