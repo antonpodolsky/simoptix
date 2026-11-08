@@ -121,10 +121,12 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
   - Each frame says the moment it was drawn for. Stage 1 shows the frame at the rhythm the frames
     arrive in, which is that moment when the frame is on time. The frame's drawn pose is that
     moment's pose (stage 2's reported methods).
-- **It keeps each frame's image as large as the output needs.**
-  - A host says how wide (`SetPictureNeed`: 1:1 in the middle of its output, within 4 GB for all its
+- **It keeps each frame's image at its own size, or as large as the output needs.**
+  - A host says how wide (`SetPictureNeed`: 1:1 in the middle of its output, within 4.7 GB for all its
     stored images).
-  - The reader copies the image at that size, never above its own. It averages in linear light when
+  - The reader copies the image as it is when that width is at least 83% of the image's own (1 / 1.2,
+    `kFullSizeMaxShrink`) and the memory holds it. The host's view then resamples it once.
+  - Otherwise it copies the image at that width, never above its own. It averages in linear light when
     the copy is smaller, and keeps the image sRGB-encoded once, as the game drew it.
   - While its graphics card reads one of the layer's textures, the reader holds the layer off it,
     and lets go as soon as the read is done.

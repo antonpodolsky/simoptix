@@ -79,6 +79,32 @@ float4 Ps(V i) : SV_Target {
                || f == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     }
 
+    // Up to this shrink (picture pixels per needed pixel) the picture is stored at its own size, and the
+    // host's view does the one resample. Shrinking it here too would resample it twice. Measured
+    // (findings\openxr.md, "The stored image's size"):
+    // - at 1.05 (a 4K canvas at zoom 1.25), LMU's eye images kept 14x the finest detail's energy, and
+    //   a natural image's detail had a seventh of the error (0.0018 against 0.0121 of a shrunk copy)
+    // - false detail grows with the shrink, because the view's filter is made for about 1:1. At 1.2 it
+    //   is 0.0023 against the shrunk copy's 0.0003, at 1.58 (a 1440p canvas) 0.0101 against 0.0013.
+    constexpr float kFullSizeMaxShrink = 1.2f;
+
+    // The stored width of a `width` x `height` picture: its own when the host needs nearly that (above),
+    // else `needWidth` (0: its own), at most what `maxBytes` (0: no limit) holds at 4 bytes a pixel.
+    float StoredWidth(int width, int height, float needWidth, double maxBytes) {
+        float stored = static_cast<float>(width);
+
+        if (needWidth > 0 && stored > needWidth * kFullSizeMaxShrink) {
+            stored = needWidth;
+        }
+
+        if (maxBytes > 0) {
+            const double fitting = std::sqrt(maxBytes / 4 * width / height);
+            stored = std::min(stored, static_cast<float>(fitting));
+        }
+
+        return stored;
+    }
+
 }
 
 bool OpenXrPictures::MakeShaders(ID3D11Device* device) {
@@ -254,12 +280,7 @@ bool OpenXrPictures::Copy(
         return false;
     }
 
-    // The stored size: as wide as the host needs, never wider than the picture, within the memory allowed.
-    float w = std::min(float(width), needWidth_.load() > 0 ? needWidth_.load() : float(width));
-    const double maxBytes = maxBytes_.load();
-    if (maxBytes > 0) {
-        w = std::min(w, float(std::sqrt(maxBytes / 4 * width / height)));
-    }
+    const float w = StoredWidth(width, height, needWidth_.load(), maxBytes_.load());
     const UINT sw = std::max(1u, UINT(std::lround(w)));
     const UINT sh = std::max(1u, UINT(std::lround(w * height / width)));
 

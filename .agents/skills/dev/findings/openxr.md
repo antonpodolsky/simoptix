@@ -18,6 +18,46 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
 - **The game's image buffers**, from that OpenXR Toolkit log: two, one per eye, 5084×4168 each, format
   29 (`R8G8B8A8_UNORM_SRGB`), drawn with Direct3D 11 on Pimax OpenXR 0.1.0.
 
+## The stored image's size
+
+- **A 4K recording from the OpenXR source looked soft at 1:1** (Look-ahead, zoom 1.25, Render Quality
+  1.0, AV1 CQP 16). Its finest detail fell to about 1/40 of its coarse detail at the pixel limit,
+  against 1/20 in a 1440p recording from the Pimax source and 1/10 in a 1440p recording from an Oculus
+  mirror. Detail is measured as the radially averaged power spectrum times f², on 6 frames each.
+- **The game's image is sharp.** Six eye images read from the layer's textures (5084×4168, as the game
+  hands them to the headset) keep 0.38–0.44 of their coarse detail's power up to their pixel limit.
+- **The cause was resampling twice.** The reader shrank each image to the width the canvas needs (4823
+  px, 95%) with 2×2 bilinear taps per stored pixel, and the view then resampled it again
+  (Catmull-Rom). Simulated on the six images, at 0.45 cycles per game pixel:
+
+  | Path | Power kept (of the game image's 0.38) |
+  |---|---|
+  | Shrunk copy (2×2 taps), then the view | 0.014 |
+  | Sharp copy (one Catmull-Rom tap), then the view | 0.046 |
+  | Full size, the view alone | 0.199 |
+
+  The encoder only deepens it. At the same CQP the 4K file got 0.082 bits per pixel, against 0.147
+  (Pimax) and 0.187 (Oculus): the image was already soft when it reached the encoder.
+- **Full size is kept up to a 1.2× shrink** (`kFullSizeMaxShrink`). For larger shrinks the copy's
+  averaging is still needed, because the view's filter is made for about 1:1 and lets finer game
+  detail through as false detail. Error over a natural spectrum (power 1/f², 1D, 8 sub-pixel offsets),
+  as detail lost and false detail:
+
+  | Shrink | Full size | Shrunk copy |
+  |---|---|---|
+  | 1.054 (4K at zoom 1.25) | 0.0014, 0.0004 | 0.0120, 0.0001 |
+  | 1.2 | 0.0007, 0.0023 | 0.0114, 0.0003 |
+  | 1.58 (1440p at zoom 1.25) | 0.0002, 0.0101 | 0.0121, 0.0013 |
+  | 2.0 | 0.0001, 0.0268 | 0.0100, 0.0047 |
+
+- **The memory cap went from 4 GB to 4.7 GB**, so that Look-ahead's 55 images (52 once the copy delay
+  is fixed) fit at 5084×4168 (84.8 MB each, 4.66 GB). Under 4 GB they were capped at 4843 px wide.
+- **Checked in a recording** with the same setup. The OBS log showed "frame ring: 5084x4168, 55 slots,
+  4662 MB", then 52 slots, and the copy delay fell from 11.4 ms to 5.0 ms. The finest detail kept
+  0.14–0.16 of the coarse detail at the pixel limit, against 0.017–0.033 in recordings with the shrunk
+  copy: about 5× more, 2.6× at 0.35 cycles per pixel. The file took 0.094 bits per pixel at CQP 16,
+  against 0.082.
+
 ## The check program
 
 - **2026-11-06, no headset.** The layer loaded through SteamVR's OpenXR loader (1.1.62), joined the
