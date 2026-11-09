@@ -32,6 +32,11 @@ struct OpenXrPublishedFrame {
     int64_t endFrameCounter = 0;  // performance counter when xrEndFrame returned
     openxr_share::Pose eye[2] = {};
     openxr_share::Fov fov[2] = {};
+
+    // How the game handed the image over (openxr_share::Record has their meaning).
+    int32_t gameImage = -1;
+    uint32_t imagesHeld = 0, releasedDuringEnd = 0;
+    uint32_t endThread = 0, releaseThread = 0;
 };
 
 // The publisher's numbers since the last TakeStats (the game's thread).

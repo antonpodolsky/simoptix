@@ -27,6 +27,7 @@
 #include <thread>
 
 #include "adapters/d3d/frame_source.h"
+#include "adapters/system/trace_writer.h"
 #include "common/arrival_stats.h"
 #include "common/pose_history.h"
 #include "openxr_pictures.h"
@@ -85,6 +86,13 @@ public:
     // The 10 s line: frames read, and those whose picture was gone before a host copied it.
     uint64_t TakeStats(double seconds, void (*line)(const char*)) override;
 
+    // Diagnostic trace, CSV with one tagged row per event, to `prefix` + `_openxr.csv`: F = a frame the
+    // layer published, with how the game handed its image over (which swapchain image, on which
+    // threads), A = its copy seen finished and handed to the hosts. Any time; Stop doesn't close it.
+    // Written to disk on its own thread (TraceWriter): the reader thread never waits on the disk.
+    bool StartTrace(const wchar_t* prefix) override;
+    void StopTrace() override;
+
 private:
     // A frame whose picture copy is finished, as the hosts get it: its record and where its picture is.
     struct Finished {
@@ -110,6 +118,8 @@ private:
     void ReadClock();
     void ReadFrames(double now);
     void FinishCopies();
+    void LogProtection(uint32_t protection) const;
+    void NoteHandover(const openxr_share::Record& r);
     double SourceSeconds(int64_t xrTime) const;  // an XrTime on the source's clock
     bool FindFinished(uint64_t serial, Finished* out);
 
@@ -132,6 +142,8 @@ private:
     std::unique_ptr<ArrivalTiming> arrival_;
     ArrivalStats stats_;
     uint64_t serial_ = 0;
+    // What the log has said about how this session's game hands its images over (once each).
+    bool loggedOtherThread_ = false, loggedReleaseDuringEnd_ = false;
     std::atomic<uint64_t> wakeups_{0}, lost_{0};
     uint64_t statArrived_ = 0;  // the hosts' control thread: FramesArrived at the last TakeStats
 
@@ -154,4 +166,5 @@ private:
     std::thread thread_;
 
     OpenXrPictures pictures_;  // the host's device thread
+    TraceWriter trace_;        // StartTrace: rows from the reader thread, written to disk on its own thread
 };

@@ -17,7 +17,7 @@ correction never leaves the stage, so the stages after it can't tell which imple
 | thumbnail | A 64×32 colour image of the middle of an eye image. The slot check compares them |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | look-ahead | The method behind Smooth and Smoothest. The view runs half a second or a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
-| frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals |
+| frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
 | timing gate | The part of the slot check that lets a slot be judged only while the frames' timing shows a queue |
 | lag | How many display slots earlier than its arrival slot the game drew a frame. 0 is on time. A lag appears while the game is behind |

@@ -80,6 +80,20 @@ was closed and OBS open. Whether Pimax Play ran was not checked.
   - `black_borders` still tilts 1.13–1.15° at its worst, at level pitch. It is 0.31° looking up or
     down.
 
+**Run 7 (2026-11-09): the layer's image noted before xrEndFrame, with `openxr_stall` and the fake game
+through the layer's frame code** (issue 12). LMU, OBS and Pimax Play were closed. The 57 runs took
+837 s. 54 of 57 passed, and 17 of 19 comparisons with Instant.
+- `openxr_stall_smoothest` failed: 5.9% from the wrong pose, 20.5° worst on screen. Another session's
+  test started a fake OpenXR game during it, which wrote the same shared memory (the mirror app logged
+  "another layout" and textures of 4168×27). Two e2e runs with OpenXR scenarios can't share the PC.
+- `black_borders_low_zoom` at Instant had one stall (as in run 5), and `openxr_black_borders` Smooth
+  tilted 0.245° against Instant's 0.128°.
+- A rerun of those three, at all three smoothings, passed with their comparisons: `openxr_stall`
+  0.053–0.054° rms on screen, worst 0.147–0.149°, `openxr_black_borders` tilts 0.216 / 0.172 / 0.164°.
+- `stabilization` 0.41 / 0.014 / 0.011 of the head's shake, `dropped_frames` 0.51 / 0.038 / 0.025,
+  `replay_queued_late_frames` 7.6 / 5.2 / 7.5% from the wrong pose, the featureless replay 1.61 /
+  0.21 / 0.22%, and `game_starts_late` 4.8 runtime calls/s idle.
+
 **The OpenXR scenarios** (the fake game with the layer's frames), from run 1:
 
 | Scenario | Result |
@@ -89,6 +103,7 @@ was closed and OBS open. Whether Pimax Play ran was not checked.
 | openxr_game_behind | pass: no frame from the wrong pose, no stall, jitter 2.8 / 1.1 / 1.1 of the head's |
 | openxr_black_borders | pass: 0% black, no stall, jitter 1.6 / 0.20 / 0.20 of the head's |
 | openxr_game_starts_late | pass: the game's first frame missed at all three (the limit: the layer learns the image's size from it), none after, no frame from the wrong pose |
+| openxr_stall | pass (2026-11-09, run 7's rerun): image/pose mismatch 0.053–0.054° rms at all three, worst frame 0.147–0.149°, no game frame missed, 88.6–88.7 fps. With the image looked up after xrEndFrame, as the layer did before: 0.73–0.75° rms, worst 2.8–4.5° |
 
 **Compared with Instant, four fail in run 1, all on the horizon's worst tilt.** The limit: Smooth and
 Smoothest at most 0.05° worse than Instant.

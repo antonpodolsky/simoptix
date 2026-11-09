@@ -14,7 +14,7 @@ alone (`vr_mirror\e2e\stage_replay`) or mixed through the builder. The folder nu
 | picture room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
 | observer | The debugging code beside the pipeline. It numbers the stamp and writes the frame trace |
 | stamp | The frame number that VR Mirror draws as 15 small squares in the top-left corner of the view, when its Debug setting is on |
-| frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals |
+| frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
 | tick | One time OBS draws a frame of its output |
 | arrival slot | The display slot a game frame is assigned from when it arrived, once the timing noise is removed. While the game keeps up, it is the slot the frame was drawn for |
 | slot check | A way to find the drawn pose: it judges from thumbnails which display slot a frame was really drawn for |

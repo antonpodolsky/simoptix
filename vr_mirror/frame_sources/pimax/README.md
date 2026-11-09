@@ -43,6 +43,9 @@ session of its own. It needs Pimax Play.
   taking over and the new session, and a frame rate under 80 fps ("low mirror frame rate"). Every 10 s
   they report the calls into the Pimax runtime ("Pimax calls: ..."), and every 12 s the timing noise
   that stage 1 removed.
+- **Its trace** (the source's Debug setting in OBS) is `trace_<time>_pimax.csv`, beside the frame
+  trace. It has the head poses at 1 kHz, the pose Pimax predicted for each display slot, and every
+  game frame's arrival.
 
 ## Files
 

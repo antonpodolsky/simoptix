@@ -10,8 +10,9 @@
 //  - pimax_game: the Pimax source with the fake runtime's game. One new trace, _ticks and _pimax, with rows.
 //    Of it and 12 older traces, the newest 10 are left, and each older one's files (_ticks, and _pimax or
 //    _openxr) went together.
-//  - openxr_game: the OpenXR source with fake_openxr.exe's game. One new trace. Of it and 10 older ones, the
-//    newest 10 are left.
+//  - openxr_game: the OpenXR source with fake_openxr.exe's game. One new trace, _ticks and _openxr, with
+//  rows.
+//    Of it and 10 older traces, the newest 10 are left.
 //  - layer: the layer's DLL loaded into "Le Mans Ultimate.exe", with and without the loader's handshake.
 //    Each start has its own log, starting with the load line. Of it and 12 older logs, the newest 10 are
 //    left. The files the layer wrote before under fixed names stay.
@@ -147,8 +148,9 @@ namespace {
         Check(stay, "files of other names stay");
     }
 
-    // The new trace: the one stem left that wasn't seeded, with rows in its files.
-    void CheckNewTrace(const Case& c, const std::string& log, bool pimax) {
+    // The new trace: the one stem left that wasn't seeded, with rows in its _ticks file and in its frame
+    // source's own file (`sourceEnding`: "_pimax.csv" or "_openxr.csv").
+    void CheckNewTrace(const Case& c, const std::string& log, const wchar_t* sourceEnding) {
         const std::vector<std::wstring> stems = StemsOf(TimedFiles(c.traces, L"trace", L".csv"), L"trace");
         std::vector<std::wstring> made;
 
@@ -170,10 +172,10 @@ namespace {
         const size_t ticks = Lines(c.traces / (made[0] + L"_ticks.csv")).size();
         Check(ticks > 50, "its _ticks file has rows (" + std::to_string(ticks) + " lines)");
 
-        if (pimax) {
-            const size_t poses = Lines(c.traces / (made[0] + L"_pimax.csv")).size();
-            Check(poses > 50, "its _pimax file has rows (" + std::to_string(poses) + " lines)");
-        }
+        const size_t own = Lines(c.traces / (made[0] + sourceEnding)).size();
+        const std::string ending = Narrow(sourceEnding);
+        const std::string label = ending.substr(0, ending.size() - 4);  // without ".csv"
+        Check(own > 50, "its " + label + " file has rows (" + std::to_string(own) + " lines)");
     }
 
     // After a run that made one trace, from `seeded` older ones: the newest 10 are left.
@@ -268,7 +270,7 @@ namespace {
             return;
         }
 
-        CheckNewTrace(c, log, true);
+        CheckNewTrace(c, log, L"_pimax.csv");
         CheckTracesKept(c, kOlder);
     }
 
@@ -310,7 +312,7 @@ namespace {
             return;
         }
 
-        CheckNewTrace(c, log, false);
+        CheckNewTrace(c, log, L"_openxr.csv");
         CheckTracesKept(c, kKept);
     }
 

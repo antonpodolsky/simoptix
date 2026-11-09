@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "openxr_publisher.h"
 
+#include <d3d11_4.h>
 #include <dxgi.h>
 
 #include <algorithm>
@@ -40,6 +41,18 @@ namespace {
             default:
                 return f;
         }
+    }
+
+    // Whether the game turned on D3D11's multithread protection for its device context. Only read: the
+    // layer copies on that context from the thread that ends the frame.
+    openxr_share::ContextProtection ProtectionOf(ID3D11DeviceContext* context) {
+        ComPtr<ID3D11Multithread> multithread;
+
+        if (!context || FAILED(context->QueryInterface(IID_PPV_ARGS(&multithread)))) {
+            return openxr_share::kProtectionUnknown;
+        }
+
+        return multithread->GetMultithreadProtected() ? openxr_share::kProtected : openxr_share::kUnprotected;
     }
 
     // The same family's plain format, for a device that won't share a typeless texture.
@@ -163,6 +176,7 @@ uint32_t OpenXrPublisher::ResetHeader() {
     h.size = sizeof(openxr_share::Header);
     h.processId = GetCurrentProcessId();
     h.counterFrequency = frequency_;
+    h.contextProtection = ProtectionOf(context_.Get());
 
     ComPtr<IDXGIDevice> dxgi;
     ComPtr<IDXGIAdapter> adapter;
@@ -555,6 +569,8 @@ void OpenXrPublisher::WriteRecord(uint64_t n, const OpenXrPublishedFrame& f, int
     std::memcpy(r.fov, f.fov, sizeof(r.fov));
     r.texture = k;
     r.x = int32_t(box.left), r.y = int32_t(box.top), r.width = int32_t(w), r.height = int32_t(ht);
+    r.gameImage = f.gameImage, r.imagesHeld = f.imagesHeld, r.releasedDuringEnd = f.releasedDuringEnd;
+    r.endThread = f.endThread, r.releaseThread = f.releaseThread;
     r.seq.store(2 * n);
     h.frames.store(n);
 }
