@@ -3,12 +3,12 @@
 r"""Shake events in a recording and what they coincide with, from shake.py's output and the OBS log.
 
 Per output frame (OBS tick): the cockpit's step away from its smooth path (px of the 1920x1080
-picture), whether the frame shows a new game frame or the last one again (the plugin re-warps a
+video), whether the frame shows a new game frame or the last one again (the plugin re-warps a
 repeated game frame with the new view only, so its pose error can't change on that tick), whether
-OBS showed the same picture twice, and the plugin's 10 s stats at that time (game fps, repeats,
+OBS showed the same image twice, and the plugin's 10 s stats at that time (game fps, repeats,
 frames judged "game behind"). Needs no frame trace.
 
-The repeated-frame detector here reads the video alone (everything in the picture moves with the
+The repeated-frame detector here reads the video alone (everything in the image moves with the
 cockpit). It finds the real repeats (they read 0.12 to 0.31 px) but also flags frames near its cut-off
 (0.48 to 0.60 px) that are new game frames: in a clean race (race F, 18 real repeats) it flagged 128.
 Its count is then no count of freezes. With a frame trace, take the repeats from the trace's serials
@@ -31,9 +31,9 @@ import sources
 from shake import DEG, PX_PER_DEG
 from trace_common import VideoTime
 
-ROLL_RADIUS = 540  # px of the 1080p picture at which a roll step is counted (half its height)
+ROLL_RADIUS = 540  # px of the 1080p video at which a roll step is counted (half its height)
 REPEAT_SPREAD = 0.6  # a repeated game frame: 90% of patches follow the rigid fit within 0.6 px (at 960 px)
-OBS_SAME = 0.3  # whole-frame mean abs difference (grey levels) below which OBS showed the same picture
+OBS_SAME = 0.3  # whole-frame mean abs difference (grey levels) below which OBS showed the same image
 
 
 def LogWindows(path, start, stop):
@@ -105,11 +105,11 @@ def _Run(npz, rec, video_name, threshold, out):
     step = np.hypot(np.hypot(d[:, 0], d[:, 1]) * PX_PER_DEG, d[:, 2] * DEG * ROLL_RADIUS)
     speed = np.hypot(vel[:, 0], vel[:, 1])  # the smooth path's speed (deg per frame)
 
-    # On a repeated game frame everything in the picture (scenery, wheel, HUD) moves with the
+    # On a repeated game frame everything in the image (scenery, wheel, HUD) moves with the
     # cockpit; on a new one the fastest scenery (the near barrier, the road) moves on its own.
     spread = np.nanpercentile(err, 90, axis=1)
 
-    # OBS showing a picture twice can't be told from a repeated game frame under a still view, and
+    # OBS showing an image twice can't be told from a repeated game frame under a still view, and
     # the OBS log reports no skipped or doubled frames: both count as repeated game frames.
     same = np.zeros(n, bool)
     repeat = (spread < REPEAT_SPREAD) | (mad < OBS_SAME)
@@ -162,7 +162,7 @@ def _Run(npz, rec, video_name, threshold, out):
     # Where the steps happen: by kind of frame.
     prev_rep = np.r_[False, repeat[:-1]]
     kinds = {
-        "repeated game frame (same picture re-warped)": ok & repeat & ~still,
+        "repeated game frame (same image re-warped)": ok & repeat & ~still,
         "new game frame right after a repeat": ok & ~repeat & ~still & prev_rep,
         "new game frame in a steady run": ok & ~repeat & ~still & ~prev_rep,
     }
@@ -179,7 +179,7 @@ def _Run(npz, rec, video_name, threshold, out):
             f"{100 * e2[m].sum() / e2.sum():11.1f}% {np.nanpercentile(step[m], 99) if m.any() else 0:9.2f}"
         )
 
-    # By cause, as far as the video and the log can tell. A repeated game frame keeps its picture, so a
+    # By cause, as far as the video and the log can tell. A repeated game frame keeps its image, so a
     # jump on it is the warp pose changing; on a new frame during a fast head turn the view itself
     # accelerates (and the smooth-path measure is least exact); the rest are new frames whose warp
     # pose is off from their neighbours', split by whether the frame matching was re-timing frames

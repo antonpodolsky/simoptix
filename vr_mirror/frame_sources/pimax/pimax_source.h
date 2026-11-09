@@ -106,10 +106,10 @@ public:
     // The same as the drawn pose looks them up (DrawnPoseFeed's predictions).
     const PoseLookup& RecordedPredictions() const override { return recorded_; }
 
-    // The host's pictures: the mirror is copied whole, as it is (it can't be scaled on the way).
-    void SetPictureNeed(float, double) override {}
-    void OpenPictures(ID3D11Device* device) override { OpenTextures(device); }
-    bool CopyPicture(
+    // The host's images: the mirror is copied whole, as it is (it can't be scaled on the way).
+    void SetImageNeed(float, double) override {}
+    void OpenImages(ID3D11Device* device) override { OpenTextures(device); }
+    bool CopyImage(
         ID3D11Device* device,
         ID3D11DeviceContext* context,
         const GameFrame& f,
@@ -117,8 +117,8 @@ public:
         bool shared
     ) override;
 
-    void PollPictures(ID3D11DeviceContext*) override {}
-    void ReleasePictures() override { mirror_.ReleaseTexture(); }
+    void PollImages(ID3D11DeviceContext*) override {}
+    void ReleaseImages() override { mirror_.ReleaseTexture(); }
     // For `n` display slots in increasing order at once (one hold of the pose lock): the predicted
     // pose where one was recorded, else the head at that time (HeadAt). Not counted in the stats.
     void PredictedHeadsAt(const double* slots, int n, Quat* out) override {

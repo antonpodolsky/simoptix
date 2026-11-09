@@ -10,6 +10,22 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 10 (ce4d1fd): the code says "image" for "picture".** LMU and OBS were closed, Pimax Play was
+running. All 38 runs passed, and all 19 comparisons with Instant. The pipeline's output is the same
+as before (`stage_replay --golden` byte for byte).
+- A first attempt with OBS open failed the 10 OpenXR runs. OBS had an OpenXR Mirror source, which
+  read each fake game's frames too. The mirror app got half of them (45 of 90 fps).
+- `stabilization` 0.50 / 0.014 of the head's shake (limit 0.5 at Instant), `dropped_frames` 0.49 /
+  0.024, `replay_queued_late_frames` 6.7 / 4.2% from the wrong pose, the featureless replay 1.80 /
+  0.32%, and `game_starts_late` 4.8 runtime calls/s idle.
+- Recorded view jitter: `stabilization` 0.133 / 0.116°, `dropped_frames` 0.177 / 0.159°.
+- Worst horizon tilt: `openxr_stabilization` 0.205 / 0.129°, `openxr_dropped_frames` 0.249 / 0.174°,
+  `openxr_game_behind` 0.157 / 0.158°, `openxr_black_borders` 0.215 / 0.166°, `stabilization` 0.109 /
+  0.105°.
+- `openxr_stall`: image/pose mismatch 0.054 / 0.054° rms, worst frame 0.149 / 0.151°.
+- The view's width is 0.07–0.13° off what its zoom asks for in all 20 runs that read it (limit
+  0.2°).
+
 **Run 9 (6638ff6): the OpenXR source keeps the game's image at full size near 1:1, and the memory
 cap is 4.7 GB.** LMU, OBS and Pimax Play were closed. 37 of 38 runs passed, and all 19 comparisons
 with Instant. At e2e's 320×180 window the source still stores a shrunk image, as before.

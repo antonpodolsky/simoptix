@@ -345,7 +345,7 @@ one or two display slots after the one it was drawn for.
   only while the frame timing looks disturbed. Otherwise nothing changes.
 
 Every 10 s the log then says how many frames were judged, and how many had been drawn for an earlier
-slot ("game behind: X frames rendered for an earlier slot ..., Y frames judged by picture"). Every
+slot ("game behind: X frames rendered for an earlier slot ..., Y frames judged by image"). Every
 stage of the pipeline reports its own numbers this way, so a new method's numbers show up without
 changes here.
 
@@ -370,7 +370,7 @@ where 1, the slot check alone, is the default.
     (`vr_mirror\core\pipeline\2_drawn_pose\README.md`, "The cockpit correction").
   - Every 10 s the log says how many frames it corrected, how many it measured from the image, how
     many couldn't be measured, and the largest correction ("cockpit correction: ..."). It also gives
-    the copy thread's time on frames with patches ("looking at pictures with patches: ... frames, ...
+    the copy thread's time on frames with patches ("looking at images with patches: ... frames, ...
     us avg, ... us max").
 - **0, off:** every frame is warped from the slot its arrival time gives it, and no images are judged.
 

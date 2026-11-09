@@ -8,11 +8,11 @@
 // looks for the layer's memory once a second), signs the reader's presence so the layer copies, puts the
 // frames' times on the performance counter with the layer's clock reading, records each frame's head
 // pose for its display time (halfway between the two eyes, OpenXR's head) in a pose history, and hands
-// each frame whose picture copy is finished to the hosts, its slot the display time the game drew it
+// each frame whose image copy is finished to the hosts, its slot the display time the game drew it
 // for (stage 1, the reported slot). Every frame's pose is the one it was drawn with, exactly: the head
 // path between frames is interpolated between their poses.
 //
-// Source time is the performance counter, in seconds. The pictures (OpenXrPictures) are opened and
+// Source time is the performance counter, in seconds. The images (OpenXrImages) are opened and
 // scaled on the host's device; the layer's textures are claimed while the host's GPU reads them.
 // Knows nothing about OpenXR's calls, OBS or windows.
 #pragma once
@@ -30,7 +30,7 @@
 #include "adapters/system/trace_writer.h"
 #include "common/arrival_stats.h"
 #include "common/pose_history.h"
-#include "openxr_pictures.h"
+#include "openxr_images.h"
 #include "openxr_share.h"
 #include "shared/unique_handle.h"
 
@@ -68,9 +68,9 @@ public:
     void PredictedHeadsAt(const double* slots, int n, Quat* out) override;
     void PredictedHeadsBetween(const double* t, int n, Quat* out) override;
 
-    void SetPictureNeed(float width, double maxBytes) override { pictures_.SetNeed(width, maxBytes); }
-    void OpenPictures(ID3D11Device* device) override;
-    bool CopyPicture(
+    void SetImageNeed(float width, double maxBytes) override { images_.SetNeed(width, maxBytes); }
+    void OpenImages(ID3D11Device* device) override;
+    bool CopyImage(
         ID3D11Device* device,
         ID3D11DeviceContext* context,
         const GameFrame& f,
@@ -78,12 +78,12 @@ public:
         bool shared
     ) override;
 
-    void PollPictures(ID3D11DeviceContext* context) override;
-    void ReleasePictures() override { pictures_.Release(); }
+    void PollImages(ID3D11DeviceContext* context) override;
+    void ReleaseImages() override { images_.Release(); }
 
     const char* ThreadName() const override { return "reader thread"; }
     uint64_t ThreadCycles() override;
-    // The 10 s line: frames read, and those whose picture was gone before a host copied it.
+    // The 10 s line: frames read, and those whose image was gone before a host copied it.
     uint64_t TakeStats(double seconds, void (*line)(const char*)) override;
 
     // Diagnostic trace, CSV with one tagged row per event, to `prefix` + `_openxr.csv`: F = a frame the
@@ -94,11 +94,11 @@ public:
     void StopTrace() override;
 
 private:
-    // A frame whose picture copy is finished, as the hosts get it: its record and where its picture is.
+    // A frame whose image copy is finished, as the hosts get it: its record and where its image is.
     struct Finished {
         GameFrame frame;
         uint64_t layerFrame = 0;    // the layer's frame number (which the texture's mark names)
-        int width = 0, height = 0;  // the picture's size in the texture (pixels, from 0, 0)
+        int width = 0, height = 0;  // the image's size in the texture (pixels, from 0, 0)
     };
 
     // A frame whose copy the layer hasn't finished yet.
@@ -165,6 +165,6 @@ private:
     UniqueHandle session_event_;  // openxr_share::kSessionEvent: the layer wakes the reader thread
     std::thread thread_;
 
-    OpenXrPictures pictures_;  // the host's device thread
-    TraceWriter trace_;        // StartTrace: rows from the reader thread, written to disk on its own thread
+    OpenXrImages images_;  // the host's device thread
+    TraceWriter trace_;    // StartTrace: rows from the reader thread, written to disk on its own thread
 };

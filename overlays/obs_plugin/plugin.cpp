@@ -4,7 +4,7 @@
 // core logging to OBS's log, and stops the telemetry reader when it unloads. Nothing else lives here.
 //
 // It knows nothing of VR Mirror: the two plugins are separate DLLs that never load or call each
-// other. What they share passes through memory each opens on its own: the picture's delay
+// other. What they share passes through memory each opens on its own: the view's delay
 // (shared\program_delay.h; 0 with VR Mirror not installed or its source hidden) and the game's
 // telemetry, read once for both (shared\telemetry\telemetry.h).
 
@@ -23,7 +23,7 @@ MODULE_EXPORT const char* obs_module_name(void) {
 }
 
 MODULE_EXPORT const char* obs_module_description(void) {
-    return "SimOptix: Overlays: game telemetry drawn over the picture, such as the G-meter.";
+    return "SimOptix: Overlays: game telemetry drawn over the video, such as the G-meter.";
 }
 
 namespace {

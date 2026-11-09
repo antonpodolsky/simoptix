@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // CockpitDrawnPose: the slot check (SlotCheckDrawnPose, unchanged, run inside) plus a correction
-// of each frame's pose measured from its picture, while the game's frames arrive irregularly
+// of each frame's pose measured from its image, while the game's frames arrive irregularly
 // (setting drawn_pose 2). Logic only: frames, thumbnails, patches and predicted poses come in
 // as parameters; it knows nothing about D3D, PVR or threads. adapters\d3d\drawn_pose_feed makes
 // the patches and feeds it.
@@ -14,7 +14,7 @@
 // first placed as the slot check says, then its fixed cockpit is compared with the previous
 // frame's as placed (cockpit_drawn_pose_shift.h): what the cockpit moved beyond what the two poses
 // explain is that frame's error, and its pose is corrected by it. Like a phone combining its
-// gyroscope with its compass, the picture decides from frame to frame and the head poses in the
+// gyroscope with its compass, the image decides from frame to frame and the head poses in the
 // long run: the correction is pulled back to the poses with a time constant of kPullS (at most
 // 3 deg/s, so pulling back never shows as a jump itself), so measuring errors can't add up into drift.
 //
@@ -44,7 +44,7 @@ public:
     // regular before the correction fades out (s).
     static constexpr double kPullS = 0.3, kFadeS = 0.3, kQuietS = 0.5;
 
-    PictureNeeds Needs() const override;
+    ImageNeeds Needs() const override;
     void Reset() override;
     int Arrived(
         const GameFrame& f,
@@ -76,7 +76,7 @@ public:
     }
 
     // The slot check's line, and "cockpit correction": the frames corrected, measured from their
-    // picture, and too plain or moving to measure, and the largest correction.
+    // image, and too plain or moving to measure, and the largest correction.
     void Report(StatsReport& r) override;
     // The slot check's description, then whether the frame was looked at and corrected, the slot it
     // was corrected against and the correction's size.
@@ -162,7 +162,7 @@ private:
     Decision decisions_[kDecisions];
     struct Stats {
         int frames = 0;        // frames whose pose was corrected at all (the correction faded in)
-        int measured = 0;      // ...of which measured from their own picture (the rest kept the last, fading)
+        int measured = 0;      // ...of which measured from their own image (the rest kept the last, fading)
         int unmeasured = 0;    // frames with patches the cockpit was too plain, moving or far off to measure
         float largestDeg = 0;  // the largest correction applied (degrees)
     } stats_;

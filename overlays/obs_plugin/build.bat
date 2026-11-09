@@ -4,11 +4,11 @@ rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds SimOptix: Overlays, simoptix_overlays.dll: plugin.cpp registers the G-meter
 rem (..\gmeter\gmeter_source.cpp: SimOptix: G-Meter Overlay, drawn by meter_chrono.cpp with
 rem meter_draw.cpp and meter_text.cpp; its text rasterised by ..\common\text_raster.cpp with
-rem DirectWrite, its picture layers by meter_image.cpp, embedded by gmeter.rc from its design folder).
+rem DirectWrite, its image layers by meter_image.cpp, embedded by gmeter.rc from its design folder).
 rem Telemetry is ..\..\shared\telemetry (the model, the one reader both plugins share and the games it
 rem reads), listed by its sources.bat, which also finds LMU's headers (without them the plugin builds
 rem without LMU and reads no game). The G-meter's demo lap is ..\..\shared\telemetry\demo_lap.cpp.
-rem Plus the rest of ..\..\shared (logging, the picture's delay the plugins share, the crash dump, the
+rem Plus the rest of ..\..\shared (logging, the view's delay the plugins share, the crash dump, the
 rem files kept in %%LOCALAPPDATA%%\simoptix).
 rem Its version comes from ..\..\shared\build\version.bat (VERSION at the repo's root, and git),
 rem and goes into the DLL's version resource (version.rc).

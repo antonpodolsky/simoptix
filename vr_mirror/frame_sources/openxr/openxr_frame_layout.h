@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Frame layout: a fixed-size summary of what the game hands the headset at the end of each frame
-// (which pictures, from which swapchain, which part of each), so the layer can log it once and again
+// (which images, from which swapchain, which part of each), so the layer can log it once and again
 // only when it changes. Also the description of a swapchain the game made.
 // Plain data and text formatting only: it reads the OpenXR structs the game passed and calls nothing.
 // It doesn't know about the loader, the log file or the layer's other calls.
@@ -25,12 +25,12 @@ struct SwapchainInfo {
     XrSwapchainUsageFlags usage = 0;
 };
 
-// One view of a projection layer (one eye), or a quad layer's picture.
+// One view of a projection layer (one eye), or a quad layer's image.
 struct LayoutView {
     uint64_t swapchain = 0;                       // the XrSwapchain's value
     int32_t x = 0, y = 0, width = 0, height = 0;  // the part of the image used, in pixels
     uint32_t arrayIndex = 0;                      // the slice of an array swapchain
-    bool hasDepth = false;  // a depth picture is attached (XR_KHR_composition_layer_depth)
+    bool hasDepth = false;  // a depth image is attached (XR_KHR_composition_layer_depth)
     XrFovf fov = {};        // radians, left and down negative; not compared, it may change per frame
 };
 

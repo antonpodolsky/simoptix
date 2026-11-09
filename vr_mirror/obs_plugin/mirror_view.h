@@ -10,7 +10,7 @@
 // for a frame at each of its ticks and gets the game frame for that tick's timestamp, warped to
 // the head pose of that moment: no race, smooth camera motion, and no extra window to capture.
 //
-// How: a copy thread on its own D3D11 device copies each new frame's picture into a ring of shared
+// How: a copy thread on its own D3D11 device copies each new frame's image into a ring of shared
 // textures as soon as it can (FrameRing, frame_ring.h), and marks a slot ready once the GPU has finished
 // the copy. OBS's render callback opens those textures on OBS's device and draws the warp in an OBS
 // effect (warp_effect.h). The same core (the frame source, the frame pipeline) as the mirror app,
@@ -66,7 +66,7 @@ private:
     void ApplySettingChanges(const PipelineConfig& config);
     void ApplyFixedDelay(FramePicker& picker);
     void OpenSlotTexture(const FrameRing::SlotInfo& slot);
-    void SetPictureNeed();
+    void SetImageNeed();
     void StartFootprint();
     void LogFootprint(double seconds);
     void LogStats(uint64_t tickNs);

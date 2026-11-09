@@ -96,9 +96,9 @@ void FrameRing::Stop() {
     }
 
     feed_.Reset();
-    feed_.Release();  // its pictures were made on this device, released below
+    feed_.Release();  // its images were made on this device, released below
     if (source_) {
-        source_->ReleasePictures();  // ...and the source's, opened on it
+        source_->ReleaseImages();  // ...and the source's, opened on it
     }
     loggedWidth_ = loggedHeight_ = 0;
     context_.Reset();
@@ -114,7 +114,7 @@ void FrameRing::Snapshot(SlotInfo out[kMaxSlots]) {
     std::copy(info_, info_ + kMaxSlots, out);
 }
 
-// Copies each new picture as soon as it exists and otherwise sleeps: it wakes for a new game
+// Copies each new image as soon as it exists and otherwise sleeps: it wakes for a new game
 // frame (FrameSource::FrameEvent), Stop, or, while copies or thumbnails are still on the GPU,
 // every millisecond.
 void FrameRing::Run() {
@@ -126,11 +126,11 @@ void FrameRing::Run() {
         wakeups_++;
         const double now = source_->Now();
 
-        // The source may re-create its pictures (Pimax when a VR app starts or stops, the OpenXR layer
+        // The source may re-create its images (Pimax when a VR app starts or stops, the OpenXR layer
         // for a new game session); pick up new handles.
         if (now - lastOpen > 2.0) {
             lastOpen = now;
-            source_->OpenPictures(device_.Get());
+            source_->OpenImages(device_.Get());
         }
 
         TakeNewDrawnPose();
@@ -139,7 +139,7 @@ void FrameRing::Run() {
         while (source_->NextFrame(lastSerial, &f)) {
             lastSerial = f.serial;
 
-            // Also the pictures the drawn pose looks at (a thumbnail, to tell if the game has
+            // Also the images the drawn pose looks at (a thumbnail, to tell if the game has
             // frames queued).
             const int slot = Copy(f);
             const float whole[4] = {0, 0, 1, 1};
@@ -160,7 +160,7 @@ void FrameRing::Run() {
             context_->Flush();  // one submission for this pass's copies (and thumbnails)
         }
         const bool copying = CheckCopies();
-        source_->PollPictures(context_.Get());
+        source_->PollImages(context_.Get());
         Look();
 
         HANDLE wait[2];
@@ -175,9 +175,9 @@ void FrameRing::Run() {
     timeEndPeriod(1);
 }
 
-// Queues one copy of frame `f`'s picture into the next slot (the slot's shared texture is made or
+// Queues one copy of frame `f`'s image into the next slot (the slot's shared texture is made or
 // re-made to fit it: UNORM, so OBS reads the stored bytes unchanged and the warp decodes what the
-// picture's encoding asks for); CheckCopies hands it to OBS once the GPU has done it. Returns the
+// image's encoding asks for); CheckCopies hands it to OBS once the GPU has done it. Returns the
 // slot, or -1.
 int FrameRing::Copy(const GameFrame& f) {
     const int want = wantSlots_;
@@ -206,7 +206,7 @@ int FrameRing::Copy(const GameFrame& f) {
         info_[slot].valid = false;  // being rewritten
     }
 
-    if (!source_->CopyPicture(device_.Get(), context_.Get(), f, &slots_[slot], true)) {
+    if (!source_->CopyImage(device_.Get(), context_.Get(), f, &slots_[slot], true)) {
         return -1;
     }
     next_ = (next_ + 1) % slotCount_;
@@ -236,7 +236,7 @@ int FrameRing::Copy(const GameFrame& f) {
     return slot;
 }
 
-// Hands the finished pictures to the drawn pose. With Instant a frame is drawn ~4 ms after arrival
+// Hands the finished images to the drawn pose. With Instant a frame is drawn ~4 ms after arrival
 // (its own thumbnail and patches are ready ~1 ms after its copy), with Look-ahead about half a
 // second later, by when the frames after it have been looked at too. Copy thread.
 void FrameRing::Look() {

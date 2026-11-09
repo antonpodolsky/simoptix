@@ -11,9 +11,9 @@
 //  - Display: 90 Hz. Each frame begins one frame before the vsync it ends at, is drawn for the slot after
 //    that (two vsyncs ahead, as OpenXR's xrWaitFrame predicts) with the head pose predicted for it at its
 //    beginning, and ends near its vsync with ~0.5 ms of timing noise (`arrival_jitter_ms`).
-//  - Picture: the left eye, 5084x4168 in R8G8B8A8_UNORM_SRGB, LMU's field of view on the Dream Air through
+//  - Image: the left eye, 5084x4168 in R8G8B8A8_UNORM_SRGB, LMU's field of view on the Dream Air through
 //    Pimax's OpenXR runtime (52.6 deg out, 47.6 in, 44.6 up and down); the direction codes or the cockpit
-//    (fake_game_picture.h), encoded once as a game draws it.
+//    (fake_game_image.h), encoded once as a game draws it.
 //  - Poses: both eyes, each turned 1 deg outward from the head and 32 mm to its side; the head halfway.
 //  - Clock: XrTime is the performance counter in nanoseconds plus 123.456789 s, so the tool must use the
 //    clock reading.
@@ -53,8 +53,8 @@
 #include <thread>
 
 #include "common/rot.h"
+#include "fake_game_image.h"
 #include "fake_game_motion.h"
-#include "fake_game_picture.h"
 #include "fake_openxr_layer.h"
 #include "shared/unique_handle.h"
 
@@ -229,7 +229,7 @@ namespace {
                 const Quat& c = kEyeCant[0];
                 const openxr_share::Fov& fov = kLeftFov;
 
-                // the picture is the left eye; its field of view as tangents, as the OpenXR source reads it
+                // the image is the left eye; its field of view as tangents, as the OpenXR source reads it
                 fprintf(log_, "eyecant,%.7f,%.7f,%.7f,%.7f\n", c.x, c.y, c.z, c.w);
                 fprintf(
                     log_,
@@ -351,17 +351,17 @@ namespace {
                 multithread->SetMultithreadProtected(TRUE);
             }
 
-            return picture_.Init(device_.Get(), false);
+            return image_.Init(device_.Get(), false);
         }
 
         void Draw(ID3D11RenderTargetView* target, const Quat& head, double sceneTime) {
-            FakeGamePicture::Look look;
+            FakeGameImage::Look look;
             look.leftTan = std::tan(-kLeftFov.left), look.rightTan = std::tan(kLeftFov.right);
             look.upTan = std::tan(kLeftFov.up), look.downTan = std::tan(-kLeftFov.down);
             look.drawnFov = float(config_.drawnFov);
             look.cockpit = config_.cockpit;
             look.encodedTwice = false;  // as the game draws it: the layer copies it so
-            picture_.Draw(
+            image_.Draw(
                 context_.Get(),
                 target,
                 config_.width,
@@ -607,7 +607,7 @@ namespace {
         std::atomic<bool> running_{true};
         ComPtr<ID3D11Device> device_;
         ComPtr<ID3D11DeviceContext> context_;
-        FakeGamePicture picture_;
+        FakeGameImage image_;
         FakeOpenXrLayer layer_;
 
         // Frames between the render thread and the thread ending them (render_thread).

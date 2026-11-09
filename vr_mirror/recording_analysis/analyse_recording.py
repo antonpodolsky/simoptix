@@ -18,7 +18,7 @@ was found) and summary.txt (the headline numbers). Steps whose output is already
 (--redo runs all again). The trace's parsed copy is cached in trace_common.CACHE.
 
 Knows nothing about the measures themselves: it finds the files, runs the steps and collects their
-numbers. Steps in px of the 1920x1080 picture.
+numbers. Steps in px of the 1920x1080 video.
 """
 
 import argparse
@@ -45,7 +45,7 @@ from trace_common import CACHE, FFMPEG, HERE, DecodeStamp, VideoTime
 DATA = os.environ.get("SIMOPTIX_DATA")  # where analyses go by default (else beside the recording)
 GRID_SHIFT = os.path.join(HERE, "grid_shift.exe")
 W, H = 960, 540  # the grid's frame size (shake.py's grid)
-STAMP_W, STAMP_H = 256, 16  # the stamp strip, top-left of the full-size picture
+STAMP_W, STAMP_H = 256, 16  # the stamp strip, top-left of the full-size image
 
 
 def Say(text):
@@ -211,9 +211,7 @@ def main():
         summary.append(
             "lineup: "
             + next(
-                l.strip()
-                for l in lineup_text.splitlines()
-                if "chosen by the pictures" in l or "NOT SURE" in l
+                l.strip() for l in lineup_text.splitlines() if "chosen by the images" in l or "NOT SURE" in l
             )
         )
 

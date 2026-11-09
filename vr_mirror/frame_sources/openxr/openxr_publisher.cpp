@@ -20,7 +20,7 @@ namespace {
         return c.QuadPart;
     }
 
-    // The format family of a game's picture, as a shared texture can hold it: typeless, so the reader can
+    // The format family of a game's image, as a shared texture can hold it: typeless, so the reader can
     // view it as the game's colour format (an _SRGB view decodes what an _SRGB swapchain holds).
     DXGI_FORMAT Typeless(DXGI_FORMAT f) {
         switch (f) {
@@ -142,7 +142,7 @@ bool OpenXrPublisher::OpenSharedMemory(bool* existed) {
         static_cast<openxr_share::Header*>(MapViewOfFile(mapping_.Get(), FILE_MAP_ALL_ACCESS, 0, 0, 0))
     );
 
-    event_.Reset(CreateEventW(nullptr, FALSE, FALSE, openxr_share::kNewPictureEvent));
+    event_.Reset(CreateEventW(nullptr, FALSE, FALSE, openxr_share::kNewImageEvent));
     reader_.Reset(CreateEventW(nullptr, FALSE, FALSE, openxr_share::kReaderEvent));
     stop_.Reset(CreateEventW(nullptr, TRUE, FALSE, nullptr));
 
@@ -266,7 +266,7 @@ void OpenXrPublisher::Run() {
         if (state_ == kReady
             && (w != textures_.width || h != textures_.height
                 || Typed(DXGI_FORMAT(f)) != Typed(DXGI_FORMAT(textures_.format)))) {
-            state_ = kRetiring;  // the game's picture changed size: made again once let go
+            state_ = kRetiring;  // the game's image changed size: made again once let go
         }
 
         if (!multithreaded_) {
@@ -469,7 +469,7 @@ void OpenXrPublisher::Publish(
 
     if (!loggedCopying_) {
         CoreLog(
-            "frame source: copying the left eye's picture, %ux%u from %d,%d of format %u",
+            "frame source: copying the left eye's image, %ux%u from %d,%d of format %u",
             w,
             ht,
             int(box.left),
@@ -517,7 +517,7 @@ void OpenXrPublisher::NoteSource(
     const bool changed = width != wantedWidth_ || height != wantedHeight_ || sd.Format != wantedFormat_;
     wantedWidth_ = width, wantedHeight_ = height, wantedFormat_ = sd.Format, gameFormat_ = gameFormat;
 
-    // The picture's size is known now (the first frame, or a new size): the publisher's thread makes
+    // The image's size is known now (the first frame, or a new size): the publisher's thread makes
     // the textures at once for a reader that is there, not at its next tick.
     if (changed && reader) {
         SetEvent(reader_.Get());

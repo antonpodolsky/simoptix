@@ -19,6 +19,6 @@ WarpParams RotationWarp::Params(const Quat& shown, const Quat& view, const ViewG
     p.srcTan[2] = g.up;
     p.srcTan[3] = g.down;
     p.rect[2] = p.rect[3] = 1;                    // the eye fills the texture: u0, v0 = 0, u1, v1 = 1
-    p.options[0] = g.encodedTwice ? 1.0f : 0.0f;  // a picture encoded twice: decode once
+    p.options[0] = g.encodedTwice ? 1.0f : 0.0f;  // an image encoded twice: decode once
     return p;
 }

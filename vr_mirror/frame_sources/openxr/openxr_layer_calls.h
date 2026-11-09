@@ -5,7 +5,7 @@
 // on each change), with the game's frame rate and the frame source's numbers every 10 s. Every call
 // first goes on unchanged to the next layer or the runtime; the layer then only reads what the game
 // passed and the runtime returned, and hands it to the frame source (openxr_layer_frames.h), which copies the
-// left eye's picture for VR Mirror without ever making the game wait.
+// left eye's image for VR Mirror without ever making the game wait.
 // It doesn't know how the layer was loaded, or whether this game is the one to look at
 // (openxr_layer_entry.cpp decides that).
 #pragma once

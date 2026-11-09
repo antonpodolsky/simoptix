@@ -3,11 +3,11 @@
 // The check program's reader: what VR Mirror would see of the layer, checked against what the check
 // program submitted. On a D3D11 device of its own (as a reader in another process has), it signs as a
 // reader, reads every frame record the layer publishes and every finished copy of the left eye's
-// picture, and compares them with the frames it was told about: the display time and poses exactly, and
-// the picture by the frame number the check program cleared it to (CheckColour). It also compares the
+// image, and compares them with the frames it was told about: the display time and poses exactly, and
+// the image by the frame number the check program cleared it to (CheckColour). It also compares the
 // layer's clock reading with the runtime's own conversion.
 //
-// It waits on the GPU when it reads a picture back: it is the check program, not the game.
+// It waits on the GPU when it reads an image back: it is the check program, not the game.
 // It doesn't know how the check program drives OpenXR.
 #pragma once
 
@@ -28,9 +28,9 @@ void CheckColour(int index, float rgba[4]);
 
 class OpenXrCheckCopies {
 public:
-    // A device of its own on the headset's adapter. `pictures`: the left eye's swapchain holds
-    // R8G8B8A8 (sRGB or not, `srgb`), so pictures can be read back and compared.
-    bool Start(LUID adapter, bool pictures, bool srgb);
+    // A device of its own on the headset's adapter. `images`: the left eye's swapchain holds
+    // R8G8B8A8 (sRGB or not, `srgb`), so images can be read back and compared.
+    bool Start(LUID adapter, bool images, bool srgb);
     // The runtime's own conversion, to compare the layer's clock reading with (nullptr: not compared).
     void SetClock(XrInstance instance, PFN_XrCounterToTime counterToTime) {
         instance_ = instance;
@@ -63,13 +63,13 @@ private:
     void OpenTextures();
     void ReadRecords();
     void ReadWaiting();
-    void ReadPicture(const Waiting& w);
+    void ReadImage(const Waiting& w);
 
     Microsoft::WRL::ComPtr<ID3D11Device> device_;
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> textures_[openxr_share::kTextures], staging_;
     uint32_t generation_ = 0;
-    bool pictures_ = false, srgb_ = false;
+    bool images_ = false, srgb_ = false;
     UniqueHandle mapping_;
     MappedView<openxr_share::Header> header_;
     XrInstance instance_ = XR_NULL_HANDLE;
@@ -78,9 +78,9 @@ private:
     std::vector<Waiting> waiting_;
     uint64_t nextFrame_ = 1;
 
-    int records_ = 0, recordsWrong_ = 0, recordsLost_ = 0, withPicture_ = 0;
-    int picturesRight_ = 0, picturesWrong_ = 0, picturesMissed_ = 0;
+    int records_ = 0, recordsWrong_ = 0, recordsLost_ = 0, withImage_ = 0;
+    int imagesRight_ = 0, imagesWrong_ = 0, imagesMissed_ = 0;
     int clockReadings_ = 0;
     int64_t clockWorstNs_ = 0;
-    uint64_t firstCopied_ = 0;  // the first frame with a picture
+    uint64_t firstCopied_ = 0;  // the first frame with an image
 };
