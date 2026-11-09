@@ -23,6 +23,55 @@ namespace {
         return byte(a) << 24 | byte(b) << 16 | byte(g) << 8 | byte(r);
     }
 
+    // An arc's centre and the radii of its edges: the inner soft edge from rad[0] to rad[1], the core to
+    // rad[2], the outer soft edge to rad[3].
+    struct ArcBand {
+        float cx, cy;
+        float rad[4];
+    };
+
+    // A point along an arc: its angle (radians, clockwise from up) and the arc's alpha there.
+    struct ArcStop {
+        float t, alpha;
+    };
+
+    // The stretch of `band` from one stop to the next, with alpha going linearly between theirs.
+    void AddArcStretch(std::vector<float>& v, const ArcBand& band, ArcStop from, ArcStop to) {
+        constexpr float kAcross[4] = {0, 1, 1, 0};
+        const float span = to.t - from.t;
+
+        // A segment every 4 px along the outer edge.
+        const int n = std::max(1, static_cast<int>(std::fabs(span) * band.rad[3] / 4));
+
+        for (int i = 0; i < n; i++) {
+            const float f0 = static_cast<float>(i) / n, f1 = static_cast<float>(i + 1) / n;
+            const float t0 = from.t + span * f0, t1 = from.t + span * f1;
+            const float along0 = from.alpha + (to.alpha - from.alpha) * f0;
+            const float along1 = from.alpha + (to.alpha - from.alpha) * f1;
+
+            // Clockwise from up on screen (y down): angle t is at (sin t, -cos t).
+            const float s0 = std::sin(t0), c0 = std::cos(t0), s1 = std::sin(t1), c1 = std::cos(t1);
+            for (int b = 0; b < 3; b++) {
+                const float ri = band.rad[b], ro = band.rad[b + 1];
+                AddQuadA(
+                    v,
+                    band.cx + ri * s0,
+                    band.cy - ri * c0,
+                    kAcross[b] * along0,
+                    band.cx + ro * s0,
+                    band.cy - ro * c0,
+                    kAcross[b + 1] * along0,
+                    band.cx + ro * s1,
+                    band.cy - ro * c1,
+                    kAcross[b + 1] * along1,
+                    band.cx + ri * s1,
+                    band.cy - ri * c1,
+                    kAcross[b] * along1
+                );
+            }
+        }
+    }
+
 }
 
 void AddTri(
@@ -104,71 +153,18 @@ void AddTaper(std::vector<float>& v, float x0, float y0, float h0, float x1, flo
 
 void AddArc(std::vector<float>& v, float cx, float cy, float r, float w, float a0, float a1) {
     const float t0 = a0 * kPi / 180, t1 = a1 * kPi / 180, span = t1 - t0;
-    const float h = w * 0.5f;
-    const int n = std::max(2, int(std::fabs(span) * r / 4));  // a segment every 4 px
-    const float rad[4] = {r - h - kFeather, r - h, r + h, r + h + kFeather};
-    const float alpha[4] = {0, 1, 1, 0};
+    const float half = w * 0.5f, soft = kFeather * 0.5f;
+    const float core = std::max(0.0f, half - soft), edge = half + soft;
+    const ArcBand band = {cx, cy, {std::max(0.0f, r - edge), r - core, r + core, r + edge}};
 
-    // Clockwise from up on screen (y down): angle t is at (sin t, -cos t).
-    for (int i = 0; i < n; i++) {
-        const float ta = t0 + span * i / n, tb = t0 + span * (i + 1) / n;
-        const float sa = std::sin(ta), ca = std::cos(ta), sb = std::sin(tb), cb = std::cos(tb);
-        for (int b = 0; b < 3; b++) {
-            const float ra = std::max(0.0f, rad[b]), rb = rad[b + 1];
-            AddQuadA(
-                v,
-                cx + ra * sa,
-                cy - ra * ca,
-                alpha[b],
-                cx + rb * sa,
-                cy - rb * ca,
-                alpha[b + 1],
-                cx + rb * sb,
-                cy - rb * cb,
-                alpha[b + 1],
-                cx + ra * sb,
-                cy - ra * cb,
-                alpha[b]
-            );
-        }
-    }
-
-    // Round ends: a half disc beyond each end, its flat side on the band's end.
+    // The ends' soft edges, as angles: centred on the ends, meeting in the middle of an arc shorter than
+    // them.
     const float dir = span >= 0 ? 1.0f : -1.0f;
-    for (int end = 0; end < 2; end++) {
-        const float t = end ? t1 : t0, out = end ? dir : -dir;
-        const float px = cx + r * std::sin(t), py = cy - r * std::cos(t);
-        const float ux = std::sin(t), uy = -std::cos(t);  // outward from the centre
+    const float endSoft = dir * std::min(soft / r, std::fabs(span) * 0.5f);
+    const ArcStop stops[4] = {{t0 - endSoft, 0}, {t0 + endSoft, 1}, {t1 - endSoft, 1}, {t1 + endSoft, 0}};
 
-        // along the circle, away from the band
-        const float tx = out * std::cos(t), ty = out * std::sin(t);
-        const int m = std::max(6, Segments(h, 8, 32) / 2);
-        const float core = std::max(0.0f, h - kFeather * 0.5f), edge = h + kFeather * 0.5f;
-        for (int i = 0; i < m; i++) {
-            const float p0 = kPi * (float(i) / m - 0.5f), p1 = kPi * (float(i + 1) / m - 0.5f);
-            const float d0x = tx * std::cos(p0) + ux * std::sin(p0),
-                        d0y = ty * std::cos(p0) + uy * std::sin(p0);
-
-            const float d1x = tx * std::cos(p1) + ux * std::sin(p1),
-                        d1y = ty * std::cos(p1) + uy * std::sin(p1);
-
-            AddTri(v, px, py, 1, px + core * d0x, py + core * d0y, 1, px + core * d1x, py + core * d1y, 1);
-            AddQuadA(
-                v,
-                px + core * d0x,
-                py + core * d0y,
-                1,
-                px + edge * d0x,
-                py + edge * d0y,
-                0,
-                px + edge * d1x,
-                py + edge * d1y,
-                0,
-                px + core * d1x,
-                py + core * d1y,
-                1
-            );
-        }
+    for (int i = 0; i < 3; i++) {
+        AddArcStretch(v, band, stops[i], stops[i + 1]);
     }
 }
 

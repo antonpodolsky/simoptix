@@ -513,9 +513,9 @@ the size, place and colour of every live part.
     comment saying what it corrects and what was measured, and in
     `overlays\gmeter\design\README.md`.
   - Move in small steps. When one step looks off one way and the next off the other, split the
-    difference (the live G and ABS both landed halfway).
-  - Examples: the live G sits 0.5 design px above its window's box (the inner shadow) and 0.8 right of
-    it. ABS sits 16.9 design px from its groove and TC 19.3, though they measure differently.
+    difference (the live G landed halfway).
+  - Example: the live G sits 0.5 design px above its window's box (the inner shadow) and 0.8 right of
+    it.
 - **Smoothness and timing:** use the plugin's 10 s stats in the OBS log, or frame-by-frame analysis of a
   recording.
   - **A whole recording:** `python -I vr_mirror\recording_analysis\analyse_recording.py
