@@ -1,0 +1,8 @@
+// Copyright (C) 2026 Anton Podolsky
+// SPDX-License-Identifier: GPL-2.0-or-later
+// The version resource of simoptix_vr_mirror.dll (shared\build\version_info.rc).
+
+#define SIMOPTIX_FILE_NAME "simoptix_vr_mirror.dll"
+#define SIMOPTIX_FILE_DESCRIPTION "SimOptix: VR Mirror"
+
+#include "shared/build/version_info.rc"

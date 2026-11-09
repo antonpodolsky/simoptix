@@ -157,3 +157,27 @@ added to it. "Idle" is the first build with the idle back-off.
 - **Off** (`drawn_pose` 0) made more visible jumps in e2e's dust-cloud replay, not fewer: 5.0–5.6%
   of frames against 0.8–1.8% (`findings\e2e.md`, "Tried and dropped: poses from the arrival timing
   alone"). It is kept for comparing in a recording.
+
+## OBS's plugin manifest
+
+What OBS does with the plugin's `manifest.json`. All of it holds for Overlays' manifest too.
+
+- **OBS 32.2.2 reads it** from the plugin's data folder when it loads the plugin, and writes no log
+  line about it (`obs_module_load_metadata` in
+  [libobs/obs-module.c](https://github.com/obsproject/obs-studio/blob/32.2.2/libobs/obs-module.c)).
+  Checked on 2026-11-09 with the local files test's private OBS, its `OBS_PLUGINS_DATA_PATH` naming a
+  folder with both manifests. The Plugin Manager's record (`modules.json` in the `plugin_manager`
+  folder of OBS's config) then held each plugin's `id` (`simoptix_vr_mirror`, `simoptix_overlays`) and
+  `version` (`0.1.0+14.g31637d5`). Without the manifests both were empty.
+- **The Plugin Manager's dialog (Tools → Plugin Manager) shows only `display_name`.** Without a
+  manifest it shows the plugin's `obs_module_name`, or else the DLL's name without its extension. It
+  shows no version. This is from OBS 32.2.2's source
+  ([PluginManagerWindow.cpp](https://github.com/obsproject/obs-studio/blob/32.2.2/frontend/plugin-manager/PluginManagerWindow.cpp)),
+  not looked at on screen.
+- **A manifest without `display_name` shows an empty name.** OBS reads every key as a string without
+  checking that it is there.
+- **OBS 32.2.2 keeps the other keys but doesn't use them:** `name`, `description`,
+  `long_description`, `os_arch` and `urls`. OBS documents none of the keys, so `os_arch` holds
+  `windows-x64` as a guess.
+- **Enabling and disabling** in the Plugin Manager is remembered by the DLL's name without its
+  extension, not by `id`.

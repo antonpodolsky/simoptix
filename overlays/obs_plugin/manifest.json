@@ -1,0 +1,14 @@
+{
+    "display_name": "SimOptix: Overlays",
+    "id": "simoptix_overlays",
+    "name": "simoptix_overlays",
+    "version": "@SIMOPTIX_VERSION@",
+    "description": "A G-meter overlay that reads Le Mans Ultimate's telemetry.",
+    "long_description": "SimOptix: Overlays adds the SimOptix: G-Meter Overlay source. It shows the car's G-forces from LMU's telemetry, in step with SimOptix: VR Mirror's view. It also works over a normal capture of a flat-screen game, and plays a demo lap without the game.",
+    "os_arch": "windows-x64",
+    "urls": {
+        "repository": "https://github.com/antonpodolsky/simoptix",
+        "website": "https://github.com/antonpodolsky/simoptix",
+        "support": "https://github.com/antonpodolsky/simoptix/issues"
+    }
+}
