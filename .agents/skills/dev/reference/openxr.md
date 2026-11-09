@@ -53,9 +53,10 @@ skill whose description says it signs the OpenXR layer.
 
 1. **Look for such a user skill** among the skills your agent offers. If there is one, follow it. It
    says how to reach the certificate, how to sign and how to install.
-2. **If there is none,** tell the user that the layer is unsigned and that Easy Anti-Cheat will keep
-   it out of LMU. Install it only for LMU started without Easy Anti-Cheat ("Starting LMU without Easy
-   Anti-Cheat", below), or ask the user how they sign.
+2. **If there is none,** tell the user that the layer is unsigned. Started the usual way, LMU's Easy
+   Anti-Cheat refuses it and disables online play. An unsigned layer works only in LMU started
+   without Easy Anti-Cheat ("Starting LMU without Easy Anti-Cheat", below), which is offline. So
+   install it only if the user starts LMU that way, or ask them how they sign.
 
 A signature that gets past Easy Anti-Cheat, whatever skill makes it:
 - covers `bin\XR_APILAYER_SIMOPTIX_frame_source.dll`, after `build.bat` and before `install.ps1`
