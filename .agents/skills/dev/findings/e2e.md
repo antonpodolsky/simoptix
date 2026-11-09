@@ -10,9 +10,9 @@ Reading notes:
 - **`lag_sim`** is the old name of `stage_replay --stage drawn_pose`.
 - Lower is better in every measure unless a row says otherwise.
 
-## One prediction per slot (the fake runtime, 2026-10-30)
+## One prediction per slot (the fake runtime)
 
-**What was wrong.** Until 2026-10-30 the fake runtime extrapolated a slot's predicted pose afresh each
+**What was wrong.** Before this change the fake runtime extrapolated a slot's predicted pose afresh each
 time it was asked.
 - The fake game asked when the slot was announced, and drew with that pose.
 - The mirror app's poll thread asked a moment later, and recorded a different pose.
@@ -30,7 +30,7 @@ of `black_borders_low_zoom`):
 | Scenario | Measure | Before | After |
 |---|---|---|---|
 | black_borders_low_zoom | jitter ratio smoothed/head, Instant / Smooth / Smoothest | 2.9–4.9 / 0.90–1.12 / 0.42–0.48 | 2.0–4.0 / 0.92 / 0.39 (all three runs alike) |
-| black_borders | jitter ratio, Instant | 1.78 | 3.53 (within Instant's spread, 2.0–5.2 on 2026-10-26) |
+| black_borders | jitter ratio, Instant | 1.78 | 3.53 (within Instant's spread, 2.0–5.2 in the baseline's runs) |
 | stabilization, dropped_frames | image/pose mismatch | 0.48–0.54° | 0.53–0.59° |
 | replays | frames from the wrong pose | | within one frame of before |
 | game_starts_late, Smoothest | game frames missed | 0% | 0.23% (one run, 3 frames skipped once, passes, not looked into) |
@@ -42,13 +42,13 @@ of `black_borders_low_zoom`):
   made 23 ms ahead rather than the mirror app's later, closer one. It is an informational measure
   (limit 1.5°).
 
-## Drawing on ticks (2026-10-30)
+## Drawing on ticks
 
 An earlier attempt at one pipeline for both hosts (branch `os6-frame-pipeline`, not merged) made the
 window draw on fixed ticks like the OBS plugin, and changed three more things at once. Two results got
 worse: `black_borders_low_zoom`'s jitter at Smooth and Smoothest, and 0.2–1.0% of game frames missed.
 Its pieces were made separate options and measured one at a time, each variant as a full run plus two
-more runs of `black_borders_low_zoom`. The options were removed on 2026-11-07
+more runs of `black_borders_low_zoom`. The options have since been removed
 (`findings\pipeline.md`, "Removed: the measured drawn pose and the slot-timeline frame picker").
 
 | Run | How the window draws | Frame picker | Edges |
@@ -146,11 +146,11 @@ Before the fake's fix the same pattern held, less steadily:
 - Edges against the shown image were not ready. Before measuring them again, the 3-frame jump when the
   copy delay is fixed should go (or the edges' lead should follow the slot timeline's eased shift
   instead of its own average), and the planning should not chase the predictions' overshoot. This was
-  done on 2026-11-01 (next section).
+  done next (next section).
 
-## The edges in the smoothing (2026-11-01)
+## The edges in the smoothing
 
-**What changed.** Since 2026-11-01 nothing after the smoothing changes the view. Each smoothing keeps
+**What changed.** Since this change nothing after the smoothing changes the view. Each smoothing keeps
 it inside the image that is shown with it (`vr_mirror\core\pipeline\picture_room\README.md`).
 - On ticks that is the game image standing in for the tick's moment. With the fixed delay it is drawn
   about 16–22 ms after that moment, and sometimes it is the previous one again.
@@ -203,7 +203,7 @@ With the fixed delay the shown image runs about 22 ms ahead of the tick's moment
 that to 0, offline.
 
 **Tried and dropped** (the same offline runs, zoom 1.2, fixed delay):
-- **The lead found by comparing poses, averaged over about 1 s** (`ShownPictureEdges`, 2026-10-31).
+- **The lead found by comparing poses, averaged over about 1 s** (`ShownPictureEdges`).
   Stops at Smooth / Smoothest: 8.4 / 8.8%, all in the first 1.3 s while the average caught up (the
   plan's image up to 3.1° from the one shown). In e2e 3.0 / 2.5% (a fail), in the fast shake.
 - **The same, reset to the median of the last 9 ticks when they differ by a quarter period.** Stops
@@ -217,7 +217,7 @@ that to 0, offline.
 - **Instant catching up against the followed image instead of the shown one.** The same within 0.02
   of jitter and 0.2 points of stops (e2e).
 
-## Edges planned for with the look-ahead (2026-10-27)
+## Edges planned for with the look-ahead
 
 **How.** With Smooth and Smoothest, the look-ahead window shows, for each moment up to a second ahead,
 the smooth view and the pose the moment's image will be warped from.
@@ -226,7 +226,7 @@ the smooth view and the pose the moment's image will be warped from.
 - The path is solved again, up to three times. The jerk penalty eases the path out to the margin and
   back, ahead of time.
 - The code is in `vr_mirror\core\pipeline\4_smoothing\lookahead_smoothing.cpp`, against the picture
-  room. Until 2026-10-31 it was in the edges.
+  room. In older builds it was in the edges.
 
 **`black_borders`' motion at Smoothest, by zoom** (jitter as a share of the head's, and the frames where
 the last-resort limit acted):
@@ -260,7 +260,7 @@ the last-resort limit acted):
   Instant's. So about 1.2 is as low as the look-ahead goes well.
 - **Not covered:** whether an eased-in correction looks right in a recording.
 
-## Smoothing compared with Instant: what it found (2026-10-26)
+## Smoothing compared with Instant: what it found
 
 - **Fixed: with Smooth and Smoothest, a frame judged late made the view jump back.**
   - The view was computed for the slot the frame matching moved a late frame to (the one it was drawn
@@ -416,7 +416,7 @@ Jitter in a slow corner at 18:31 of race D (`replay_false_retiming_featureless_c
     gradient and the HUD panels) still lined up cleanly, and the matcher stayed right (0 of 94 judged
     frames re-timed). So the replay passes on every build.
 
-### Why the dust replay fails (2026-10-27)
+### Why the dust replay fails
 
 `replay_queued_late_frames` has LMU two frames behind for 68 frames, then one behind for 33, then on
 time again. The true lags, fitted to the recording: −2 from frame 630873, −1 from 630941, 0 from
@@ -458,9 +458,9 @@ Smooth and Smoothest to 0.1–0.2%.
 - The same recording also wobbles at 18:34.5 without any late frames. That isn't explained by pose
   timing, and is still open.
 
-### Tried and dropped: poses from the arrival timing alone (2026-10-31)
+### Tried and dropped: poses from the arrival timing alone
 
-**The idea.** The shake study of two later races (the data folder's `2026-10 shake in recordings`)
+**The idea.** The shake study of two later races (the data folder's shake in recordings)
 found the frame matching re-timing frames all race long while the game ran under 90 fps: 278 visible
 jumps a minute, against 11 at 90 fps. Without the matching, a frame the game drew late would be warped
 from a steady wrong pose, which isn't seen, instead of flipping between slots.
@@ -475,20 +475,20 @@ pose jumps):
 | false_retiming_head_turns, short_hiccup | 0% | 0% |
 
 **Why it fails.** In the dust queue the offset stays at the true two slots for every frame. Yet the
-error changes by 0.1–0.6° from frame to frame (`jumps.py` in the data folder's `2026-10 shake in
-recordings`, on `out\replay_queued_late_frames`). It is the head's motion over two slots, and the real
+error changes by 0.1–0.6° from frame to frame (`jumps.py` in the data folder's shake in
+recordings, on `out\replay_queued_late_frames`). It is the head's motion over two slots, and the real
 head and the runtime's per-slot predictions vary that much within tens of milliseconds. A wrong slot is
 never a steady error. So the default stays on. The setting is kept for comparing in a real recording,
 where the game runs under 90 fps for a whole race, which no replay covers.
 
-## The cockpit correction (2026-10-31)
+## The cockpit correction
 
 The setting `drawn_pose` 2: the slot check, plus a correction of each frame's pose measured from
 its fixed cockpit while frames arrive irregularly (`vr_mirror\core\pipeline\2_drawn_pose\README.md`,
 "The cockpit correction").
 
 **Measured** in `queued_cockpit`, against the slot check alone in `queued_cockpit_slot_check`. Two runs
-each at 320×180 on 2026-10-31, the second within the full suite: all 36 runs and 12 comparisons
+each at 320×180, the second within the full suite: all 36 runs and 12 comparisons
 passed, and the replays were within their earlier ranges. Instant / Smooth / Smoothest:
 
 | Measure | Slot check alone (today's default) | With the cockpit correction |
@@ -501,7 +501,7 @@ passed, and the replays were within their earlier ranges. Instant / Smooth / Smo
 | recorded view jitter | 0.243 / 0.216 / 0.215° | 0.228 / 0.211 / 0.217° |
 | game frames missed | 0% | 0% |
 
-- **The drift measure.** Until 2026-10-31 e2e graded the correction's own mean ("correction drift",
+- **The drift measure.** In older builds e2e graded the correction's own mean ("correction drift",
   0.08–0.10° in `queued_cockpit` then). The pose error's mean replaced it as "pose drift". It read
   0.29–0.31° in the same runs, and 0.19° with the slot check alone.
 - **What is left:**
@@ -529,7 +529,7 @@ passed, and the replays were within their earlier ranges. Instant / Smooth / Smo
 
 ## Real thumbnails in replays
 
-### Replaced: imitating real images in the fake (2026-10-24)
+### Replaced: imitating real images in the fake
 
 - Before replays brought the real thumbnails, the fake drew things real images have:
   - a swaying "scenery" band
@@ -545,7 +545,7 @@ passed, and the replays were within their earlier ranges. Instant / Smooth / Smo
 - With the texture, texture everywhere made the view reading noisy (worst frame 0.11° → 0.19°), and a
   weak texture no longer misled the old matching (2.0% against 9.1%).
 
-### Open (2026-10-25): with real thumbnails, two replays fail on the current build
+### Open: with real thumbnails, two replays fail on the build of the time
 
 Checked offline with `vr_mirror\recording_analysis\replica.py` on the source recordings, under the real
 session's timing from the trace.
@@ -586,7 +586,7 @@ session's timing from the trace.
 
 ## The test harness
 
-- **Changed (2026-10-25): a small window, a sharper border check, and the stall rule.**
+- **Changed: a small window, a sharper border check, and the stall rule.**
   - The mirror app runs at 320×180 in the tests (`reference\e2e_results.md`, "Window size").
   - Edge and corner patches are judged by their outermost line, not by 8% of the patch. That catches
     1.6 px of black instead of 3.2–4.8 px.
@@ -595,7 +595,7 @@ session's timing from the trace.
   - The stall rule counted the `black_borders` shake's three turnarounds as stalls: the view slows to
     about 25°/s as it reverses with the head, within a frame. It counts only a catch-up in the same
     direction since.
-- **Dropped (2026-10-24): synthetic edge cases.** Dropped frames, timing noise, fast and slow looks, a
+- **Dropped: synthetic edge cases.** Dropped frames, timing noise, fast and slow looks, a
   hand-held headset, and stabilization off (the chain's accuracy) were synthetic tests. Edge cases are
   replays of real footage since, and the synthetic tests became the ones listed in
   `vr_mirror\e2e\README.md`.

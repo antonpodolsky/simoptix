@@ -19,7 +19,7 @@ For each scenario, the e2e runner:
    `SIMOPTIX_VR_MIRROR_SERVER_EXE` (the fake's process name)
 
 The pipeline's observer writes the trace in the OBS plugin's columns
-(`vr_mirror\core\pipeline\observer\README.md`), and the runner reads them by name. Until 2026-10-31 the
+(`vr_mirror\core\pipeline\observer\README.md`), and the runner reads them by name. In older builds the
 mirror app had columns of its own, with the frame's lag (`warped_slot`, `decided_lag`) and the cockpit
 correction (`corr_*`).
 

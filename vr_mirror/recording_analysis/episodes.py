@@ -43,8 +43,8 @@ def main():
 
     print(f"trace {log['trace']}, recording {VideoTime(rec_stop - rec_start)} long")
     for t, text in log["lines"]:
-        # "game behind: X frames rendered for an earlier slot ..., Y frames judged by picture" (before
-        # 2026-10-31: "game behind: X of Y frames judged by picture ...").
+        # "game behind: X frames rendered for an earlier slot ..., Y frames judged by picture" (older
+        # builds: "game behind: X of Y frames judged by picture ...").
         m = re.match(r"game behind: (\d+)(?: of| frames rendered)", text)
         if rec_start <= t <= rec_stop and m and m[1] != "0":
             print(f"  log, 10 s up to video {VideoTime(t - rec_start)}: {m[1]} frames re-timed")

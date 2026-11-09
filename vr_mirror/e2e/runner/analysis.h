@@ -25,7 +25,7 @@ struct ToolTrace {
 
     // Columns by their header name, so builds that write other columns read the same (older builds
     // wrote lags and the cockpit correction between them; the counters are cumulative). The pose the
-    // picture was warped from: `img` (the observer's trace, since 2026-10-31), else `raw`. Lines that
+    // picture was warped from: `img` (the observer's trace), else `raw` (older builds). Lines that
     // aren't frames ("#stats,...") are skipped.
     bool Load(const fs::path& path) {
         std::ifstream f(path);

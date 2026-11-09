@@ -195,8 +195,8 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   - If only contributors notice it (tests, refactors, contributors' docs, the skills, the build),
     label it `internal`, and leave the Changelog section empty.
 - Keep personal information out of everything public: every file in the repo, commit messages, branch
-  names, pull requests, issues and comments. That means recording names, the dates and times of your
-  sessions, tracks, cars and local paths. Git and GitHub keep every version.
+  names, pull requests, issues and comments. That means recording names, dates and times (of your
+  sessions and of your work on the code alike), tracks, cars and local paths. Git and GitHub keep every version.
   `.agents\skills\public-text\SKILL.md` lists what stays out. Before each commit,
   `python -I .agents\skills\public-text\check_public_text.py --staged` lists lines to review.
 

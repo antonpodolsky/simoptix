@@ -18,7 +18,7 @@ own README. The e2e side of most findings here is in `findings\e2e.md`.
   it from 0.52 to 1.46 ms rms in one e2e run (`reference\e2e_results.md`, "Results on the current
   build").
 
-### Fixed: a single late frame takes the free slot before (2026-11-05)
+### Fixed: a single late frame takes the free slot before
 
 Rounding to the nearest slot gave a frame that arrived more than half a period late the *next* slot.
 The frame after it then took that slot too. Two frames sat on one slot, and the first was lined up
@@ -59,10 +59,10 @@ recording has one pair, at 7:39. Not checked: whether the drawn pose stage catch
   550–2,000 frames forward to remove the same pairs, each moved frame pushing the next. In a burst of
   queued frames the truth is the other way: they were drawn for earlier slots.
 
-The scripts and numbers are in the data folder's `2026-11 smoothing 2 stutter\` (`snapping.py`,
+The scripts and numbers are in the data folder's investigation of the stutter with smoothing 2 (`snapping.py`,
 `snap_rule.py --steady 0.15`, `snap_truth.py`).
 
-### The reported slot and pose (2026-11-07)
+### The reported slot and pose
 
 `ReportedArrivalTiming` and `ReportedDrawnPose` serve the OpenXR layer, whose frames carry the
 display time the game drew them for, and its pose.
@@ -107,14 +107,14 @@ display time the game drew them for, and its pose.
     (`reference\e2e_results.md`, run 6). The fake OpenXR eye is turned 1°, so the old camera tilted
     with the head's pitch, and the look-ahead's pitch differs from Instant's. That is the likely cause.
     One run only, so not settled.
-  - The full run of 2026-11-08 showed the same, with `openxr_game_behind` failing too (0.175 / 0.259
+  - The next full run showed the same, with `openxr_game_behind` failing too (0.175 / 0.259
     / 0.256°). Which look-ahead setting is worst changes from run to run (`openxr_dropped_frames`
     0.198 / 0.314 / 0.221°). See `reference\e2e_results.md`.
 
 ## Stage 2: drawn pose
 
-- **`stage_replay --stage drawn_pose`** (`reference\e2e.md`): its numbers on 2026-10-31 equal the
-  lag scores before. `queued_late_frames`: 8.6 / 8.3 / 4.3 / 4.3% wrong, at the mirror app's Instant,
+- **`stage_replay --stage drawn_pose`** (`reference\e2e.md`): its numbers when it was made equal
+  the lag scores before. `queued_late_frames`: 8.6 / 8.3 / 4.3 / 4.3% wrong, at the mirror app's Instant,
   the plugin's Instant, half a second later and a second later.
 - **The cockpit correction, measured** in e2e `queued_cockpit` (the game behind at 82 fps with a
   detailed cockpit, `findings\e2e.md`, "The cockpit correction"): visible pose jumps on 1.1–1.2% of
@@ -141,7 +141,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 - **No robust weights and no record of disagreeing patches.** With the head still while the car
   cornered, the correction crept 0.12° a frame towards the scenery past the windscreen's edge.
 
-### Fixed: after hiding and showing the OBS source, the stage saw each frame's image late (2026-11-05)
+### Fixed: after hiding and showing the OBS source, the stage saw each frame's image late
 
 - **What happened.** The OBS plugin makes a new D3D device each time the source is shown. The feed
   (`vr_mirror\core\adapters\d3d\drawn_pose_feed.*`) kept its thumbnail and patch makers from the old
@@ -158,18 +158,18 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 - **The fix.** `Init` with another device makes the images afresh, and the ring's `Stop` releases them
   (`DrawnPoseFeed::Release`).
 - e2e can't show it, because the mirror app makes its device once. `judged_scan.py` in the data
-  folder's `2026-11 smoothing 2 stutter\` checks a trace.
+  folder's investigation of the stutter with smoothing 2 checks a trace.
 
 ### Other findings
 
 - **The moment is the slot a frame is shown in,** not the earlier one a late frame was drawn for.
   With the earlier one, a re-timed frame's view jumped back along the path by a frame's motion: up to
   0.35° in `replay_false_retiming_featureless_cockpit` at Smoothest (`findings\e2e.md`, "Smoothing
-  compared with Instant: what it found"). Since 2026-10-31 the moment is plain frame data
+  compared with Instant: what it found"). The moment has since become plain frame data
   (`FrameTimes::moment`) instead of being worked out from the frame's lag, with the same numbers
   (`stage_replay --golden` byte for byte).
-- **Tried and dropped: the arrival slot as the measured head's moment** (2026-10-31, `stage_replay
-  --pipeline --drawn_pose measured`). The measured pose is the head at the pose time, about 22 ms
+- **Tried and dropped: the arrival slot as the measured head's moment** (`stage_replay --pipeline
+  --drawn_pose measured`). The measured pose is the head at the pose time, about 22 ms
   before the slot. So the look-ahead's view trailed the image by that much head motion:
 
   | Input | Measure | Before | After |
@@ -184,9 +184,9 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   predictions' own error (1.7° rms in `black_borders`' turns) left the last-resort limit acting on 1.5%
   of frames at zoom 1.2 (`findings\e2e.md`, "Edges planned for with the look-ahead").
 - **`MeasuredDrawnPose::PosesAt` copied the window's heads** instead of asking again, because a live
-  `PimaxSource` can extrapolate differently between two calls. (The measured drawn pose was removed
-  on 2026-11-07, below.)
-- **Merged from two stages (2026-10-31).** Before, the frame matching (stage 2 then) handed hosts a lag
+  `PimaxSource` can extrapolate differently between two calls. (The measured drawn pose has since
+  been removed, below.)
+- **Merged from two stages.** Before, the frame matching (stage 2 then) handed hosts a lag
   and a pose correction per frame. The hosts kept them beside each frame, and the drawn pose (stage 4
   then) turned them into a pose. The lag also set traces' columns and a stand-in image's lead. Since,
   one stage answers with the pose. `stage_replay --golden` was byte for byte main's after the merge.
@@ -212,8 +212,8 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 - **The ring's size follows the delay:** the frames in the delay plus 3, at least 4
   (`vr_mirror\obs_plugin\README.md`).
 - **The fixed delay's moments trail their images and jump once. The slot timeline's didn't**
-  (`stage_replay --stage frame_picker --frame_picker K`, 2026-10-30, the shorter of those OBS traces
-  and synthetic ticks). The slot-timeline picker was removed on 2026-11-07 (below).
+  (`stage_replay --stage frame_picker --frame_picker K`, the shorter of those OBS traces and
+  synthetic ticks). The slot-timeline picker has since been removed (below).
 
   | Measure | Fixed delay | Slot timeline |
   |---|---|---|
@@ -224,7 +224,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   - The fixed delay's jump is at the tick the copy delay is fixed. 40 ms is assumed until then.
   - The picks themselves are identical, run for run: the same next, repeat, jump, held and none
     counts, and the same tick and delay fixed.
-- **In e2e on the mirror app's ticks** (2026-10-30, `findings\e2e.md`, "Drawing on ticks"):
+- **In e2e on the mirror app's ticks** (`findings\e2e.md`, "Drawing on ticks"):
   - The shown image's drawn slot runs 16.2 ms ahead of the tick's moment with the fixed delay, and
     −5.6 ms (half a period) with the slot timeline.
   - With the edges of that date, low-zoom jitter as a share of the head's at Smoothest: 1.58 with the
@@ -245,7 +245,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   (`findings\e2e.md`, "The slot check": "Fixed (the mirror app and the OBS plugin): when LMU falls
   behind, frames were warped from a pose that is too new").
 
-### Fixed: the same zoom showed a narrower view through OpenXR than through Pimax (2026-11-08)
+### Fixed: the same zoom showed a narrower view through OpenXR than through Pimax
 
 - **Seen:** a recording with OpenXR Mirror at zoom 1.25 and Smooth looked more zoomed in than one with
   Pimax Mirror at the same settings (#5). The frame trace confirmed zoom 1.25 on every frame.
@@ -286,7 +286,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 
 ## Picture room
 
-### Inside the image actually shown, on ticks too (2026-11-01)
+### Inside the image actually shown, on ticks too
 
 - The stop and Instant's room are the shown image's alone. On ticks the followed image (the tick's own
   moment) is never shown.
@@ -304,7 +304,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 - Some offline jitter numbers got worse: the first second, and single outputs at fast reversals
   (`findings\e2e.md`, "The edges in the smoothing", with what was tried and dropped).
 
-### One place for the edges (2026-11-01)
+### One place for the edges
 
 - **Before,** the edges were stage 5: this room service, plus a last-resort limit that the glue ran
   after the smoothing, in two clips:
@@ -321,7 +321,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   and the limit against the shown image only, and planned the path against the images shown at its
   moments (`Pipeline::ShownLead`). Its idea, made sound, became the default the same day (above).
 
-### Earlier measurements against the shown image (2026-10-30 and 31)
+### Earlier measurements against the shown image
 
 - **With the fixed delay's ticks, the limit acts far more often against the shown image.** Offline,
   `stage_replay --pipeline --ticks 90 --zoom 1.2 --input edge_test+heartbeat`:
@@ -355,7 +355,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   - At Smooth the jitter was 1.89–1.98 (limit 1.2), from planning against the runtime's predictions,
     which overshoot on the fast reversal.
   - With the fixed delay, the planning acted on nearly every tick and the limit on 0–1.19%.
-- **The stand-ins' lead by comparing poses, not the drawn slot** (2026-10-31, `ShownPictureEdges`).
+- **The stand-ins' lead by comparing poses, not the drawn slot** (`ShownPictureEdges`).
   - Before, the lead was the shown frame's drawn slot (its lag applied) minus the moment. That needed
     the drawn pose stage's lag outside its stage.
   - Then it was where the stand-in's pose sits among the drawn poses around the moment, updated only
@@ -381,7 +381,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   dropped there: a correction shaped after the solve, and weight 100,000 with five passes.
 - **Before the planning** (`findings\e2e.md`, "The first mirror app"): auto zoom and pinning the view to
   "head + room" near the edge were dropped. Instant's speed-scaled catch-up was kept.
-- **A service, not a protocol** (2026-10-31). Before, the edges planned the look-ahead's path
+- **A service, not a protocol.** Before, the edges planned the look-ahead's path
   themselves, in about fifteen calls that the glue interleaved with the smoothing's. So a new smoothing
   had to implement the edges' planning protocol, and the reverse. Since, the planning is the
   look-ahead's own (the same margin, weight and passes), and the picture room answers room questions.
@@ -389,18 +389,18 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 
 ## Observer
 
-- Until 2026-10-31 each host assembled and formatted its own trace rows and stamp: the OBS plugin per
+- In older builds each host assembled and formatted its own trace rows and stamp: the OBS plugin per
   tick, the mirror app in three places, with different columns. A stage's method details (lags,
   corrections) had to be passed out to them.
-- Until 2026-11-01 the trace couldn't show:
+- Older traces couldn't show:
   - which frame the view followed
   - when the edge limit acted on a repeated frame. It wasn't counted at all.
   - what the drawn pose stage decided per frame
 
   An analysis of a real recording had to rebuild these from the poses, by guessing (the data folder's
-  `2026-10 shake in recordings\`).
+  shake in recordings).
 
-## Removed: the measured drawn pose and the slot-timeline frame picker (2026-11-07)
+## Removed: the measured drawn pose and the slot-timeline frame picker
 
 Both went with the settings and the experimental output that reached them.
 - **The measured drawn pose** (`MeasuredDrawnPose`, the setting `predicted_pose` off): the measured

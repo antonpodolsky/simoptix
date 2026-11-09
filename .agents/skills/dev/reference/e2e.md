@@ -24,8 +24,8 @@ It runs every scenario. Name some to run only those (`e2e_runner.exe stabilizati
 list them with `--list`.
 
 - Each scenario opens a small window (320×180) on top of everything, for about 15 s.
-- With every scenario at both smoothings, that is 38 runs. They took 558 s (about 9 minutes) on
-  2026-11-09.
+- With every scenario at both smoothings, that is 38 runs. They took 558 s (about 9 minutes) in
+  run 8 (`reference\e2e_results.md`).
 - Don't use the PC meanwhile. For consistent timing, close LMU, the mirror app, Pimax Play and other
   heavy apps first.
 - Run one test of the OpenXR layer at a time on the PC. The fake OpenXR games of two runs, from two
@@ -99,9 +99,9 @@ stage is the slot check (`vr_mirror\core\pipeline\2_drawn_pose`), or another one
 - It takes about a second. Use it to find out why a replay fails, and to try changes to the slot check.
   The e2e suite still decides.
 
-Until 2026-10-30 this was a program of its own, `lag_sim`, then `--stage frame_matching`, and until
-2026-11-08 `--stage picture_pose`.
-`findings\e2e.md` calls it `lag_sim`. Until 2026-10-31 it scored lags, with the same numbers.
+In older builds this was a program of its own, `lag_sim`, then `--stage frame_matching`, then
+`--stage picture_pose`. `findings\e2e.md` calls it `lag_sim`. In its first form it scored lags, with
+the same numbers.
 
 ### The whole pipeline: `--pipeline`
 
@@ -135,7 +135,7 @@ It scores each input from the pipeline's numbers alone (`scores.*`). Lower is be
 | black | Outputs where a corner of the window, warped as `warp.hlsli` does, falls outside the shown image |
 | lag | How far the view's look direction trails the image's, p99 and max |
 | jitter still, jitter small | What is left of the view's direction after a local quadratic fit over ±50 ms (as e2e measures it), rms, while the image turns under 5°/s and at 5–30°/s |
-| edge limit | Outputs where the smoothing's last resort stopped the view at an edge of the shown image. Before 2026-11-01 it was the clamp after the smoothing, against the followed image only |
+| edge limit | Outputs where the smoothing's last resort stopped the view at an edge of the shown image. In older builds it was the clamp after the smoothing, against the followed image only |
 | planned | Outputs where the planning pulled the path in |
 | wrong pose | Outputs warped from a pose more than 0.01° off the one the frame was really drawn with (the replays' true lags, and the motions' exact predictions) |
 
@@ -172,7 +172,7 @@ vr_mirror\e2e\bin\stage_replay.exe --stage arrival_timing [--arrival_timing K] [
 It runs the arrival timing alone over the traces' frame arrivals. It reports the noise it removes, how
 far the de-jittered arrivals' spacing stays off the display grid, and how often its slot agrees with the
 one the plugin recorded.
-- The grid on the shorter of the two traces in the data folder's `2026-10 late frames after drops\trace\`:
+- The grid on the shorter of the two traces in the data folder's late frames after drops (its trace folder):
   0.487 ms rms removed, 0.031 ms off the grid against the plugin's 0.026, 100% agreement.
 - On the longer one: 0.708 ms, 0.065 against 0.062, 99.99%.
 - The small differences come from the plugin's session restarts, which the run doesn't see.
@@ -184,7 +184,7 @@ vr_mirror\e2e\bin\stage_replay.exe --stage frame_picker [--frame_picker K] [--tr
 It runs the frame picker as the OBS plugin does: the fixed delay, unless `--frame_picker` names another.
 - **Its inputs:** OBS frame traces, each an `_ticks.csv` with its `_pimax.csv` (the ticks and the frame
   arrivals), and synthetic ticks at 50, 59.94, 60 and 144 Hz. The traces are in the data folder's
-  `2026-10 late frames after drops\trace\`.
+  late frames after drops (its trace folder).
 - **In the synthetic runs** the smoothing changes mid-run, copies finish after a seeded random 1–3 ms
   (5% of them after 5–30 ms), and the store is resized as the picker asks.
 - **It prints** the picks by kind per run and the delay it fixed, how far each tick's moment trails the
@@ -221,8 +221,8 @@ It runs the frame picker as the OBS plugin does: the fixed delay, unless `--fram
 
 Every CSV in `vr_mirror\e2e\replay` becomes a scenario `replay_<name>`.
 
-The source data of every replay is too big for the repo. It is kept in the data folder's `2026-10 late
-frames after drops\`: the session's full frame trace, its OBS log, a clip of the moment, and the script
+The source data of every replay is too big for the repo. It is kept in the data folder's
+investigation of late frames after drops: the session's full frame trace, its OBS log, a clip of the moment, and the script
 that fitted the lag column. Its README says how video and trace line up, per test. Save a new replay's
 sources there too (`SKILL.md`, "5a. Replay tests from real sessions").
 

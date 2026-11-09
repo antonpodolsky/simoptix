@@ -60,7 +60,7 @@ def main():
         if k >= len(frames) or frames[k, 3] > r["arrival"] + 0.003:
             continue
 
-        # The pose the picture was warped from: img in the observer's trace (2026-10-31 on), else raw.
+        # The pose the picture was warped from: img in the observer's trace, else raw (older builds).
         p = "img" if "img_x" in tool.dtype.names else "raw"
         raw = (r[p + "_x"], r[p + "_y"], r[p + "_z"], r[p + "_w"])
         off = Angle(raw, frames[k, 4:8])

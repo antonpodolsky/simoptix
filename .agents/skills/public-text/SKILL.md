@@ -26,9 +26,12 @@ it is committed or posted. An edit doesn't take anything out.
 ## Personal information stays out
 
 - recording file names, which carry the date and the time (OBS names a recording by its start)
-- the dates and clock times of the maintainer's sessions, and how long a named or dated session
-  lasted. A count of frames or ticks gives the length away, so it stays only where nothing beside it
-  says when or where the session was.
+- dates and clock times, of the maintainer's sessions and of the work on the code alike. The work is
+  done on the days the maintainer drives, so its dates say when they drove too. Name a build by its
+  commit hash or pull request (`6638ff6`, `#22`), a run by its number ("run 8"), and a time by what
+  changed ("before the full-size copy", "traces with 18 columns"). Git and GitHub keep when.
+- how long a named session lasted. A count of frames or ticks gives the length away, so it stays
+  only where nothing beside it says when or where the session was.
 - tracks, cars, and anything else that says when or what the maintainer drove
 - local paths, user names, machine names, email addresses, tokens and the values of environment
   variables
@@ -41,9 +44,10 @@ frames") or by a letter ("race A"), never by its date or its file name.
 
 These may stay:
 - the maintainer's name, in the copyright lines and the sign-off, and where a screenshot shows it
-- dates of work on the code: a commit, a fix, a release, a run of the e2e suite or of `stage_replay`,
-  an offline study
-- commit hashes, and numbers measured in the e2e suite
+- commit hashes, pull request and run numbers, and numbers measured in the e2e suite
+- a release's date in `CHANGELOG.md`, which the release script writes and GitHub shows on the release
+- legal text (`LICENSE`), and dates that are data rather than a time of work: a placeholder
+  (`YYYY-MM-DD`), or the fixed day a test's files are named for
 - video times inside a recording that has no name or date (`18:31`), when the point needs them
 - paths inside the repo, and folders that are the same on every PC (`%LOCALAPPDATA%\simoptix\`,
   OBS's plugin folder, Program Files)
@@ -98,6 +102,8 @@ argument that holds double quotes, so `--body "..."` and `-m "..."` break on suc
 | Seen in `<date> <time>.mp4` at 21:14, in the Porsche at Spa | A recording's name, a clock time, a car and a track | Seen in one recording, OpenXR Mirror on Look-ahead |
 | `- 2026-03-14, a race at Sebring, 52 min` (in a findings file) | A session's date, its track and its length | `- race A, the longest of four sessions` |
 | The second start, at 21:05 | A clock time of the maintainer's session | The second start, with the load note |
+| `// Measured 2026-03-14 on six eye images read from the layer` (in a code comment) | A date of work, which says when the maintainer drove | `// Measured on six eye images read from the layer` |
+| `## The baseline (2026-03-14)`, `Until 2026-03-14 the trace had 18 columns` (in the skills) | Dates of work | `## The baseline`, `Traces with 18 columns, the oldest,` |
 | The flicker came 41312 frames into the session | The count gives the session's length | The flicker is one output frame, after a 64 ms stall |
 | `# A recording '<date> <time>_s2.mp4' (OBS names files ...)` in a script's help | A real recording's name, in code | `# A recording 'YYYY-MM-DD HH-MM-SS_s2.mp4'` |
 | The plugin folders were recreated by a process running as administrator | The state of the maintainer's PC | (delete, and tell the maintainer in chat) |

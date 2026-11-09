@@ -222,14 +222,21 @@ Record at the source's **native** resolution, one recorded pixel per source pixe
 at the end. Every scaling step in between softens the image. Record at 90 fps, the game's own rate. The
 source then shows every game frame exactly once, so motion is even.
 
-**The OpenXR source** keeps each frame's image at the size the canvas shows it 1:1, and never above the
-game's own size. So it is native at the canvas's size whenever the game's image is large enough.
-- LMU's left eye has about 2115 source pixels per unit of view tangent. That is enough for 1440p at any
-  zoom up to 1.98, and for 4K up to 1.32.
-- All stored images together may take at most 4 GB of video memory, which caps each stored image's
-  width. Look-ahead stores about 52 images, so each is at most about 4840 px wide. A canvas is then
-  native up to about 3860 px wide at zoom 1.25, so a 3840x2160 canvas is native up to zoom 1.26.
-- These sizes are worked out, not measured in a recording.
+**The OpenXR source** keeps each frame's image at the game's own size when the canvas shows it at 83%
+of that size or more. Otherwise it keeps the image at the size the canvas shows it 1:1. Each
+resampling softens the finest detail, so near the game's size the view resamples the image once,
+straight from the game's.
+- LMU's left eye is 5084×4168 at Render Quality 1.0, about 2115 source pixels per unit of view tangent.
+  That is enough for 1440p at any zoom up to 1.98, and for 4K up to 1.32.
+- A 4K canvas at zoom 1.25 shows the game's image at 95% of its size, so the source keeps it whole. A
+  1440p canvas shows it at 63%, so the source stores it at that size.
+- All stored images together may take at most 4.7 GB of video memory. Look-ahead stores 52 to 55
+  images, which fit at the game's own size. So a 3840x2160 canvas is native up to zoom 1.32, from the
+  game's image as it is.
+- A higher Render Quality makes the game's image larger than 55 of them fit in 4.7 GB. At 1.25 each is
+  then stored at about 80% of its size.
+- The OBS log showed "frame ring: 5084x4168" with Look-ahead on a 4K canvas at zoom 1.25. The other
+  sizes are worked out, not measured.
 
 **The Pimax game eye** (LMU) has about 1059 source pixels per unit of view tangent. A 16:9 recording is
 native at:
@@ -301,9 +308,10 @@ delay ... ms", about 4–5 ms measured). The frame picker (`vr_mirror\core\pipel
 `FixedDelayPicker`) decides which copy each tick shows, the delay, and the copies needed.
 - The ring starts with 8 copies, because the source allows 40 ms until it has measured that delay. It
   then keeps only the frames inside the delay plus 3, and at least 4.
-- From the OpenXR source each copy is the size the canvas shows it (above). From the Pimax source each
-  copy is the size of the game eye: 21 MB at Render Quality 1.0 (2508x2084) and 33 MB at 1.25
-  (3134x2604). So 4 copies take 84 and 130 MB instead of 167 and 261 MB.
+- From the OpenXR source each copy is the game's own size, or the size the canvas shows it (above). At
+  the game's own size, 5084x4168, a copy takes 84.8 MB. From the Pimax source each copy is the size of
+  the game eye: 21 MB at Render Quality 1.0 (2508x2084) and 33 MB at 1.25 (3134x2604). So 4 copies
+  take 84 and 130 MB instead of 167 and 261 MB.
 - The log says "frame ring: ... 8 slots, ... MB" when the first frame arrives, and "frame ring: 4
   slots, ... MB" about 2 s later.
 - If a copy is ever too late for its frame, the 10 s stats count it as "held the last image (copy

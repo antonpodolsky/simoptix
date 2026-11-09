@@ -25,7 +25,7 @@ on measurements that show it is better (`SKILL.md`, "1a. Keep every stage swappa
 
 ## What a new method touches, per stage
 
-Checked on 2026-10-31. "Its files" are the new `.h/.cpp` and its row in the stage README's table.
+Checked against the code before the first public version. "Its files" are the new `.h/.cpp` and its row in the stage README's table.
 Every row also adds one line to `vr_mirror\core\build\pipeline.rsp`.
 
 | Stage | Its files | `pipeline_builder.cpp` | `pipeline_config.h` | Nothing else, because |

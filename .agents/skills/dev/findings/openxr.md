@@ -12,27 +12,67 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
 
 - **Another API layer already loads into LMU in these tests.** OpenXR Toolkit is installed (registered
   in HKLM, switched on), and its log shows it active in LMU.
-  - Its DLL's certificate expired on 2024-02-27, and the signature has no timestamp. So Windows reports
+  - Its DLL's certificate has expired, and the signature has no timestamp. So Windows reports
     the signature as not valid.
   - Whether that game was online is not known.
 - **The game's image buffers**, from that OpenXR Toolkit log: two, one per eye, 5084×4168 each, format
   29 (`R8G8B8A8_UNORM_SRGB`), drawn with Direct3D 11 on Pimax OpenXR 0.1.0.
 
+## The stored image's size
+
+- **A 4K recording from the OpenXR source looked soft at 1:1** (Look-ahead, zoom 1.25, Render Quality
+  1.0, AV1 CQP 16). Its finest detail fell to about 1/40 of its coarse detail at the pixel limit,
+  against 1/20 in a 1440p recording from the Pimax source and 1/10 in a 1440p recording from an Oculus
+  mirror. Detail is measured as the radially averaged power spectrum times f², on 6 frames each.
+- **The game's image is sharp.** Six eye images read from the layer's textures (5084×4168, as the game
+  hands them to the headset) keep 0.38–0.44 of their coarse detail's power up to their pixel limit.
+- **The cause was resampling twice.** The reader shrank each image to the width the canvas needs (4823
+  px, 95%) with 2×2 bilinear taps per stored pixel, and the view then resampled it again
+  (Catmull-Rom). Simulated on the six images, at 0.45 cycles per game pixel:
+
+  | Path | Power kept (of the game image's 0.38) |
+  |---|---|
+  | Shrunk copy (2×2 taps), then the view | 0.014 |
+  | Sharp copy (one Catmull-Rom tap), then the view | 0.046 |
+  | Full size, the view alone | 0.199 |
+
+  The encoder only deepens it. At the same CQP the 4K file got 0.082 bits per pixel, against 0.147
+  (Pimax) and 0.187 (Oculus): the image was already soft when it reached the encoder.
+- **Full size is kept up to a 1.2× shrink** (`kFullSizeMaxShrink`). For larger shrinks the copy's
+  averaging is still needed, because the view's filter is made for about 1:1 and lets finer game
+  detail through as false detail. Error over a natural spectrum (power 1/f², 1D, 8 sub-pixel offsets),
+  as detail lost and false detail:
+
+  | Shrink | Full size | Shrunk copy |
+  |---|---|---|
+  | 1.054 (4K at zoom 1.25) | 0.0014, 0.0004 | 0.0120, 0.0001 |
+  | 1.2 | 0.0007, 0.0023 | 0.0114, 0.0003 |
+  | 1.58 (1440p at zoom 1.25) | 0.0002, 0.0101 | 0.0121, 0.0013 |
+  | 2.0 | 0.0001, 0.0268 | 0.0100, 0.0047 |
+
+- **The memory cap went from 4 GB to 4.7 GB**, so that Look-ahead's 55 images (52 once the copy delay
+  is fixed) fit at 5084×4168 (84.8 MB each, 4.66 GB). Under 4 GB they were capped at 4843 px wide.
+- **Checked in a recording** with the same setup. The OBS log showed "frame ring: 5084x4168, 55 slots,
+  4662 MB", then 52 slots, and the copy delay fell from 11.4 ms to 5.0 ms. The finest detail kept
+  0.14–0.16 of the coarse detail at the pixel limit, against 0.017–0.033 in recordings with the shrunk
+  copy: about 5× more, 2.6× at 0.35 cycles per pixel. The file took 0.094 bits per pixel at CQP 16,
+  against 0.082.
+
 ## The check program
 
-- **2026-11-06, no headset.** The layer loaded through SteamVR's OpenXR loader (1.1.62), joined the
+- **No headset.** The layer loaded through SteamVR's OpenXR loader (1.1.62), joined the
   chain and reached the Pimax runtime.
   - OpenXR Toolkit sat before it in the chain and added four extensions to the instance.
   - Switched on for one program, the layer counts as "explicit". In the game both layers are
     "implicit", and their order there may differ.
   - Under another program name, the layer passed everything through and wrote nothing.
   - Sessions and frames couldn't be checked: the runtime reported no headset (error −35).
-- **2026-11-06, with the headset.** The check passed with the layer in the chain: a D3D11 session on
+- **With the headset.** The check passed with the layer in the chain: a D3D11 session on
   the Pimax Dream Air, two 5084×4168 buffers in format 29, 1,100 frames, and a clean shutdown.
   - The layer logged the frame layout once, and "900 frames in 10.0 s, 89.97 per second", with nothing
     skipped.
   - OpenXR Toolkit added a third buffer of its own, 2048×2048.
-- **2026-11-07, the copy** (Pimax OpenXR 0.1.0, Dream Air, 1,100 frames). Copying the left eye
+- **The copy** (Pimax OpenXR 0.1.0, Dream Air, 1,100 frames). Copying the left eye
   after `xrEndFrame` has gone on to the runtime works on Pimax's runtime.
   - Every record held what was submitted.
   - The reader appeared, and the textures were made 0.3 s after the session began, in 0.5 ms. From
@@ -99,7 +139,7 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
 
 - **The half-drawn frame in a 4K recording** (issue 12) is one game frame, after a 64 ms
   stall, with the sun strip, the driver's arms and the wheel rim missing. Whether LMU drew it so or the
-  layer copied it unfinished is not known. Read in the code on 2026-11-09:
+  layer copied it unfinished is not known. Read in the code:
   - The two frames "0.005 ms apart" after the stall are two copies VR Mirror saw finished at once. VR
     Mirror counts a frame as arrived when it sees its copy finished, and the layer checks its copies
     only when the game ends its next frame. They say nothing about how the game ended those frames.
@@ -115,7 +155,7 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
   - Measured in e2e `openxr_stall` (a render thread, the runtime holding xrEndFrame until vsync, a
     64 ms stall every 3 s): with the old order 0.73–0.75° rms image/pose mismatch on screen, 2.8–4.5°
     in the worst frame. With the fix 0.053° rms, at most 0.153°, as `openxr_stabilization` (0.05°).
-- **To tell the game from the layer at the next flicker** (2026-11-09), each frame's record now says
+- **To tell the game from the layer at the next flicker** (#17), each frame's record now says
   which swapchain image it showed, how many images the game held, how many it released while the
   frame was in xrEndFrame, and the threads that released the image and ended the frame. The OpenXR
   source writes them to `trace_<time>_openxr.csv` with Debug on, and logs once a session whether the

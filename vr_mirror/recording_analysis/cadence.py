@@ -10,7 +10,7 @@ only if the shown frame's slot steps by one display period with every video fram
 
 usage: python -I cadence.py <out folder of analyse_recording.py>
 (analyse_recording.py runs it; it reads that folder's lineup.npz.) Times in ms, steps in display
-periods. Traces before 2026-10-31 have no view time: those lines are left out.
+periods. Traces with 18 columns, the oldest, have no view time: those lines are left out.
 """
 
 import os

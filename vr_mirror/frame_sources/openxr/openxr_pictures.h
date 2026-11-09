@@ -1,9 +1,10 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // OpenXrPictures: the OpenXR layer's three shared textures, opened on a host's device, and the copy of a
-// frame's picture from one of them into the host's store (FrameCopy) at the size the host needs: as it
-// is when that is the picture's own size, else drawn smaller, averaged over each stored pixel's area in
-// linear light. Stored sRGB-encoded once, as the game drew it (EyeInfo::encodedTwice false).
+// frame's picture from one of them into the host's store (FrameCopy): as it is when the host needs nearly
+// its own size and the memory holds it, else drawn at the size the host needs, averaged over each stored
+// pixel's area in linear light. Stored sRGB-encoded once, as the game drew it (EyeInfo::encodedTwice
+// false).
 //
 // While its GPU reads a texture the host holds the layer off it (openxr_share.h: its reader count), and lets
 // go once a query after the read says it is done, checked without waiting or flushing (Poll).
@@ -27,7 +28,8 @@ public:
     ~OpenXrPictures() { Release(); }
 
     // How wide (pixels) the host needs a stored picture, and the most memory one may take (bytes); the
-    // stored picture is that wide (never wider than its own), as tall as its shape asks.
+    // stored picture is its own width when that is within 1.2x of the need, else that wide, as tall as
+    // its shape asks, and within the memory.
     void SetNeed(float width, double maxBytes) {
         needWidth_ = width;
         maxBytes_ = maxBytes;

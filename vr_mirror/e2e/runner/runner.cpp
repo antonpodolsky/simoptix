@@ -391,7 +391,7 @@ namespace {
         // Drift: a drawn pose that corrects poses from the picture (the cockpit correction) follows
         // the picture from frame to frame and the head poses in the long run, so over the whole run
         // its error averages out; one that drifts doesn't (offline, with no pull back: 3.4 deg). Was the
-        // correction's own mean (0.08-0.10 deg on 2026-10-31), which no longer leaves the drawn pose;
+        // correction's own mean (0.08-0.10 deg), which no longer leaves the drawn pose;
         // the pose error's mean read 0.29-0.31 deg there, 0.19 with the slot check alone. Over a second
         // it may hold a slot error.
         const std::vector<Vec3> errorVectors = PoseErrorVectorsDeg(log, tools);

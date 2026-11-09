@@ -26,7 +26,7 @@ CACHE = os.environ.get(
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # _ticks.csv columns (vr_mirror\core\pipeline\observer\README.md). T_SLOT: the slot the frame arrived for;
-# in traces before 2026-10-31 (header `display_slot`) the slot it was drawn for (DrawnSlotColumn).
+# in traces with 18 columns (header `display_slot`) the slot it was drawn for (DrawnSlotColumn).
 T_STAMP, T_TICK, T_SERIAL, T_ARRIVAL, T_SMOOTH, T_SLOT = range(6)
 T_IMG, T_RAW, T_VIEW = slice(6, 10), slice(10, 14), slice(14, 18)
 T_COLUMNS = 18  # the numeric columns read (more follow: the drawn pose's name, timing, ...)
@@ -181,8 +181,8 @@ def TicksForSerials(prefix, first, last, margin=200):
 
 
 def DrawnSlotColumn(prefix):
-    """Whether the trace's T_SLOT column is the slot each frame was drawn for (traces before
-    2026-10-31, header `display_slot`); else it is the slot the frame arrived for, and the slot it
+    """Whether the trace's T_SLOT column is the slot each frame was drawn for (traces with
+    18 columns, header `display_slot`); else it is the slot the frame arrived for, and the slot it
     was drawn for is found by comparing poses (DrawnLag)."""
 
     with open(prefix + "_ticks.csv") as f:

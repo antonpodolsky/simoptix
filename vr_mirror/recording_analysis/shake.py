@@ -21,7 +21,7 @@ import numpy as np
 COLS, ROWS, GX, GY, SX, SY, PW, PH = 11, 8, 32, 32, 80, 60, 48, 32  # grid_shift.cpp's grid
 W, H = 960, 540
 # px per unit tangent at 960 px: the Pimax eye's half-FOV seen from the image's middle, over zoom 1.25
-# (vr_mirror\core\pipeline\pipeline_types.h GeometryFor; 1.173, its narrower side, before 2026-11-08)
+# (vr_mirror\core\pipeline\pipeline_types.h GeometryFor; 1.173, its narrower side, in older builds)
 K = (W / 2) / (1.1838 / 1.25)
 TO_1080 = 2.0  # 960 px -> 1920 px
 DEG = np.pi / 180

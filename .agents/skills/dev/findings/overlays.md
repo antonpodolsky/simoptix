@@ -32,8 +32,8 @@ DirectWrite against the GDI+ text it replaced, measured at 1:1 on a 300 px Chron
 
 ## Telemetry checks
 
-- **A recorded session played on LMU's telemetry interface** (2026-11-06). The fake LMU then had a
-  `--replay` option, removed on 2026-11-07 with the other one-off tools. It played 30 s of the first
+- **A recorded session played on LMU's telemetry interface.** The fake LMU then had a
+  `--replay` option, since removed with the other one-off tools. It played 30 s of the first
   recorded session (the data folder's `traction\lmu_tyres_1.csv`, from 120 s).
   - The plugin connected, and read a practice session at 96–100 updates a second.
   - The meter's dot moved: 293 of the meter's pixels changed in 0.7 s on a screenshot.
@@ -50,7 +50,7 @@ Why some of the specs are as they are:
 - **1G and 2G rings:** white at 8 % at first. They faded out in compressed video, so they are 16 %.
 - **Comet tail colour:** in the accent it merged with the dot. In amber `#ffb020` it stood out too
   much, and `#ff7c1f` still a bit. `#ff6b1f` is the one kept.
-- **The look is the canvas's "Chrono Inner" board** since 2026-11-09, with its ABS and TC labels
+- **The look is the canvas's "Chrono Inner" board**, with its ABS and TC labels
   removed: the bars sit just inside the 3G ring, and the bezel is r 190. The maintainer chose it over
   the "Chrono" board below. Its glass is the same feathered crescent, so `gmeter_glass.png` stayed
   identical, pixel for pixel.
@@ -64,7 +64,7 @@ Why some of the specs are as they are:
 
 ### Replaced: the "Chrono" board, with the bars in the bezel
 
-The plugin drew the canvas's "Chrono" board until 2026-11-09. Its bezel was r 210, with the pedal bars
+Before that, the plugin drew the canvas's "Chrono" board. Its bezel was r 210, with the pedal bars
 in grooves (centre r 193, 10 wide, round ends) and the bars 6.5 wide in them. ABS and TC labels
 (11 px, letter spacing 0.1 em) sat past the grooves' upper ends, turned along the circle, and lit up in
 the pedal colours. The maintainer replaced it with "Chrono Inner" (above).
@@ -85,14 +85,14 @@ Tried on the canvas's "Chrono Inner" board:
 
 At 3–12 % white they were too faint to tell apart. Made bolder (up to about 30 %), they looked
 artificial, not like real reflections. The closest was a "feathered" crescent about twice as bright
-(24 % at the top), whose lower edge fades out instead of ending in a line. It was chosen on 2026-10-24
-and is the plugin's glass.
+(24 % at the top), whose lower edge fades out instead of ending in a line. It was chosen, and is
+the plugin's glass.
 
 ## Tried and removed: tyre grip learning and ideal pedals
 
 The G-meter once learned how close each tyre is to its limit, and worked out the ideal brake and
 throttle from it, to draw as arcs and ticks on the meter. The Chrono look draws neither. So it was
-switched off, then removed on 2026-11-07, with its spec and a tool that replayed it over recorded
+switched off, then removed, with its spec and a tool that replayed it over recorded
 telemetry. How it worked:
 
 - **The ideal window** was 3 % of each tyre's peak grip.

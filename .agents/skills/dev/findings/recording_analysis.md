@@ -13,8 +13,8 @@ Terms: `reference\terms.md`. What the scripts do and how they measure:
 
 ## Checked against an earlier investigation
 
-`analyse_recording.py` (2026-11-05) gives the numbers of the investigation in the data folder's
-`2026-11 smoothing 2 stutter\README.md`. Lower is better in every row.
+`analyse_recording.py` gives the numbers of the data folder's investigation of the stutter with
+smoothing 2 (its README). Lower is better in every row.
 
 | Measure | Session E, Instant (`_s1`) | Race F, Smooth (`_s2`) |
 |---|---|---|

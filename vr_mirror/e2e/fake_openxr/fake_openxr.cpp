@@ -170,7 +170,7 @@ namespace {
         }
     };
 
-    // LMU's left eye through Pimax's OpenXR runtime (the layer's log, 2026-11-06), and the eyes' turn
+    // LMU's left eye through Pimax's OpenXR runtime (the layer's log), and the eyes' turn
     // outward from the head.
     const openxr_share::Fov kLeftFov = {
         -52.6f * kDegToRad,

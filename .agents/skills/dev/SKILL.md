@@ -118,7 +118,7 @@ for the agents that read those files. Change the rules here, never in those file
   - Once the repo has its GitHub remote, every change reaches `main` through a pull request (step 7).
 - **Nothing personal in anything public.** Every file in the repo, every commit message and branch
   name, and everything on GitHub is public and keeps its history. None of it holds recording names,
-  session dates or times, tracks, cars, local paths or details of the maintainer's PC, or anything of
+  dates or clock times, tracks, cars, local paths or details of the maintainer's PC, or anything of
   how the work went. Check before each commit and each post (public-text skill).
 - **Docs move with the code, each in its place.**
   - READMEs describe the project: what each part is and does, how it behaves, its settings as a user
@@ -238,7 +238,7 @@ for the agents that read those files. Change the rules here, never in those file
   fake PVR runtime (`vr_mirror\e2e\fake_pvr`), with its window captured like OBS. The suite covers the
   `vr_mirror\core\` pipeline: frames, smoothing, lag, horizon, black borders.
   - Run it once at the end of a change to `vr_mirror\core\` or `vr_mirror\mirror_app\`.
-  - Its 38 runs take about 9 minutes (558 s on 2026-11-09). LMU and
+  - Its 38 runs take about 9 minutes (558 s in run 8, `reference\e2e_results.md`). LMU and
     the mirror app must be closed, and nobody should use the PC meanwhile, so ask the user before
     running it.
   - Only one test of the OpenXR layer may run on the PC at a time, from any session or worktree. Two
@@ -401,10 +401,10 @@ One convention, everywhere. Check every new name against it, and rename what bre
     `picture_*` names (`picture_room`, `FakeGamePicture`) stay as they are.
   - "Drawn pose" is the head pose a frame was drawn with: the stage (`2_drawn_pose\`, `DrawnPose`),
     the setting `drawn_pose`, and the trace's `drawn_pose` column. It was called the picture pose,
-    and the setting `picture_matching`, until 2026-11-08.
+    and the setting `picture_matching`, in older builds.
   - "Look-ahead" is the smoothing that runs half a second behind the game: the Smoothing setting's
     choice (2), `SmoothingKind::kLookahead`, `LookaheadSmoothing`, and the e2e runs `<name>_lookahead`.
-    It was called Smooth (`_smooth`) until 2026-11-09, beside Smoothest (a second behind, 3,
+    It was called Smooth (`_smooth`) until #22, beside Smoothest (a second behind, 3,
     `_smoothest`), which was dropped then (`findings\obs_plugin.md`, "Smoothing and zoom"). Findings
     and e2e results from before keep the old names.
   - "Mirror" in a name ("VR Mirror", "Pimax Mirror", `MirrorView`, `vr_mirror\`) is our plugin and its

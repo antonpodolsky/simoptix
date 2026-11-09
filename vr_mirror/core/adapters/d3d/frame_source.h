@@ -25,10 +25,10 @@
 #include "pipeline/2_drawn_pose/drawn_pose.h"
 #include "pipeline/pipeline_config.h"
 
-// The most memory one host's stored pictures may take (bytes): Look-ahead holds about half a second
-// of frames (52 at 90 fps), which at the OpenXR layer's full 5084x4168 would be 4.4 GB beside the
-// game's own.
-constexpr double kPictureMemory = 4e9;
+// The most memory one host's stored pictures may take (bytes): Look-ahead holds at most 55 frames (its
+// half second, the copy delay up to 45 ms, and 3 more: FixedDelayPicker), 4.66 GB at the OpenXR layer's
+// full 5084x4168.
+constexpr double kPictureMemory = 4.7e9;
 
 class FrameSource : public PoseSource {
 public:
@@ -69,7 +69,8 @@ public:
 
     // How wide (pixels) a stored picture of the eye needs to be for the output to be shown 1:1 in its
     // middle, and the most memory one may take (bytes): a source that can scale its pictures keeps them
-    // that size, never above its own; one that can't ignores it. Any thread, before Start too.
+    // that size, or its own when that is near it, never above its own; one that can't ignores it. Any
+    // thread, before Start too.
     virtual void SetPictureNeed(float width, double maxBytes) = 0;
     // The host's device and context (the thread that owns the context).
     // Opens the source's pictures on `device` (again, if the source re-created them): call every 2 s.

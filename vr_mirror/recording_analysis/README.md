@@ -26,7 +26,7 @@ closer at one moment. They need the trace that the Pimax source's **Debug** sett
 
 | File | What |
 |---|---|
-| `trace_common.py` | Reading the trace and the OBS log, quaternion maths, the frame stamp, and ffmpeg. It also finds the slot each frame was drawn for (`FrameLag`), from the trace's own column in traces before 2026-10-31 and by comparing the image pose with the runtime's predictions after |
+| `trace_common.py` | Reading the trace and the OBS log, quaternion maths, the frame stamp, and ffmpeg. It also finds the slot each frame was drawn for (`FrameLag`), from the trace's own column in traces with 18 columns and by comparing the image pose with the runtime's predictions after |
 | `episodes.py` | The plugin's re-timed stretches in a recording, from the trace |
 | `window.py` | A stretch of video against the trace: the true lag per frame, from the cockpit's motion |
 | `replica.py` | The slot check replayed offline on a recording's real images |
@@ -84,11 +84,11 @@ then says **NOT SURE**. `lineup.txt` also checks the result: shifted by a frame 
 should miss.
 
 **Trace formats.** The scripts read all of these:
-- 18 columns, before 2026-10-31: no zoom, edge counters or view time, so `shake_traced.py` is skipped
-- 26 columns, from 2026-10-31
-- 31 columns, on 2026-11-01, with `edge_repeat_clamps`
-- 30 columns, since 2026-11-02, with `picture_notes` last (named `pose_notes` since 2026-11-08,
-  and `picture_pose` named `drawn_pose`)
+- 18 columns, the oldest: no zoom, edge counters or view time, so `shake_traced.py` is skipped
+- 26 columns
+- 31 columns, with `edge_repeat_clamps`, for a short time
+- 30 columns, the newest, with `pose_notes` last (`picture_notes` in older ones, and `drawn_pose`
+  `picture_pose`)
 
 ## Known limits
 
