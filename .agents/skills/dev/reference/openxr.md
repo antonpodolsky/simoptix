@@ -31,9 +31,10 @@ near the game.
 - It needs the headset on, with Pimax Play running. Without them it stops at `xrGetSystem` (−35, no
   headset available) and says so. The log then shows only the handshake and the instance.
 
-Afterwards the layer's log (`%LOCALAPPDATA%\simoptix\openxr_frame_source.log`) should show the runtime,
-the time conversion asked for, the session, both buffers, the frame layout, the frame source's lines,
-and no errors. The copy time it logs is not the game's: an image cleared to one colour is stored
+Afterwards the layer's log, which the check names in its last line (the newest
+`%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`), should show the runtime, the time
+conversion asked for, the session, both buffers, the frame layout, the frame source's lines, and no
+errors. The copy time it logs is not the game's: an image cleared to one colour is stored
 compressed, and copies much faster than a drawn one.
 
 An installed copy of the layer wakes up in the check program too, because the program is called

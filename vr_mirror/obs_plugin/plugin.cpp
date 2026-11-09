@@ -182,8 +182,12 @@ namespace {
     }
 
     bool LoadModule() {
-        InstallCrashDump(L"vr_mirror");
+        const int dumpsDeleted = InstallCrashDump(L"vr_mirror");
         SetCoreLog(LogToObs);  // before any source: race auto-record and the telemetry log too
+
+        if (dumpsDeleted > 0) {
+            blog(LOG_INFO, "[simoptix_vr_mirror] %d older crash dump(s) deleted", dumpsDeleted);
+        }
 
         obs_source_info info = {};
         info.type = OBS_SOURCE_TYPE_INPUT;

@@ -46,6 +46,22 @@ The mirror app logs every stage's numbers every 10 s while it runs, like the OBS
 `out\<scenario>\tool.log`. An example is the slot check's "game behind: X frames rendered for an
 earlier slot ..., Y frames judged by picture".
 
+## The local files test
+
+What it runs and checks: `vr_mirror\e2e\README.md`, "The local files test".
+
+1. Build both plugins, the OpenXR layer (`vr_mirror\frame_sources\openxr\build.bat`) and
+   `vr_mirror\e2e\build.bat`. The test runs the DLLs those builds left in their `bin\` folders.
+2. Close OBS and LMU. The test refuses to start while either runs, because its OBS would share the
+   plugins' memory with the other.
+3. Run `vr_mirror\e2e\bin\local_files_e2e.exe`. The first run copies the installed OBS into
+   `vr_mirror\e2e\out\obs_portable\` (466 MB). `OBS_DIR` names another OBS folder to copy.
+4. Each case's files are in `vr_mirror\e2e\out\local_files\<case>\`: the test `%LOCALAPPDATA%` (the
+   folder `appdata`), OBS's log (`obs.log`) and the fakes' logs.
+
+A change to a kind of file, or a new kind, gets a case or a check in `local_files_e2e.cpp` that fails
+on the build before the change.
+
 ## The stage replay
 
 `stage_replay` runs core's frame pipeline offline. `vr_mirror\core\pipeline\pipeline_builder.cpp` builds

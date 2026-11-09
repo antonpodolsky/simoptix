@@ -73,12 +73,12 @@ and is ignored by git. Builds must finish with no new warnings at `/W3`.
 | Changed | Build | e2e tests at the end |
 |---|---|---|
 | `vr_mirror\core\`, `vr_mirror\frame_sources\pimax\` | Both plugins, `vr_mirror\mirror_app\build.bat`, `vr_mirror\e2e\build.bat` | Yes |
-| `shared\` | The same, and `shared\telemetry\games\lmu\fake\build.bat` for a telemetry change | If the mirror app or the tests use the file |
-| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins | No. Check in OBS (below) |
+| `shared\` | The same, and `shared\telemetry\games\lmu\fake\build.bat` for a telemetry change, and `vr_mirror\frame_sources\openxr\build.bat` for `shared\local_files.*` | If the mirror app or the tests use the file. The local files test for `shared\local_files.*` and the crash dump |
+| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins | The local files test for the Debug setting's trace files. Otherwise no. Check in OBS (below) |
 | `vr_mirror\mirror_app\` | `vr_mirror\mirror_app\build.bat` | Yes, for a change in behaviour |
 | `vr_mirror\e2e\` | `vr_mirror\e2e\build.bat` | The scenarios that changed |
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`, which checks the declarations against Pimax's headers. Without the SDK it says so and skips | Yes |
-| `vr_mirror\frame_sources\openxr\` | Its `build.bat`, then its check program | No |
+| `vr_mirror\frame_sources\openxr\` | Its `build.bat`, then its check program | The local files test for the layer's log. Otherwise no |
 | `vr_mirror\recording_analysis\` | Its `build.bat` (`patch_shift.exe`, `grid_shift.exe`) | No |
 
 The two plugins are `vr_mirror\obs_plugin\build.bat` and `overlays\obs_plugin\build.bat`. With the
@@ -102,6 +102,12 @@ way OBS does and measures what a viewer would see.
 4. Compare the results with `.agents\skills\dev\reference\e2e_results.md`, and update the numbers there
    when they change for a reason. Each run's files are in `vr_mirror\e2e\out\<scenario>\`.
 
+The local files test (`vr_mirror\e2e\bin\local_files_e2e.exe`) checks the files the plugins and the
+OpenXR layer write under `%LOCALAPPDATA%\simoptix`: the Debug setting's traces, crash dumps and the
+layer's logs. It runs the built plugins in a private copy of OBS, and the built layer in a fake game.
+Build both plugins, the layer and `vr_mirror\e2e\build.bat` first, and close OBS and LMU. It takes about
+a minute, and its first run copies OBS (466 MB).
+
 The stage replay (`vr_mirror\e2e\bin\stage_replay.exe`) runs in about a second. Use it to find out why
 a scenario fails, and to check that a refactor changes nothing (`.agents\skills\dev\reference\e2e.md`).
 
@@ -111,10 +117,11 @@ a scenario fails, and to check that a refactor changes nothing (`.agents\skills\
 - Never loosen a scenario's limits or remove a scenario to get a pass. Report failures with their
   numbers.
 
-**Checking by hand.** The tests cover VR Mirror's core and the mirror app. Check the rest by hand: the
-OBS plugins, the G-meter, LMU's telemetry, the OpenXR layer and real hardware timing.
+**Checking by hand.** The tests cover VR Mirror's core, the mirror app, and the files the plugins and
+the layer write. Check the rest by hand: the OBS plugins, the G-meter, LMU's telemetry, the OpenXR layer
+and real hardware timing.
 - Install the plugins and read OBS's log (`%APPDATA%\obs-studio\logs`) for their lines. Crash dumps go
-  to `%LOCALAPPDATA%\simoptix`.
+  to `%LOCALAPPDATA%\simoptix`, and the newest 10 are kept.
 - Without the game, `shared\telemetry\games\lmu\fake\lmu_fake.exe` publishes a made-up lap on LMU's
   telemetry interface for 60 s, while LMU is closed. `--race` adds a race start and finish, for race
   auto-record.

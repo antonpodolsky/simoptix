@@ -10,6 +10,7 @@
 #include <cstring>
 
 #include "pipeline/pipeline_builder.h"
+#include "shared/local_files.h"
 #include "shared/program_delay.h"
 #include "shared/thread_cpu.h"
 #include "warp_effect.h"
@@ -97,8 +98,9 @@ void MirrorView::FollowCanvas() {
 // Debug frame trace, for matching a recording (with the frame-number stamp) to the poses the
 // warp used: trace_<time>_ticks.csv here (one row per drawn tick) and the frame source's own beside it,
 // if it has one (Pimax: trace_<time>_pimax.csv, head poses, slot predictions, frame arrivals), in
-// %LOCALAPPDATA%\simoptix\traces.
-// Opens and closes with the setting and with the source starting and stopping. Graphics thread.
+// %LOCALAPPDATA%\simoptix\traces. LocalFiles names it and keeps the newest traces.
+// Opens with the setting at the game's first frame, and closes with the setting or when the source stops.
+// Graphics thread.
 void MirrorView::ToggleTrace(bool on) {
     if (on == tickTrace_.IsOpen()) {
         return;
@@ -111,25 +113,13 @@ void MirrorView::ToggleTrace(bool on) {
         return;
     }
 
-    wchar_t dir[MAX_PATH], prefix[MAX_PATH], path[MAX_PATH];
-    ExpandEnvironmentStringsW(L"%LOCALAPPDATA%\\simoptix", dir, MAX_PATH);
-    CreateDirectoryW(dir, nullptr);  // fails harmlessly if it exists
-    wcscat_s(dir, L"\\traces");
-    CreateDirectoryW(dir, nullptr);
-    SYSTEMTIME t;
-    GetLocalTime(&t);
-    swprintf(
-        prefix,
-        MAX_PATH,
-        L"%s\\trace_%04d%02d%02d_%02d%02d%02d",
-        dir,
-        t.wYear,
-        t.wMonth,
-        t.wDay,
-        t.wHour,
-        t.wMinute,
-        t.wSecond
-    );
+    wchar_t prefix[MAX_PATH], path[MAX_PATH];
+
+    if (!NewLocalFilePath(LocalFileKind::kFrameTrace, prefix, MAX_PATH)) {
+        trace_ = false;
+        blog(LOG_WARNING, "[simoptix_vr_mirror] no folder for the frame trace");
+        return;
+    }
 
     swprintf(path, MAX_PATH, L"%s_ticks.csv", prefix);
 
@@ -143,13 +133,21 @@ void MirrorView::ToggleTrace(bool on) {
     tickTraceSink_.writer = &tickTrace_;
     pipeline_.SetTraceSink(&tickTraceSink_);
     const bool own = frameSource_->StartTrace(prefix);
+
+    // On this thread, timed: it lists one folder and deletes a trace or two.
+    const uint64_t t0 = os_gettime_ns();
+    const int deleted = PruneLocalFiles(LocalFileKind::kFrameTrace, 0);
+    const double pruneMs = (os_gettime_ns() - t0) / 1e6;
+
     char utf8[MAX_PATH * 3];
     WideCharToMultiByte(CP_UTF8, 0, path, -1, utf8, sizeof(utf8), nullptr, nullptr);
     blog(
         LOG_INFO,
-        "[simoptix_vr_mirror] frame trace: %s%s",
+        "[simoptix_vr_mirror] frame trace: %s%s; %d older trace(s) deleted in %.2f ms",
         utf8,
-        own ? " (and the frame source's own beside it)" : ""
+        own ? " (and the frame source's own beside it)" : "",
+        deleted,
+        pruneMs
     );
 }
 
@@ -201,6 +199,7 @@ void MirrorView::StartStop() {
         session_.Start();
     } else if (wanted_ && state == SessionWorker::kRunning && !started_) {
         started_ = true;
+        framesAtStart_ = frameSource_->FramesArrived();
         clock_.Reset();
         RestartDelay();  // measure the output delay again
         warpSlot_ = -1;
@@ -234,7 +233,9 @@ void MirrorView::Tick() {
     if (!started_) {
         return;
     }
-    ToggleTrace(trace_);
+    ToggleTrace(
+        trace_ && frameSource_->FramesArrived() > framesAtStart_
+    );  // no trace before the game's frames
     SetPictureNeed();
     const uint64_t q0 = os_gettime_ns();
     const double now = frameSource_->Now();

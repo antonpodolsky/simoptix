@@ -2,7 +2,9 @@
 rem Copyright (C) 2026 Anton Podolsky
 rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds the fake PVR runtime (bin\libPVRClient64.dll), the fake game with the OpenXR layer's
-rem frames (bin\fake_openxr.exe), the e2e runner (bin\e2e_runner.exe) and
+rem frames (bin\fake_openxr.exe), the e2e runner (bin\e2e_runner.exe), the local files test
+rem (bin\local_files_e2e.exe) with its fake game that loads the layer's DLL
+rem (bin\fake_layer_game\Le Mans Ultimate.exe), and
 rem the stage replay (bin\stage_replay.exe: the pipeline and its stages offline, the drawn pose's
 rem replay simulation included).
 setlocal
@@ -29,6 +31,19 @@ cl /nologo /std:c++17 /EHsc /O2 /Zi /W3 /DNOMINMAX /DUNICODE /D_UNICODE /Fo:obj\
    runner\runner.cpp runner\scenarios.cpp runner\analysis.cpp runner\compare.cpp runner\tool_process.cpp ^
    /Fe:bin\e2e_runner.exe ^
    /link /DEBUG /MAP:obj\e2e_runner.map d3d11.lib dxgi.lib dwmapi.lib windowsapp.lib user32.lib || exit /b 1
+
+if not exist obj\local_files mkdir obj\local_files
+cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /DUNICODE /D_UNICODE /Fo:obj\local_files\ ^
+   /I..\.. /I..\core /Irunner ^
+   local_files\local_files_e2e.cpp local_files\local_files_obs.cpp local_files\local_files_folder.cpp ^
+   runner\tool_process.cpp ^
+   /Fe:bin\local_files_e2e.exe /link user32.lib || exit /b 1
+
+if not exist obj\fake_layer_game mkdir obj\fake_layer_game
+if not exist bin\fake_layer_game mkdir bin\fake_layer_game
+cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /DUNICODE /D_UNICODE /Fo:obj\fake_layer_game\ ^
+   /I..\..\third_party\openxr ^
+   fake_layer_game\fake_layer_game.cpp /Fe:"bin\fake_layer_game\Le Mans Ultimate.exe" || exit /b 1
 
 if not exist obj\stage_replay mkdir obj\stage_replay
 cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /Fo:obj\stage_replay\ ^

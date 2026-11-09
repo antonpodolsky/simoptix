@@ -40,8 +40,8 @@ Reading LMU needs its telemetry headers from the game's folder at build time, be
 doesn't allow copying them into this repo. The build finds the game in any Steam library. A build
 without the headers says so and reads no game, and the demo lap still plays.
 
-Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`. The OBS log marks this plugin's lines
-`[simoptix_overlays]`.
+Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`. The newest 10 are kept: when OBS starts,
+the plugins delete the oldest beyond 8. The OBS log marks this plugin's lines `[simoptix_overlays]`.
 
 ## G-Meter Overlay
 

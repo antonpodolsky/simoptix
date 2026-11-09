@@ -35,8 +35,13 @@ void RegisterGMeterSource();  // ..\gmeter\gmeter_source.cpp
 
 bool obs_module_load(void) {
     return Guarded("load", [] {
-        InstallCrashDump(L"overlays");
+        const int dumpsDeleted = InstallCrashDump(L"overlays");
         SetCoreLog(LogToObs);
+
+        if (dumpsDeleted > 0) {
+            blog(LOG_INFO, "[simoptix_overlays] %d older crash dump(s) deleted", dumpsDeleted);
+        }
+
         RegisterGMeterSource();
         blog(LOG_INFO, "[simoptix_overlays] loaded");
         return true;

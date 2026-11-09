@@ -63,11 +63,13 @@ In LMU started the usual way, Easy Anti-Cheat keeps the layer out:
 - **It copies only while VR Mirror reads.** The three textures take 85 MB each at 5084×4168, which is
   254 MB of the graphics card's memory. The layer makes them when VR Mirror starts reading and lets
   them go 10 s after it stopped. With nobody reading, the layer only writes each frame's record.
-- **It logs when Windows loads it into LMU.** Before any OpenXR step, it adds a line to
-  `%LOCALAPPDATA%\simoptix\openxr_frame_source_loads.log`. The file is never cleared. A game start with
-  no new line there means the DLL was never loaded, for example because anti-cheat blocked it.
-- **In LMU, it logs** to `%LOCALAPPDATA%\simoptix\openxr_frame_source.log`. The previous game start's
-  log is kept as `openxr_frame_source.prev.log`. The log holds:
+- **In LMU, it writes one log per game start,**
+  `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`. The newest 10 are kept. Each game
+  start that reaches OpenXR deletes the oldest beyond that.
+- **The log's first line says that Windows loaded the DLL into LMU,** before any OpenXR step. A game
+  start with no new log means the DLL was never loaded, for example because anti-cheat blocked it. A log
+  with this line alone means OpenXR never called the layer.
+- **After that line, the log holds:**
   - what the game's OpenXR loader offered in the first handshake, and why the layer refused it if it did
   - that the layer loaded, which runtime and headset the game uses, and whether it asked for the time
     conversion
@@ -125,7 +127,7 @@ In LMU started the usual way, Easy Anti-Cheat keeps the layer out:
 | `openxr_share.h` | The memory the layer shares with VR Mirror: its layout, and the rules for reading it |
 | `openxr_d3d11.h` | The few Windows-specific OpenXR declarations that the layer and its check program use |
 | `openxr_frame_layout.*` | The summary of each frame's layout and the log lines (plain logic, no OpenXR calls) |
-| `openxr_layer_log.*` | The log file |
+| `openxr_layer_log.*` | The log file. `shared\local_files.*` names it and keeps the newest |
 | `XR_APILAYER_SIMOPTIX_frame_source.json` | The manifest: how OpenXR finds the DLL |
 | `frame_source.def` | The DLL's one exported function |
 | `build.bat` | Builds the DLL and the check program into `bin\` |

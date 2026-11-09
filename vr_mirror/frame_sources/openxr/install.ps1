@@ -33,7 +33,7 @@ New-ItemProperty -Path $key -Name $manifest -PropertyType DWord -Value 0 -Force 
 
 Write-Host "Installed to $target"
 Write-Host "Registered in $key (0 = on)"
-Write-Host "The layer's log, once LMU has started: $env:LOCALAPPDATA\simoptix\openxr_frame_source.log"
+Write-Host "The layer's logs, one per start of LMU: $env:LOCALAPPDATA\simoptix\openxr_frame_source_<date>_<time>.log"
 Write-Host 'Layers registered now:'
 Get-Item $key | Select-Object -ExpandProperty Property | ForEach-Object {
     Write-Host "  $_ = $((Get-ItemProperty $key).$_)"

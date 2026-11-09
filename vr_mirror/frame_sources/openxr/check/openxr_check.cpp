@@ -9,9 +9,10 @@
 // (openxr_check_copies.h): every frame's record must hold what was submitted, nearly every frame's picture
 // must be copied, and every copy read back must show its own frame; the layer's clock reading must match the
 // runtime's conversion. The layer only wakes up in a program called "Le Mans Ultimate.exe", which is why
-// build.bat gives this program that name. It is not the game and touches no game file. Then read
-// %LOCALAPPDATA%\simoptix\openxr_frame_source.log: it should hold the runtime, the session, both swapchains,
-// the frame layout, the frame source's lines and no errors. If the headset isn't ready (asleep, Pimax Play
+// build.bat gives this program that name. It is not the game and touches no game file. Then read the
+// layer's log it names at the end, the newest %LOCALAPPDATA%\simoptix\openxr_frame_source_<time>.log: it
+// should hold the runtime, the session, both swapchains, the frame layout, the frame source's lines and no
+// errors. If the headset isn't ready (asleep, Pimax Play
 // closed), the session never starts its frames; the check says so and still makes and destroys everything
 // else.
 //
@@ -29,6 +30,7 @@
 
 #include "openxr_check_copies.h"
 #include "openxr_d3d11.h"
+#include "shared/local_files.h"
 
 namespace {
 
@@ -575,10 +577,9 @@ int wmain(int argc, wchar_t** argv) {
 
     RunFrames(run, frameCount, copies);
     ReleaseAll(run);
-    printf(
-        "%s; the layer's log: %%LOCALAPPDATA%%\\simoptix\\openxr_frame_source.log\n",
-        g_failures ? "FAILED" : "passed"
-    );
+    wchar_t log[MAX_PATH] = L"(none found)";
+    NewestLocalFile(LocalFileKind::kLayerLog, log, MAX_PATH);  // keeps "(none found)" if there is none
+    printf("%s; the layer's log: %ls\n", g_failures ? "FAILED" : "passed", log);
 
     return g_failures ? 1 : 0;
 }
