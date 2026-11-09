@@ -1,0 +1,14 @@
+{
+    "display_name": "SimOptix: VR Mirror",
+    "id": "simoptix_vr_mirror",
+    "name": "simoptix_vr_mirror",
+    "version": "@SIMOPTIX_VERSION@",
+    "description": "Stabilized VR footage of Le Mans Ultimate, from a Pimax headset or through OpenXR, and race auto-record.",
+    "long_description": "SimOptix: VR Mirror adds two OBS sources with the stabilized headset view. SimOptix: Pimax Mirror takes the copy of the left eye that Pimax Play makes. SimOptix: OpenXR Mirror takes the game's own left eye through SimOptix's OpenXR API layer. Race auto-record makes OBS record each LMU race by itself.",
+    "os_arch": "windows-x64",
+    "urls": {
+        "repository": "https://github.com/antonpodolsky/simoptix",
+        "website": "https://github.com/antonpodolsky/simoptix",
+        "support": "https://github.com/antonpodolsky/simoptix/issues"
+    }
+}

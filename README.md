@@ -84,8 +84,9 @@ To build:
 1. Close OBS.
 2. Run `vr_mirror\obs_plugin\build.bat install` and `overlays\obs_plugin\build.bat install`. Each
    builds its plugin and copies it to OBS's plugin folder
-   (`C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`). Install both from one build, because
-   they share the game's data and check that they match.
+   (`C:\ProgramData\obs-studio\plugins\<its name>`): the DLL to `bin\64bit`, and `manifest.json` with
+   the plugin's name and version to `data`. Install both from one build, because they share the game's
+   data and check that they match.
 3. For OpenXR Mirror, also install the API layer. Read the warning above first, close LMU, and run
    `vr_mirror\frame_sources\openxr\install.bat`. It builds the layer and installs it with
    administrator rights, which Windows asks for. That layer is unsigned. For a signed layer, run

@@ -36,7 +36,8 @@ telemetry it stands in for.
 
 1. With OBS closed, run `build.bat install` in `obs_plugin\`. The root `README.md` lists what the build
    needs. The script builds the plugin and copies it to
-   `C:\ProgramData\obs-studio\plugins\simoptix_overlays\bin\64bit`. If you use the VR Mirror plugin,
+   `C:\ProgramData\obs-studio\plugins\simoptix_overlays\bin\64bit`. It also copies the plugin's
+   `manifest.json` to `data` beside `bin`. OBS 32 reads the plugin's name and version from it. If you use the VR Mirror plugin,
    install it from the same build.
 2. In OBS, add a **SimOptix: G-Meter Overlay** source.
 

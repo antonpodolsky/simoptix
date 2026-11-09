@@ -459,8 +459,10 @@ committed.
 ## 4. Install the OBS plugins
 
 `build.bat install` in `vr_mirror\obs_plugin\` and in `overlays\obs_plugin\` builds each plugin and
-copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`. OBS must be closed, because
-it holds the DLLs. Install both from one build, because the telemetry both read checks that they match.
+copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`. It also copies the
+`manifest.json` that the build wrote into its own `bin` folder, with the version filled in, to the
+plugin's `data` folder beside `bin`, where OBS 32 and later read it. OBS must be closed, because it
+holds the DLLs. Install both from one build, because the telemetry both read checks that they match.
 
 1. Build both first. If a build fails, leave OBS alone.
 2. If OBS runs, close it the way its close button does, never by force: in PowerShell,

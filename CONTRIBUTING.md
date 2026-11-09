@@ -84,7 +84,8 @@ and is ignored by git. Builds must finish with no new warnings at `/W3`.
 | `vr_mirror\recording_analysis\` | Its `build.bat` (`patch_shift.exe`, `grid_shift.exe`) | No |
 
 The two plugins are `vr_mirror\obs_plugin\build.bat` and `overlays\obs_plugin\build.bat`. With the
-argument `install`, each also copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`.
+argument `install`, each also copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`,
+and its `manifest.json`, which OBS 32 reads for the plugin's name and version, to `data` beside it.
 OBS must be closed, because it holds the DLLs. Install both from the same build, because the telemetry
 they share checks that they match.
 

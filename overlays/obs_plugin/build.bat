@@ -12,8 +12,10 @@ rem Plus the rest of ..\..\shared (logging, the picture's delay the plugins shar
 rem files kept in %%LOCALAPPDATA%%\simoptix).
 rem Its version comes from ..\..\shared\build\version.bat (VERSION at the repo's root, and git),
 rem and goes into the DLL's version resource (version.rc).
-rem Optional argument "install": copies it to OBS's per-machine plugin folder
-rem (C:\ProgramData\obs-studio\plugins\simoptix_overlays\bin\64bit). Close OBS first.
+rem Writes bin\manifest.json from manifest.json with the version filled in, for OBS 32 and later.
+rem Optional argument "install": copies the DLL and manifest.json to OBS's per-machine plugin folder
+rem (C:\ProgramData\obs-studio\plugins\simoptix_overlays: the DLL in bin\64bit, manifest.json in
+rem data, where OBS reads it). Close OBS first.
 rem It links against OBS through an import library made here from ..\..\shared\obs_lib\obs.def (the
 rem functions OBS 32.2.2's obs.dll exports).
 setlocal
@@ -40,9 +42,14 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_S
    /LD /Fe:bin\%NAME%.dll ^
    /link obj\gmeter.res obj\version.res obj\obs.lib shlwapi.lib dwrite.lib d3d11.lib user32.lib ^
    gdi32.lib gdiplus.lib dbghelp.lib || exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File ..\..\shared\build\fill_version.ps1 ^
+   manifest.json bin\manifest.json || exit /b 1
 if /i "%~1"=="install" (
    if not exist "C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit" ^
       mkdir "C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit"
+   if not exist "C:\ProgramData\obs-studio\plugins\%NAME%\data" ^
+      mkdir "C:\ProgramData\obs-studio\plugins\%NAME%\data"
    copy /y bin\%NAME%.dll "C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit\" >nul || exit /b 1
-   echo installed to C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit
+   copy /y bin\manifest.json "C:\ProgramData\obs-studio\plugins\%NAME%\data\" >nul || exit /b 1
+   echo installed to C:\ProgramData\obs-studio\plugins\%NAME%
 )
