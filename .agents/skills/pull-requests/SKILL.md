@@ -7,8 +7,8 @@ description: Writing SimOptix's pull requests and commit messages. The title, th
 
 Use this whenever a commit message is written, or a pull request is opened or edited. The terms of
 this repo are in `.agents\skills\dev\reference\terms.md`. Commit messages and pull requests are public,
-and they stay. What stays out of every text on GitHub, and the check before posting, are in
-`.agents\skills\dev\reference\github_text.md`. Read it too. The dev skill
+and they stay. What stays out of everything public, and the check before posting, are in the
+public-text skill (`.agents\skills\public-text\SKILL.md`). Read it too. The dev skill
 (`.agents\skills\dev\SKILL.md`) says when to commit (step 6) and how a change reaches `main` (step 7).
 
 A pull request is read by a reviewer who sees only its diff, and later by anyone reading the history.
@@ -27,7 +27,7 @@ the branch changes against `main`, why, what was verified and what wasn't. These
 - **What comes next:** plans, next steps, follow-ups, and work that isn't on `main` or in this branch.
   An agent tells the maintainer in chat. A plan worth keeping becomes an issue
   (`.agents\skills\issues\SKILL.md`), when the maintainer asks for one.
-- **Personal information** (`reference\github_text.md`, "Personal information stays out").
+- **Personal information** (public-text skill, "Personal information stays out").
 
 ## Commit messages
 
@@ -39,6 +39,8 @@ the branch changes against `main`, why, what was verified and what wasn't. These
   attribution line the agent's own instructions give, if any.
 - **Commit from a file:** `git commit -s -F <file>`. Windows PowerShell 5.1 splits a quoted argument
   that holds double quotes, so `-m "..."` breaks on such text.
+- **Check before each commit,** both what is staged and the message, because every line of a commit
+  is public: `check_public_text.py --staged` and `check_public_text.py --pr-text <file>`.
 
 ## The pull request
 
@@ -70,15 +72,15 @@ the branch changes against `main`, why, what was verified and what wasn't. These
    folder.
 2. Read each sentence as a reviewer who sees only `git diff main...<branch>`. Delete each one that
    reviewer doesn't need ("Only this change").
-3. Check the description and the branch's commit messages (`reference\github_text.md`, "Check before
-   posting"):
+3. Check the description and the branch's commit messages (public-text skill, "Check before committing
+   or posting"):
 
    ```
-   python -I .agents\skills\dev\check_github_text.py <file>
+   python -I .agents\skills\public-text\check_public_text.py --pr-text <file>
    ```
 
    ```
-   python -I .agents\skills\dev\check_github_text.py --commits main..<branch>
+   python -I .agents\skills\public-text\check_public_text.py --commits main..<branch>
    ```
 
 4. Open it from the file:
@@ -87,7 +89,7 @@ the branch changes against `main`, why, what was verified and what wasn't. These
    gh pr create --base main --title "<title>" --label <label> --body-file <file>
    ```
 
-5. Check what was posted: `check_github_text.py --pr <number>`.
+5. Check what was posted: `check_public_text.py --pr <number>`.
 
 ## Editing a pull request
 
@@ -119,5 +121,6 @@ the branch changes against `main`, why, what was verified and what wasn't. These
       plans
 - [ ] What was verified has numbers. What wasn't is named, with a reason about the change
 - [ ] One type label, and Changelog lines only with a user-facing label
-- [ ] `check_github_text.py` run on the description and on the branch's commits, and its lines read
+- [ ] `check_public_text.py` run on what each commit staged, on the description and on the branch's
+      commits, and its lines read
 - [ ] Posted from a file, and checked again on GitHub

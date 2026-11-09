@@ -7,9 +7,10 @@ measured and tried so far (`findings\`). They are plain Markdown and worth readi
 change. `.agents\skills\docs\SKILL.md` has the rules for writing docs, and
 `.agents\skills\code-style\SKILL.md` and `.agents\skills\code-practices\SKILL.md` the rules for writing code.
 `.agents\skills\pull-requests\SKILL.md` and `.agents\skills\issues\SKILL.md` have the rules for writing
-pull requests, commit messages, issues and comments.
+pull requests, commit messages, issues and comments. `.agents\skills\public-text\SKILL.md` says what
+stays out of everything public.
 
-`AGENTS.md` points coding agents at these six skills. Codex, Cursor, Windsurf, Zed and Cline read it
+`AGENTS.md` points coding agents at these seven skills. Codex, Cursor, Windsurf, Zed and Cline read it
 on their own. Claude Code reads it through `CLAUDE.md`, and finds the skills through the short ones in
 `.claude\skills\`. GitHub Copilot reads `AGENTS.md` or `.github\copilot-instructions.md`, which points
 at the same skills. Aider reads it when started with `--read AGENTS.md`. Gemini CLI reads it when its
@@ -192,10 +193,11 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
     changelog").
   - If only contributors notice it (tests, refactors, contributors' docs, the skills, the build),
     label it `internal`, and leave the Changelog section empty.
-- Keep personal information out of commit messages, pull requests, issues and comments: recording
-  names, the dates and times of your sessions, tracks, cars and local paths. They are public, and
-  GitHub keeps every edit. `.agents\skills\dev\reference\github_text.md` lists what stays out, and
-  `python -I .agents\skills\dev\check_github_text.py <file>` lists lines to review before you post.
+- Keep personal information out of everything public: every file in the repo, commit messages, branch
+  names, pull requests, issues and comments. That means recording names, the dates and times of your
+  sessions, tracks, cars and local paths. Git and GitHub keep every version.
+  `.agents\skills\public-text\SKILL.md` lists what stays out. Before each commit,
+  `python -I .agents\skills\public-text\check_public_text.py --staged` lists lines to review.
 
 ## Releases
 

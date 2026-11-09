@@ -37,7 +37,6 @@ it is here, with the details in files beside this one. Paths below are relative 
 | `reference\mirror_app.md` | The mirror app's build and its use in the tests |
 | `reference\openxr.md` | The OpenXR layer: build, check, sign, install, the Easy Anti-Cheat test |
 | `reference\release.md` | The version and what carries it, when to bump it, the changelog from each pull request, and making a release |
-| `reference\github_text.md` | What stays out of issues, pull requests, comments and commit messages, and the check before posting (`check_github_text.py`) |
 | `findings\<part>.md` | What was measured, fixed, and tried and dropped, per part: `obs_plugin`, `frame_sources`, `openxr`, `overlays`, `telemetry`, `mirror_app`, `pipeline`, `e2e`, `recording_analysis` |
 
 The rules for writing docs are in `.agents\skills\docs\SKILL.md`. Read that skill whenever you write or
@@ -51,7 +50,11 @@ The rules for writing for GitHub are in `.agents\skills\pull-requests\SKILL.md` 
 commit messages) and `.agents\skills\issues\SKILL.md` (issues and comments). Read the matching one
 whenever you write a commit message, a pull request, an issue or a comment.
 
-These six skills in `.agents\skills\` are the instructions for every coding agent. `AGENTS.md`,
+What stays out of everything public is in `.agents\skills\public-text\SKILL.md`. Everything in the repo
+is public, and so are commit messages, branch names and all of GitHub. Read it before you write
+anything that is committed, pushed or posted.
+
+These seven skills in `.agents\skills\` are the instructions for every coding agent. `AGENTS.md`,
 `CLAUDE.md`, `.github\copilot-instructions.md` and the skills in `.claude\skills\` only point at them,
 for the agents that read those files. Change the rules here, never in those files.
 
@@ -113,10 +116,10 @@ for the agents that read those files. Change the rules here, never in those file
   - Never commit build output, captures or local `.ini` files, or binaries the build can make (OBS's
     import library is made from `shared\obs_lib\obs.def`).
   - Once the repo has its GitHub remote, every change reaches `main` through a pull request (step 7).
-- **Nothing personal goes to GitHub.** Issues, pull requests, comments and commit messages are public
-  and keep their history. They hold no recording names, session dates or times, tracks, cars, local
-  paths or details of the maintainer's PC, and nothing of how the work went. Check each text before
-  posting it (`reference\github_text.md`).
+- **Nothing personal in anything public.** Every file in the repo, every commit message and branch
+  name, and everything on GitHub is public and keeps its history. None of it holds recording names,
+  session dates or times, tracks, cars, local paths or details of the maintainer's PC, or anything of
+  how the work went. Check before each commit and each post (public-text skill).
 - **Docs move with the code, each in its place.**
   - READMEs describe the project: what each part is and does, how it behaves, its settings as a user
     sees them, how to use it, and its files. They hold no build, test or working steps, no findings,
@@ -628,8 +631,9 @@ build, then fix.
     passes on the build it should catch (`reference\e2e.md`, "Adding a replay of a real session",
     step 3).
 - **Export:** the trace's P, S and F rows of about 12 s around the moment, with times relative to the
-  file start, and the lag per frame. Add a header that says where the replay comes from and what
-  happened.
+  file start, and the lag per frame. Add a header that says what the replay shows and what happened.
+  The replay is public, so its header and its name hold no recording name, date, clock time, track or
+  car (public-text skill). Those go into the data folder's README.
 - **Test first:** run the new scenario on the current build, where it should fail. Check that it fails
   for the right reason (per-frame analysis of `vr_mirror\e2e\out\<scenario>\`), and that older builds
   it should catch fail too (`--tool <exe>`, built from that commit in a worktree). If the fake can't
@@ -700,6 +704,12 @@ Record what each start of the game showed in `findings\openxr.md`.
   release.
 - Before committing docs, run `python -I .agents\skills\docs\check_docs.py` (the docs skill has the
   checklist).
+- Before every commit, check what is staged for personal information and the like, and read the lines
+  it lists (public-text skill):
+
+  ```
+  python -I .agents\skills\public-text\check_public_text.py --staged
+  ```
 
 ## 7. Bring `main` up
 

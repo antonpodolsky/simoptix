@@ -111,7 +111,7 @@ assumes.
      Pimax headsets and Le Mans Ultimate". Don't say it as a limit: "Only Pimax is supported".
    - No history in READMEs: no dates of changes, no "was replaced", "used to". History lives in
      commit messages, and for users in `CHANGELOG.md` ("The changelog", below). Findings files keep
-     dated measurements and dead ends, because those are measured facts.
+     measurements, with the build they were made on, and dead ends, because those are measured facts.
    - No plans, roadmap codes, "for now", "yet" or "being obtained".
 4. **Cut what gives the reader nothing.** Count words ("two plugins", "in one repo"), "simply",
    "just", "note that", "as you can see", a sentence that restates its heading, and any statement
@@ -142,8 +142,11 @@ assumes.
 9. **Facts first.**
    - Check a claim against the code or a measurement before writing it. Say what was not
      verified.
-   - A number carries its unit and, in findings, its conditions (headset, scenario, date).
-   - Never print secrets, tokens or environment variables. No personal paths or machine names.
+   - A number carries its unit and, in findings, its conditions (headset, scenario, the build).
+   - Docs are public. Nothing personal goes in them: no secrets, tokens or values of environment
+     variables, no local paths or machine names, and no recording names, session dates or times,
+     tracks or cars. The public-text skill (`.agents\skills\public-text\SKILL.md`) has the full list
+     and the check.
    - Keep every fact when rewriting. Remove fluff, not information.
 
 10. **The same fact in the same words, for every variation.** Wherever the repo has more than one
@@ -202,7 +205,8 @@ reader. It has one section per release, newest first, in the Keep a Changelog fo
 The dev skill's files are read by people and agents in the middle of work. They need the facts fast.
 - **Findings** (`findings\<part>.md`): one section per subject. Inside it, one bullet or short
   paragraph per finding, with what was measured or tried, the numbers with their conditions, the
-  date, and the conclusion. A dead end says why it was dropped, with the measured reason. Keep the
+  build it was measured on (a commit), and the conclusion. A recording is named by what it shows,
+  never by its file name, date, track or car (public-text skill). A dead end says why it was dropped, with the measured reason. Keep the
   history a measurement needs ("before the fix: 1.6 %, after: 0 %"), and nothing else.
 - **Reference** (`reference\*.md`): procedures as numbered steps, options and file formats as
   tables, and the reasons a step exists.
@@ -261,6 +265,7 @@ them)". A clean run is not the end. Read the rest yourself.
 - [ ] No fluff: count words, "just", "simply", restated headings
 - [ ] Every fact of the old text survives, with its numbers, conditions and reasons, and every new
       fact was checked
+- [ ] Nothing personal: `check_public_text.py --staged` run, and its lines read (public-text skill)
 - [ ] A new term is in `reference\terms.md` and in each README's table that uses it
 - [ ] A fact shared by several variations (both plugins, both sources, the kinds of file) reads the
       same for each, and every variation's doc states it

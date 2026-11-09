@@ -197,6 +197,9 @@ The dev skill's "1b. Names" names the parts, files and concepts. Inside the code
   comment is a lower-case phrase.
 - **Only line comments.** A block comment is only for an unused parameter's name (`/*prefix*/`).
 - **No commented-out code.** Git keeps it.
+- **Comments, help text and test data are public.** They hold no recording names, session dates or
+  times, tracks, cars or local paths (public-text skill, `.agents\skills\public-text\SKILL.md`). An
+  example of a recording's name is a pattern: `'YYYY-MM-DD HH-MM-SS.mp4'`.
 - **Moving code keeps its comments' wording.** Changing code updates the comment above it in the same
   commit.
 
@@ -249,5 +252,6 @@ For the scripts in `vr_mirror\recording_analysis\`, `.agents\skills\` and any ot
 - [ ] No comment that labels a group, repeats a name or narrates. Comments say why, give units and name
       the owning thread
 - [ ] Every header opens with its comment. No commented-out code
+- [ ] Nothing personal in comments, help text or test data: `check_public_text.py --staged` run
 - [ ] A rename touched every use, and the build lists
 - [ ] The `code-practices` checklist passes too

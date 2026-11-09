@@ -209,6 +209,7 @@ def CheckTerms(doc, lines, terms):
             ".agents/skills/code-practices/",
             ".agents/skills/pull-requests/",
             ".agents/skills/issues/",
+            ".agents/skills/public-text/",
         )
     ) and any("terms.md" in l for l in lines[:15]):
         return []

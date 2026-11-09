@@ -1,7 +1,8 @@
 ## What changed and why
 
-<!-- This change only. How the work went, details of your own PC, plans, next steps and work on other
-branches stay out. -->
+<!-- This change only. Recording names, session dates and times, tracks, cars, details of your own PC,
+how the work went, plans, next steps and work on other branches stay out
+(.agents\skills\public-text\SKILL.md). -->
 
 ## What was verified
 
