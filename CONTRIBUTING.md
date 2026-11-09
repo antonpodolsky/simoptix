@@ -210,8 +210,11 @@ build carries it, and a build that isn't a release adds the commits since the la
    `python -I .agents\skills\dev\release.py`. It writes the release's section of `CHANGELOG.md` from
    the labels and Changelog sections of the pull requests since the last release.
 2. After it merges, tag the merge commit on `main` as `v<version>`, annotated.
-3. Build from the tag. Sign the OpenXR layer, because the version in it makes every build a new DLL.
-4. Create the GitHub Release with that section of `CHANGELOG.md` as its notes, and the built files.
+3. Build the OpenXR layer from the tag, and sign it, because the version in it makes every build a new
+   DLL.
+4. Build SimOptix Setup, which builds both plugins and carries them and the signed layer. Sign it too.
+5. Create the GitHub Release with that section of `CHANGELOG.md` as its notes, and the built files:
+   SimOptix Setup, and zips of the plugins and of the layer.
 
 While the version starts with 0, a patch release (0.1.1) holds only fixes. A minor one (0.2.0) adds or
 changes things, and also anything that breaks. `.agents\skills\dev\reference\release.md` has the

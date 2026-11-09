@@ -27,6 +27,7 @@ commit whose `VERSION` says 0.2.0.
 | The layer's manifest in `bin\` | `implementation_version`, one decimal number: major × 1000000 + minor × 1000 + patch, so 0.2.0 is 2000. The OpenXR loader skips a layer whose number isn't a whole number |
 | The OBS log | `[simoptix_vr_mirror] loaded, version 0.2.0`, and the same for `[simoptix_overlays]` |
 | The layer's log | `XR_APILAYER_SIMOPTIX_frame_source 0.2.0 loaded into Le Mans Ultimate.exe, ...` |
+| SimOptix Setup (`setup\`) | Its own version in the exe's version resource, after its window's title, and as `DisplayVersion` in its entry in Windows' installed apps. Each row shows the installed part's version, read from that DLL's version resource |
 
 The version names a build for people, and decides nothing at run time. Whether parts fit together is
 checked by the layout versions of the memory they share, which change only with that layout
@@ -125,14 +126,18 @@ Work in a worktree from `main` (`SKILL.md`, step 0), named `release_v<version>`.
    ```
 
    Check first that the newest commit of `main` on GitHub is the release's, with the new `VERSION`.
-5. Build from the tag in a new worktree, so the version is exactly the release's
-   (`git worktree add .claude/worktrees/build_v<version> v<version>`). Build both plugins and the layer
-   (`SKILL.md`, step 3). Each build prints `SimOptix <version>`, with no `+`. The PC needs LMU's
-   headers, or the plugins read no game.
+5. Build the layer from the tag in a new worktree, so the version is exactly the release's
+   (`git worktree add .claude/worktrees/build_v<version> v<version>`, then
+   `vr_mirror\frame_sources\openxr\build.bat`). Each build prints `SimOptix <version>`, with no `+`.
 6. Sign the layer with the user's own signing skill (`reference\openxr.md`, "Signing"). The version
    resource changed the DLL, so the release's layer is signed even if an earlier build was. Run its
    check program before the layer goes into the game.
-7. Pack the built files, write the notes, and create the GitHub Release, all in a folder outside the
+7. Build SimOptix Setup, `setup\build.bat`. It builds both plugins too, and carries them and the
+   signed layer. It ends with "The OpenXR layer in setup is signed (Valid)." and no warning. The PC
+   needs LMU's headers, or the plugins read no game. Then sign `setup\bin\simoptix_setup.exe` the same
+   way as the layer, with the same certificate, because Windows warns about a downloaded program
+   that isn't signed.
+8. Pack the built files, write the notes, and create the GitHub Release, all in a folder outside the
    repo:
 
    ```
@@ -144,14 +149,15 @@ Work in a worktree from `main` (`SKILL.md`, step 0), named `release_v<version>`.
    ```
 
    ```
-   gh release create v<version> --title "SimOptix <version>" --notes-file <folder>\notes.md --generate-notes <folder>\simoptix_obs_plugins_<version>.zip <folder>\simoptix_openxr_layer_<version>.zip
+   gh release create v<version> --title "SimOptix <version>" --notes-file <folder>\notes.md --generate-notes <folder>\simoptix_setup_<version>.exe <folder>\simoptix_obs_plugins_<version>.zip <folder>\simoptix_openxr_layer_<version>.zip
    ```
 
-   `release_files.ps1` makes two zips. One holds both plugins, laid out as in OBS's plugin folder,
-   each with its `manifest.json` in its own `data` folder. The other holds the layer and its manifest
-   in `bin\`, beside `install.ps1`, `uninstall.ps1` and `uninstall.bat`. It refuses when a DLL's
-   version isn't exactly the release's, or when the layer isn't validly signed. `--generate-notes`
-   adds GitHub's list of the merged pull requests under the notes, without the `internal` ones.
+   `release_files.ps1` copies setup as `simoptix_setup_<version>.exe` and makes two zips. One holds
+   both plugins, laid out as in OBS's plugin folder, each with its `manifest.json` in its own `data`
+   folder. The other holds the layer and its manifest in `bin\`, beside `install.ps1`,
+   `uninstall.ps1` and `uninstall.bat`. It refuses when a file's version isn't exactly the release's,
+   or when the layer or setup isn't validly signed. `--generate-notes` adds GitHub's list of the
+   merged pull requests under the notes, without the `internal` ones.
 
 The first release, 0.1.0, is the exception to steps 1 and 2. The pull requests before it carry no
 labels, and `VERSION` already says 0.1.0. Label them first, or write its section of `CHANGELOG.md` by
