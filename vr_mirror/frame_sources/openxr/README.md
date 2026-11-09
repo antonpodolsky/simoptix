@@ -64,8 +64,8 @@ In LMU started the usual way, Easy Anti-Cheat keeps the layer out:
   254 MB of the graphics card's memory. The layer makes them when VR Mirror starts reading and lets
   them go 10 s after it stopped. With nobody reading, the layer only writes each frame's record.
 - **In LMU, it writes one log per game start,**
-  `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`. The newest 10 are kept. Each game
-  start that reaches OpenXR deletes the oldest beyond that.
+  `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`. The newest 10 logs are kept. When a
+  game start reaches OpenXR, the layer deletes the oldest beyond 10. Its log says how many it deleted.
 - **The log's first line says that Windows loaded the DLL into LMU,** before any OpenXR step. A game
   start with no new log means the DLL was never loaded, for example because anti-cheat blocked it. A log
   with this line alone means OpenXR never called the layer.

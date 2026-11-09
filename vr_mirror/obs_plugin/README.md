@@ -60,7 +60,9 @@ thread of their own, so OBS's output never stops for them. The OBS log says "Pim
 ... ms".
 
 Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`, at most two per OBS session. The newest
-10 are kept. When OBS starts, the plugins delete the oldest beyond 8, so that session's two still fit.
+10 crash dumps are kept. When OBS starts, the plugins delete the oldest beyond 8, so that session's two
+still fit. The OBS log says how many they deleted. The OBS log marks this plugin's lines
+`[simoptix_vr_mirror]`.
 
 ## What the sources show
 
@@ -190,8 +192,11 @@ by itself. It is off by default.
   With several, it is on while any of them has it ticked.
 
 It reads LMU through the telemetry both plugins share (`shared\telemetry\README.md`). One reader serves
-the whole of OBS, and runs only while something needs it. Reading LMU needs LMU's telemetry headers from
-the game's folder at build time. A build without them says so, and auto-record then reads no game.
+the whole of OBS, and runs only while something needs it.
+
+Reading LMU needs its telemetry headers from the game's folder at build time, because their licence
+doesn't allow copying them into this repo. The build finds the game in any Steam library. A build
+without the headers says so and reads no game, and race auto-record then records nothing.
 
 The OBS log shows each step, in lines that start "LMU race auto-record:":
 - on and off
@@ -390,5 +395,5 @@ otherwise. The trace takes about 300 MB per hour with the Pimax source, and abou
 the OpenXR source. It is written to disk on its own thread, so a slow disk never holds up OBS or the
 frame signal. If the disk falls a minute behind, rows are dropped, and the OBS log says how many.
 
-The newest 10 traces are kept. When a trace starts, VR Mirror deletes the oldest beyond that, each with
-all its files. The OBS log's "frame trace:" line says how many it deleted.
+The newest 10 traces are kept. When a trace starts, VR Mirror deletes the oldest beyond 10, each with
+all its files. The OBS log says how many it deleted, in the "frame trace:" line.
