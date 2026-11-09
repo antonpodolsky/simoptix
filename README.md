@@ -99,6 +99,12 @@ To build:
 
 To remove a plugin, close OBS and delete the plugin's folder in `C:\ProgramData\obs-studio\plugins\`.
 
+**SimOptix Setup** installs and removes both plugins and the layer in one program, and shows what is
+installed. `setup\build.bat` builds both plugins and then setup, `setup\bin\simoptix_setup.exe`, one
+file that carries all three. It takes the layer as it was last built, so build the layer first, and
+sign it for a signed layer. While anything is installed, Windows' installed apps list SimOptix, and
+its Uninstall removes everything. `setup\README.md` describes setup.
+
 ## Folders
 
 | Folder | What |
@@ -113,6 +119,7 @@ To remove a plugin, close OBS and delete the plugin's folder in `C:\ProgramData\
 | `overlays\` | SimOptix: Overlays: the G-meter (`gmeter\`, its image layers in `gmeter\design\`) and what any overlay can reuse (`common\`) |
 | `shared\` | Code compiled into both plugins: logging, CPU counters, crash dumps, the files kept in `%LOCALAPPDATA%\simoptix` (the newest 10 of each kind), the view's delay, and the list of OBS functions they call (`obs_lib\`). `build\` finds Visual Studio and gives every build SimOptix's version |
 | `shared\telemetry\` | One reader of the game's telemetry for all of OBS, and the G-meter's demo lap. `games\lmu\fake\` makes up LMU telemetry, to test without the game |
+| `setup\` | SimOptix Setup: one program that installs and removes both plugins and the layer |
 | `third_party\` | libobs 32.2.2 and the OpenXR headers, as published |
 
 Each part's README describes what it does, its settings and its files:
@@ -125,6 +132,7 @@ Each part's README describes what it does, its settings and its files:
 - `vr_mirror\recording_analysis\README.md`
 - `overlays\README.md` and `overlays\gmeter\design\README.md`
 - `shared\telemetry\README.md`
+- `setup\README.md`
 
 ## Contributing
 

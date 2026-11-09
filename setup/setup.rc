@@ -1,0 +1,21 @@
+// Copyright (C) 2026 Anton Podolsky
+// SPDX-License-Identifier: GPL-2.0-or-later
+// The files SimOptix Setup carries inside its exe, by the resource names in setup_parts.h, and the exe's
+// version resource (shared\build\version_info.rc). build.bat builds the plugins first and takes the
+// OpenXR layer as it is.
+
+VR_MIRROR_DLL RCDATA "..\\vr_mirror\\obs_plugin\\bin\\simoptix_vr_mirror.dll"
+VR_MIRROR_MANIFEST RCDATA "..\\vr_mirror\\obs_plugin\\bin\\manifest.json"
+OVERLAYS_DLL RCDATA "..\\overlays\\obs_plugin\\bin\\simoptix_overlays.dll"
+OVERLAYS_MANIFEST RCDATA "..\\overlays\\obs_plugin\\bin\\manifest.json"
+OPENXR_LAYER_DLL RCDATA "..\\vr_mirror\\frame_sources\\openxr\\bin\\XR_APILAYER_SIMOPTIX_frame_source.dll"
+OPENXR_LAYER_MANIFEST RCDATA "..\\vr_mirror\\frame_sources\\openxr\\bin\\XR_APILAYER_SIMOPTIX_frame_source.json"
+
+// The icon, which make_icon.ps1 writes into obj\ for each build (kSetupIconId in setup_theme.h).
+1 ICON "obj\\setup.ico"
+
+#define SIMOPTIX_FILE_NAME "simoptix_setup.exe"
+#define SIMOPTIX_FILE_DESCRIPTION "SimOptix Setup"
+#define SIMOPTIX_FILE_TYPE VFT_APP
+
+#include "shared/build/version_info.rc"

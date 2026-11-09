@@ -191,8 +191,9 @@ for the agents that read those files. Change the rules here, never in those file
   - Telemetry (`shared\telemetry\`): game adapters (`shared\telemetry\games\`) feed one reader per OBS
     process. The reader feeds the overlays (`overlays\gmeter\`, with `overlays\obs_plugin\` as their
     OBS module) and race auto-record (`vr_mirror\obs_plugin\race_auto_record\`).
-  - `vr_mirror\e2e\`, `vr_mirror\recording_analysis\`, the fake LMU and the OpenXR layer's check
-    program are standalone programs.
+  - `vr_mirror\e2e\`, `vr_mirror\recording_analysis\`, the fake LMU, the OpenXR layer's check
+    program and SimOptix Setup (`setup\`) are standalone programs. Setup carries the plugins' and the
+    layer's built DLLs inside it, and includes none of their code.
   - Hosts include `vr_mirror\core\`, and core includes no host. Hosts include no other host, and no
     includes are cyclic.
 - **Logic apart from I/O.**
@@ -471,6 +472,7 @@ committed.
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`: the layout check, on a PC with Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`. `PVR_SDK` names another `Include` folder. Without the SDK it says so and skips | Yes |
 | `vr_mirror\frame_sources\openxr\` | `vr_mirror\frame_sources\openxr\build.bat`, then its check program, then signed if it goes into the game (`reference\openxr.md`) | The local files test for the layer's log. Otherwise no |
 | `vr_mirror\recording_analysis\` | `build.bat` there, for `patch_shift.exe` and `grid_shift.exe` | No |
+| `setup\` | `setup\build.bat`, after `vr_mirror\frame_sources\openxr\build.bat` and signing: setup takes the layer as it is, because building it again would replace a signed DLL with an unsigned one. It builds both plugins itself, and carries all three inside `simoptix_setup.exe`. A new worktree has no layer build, so build and sign the layer there first. The build ends with a warning when the layer it carries isn't validly signed, or carries another version than the plugins | No. Run it (Windows asks for administrator rights), and check its buttons and what Install, Update and Uninstall leave on the PC |
 
 - Run the build scripts through `cmd /c "<full path>\build.bat"` from PowerShell. A bare `build.bat`
   isn't found from another folder.

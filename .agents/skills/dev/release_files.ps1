@@ -1,13 +1,14 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Packs a release's built files into two zips for its GitHub Release (reference\release.md, step 7):
+# Packs a release's built files for its GitHub Release (reference\release.md, step 8):
+#   simoptix_setup_<version>.exe         SimOptix Setup, which carries both plugins and the layer
 #   simoptix_obs_plugins_<version>.zip   both plugins, laid out as in OBS's plugin folder,
 #                                        C:\ProgramData\obs-studio\plugins: <name>\bin\64bit\<name>.dll
 #                                        and <name>\data\manifest.json
 #   simoptix_openxr_layer_<version>.zip  the layer and its manifest in bin\, beside install.ps1,
 #                                        uninstall.ps1 and uninstall.bat, which install it from there
-# Refuses when a DLL's version isn't exactly the one in VERSION (a build off the release tag, or with
-# changes), or when the layer's signature isn't valid.
+# Refuses when a file's version isn't exactly the one in VERSION (a build off the release tag, or with
+# changes), or when the layer's or setup's signature isn't valid.
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File release_files.ps1 <output folder>
 param([string]$OutputPath)
 $ErrorActionPreference = 'Stop'
@@ -20,8 +21,10 @@ $plugins = [ordered]@{
     simoptix_overlays = Join-Path $root 'overlays\obs_plugin\bin'
 }
 
+$setup = Join-Path $root 'setup\bin\simoptix_setup.exe'
 $dlls = @($plugins.Keys | ForEach-Object { Join-Path $plugins[$_] "$_.dll" })
 $dlls += Join-Path $layerBin "$layerName.dll"
+$dlls += $setup
 foreach ($dll in $dlls) {
     if (-not (Test-Path $dll)) {
         Write-Host "error: $dll is missing. Build it first."
@@ -36,11 +39,13 @@ foreach ($dll in $dlls) {
     }
 }
 
-$signature = Get-AuthenticodeSignature (Join-Path $layerBin "$layerName.dll")
-if ($signature.Status -ne 'Valid') {
-    Write-Host "error: the layer's signature is $($signature.Status)."
-    Write-Host 'Sign it first (.agents\skills\dev\reference\openxr.md, "Signing").'
-    exit 1
+foreach ($signed in (Join-Path $layerBin "$layerName.dll"), $setup) {
+    $signature = Get-AuthenticodeSignature $signed
+    if ($signature.Status -ne 'Valid') {
+        Write-Host "error: the signature of $signed is $($signature.Status)."
+        Write-Host 'Sign it first (.agents\skills\dev\reference\release.md, "Making a release").'
+        exit 1
+    }
 }
 
 $staging = Join-Path $OutputPath "staging_$version"
@@ -64,10 +69,13 @@ foreach ($script in 'install.ps1', 'uninstall.ps1', 'uninstall.bat') {
     Copy-Item (Join-Path $root "vr_mirror\frame_sources\openxr\$script") $layerFolder
 }
 
+$setupCopy = Join-Path $OutputPath "simoptix_setup_$version.exe"
 $pluginsZip = Join-Path $OutputPath "simoptix_obs_plugins_$version.zip"
 $layerZip = Join-Path $OutputPath "simoptix_openxr_layer_$version.zip"
+Copy-Item $setup $setupCopy -Force
 Compress-Archive -Path (Join-Path $pluginsFolder '*') -DestinationPath $pluginsZip -Force
 Compress-Archive -Path (Join-Path $layerFolder '*') -DestinationPath $layerZip -Force
 Remove-Item -Recurse -Force $staging
+Write-Host $setupCopy
 Write-Host $pluginsZip
 Write-Host $layerZip

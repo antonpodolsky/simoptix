@@ -85,6 +85,7 @@ and is ignored by git. Builds must finish with no new warnings at `/W3`.
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`, which checks the declarations against Pimax's headers. Without the SDK it says so and skips | Yes |
 | `vr_mirror\frame_sources\openxr\` | Its `build.bat`, then its check program, then signed if the layer goes into the game | The local files test for the layer's log. Otherwise no |
 | `vr_mirror\recording_analysis\` | Its `build.bat` (`patch_shift.exe`, `grid_shift.exe`) | No |
+| `setup\` | Its `build.bat`, after the layer's `build.bat` (and signing). It builds both plugins too | No. Check its window and what it installs |
 
 The two plugins are `vr_mirror\obs_plugin\build.bat` and `overlays\obs_plugin\build.bat`. With the
 argument `install`, each also copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`,
@@ -209,8 +210,11 @@ build carries it, and a build that isn't a release adds the commits since the la
    `python -I .agents\skills\dev\release.py`. It writes the release's section of `CHANGELOG.md` from
    the labels and Changelog sections of the pull requests since the last release.
 2. After it merges, tag the merge commit on `main` as `v<version>`, annotated.
-3. Build from the tag. Sign the OpenXR layer, because the version in it makes every build a new DLL.
-4. Create the GitHub Release with that section of `CHANGELOG.md` as its notes, and the built files.
+3. Build the OpenXR layer from the tag, and sign it, because the version in it makes every build a new
+   DLL.
+4. Build SimOptix Setup, which builds both plugins and carries them and the signed layer. Sign it too.
+5. Create the GitHub Release with that section of `CHANGELOG.md` as its notes, and the built files:
+   SimOptix Setup, and zips of the plugins and of the layer.
 
 While the version starts with 0, a patch release (0.1.1) holds only fixes. A minor one (0.2.0) adds or
 changes things, and also anything that breaks. `.agents\skills\dev\reference\release.md` has the
