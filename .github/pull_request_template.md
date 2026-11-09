@@ -1,5 +1,9 @@
 ## What changed and why
 
+<!-- This change only. Recording names, session dates and times, tracks, cars, details of your own PC,
+how the work went, plans, next steps and work on other branches stay out
+(.agents\skills\public-text\SKILL.md). -->
+
 ## What was verified
 
 <!-- The builds, the e2e results if `vr_mirror\core\` or `vr_mirror\mirror_app\` changed, and what was

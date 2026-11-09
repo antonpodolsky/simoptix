@@ -6,8 +6,11 @@ AI coding agents and people alike. Beside it are longer procedures (`reference\`
 measured and tried so far (`findings\`). They are plain Markdown and worth reading before a larger
 change. `.agents\skills\docs\SKILL.md` has the rules for writing docs, and
 `.agents\skills\code-style\SKILL.md` and `.agents\skills\code-practices\SKILL.md` the rules for writing code.
+`.agents\skills\pull-requests\SKILL.md` and `.agents\skills\issues\SKILL.md` have the rules for writing
+pull requests, commit messages, issues and comments. `.agents\skills\public-text\SKILL.md` says what
+stays out of everything public.
 
-`AGENTS.md` points coding agents at these four skills. Codex, Cursor, Windsurf, Zed and Cline read it
+`AGENTS.md` points coding agents at these seven skills. Codex, Cursor, Windsurf, Zed and Cline read it
 on their own. Claude Code reads it through `CLAUDE.md`, and finds the skills through the short ones in
 `.claude\skills\`. GitHub Copilot reads `AGENTS.md` or `.github\copilot-instructions.md`, which points
 at the same skills. Aider reads it when started with `--read AGENTS.md`. Gemini CLI reads it when its
@@ -181,6 +184,8 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 - Sign off every commit ("Sign-off", below).
 - Send changes as a pull request against `main`. Say what changed, why, and what you verified: the
   builds, the e2e results if `vr_mirror\core\` or the mirror app changed, and what you checked by hand.
+  The description covers that change only. How the work went and details of your own PC stay out.
+  Plans, next steps and work on other branches go in an issue.
 - Give the pull request one label, which decides whether it goes into `CHANGELOG.md`:
   - If users notice the change, label it `added`, `changed`, `fixed`, `removed` or `security`. Then
     write one to three lines in the Changelog section of its description. Write them for a VR sim
@@ -188,6 +193,11 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
     changelog").
   - If only contributors notice it (tests, refactors, contributors' docs, the skills, the build),
     label it `internal`, and leave the Changelog section empty.
+- Keep personal information out of everything public: every file in the repo, commit messages, branch
+  names, pull requests, issues and comments. That means recording names, the dates and times of your
+  sessions, tracks, cars and local paths. Git and GitHub keep every version.
+  `.agents\skills\public-text\SKILL.md` lists what stays out. Before each commit,
+  `python -I .agents\skills\public-text\check_public_text.py --staged` lists lines to review.
 
 ## Releases
 
