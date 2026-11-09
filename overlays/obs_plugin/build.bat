@@ -32,7 +32,7 @@ rc /nologo /i ..\.. /i obj /fo obj\version.res version.rc || exit /b 1
 set "G=..\gmeter"
 set "C=..\common"
 cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Fo:obj\ ^
-   /I..\.. /I%G% /I%C% ^
+   /I..\.. /I%G% /I%C% /Iobj ^
    /I..\..\third_party\obs-32.2.2\libobs %TELEMETRY_FLAGS% ^
    plugin.cpp %TELEMETRY_FILES% ..\..\shared\telemetry\demo_lap.cpp ^
    %G%\gmeter_source.cpp %G%\meter_chrono.cpp %G%\meter_draw.cpp %G%\meter_text.cpp ^

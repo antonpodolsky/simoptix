@@ -70,7 +70,9 @@ Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`, at most two per OB
 still fit. The OBS log says how many they deleted. The OBS log marks this plugin's lines
 `[simoptix_vr_mirror]`.
 
-Windows shows the plugin's version in the DLL's Properties, under Details. A build of a release shows
+The plugin writes its version to the OBS log when OBS loads it
+(`[simoptix_vr_mirror] loaded, version 0.1.0`). Windows shows the same version in the DLL's
+Properties, under Details. A build of a release shows
 its number (`0.1.0`). Any other build adds the commits since that release and the commit
 (`0.1.0+12.gabc1234`).
 

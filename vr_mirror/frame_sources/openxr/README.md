@@ -81,6 +81,8 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
   loaded and worked but wrote no log. Why is not known. There, VR Mirror's OBS log shows that the layer
   runs in the game.
 - **After that line, the log holds:**
+  - the layer's version, when OpenXR first calls it
+    (`XR_APILAYER_SIMOPTIX_frame_source 0.1.0 loaded into Le Mans Ultimate.exe, ...`)
   - what the game's OpenXR loader offered in the first handshake, and why the layer refused it if it did
   - that the layer loaded, which runtime and headset the game uses, and whether it asked for the time
     conversion
