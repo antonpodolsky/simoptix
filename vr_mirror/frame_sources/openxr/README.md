@@ -18,6 +18,7 @@ LMU with Easy Anti-Cheat, and online play stayed enabled. `uninstall.bat` remove
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
+| frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
 
 ## The two halves
 
@@ -56,7 +57,9 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 - **It hands each frame to VR Mirror** (the SimOptix: OpenXR Mirror source in OBS,
   `vr_mirror\obs_plugin\README.md`). After the frame has gone on to the headset, the layer provides:
   - A record of the frame in a small piece of shared memory. It holds the moment the game drew the
-    frame for, and the pose and field of view of each eye.
+    frame for, and the pose and field of view of each eye. It also holds how the game handed over the
+    left eye's image: which swapchain image, how many images the game held, how many it released while
+    the frame was in xrEndFrame, and which threads released the image and ended the frame.
   - While VR Mirror is reading, one copy of the left eye image into one of three textures that VR
     Mirror can open. The copy runs on the game's graphics card after the frame's own work and takes
     about 0.2 ms of it (the layer measures it). The frame has already gone to the headset, so the
@@ -86,6 +89,9 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
     the copy's time on the graphics card (median, 99th percentile, longest)
 - **Its footprint in the game is small.** Each call goes on to the runtime first, unchanged. The layer
   then reads what the game passed and the runtime returned.
+  - At the end of a frame it first notes which image the frame shows. OpenXR shows the image the game
+    released last when it ends the frame, and a thread of the game may release the next one while the
+    call is in the runtime.
   - Per frame, it does a few comparisons, writes the record, and copies while VR Mirror reads.
   - It uses no locks, no waits on the graphics card, no flushes and no allocations per frame.
   - It makes the textures on a thread of its own. It makes them on the game's thread only if the
@@ -117,9 +123,19 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
     the copy is smaller, and keeps the image sRGB-encoded once, as the game drew it.
   - While its graphics card reads one of the layer's textures, the reader holds the layer off it,
     and lets go as soon as the read is done.
+- **It reads only the memory layout of its own build.** A layer from another build is logged as "the
+  layer's memory has another layout: install the layer from this build", and gives no frames.
 - **Log lines** start with "OpenXR:". They report the layer found, the clock read, frames coming, and
   going idle after 2 s without a frame, and the game's session ending. Every 10 s they report the
   frames read and the images that were gone before they were copied.
+  - Once a session, they say whether the game's device context is protected for use from several
+    threads. The layer copies on that context from the thread that ends the frame.
+  - The first time it happens in a session, they say that the game releases its images on another
+    thread than it ends its frames on, and that it released an image while a frame was in xrEndFrame.
+- **Its trace** (the source's Debug setting in OBS) is `trace_<time>_openxr.csv`, beside the frame
+  trace. It has a row for every frame the layer published: when the game ended it, the moment it was
+  drawn for, and how the game handed its image over (as in the record above). A second row says when
+  its copy was seen finished, and which game frame of the frame trace it became.
 
 ## Files
 

@@ -270,6 +270,26 @@ namespace {
             c.limits.maxPoseJumpPct = 0;
             AddEverySmoothing(OnOpenXr(c), out);
         }
+
+        {
+            // A game that draws on one thread and ends its frames on another: the next frame's image is
+            // released while the frame before is still in xrEndFrame. Every 3 s a frame takes 64 ms longer,
+            // and the next follows it at once (issue 12). Each frame must show its own image.
+            Scenario c{
+                "openxr_stall",
+                "a render thread releases the next image during xrEndFrame; a 64 ms stall every 3 s",
+                "racing+heartbeat"
+            };
+
+            c.fake["render_thread"] = "1";
+            c.fake["stall_every_s"] = "3";
+            c.fake["stall_ms"] = "64";
+            c.seconds = 15;
+            c.limits.minToolFps = 80;
+            c.limits.maxMismatchDeg = 0.2;       // openxr_stabilization: 0.05 deg rms
+            c.limits.maxWorstMismatchDeg = 0.5;  // ...0.15 deg; the image of the next frame: 2.8 deg
+            AddEverySmoothing(OnOpenXr(c), out);
+        }
     }
 
     void AddOpenXrEdgeScenarios(std::vector<Scenario>* out) {

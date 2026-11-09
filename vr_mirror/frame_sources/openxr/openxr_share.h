@@ -12,8 +12,9 @@
 // construction; kVersion changes with every change of layout or meaning.
 //
 // Each frame (Record), in order: the layer's frame number, the display time the game drew it for, the
-// two eyes' poses and fields of view as the game passed them, and which of the kTextures shared textures
-// holds the left eye's picture (-1: none, the frame was not copied). A record is written under a sequence
+// two eyes' poses and fields of view as the game passed them, which of the kTextures shared textures
+// holds the left eye's picture (-1: none, the frame was not copied), and how the game handed that image
+// over (which swapchain image, on which threads). A record is written under a sequence
 // count (odd while it is written), so a reader never takes half of one. The picture in texture k is
 // frame `textureFrame[k]`'s once its copy is finished on the GPU; 0 while one is being copied in.
 //
@@ -43,7 +44,7 @@ namespace openxr_share {
     // so the reader opens the memory at once rather than at its next look (once a second).
     constexpr const wchar_t* kSessionEvent = L"Local\\SimOptix.OpenXR.FrameSource.Session";
     constexpr uint32_t kMagic = 0x46584F53;  // "SOXF"
-    constexpr uint32_t kVersion = 1;
+    constexpr uint32_t kVersion = 2;
     constexpr int kTextures = 3;
     constexpr int kRecords = 256;  // about 2.8 s of frames at 90 Hz
 
@@ -78,6 +79,20 @@ namespace openxr_share {
         int32_t texture;  // the shared texture its picture is copied into; -1: not copied
         // the part of the game's image copied (pixels); the texture holds it at 0, 0
         int32_t x, y, width, height;
+
+        // How the game handed the left eye's image over, for the frame trace.
+        int32_t gameImage;    // the swapchain image the frame shows; -1: none known
+        uint32_t imagesHeld;  // that swapchain's images the game held acquired as it ended the frame
+        uint32_t
+            releasedDuringEnd;   // that swapchain's images it released while xrEndFrame was in the runtime
+        uint32_t endThread;      // the game's thread that ended the frame (Windows thread id)
+        uint32_t releaseThread;  // the game's thread that released the image
+    };
+
+    enum ContextProtection : uint32_t {
+        kProtectionUnknown = 0,
+        kUnprotected = 1,  // the game's device context is not safe for two threads at once
+        kProtected = 2,    // it is: the game turned D3D11's multithread protection on
     };
 
     enum State : uint32_t {
@@ -95,6 +110,9 @@ namespace openxr_share {
         uint32_t adapterLow;            // the game's graphics adapter (LUID), for the reader's device
         int32_t adapterHigh;
         int64_t counterFrequency;  // performance-counter ticks per second, as the layer read it
+        // ContextProtection of the game's device context, which the layer copies on from the thread that
+        // ends the frame
+        uint32_t contextProtection;
 
         // The shared textures (legacy D3D11 shared handles), made while a reader is there.
         std::atomic<uint32_t> textureGeneration;  // changes each time they are made; 0: there are none
@@ -140,6 +158,9 @@ namespace openxr_share {
         }
         out->texture = r.texture;
         out->x = r.x, out->y = r.y, out->width = r.width, out->height = r.height;
+        out->gameImage = r.gameImage, out->imagesHeld = r.imagesHeld;
+        out->releasedDuringEnd = r.releasedDuringEnd;
+        out->endThread = r.endThread, out->releaseThread = r.releaseThread;
         std::atomic_thread_fence(std::memory_order_acquire);
         return r.seq.load(std::memory_order_relaxed) == before && out->frame == frame;
     }
