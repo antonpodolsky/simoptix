@@ -38,7 +38,7 @@ Bump the version only in a release's pull request, by what changed for users sin
 
 | Bump | When | Example |
 |---|---|---|
-| Patch, 0.2.0 to 0.2.1 | Fixes only. Nothing a user has to do or set differently | The G-meter's needle no longer sticks after a pause |
+| Patch, 0.2.0 to 0.2.1 | Fixes only. Nothing a user has to do or set differently | `build.bat install` makes the plugin's folders on a PC that has none |
 | Minor, 0.2.0 to 0.3.0 | Something added or changed. While the major is 0, also anything that breaks | A new setting. A setting removed or with a new meaning. A plugin and the layer that must be updated together, because their shared memory's layout changed. A new OBS version needed |
 | Major, 0.x to 1.0.0 | When the maintainer calls SimOptix stable. After that, any change that breaks | |
 
@@ -59,7 +59,8 @@ Its lines come from the pull requests. Each one carries exactly one type label:
 | `internal` | Changes nothing users notice: tests, refactors, contributors' docs, the skills, the build, findings | Empty |
 
 A change to a README that users read, such as a corrected install step, is `changed`. A release's own
-pull request is `internal`. The template (`.github\pull_request_template.md`) has the section. An
+pull request is `internal`. A pull request with changes of two types takes the type of the one users
+notice most, or is split in two. The template (`.github\pull_request_template.md`) has the section. An
 agent opens the pull request with `gh pr create --label <label> --body-file <file>`.
 
 `.github\release.yml` leaves the `internal` pull requests out of the list of merged pull requests
@@ -154,4 +155,5 @@ Work in a worktree from `main` (`SKILL.md`, step 0), named `release_v<version>`.
 
 The first release, 0.1.0, is the exception to steps 1 and 2. The pull requests before it carry no
 labels, and `VERSION` already says 0.1.0. Label them first, or write its section of `CHANGELOG.md` by
-hand in step 2, saying what SimOptix 0.1.0 is.
+hand in step 2, saying what SimOptix 0.1.0 is. A section written by hand has the script's form,
+with its link line at the end of the file, and `check_docs.py` checks it.
