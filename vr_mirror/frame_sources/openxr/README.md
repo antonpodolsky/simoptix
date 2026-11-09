@@ -153,7 +153,7 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 | `openxr_d3d11.h` | The few Windows-specific OpenXR declarations that the layer and its check program use |
 | `openxr_frame_layout.*` | The summary of each frame's layout and the log lines (plain logic, no OpenXR calls) |
 | `openxr_layer_log.*` | The log file. `shared\local_files.*` names it and keeps the newest |
-| `XR_APILAYER_SIMOPTIX_frame_source.json` | The manifest: how OpenXR finds the DLL |
+| `XR_APILAYER_SIMOPTIX_frame_source.json` | The manifest: how OpenXR finds the DLL. `build.bat` writes it into `bin\` with `implementation_version` filled in: the version as one number, 1000 for 0.1.0 (major × 1000000 + minor × 1000 + patch), because the OpenXR loader reads one decimal number there |
 | `frame_source.def` | The DLL's one exported function |
 | `openxr_layer_version.rc` | The DLL's version resource, which Windows shows in its Properties, under Details |
 | `build.bat` | Builds the DLL, unsigned, and the check program into `bin\` |
