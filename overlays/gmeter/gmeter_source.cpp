@@ -5,9 +5,9 @@
 // direction from the centre is the direction of the force and its distance the amount, against
 // rings at every whole G. A comet tail (the dot's recent positions, shrinking and fading) shows how
 // braking blends into cornering, and the highest G reached in each of the four directions stands
-// outside the outer ring (reset when a new driving session starts). Two bars show the brake (left)
-// and throttle (right), with ABS and TC lighting up. One look, Chrono (meter_chrono.h: a black bezel
-// under domed glass).
+// outside the outer ring (reset when a new driving session starts). Two bars just inside the outer
+// ring show the brake (left) and throttle (right), each darker while ABS or TC intervenes. One look,
+// Chrono (meter_chrono.h: a black bezel around a face under domed glass).
 //
 // Its properties hold only the meter type (Chrono, the one look) and the demo lap's button; the rest is
 // fixed here (the constants below). The dot moves the way the driver is pushed (braking: forward, a

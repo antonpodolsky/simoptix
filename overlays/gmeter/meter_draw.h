@@ -48,8 +48,8 @@ void AddQuadA(
 // A band from (x0, y0) with half width h0 to (x1, y1) with half width h1, with soft long edges.
 void AddTaper(std::vector<float>& v, float x0, float y0, float h0, float x1, float y1, float h1);
 // A band of width w along the circle of radius r around (cx, cy), from angle a0 to a1 (degrees,
-// clockwise from straight up, as on screen), with soft edges and round ends that don't overlap the
-// band (so a translucent arc has even alpha).
+// clockwise from straight up, as on screen), with flat ends (as SVG's default line cap). Its soft edges
+// are centred on its outline, so it covers as much as the same stroke in SVG.
 void AddArc(std::vector<float>& v, float cx, float cy, float r, float w, float a0, float a1);
 void AddDisc(std::vector<float>& v, float cx, float cy, float r);
 // A disc of radius r blurred by a Gaussian of `sigma` (as SVG's feGaussianBlur), for glows: alpha falls
