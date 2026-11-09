@@ -24,10 +24,13 @@ It runs every scenario. Name some to run only those (`e2e_runner.exe stabilizati
 list them with `--list`.
 
 - Each scenario opens a small window (320×180) on top of everything, for about 15 s.
-- With every scenario at all three smoothings, that is 57 runs. The 54 before `openxr_stall` took
-  787 s (about 13 minutes) on 2026-11-08.
+- With every scenario at all three smoothings, that is 57 runs. They took 837 s (about 14 minutes) on
+  2026-11-09.
 - Don't use the PC meanwhile. For consistent timing, close LMU, the mirror app, Pimax Play and other
   heavy apps first.
+- Run one test of the OpenXR layer at a time on the PC. The fake OpenXR games of two runs, from two
+  worktrees say, write the same shared memory, and each breaks the other's frames
+  (`reference\e2e_results.md`, run 7).
 
 | Option | What it does |
 |---|---|

@@ -215,9 +215,11 @@ for the agents that read those files. Change the rules here, never in those file
   fake PVR runtime (`vr_mirror\e2e\fake_pvr`), with its window captured like OBS. The suite covers the
   `vr_mirror\core\` pipeline: frames, smoothing, lag, horizon, black borders.
   - Run it once at the end of a change to `vr_mirror\core\` or `vr_mirror\mirror_app\`.
-  - Its 57 runs take about 14 minutes (787 s for 54 on 2026-11-08). LMU and
+  - Its 57 runs take about 14 minutes (837 s on 2026-11-09). LMU and
     the mirror app must be closed, and nobody should use the PC meanwhile, so ask the user before
     running it.
+  - Only one test of the OpenXR layer may run on the PC at a time, from any session or worktree. Two
+    fake OpenXR games write the same shared memory.
   - Close Pimax Play too for runs whose numbers are compared, because its compositor disturbs the
     timing.
   - Compare the results with the numbers in `reference\e2e_results.md`, and update them there when
