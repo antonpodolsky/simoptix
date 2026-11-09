@@ -96,8 +96,8 @@ argument that holds double quotes, so `--body "..."` and `-m "..."` break on suc
 | Bad | Why | Good |
 |---|---|---|
 | Seen in `<date> <time>.mp4` at 21:14, in the Porsche at Spa | A recording's name, a clock time, a car and a track | Seen in one recording, OpenXR Mirror on Smooth |
-| `- 2026-10-21, a race at Imola, 76 min` (in a findings file) | A session's date, its track and its length | `- a race, the longest of four sessions` |
-| The second start, at 20:47 | A clock time of the maintainer's session | The second start, with the load note |
+| `- 2026-03-14, a race at Sebring, 52 min` (in a findings file) | A session's date, its track and its length | `- race A, the longest of four sessions` |
+| The second start, at 21:05 | A clock time of the maintainer's session | The second start, with the load note |
 | The flicker came 41312 frames into the session | The count gives the session's length | The flicker is one output frame, after a 64 ms stall |
 | `# A recording '<date> <time>_s2.mp4' (OBS names files ...)` in a script's help | A real recording's name, in code | `# A recording 'YYYY-MM-DD HH-MM-SS_s2.mp4'` |
 | The plugin folders were recreated by a process running as administrator | The state of the maintainer's PC | (delete, and tell the maintainer in chat) |
