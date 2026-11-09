@@ -44,12 +44,13 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_S
    gdi32.lib gdiplus.lib dbghelp.lib || exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\..\shared\build\fill_version.ps1 ^
    manifest.json bin\manifest.json || exit /b 1
+rem A line continued with ^ inside the block below runs as a command named " ", so each command
+rem there stays on one line.
+set "PLUGIN_FOLDER=C:\ProgramData\obs-studio\plugins\%NAME%"
 if /i "%~1"=="install" (
-   if not exist "C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit" ^
-      mkdir "C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit"
-   if not exist "C:\ProgramData\obs-studio\plugins\%NAME%\data" ^
-      mkdir "C:\ProgramData\obs-studio\plugins\%NAME%\data"
-   copy /y bin\%NAME%.dll "C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit\" >nul || exit /b 1
-   copy /y bin\manifest.json "C:\ProgramData\obs-studio\plugins\%NAME%\data\" >nul || exit /b 1
-   echo installed to C:\ProgramData\obs-studio\plugins\%NAME%
+   if not exist "%PLUGIN_FOLDER%\bin\64bit" mkdir "%PLUGIN_FOLDER%\bin\64bit" || exit /b 1
+   if not exist "%PLUGIN_FOLDER%\data" mkdir "%PLUGIN_FOLDER%\data" || exit /b 1
+   copy /y bin\%NAME%.dll "%PLUGIN_FOLDER%\bin\64bit\" >nul || exit /b 1
+   copy /y bin\manifest.json "%PLUGIN_FOLDER%\data\" >nul || exit /b 1
+   echo installed to %PLUGIN_FOLDER%
 )
