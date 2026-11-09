@@ -18,11 +18,12 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /MT /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_S
    /I..\..\.. /I..\..\..\third_party\openxr ^
    openxr_layer_entry.cpp openxr_layer_calls.cpp openxr_layer_frames.cpp openxr_publisher.cpp ^
    openxr_layer_log.cpp openxr_frame_layout.cpp ^
-   ..\..\..\shared\log.cpp ^
+   ..\..\..\shared\log.cpp ..\..\..\shared\local_files.cpp ^
    /LD /Fe:bin\XR_APILAYER_SIMOPTIX_frame_source.dll ^
    /link /DEF:frame_source.def d3d11.lib dxgi.lib || exit /b 1
 copy /y XR_APILAYER_SIMOPTIX_frame_source.json bin\ >nul || exit /b 1
 cl /nologo /std:c++17 /EHsc /O2 /W3 /MT /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS ^
    /Fo:obj\check\ ^
    /I. /I..\..\.. /I..\..\..\third_party\openxr check\openxr_check.cpp check\openxr_check_copies.cpp ^
+   ..\..\..\shared\local_files.cpp ^
    /Fe:"bin\check\Le Mans Ultimate.exe" /link d3d11.lib dxgi.lib || exit /b 1

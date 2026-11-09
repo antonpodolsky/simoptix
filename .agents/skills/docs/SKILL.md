@@ -145,6 +145,16 @@ assumes.
    - Never print secrets, tokens or environment variables. No personal paths or machine names.
    - Keep every fact when rewriting. Remove fluff, not information.
 
+10. **The same fact in the same words, for every variation.** Wherever the repo has more than one
+    variation of something, a fact that holds for more than one of them is written the same way for
+    each. Examples are the two plugins, the two sources, the frame sources, a stage's implementations,
+    and the kinds of file in `%LOCALAPPDATA%\simoptix`.
+    - Only the variation's own name or value changes ("The OBS log marks this plugin's lines
+      `[simoptix_vr_mirror]`" and "... `[simoptix_overlays]`").
+    - When one variation's doc states such a fact, the others' docs state it too, in the matching
+      place (the Install section of each plugin README, say).
+    - Change all of them in the same commit.
+
 ## Formatting
 
 - **Headings:** sentence case, naming the content ("Settings", "Files"), not a teaser.
@@ -224,6 +234,8 @@ end. Read the rest yourself.
 - [ ] Every fact of the old text survives, with its numbers, conditions and reasons, and every new
       fact was checked
 - [ ] A new term is in `reference\terms.md` and in each README's table that uses it
+- [ ] A fact shared by several variations (both plugins, both sources, the kinds of file) reads the
+      same for each, and every variation's doc states it
 - [ ] The matching README, `CONTRIBUTING.md` and the dev skill changed together (dev skill, "Docs move
       with the code")
 - [ ] The commit subject is `Docs: what changed`

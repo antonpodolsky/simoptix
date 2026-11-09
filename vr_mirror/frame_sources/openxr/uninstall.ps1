@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Removes the OpenXR layer: its registration with the OpenXR loader and its folder under
 # C:\Program Files\simoptix\. Run as administrator, with the game closed.
-# Its log in %LOCALAPPDATA%\simoptix stays.
+# Its logs in %LOCALAPPDATA%\simoptix stay.
 $ErrorActionPreference = 'Stop'
 $name = 'XR_APILAYER_SIMOPTIX_frame_source'
 $target = 'C:\Program Files\simoptix\openxr_frame_source'

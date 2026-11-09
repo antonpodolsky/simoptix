@@ -32,15 +32,17 @@ telemetry it stands in for.
 
 1. With OBS closed, run `build.bat install` in `obs_plugin\`. The root `README.md` lists what the build
    needs. The script builds the plugin and copies it to
-   `C:\ProgramData\obs-studio\plugins\simoptix_overlays\bin\64bit`. If you use VR Mirror, install it from
-   the same build.
+   `C:\ProgramData\obs-studio\plugins\simoptix_overlays\bin\64bit`. If you use the VR Mirror plugin,
+   install it from the same build.
 2. In OBS, add a **SimOptix: G-Meter Overlay** source.
 
 Reading LMU needs its telemetry headers from the game's folder at build time, because their licence
 doesn't allow copying them into this repo. The build finds the game in any Steam library. A build
 without the headers says so and reads no game, and the demo lap still plays.
 
-Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`. The OBS log marks this plugin's lines
+Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`, at most two per OBS session. The newest
+10 crash dumps are kept. When OBS starts, the plugins delete the oldest beyond 8, so that session's two
+still fit. The OBS log says how many they deleted. The OBS log marks this plugin's lines
 `[simoptix_overlays]`.
 
 ## G-Meter Overlay

@@ -71,13 +71,15 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 - **It copies only while VR Mirror reads.** The three textures take 85 MB each at 5084×4168, which is
   254 MB of the graphics card's memory. The layer makes them when VR Mirror starts reading and lets
   them go 10 s after it stopped. With nobody reading, the layer only writes each frame's record.
-- **It logs when Windows loads it into LMU.** Before any OpenXR step, it adds a line to
-  `%LOCALAPPDATA%\simoptix\openxr_frame_source_loads.log`. The file is never cleared. In LMU started
-  without Easy Anti-Cheat, a game start with no new line there means the DLL was never loaded. With
-  Easy Anti-Cheat, the signed layer loaded and worked but wrote neither this file nor its log below.
-  Why is not known. There, VR Mirror's OBS log shows that the layer runs in the game.
-- **In LMU, it logs** to `%LOCALAPPDATA%\simoptix\openxr_frame_source.log`. The previous game start's
-  log is kept as `openxr_frame_source.prev.log`. The log holds:
+- **In LMU, it writes one log per game start,**
+  `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`. The newest 10 logs are kept. When a
+  game start reaches OpenXR, the layer deletes the oldest beyond 10. Its log says how many it deleted.
+- **The log's first line says that Windows loaded the DLL into LMU,** before any OpenXR step. In LMU
+  started without Easy Anti-Cheat, a game start with no new log means the DLL was never loaded. A log
+  with this line alone means OpenXR never called the layer. With Easy Anti-Cheat, the signed layer
+  loaded and worked but wrote no log. Why is not known. There, VR Mirror's OBS log shows that the layer
+  runs in the game.
+- **After that line, the log holds:**
   - what the game's OpenXR loader offered in the first handshake, and why the layer refused it if it did
   - that the layer loaded, which runtime and headset the game uses, and whether it asked for the time
     conversion
@@ -148,7 +150,7 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 | `openxr_share.h` | The memory the layer shares with VR Mirror: its layout, and the rules for reading it |
 | `openxr_d3d11.h` | The few Windows-specific OpenXR declarations that the layer and its check program use |
 | `openxr_frame_layout.*` | The summary of each frame's layout and the log lines (plain logic, no OpenXR calls) |
-| `openxr_layer_log.*` | The log file |
+| `openxr_layer_log.*` | The log file. `shared\local_files.*` names it and keeps the newest |
 | `XR_APILAYER_SIMOPTIX_frame_source.json` | The manifest: how OpenXR finds the DLL |
 | `frame_source.def` | The DLL's one exported function |
 | `build.bat` | Builds the DLL, unsigned, and the check program into `bin\` |

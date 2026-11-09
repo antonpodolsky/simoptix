@@ -9,7 +9,11 @@ Paths below are relative to `vr_mirror\recording_analysis\`. Run the scripts wit
 
 - In the Pimax source's properties, tick **Debug**. It stamps frame numbers and writes a frame trace
   (`vr_mirror\obs_plugin\README.md`, "Debug: stamp and frame trace").
-- The trace goes to `%LOCALAPPDATA%\simoptix\traces\trace_<time>_*.csv`, about 300 MB per hour.
+- The trace goes to `%LOCALAPPDATA%\simoptix\traces\trace_<time>_*.csv`, about 300 MB per hour with
+  the Pimax source. With the OpenXR source it is about 100 MB per hour, and its own file adds about
+  30 MB (estimated from its rows' size, not measured). It starts at the game's first frame. Only the
+  newest 10 traces are kept, so copy the trace of a recording to analyse into the data folder soon after
+  recording.
 - The OBS log (`%APPDATA%\obs-studio\logs`) says which trace belongs to which session.
 
 ## Setup

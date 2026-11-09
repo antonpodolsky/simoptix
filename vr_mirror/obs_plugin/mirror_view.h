@@ -79,7 +79,8 @@ private:
     // (StartStop), never waiting for it.
     SessionWorker session_{frameSource_.get(), &ring_};
     std::atomic<bool> wanted_{false};
-    bool started_ = false;  // graphics thread: the session runs and its per-start state is set up
+    bool started_ = false;        // graphics thread: the session runs and its per-start state is set up
+    uint64_t framesAtStart_ = 0;  // graphics thread: FrameSource::FramesArrived() when it started
 
     MirrorSettings settings_;
     // The OBS canvas's base size: written each tick on the graphics thread (FollowCanvas), read by OBS

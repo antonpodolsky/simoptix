@@ -60,7 +60,10 @@ thread of their own, so OBS's output never stops for them. The OBS log says "Pim
 ... ms" (or "OpenXR layer ready after ... ms") and "stopping (source hidden): graphics thread done in
 ... ms".
 
-Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`, at most two per OBS session.
+Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`, at most two per OBS session. The newest
+10 crash dumps are kept. When OBS starts, the plugins delete the oldest beyond 8, so that session's two
+still fit. The OBS log says how many they deleted. The OBS log marks this plugin's lines
+`[simoptix_vr_mirror]`.
 
 ## What the sources show
 
@@ -190,8 +193,11 @@ by itself. It is off by default.
   With several, it is on while any of them has it ticked.
 
 It reads LMU through the telemetry both plugins share (`shared\telemetry\README.md`). One reader serves
-the whole of OBS, and runs only while something needs it. Reading LMU needs LMU's telemetry headers from
-the game's folder at build time. A build without them says so, and auto-record then reads no game.
+the whole of OBS, and runs only while something needs it.
+
+Reading LMU needs its telemetry headers from the game's folder at build time, because their licence
+doesn't allow copying them into this repo. The build finds the game in any Steam library. A build
+without the headers says so and reads no game, and race auto-record then records nothing.
 
 The OBS log shows each step, in lines that start "LMU race auto-record:":
 - on and off
@@ -313,6 +319,8 @@ The source idles.
   full rate on the game's first frame, and catches that frame (e2e scenario `game_starts_late`).
 - The OBS log says so once each way: "no game frames for 2 s: idle ..." and "game frames again after
   ... s idle: back to full rate".
+- With Debug on, the frame trace starts at the game's first frame ("Debug: stamp and frame trace",
+  below).
 - The Pimax session itself stays open. The status check, 4 times a second, is how Pimax tells the
   source that the game has taken over. While idle, the source's cost to `pi_server` is within
   `pi_server`'s own variation.
@@ -361,7 +369,8 @@ where 1, the slot check alone, is the default.
 
 For checking a recording frame by frame, the **Debug** setting does two things:
 - It draws the stamp, the frame number as 15 small squares in the top-left corner of the view.
-- While the source is shown, it writes two files to `%LOCALAPPDATA%\simoptix\traces`:
+- While the source is shown, from the game's first frame, it writes two files to
+  `%LOCALAPPDATA%\simoptix\traces`:
   - `trace_<time>_ticks.csv`, the frame trace, with one row per drawn frame:
     - the stamped number, the game frame shown, and the display slot it arrived for (`slot`)
     - the head poses the warp used
@@ -387,6 +396,9 @@ For checking a recording frame by frame, the **Debug** setting does two things:
 
 Turn Debug on and record, and the recording can be matched to the poses frame by frame. Leave it off
 otherwise. The trace takes about 300 MB per hour with the Pimax source. With the OpenXR source it takes
-about 100 MB per hour, and its own file adds about 30 MB (estimated from its rows' size, not measured). It is written to disk on its own thread, so a slow
-disk never holds up OBS or the frame signal. If the disk falls a minute behind, rows are dropped, and
-the OBS log says how many.
+about 100 MB per hour, and its own file adds about 30 MB (estimated from its rows' size, not
+measured). It is written to disk on its own thread, so a slow disk never holds up OBS or the frame
+signal. If the disk falls a minute behind, rows are dropped, and the OBS log says how many.
+
+The newest 10 traces are kept. When a trace starts, VR Mirror deletes the oldest beyond 10, each with
+all its files. The OBS log says how many it deleted, in the "frame trace:" line.
