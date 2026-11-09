@@ -4,30 +4,6 @@ SimOptix Setup, `simoptix_setup.exe`, installs and removes VR Mirror, Overlays a
 layer, and shows what is installed. It is one file that carries all three inside it, and needs nothing
 beside it.
 
-## What it shows
-
-The window has a dark band at the top, a row for each part, and a footer.
-
-- **The band** holds SimOptix's name and setup's own version, which is also the version of the parts it
-  carries. On the right is **Install all**, **Update all** once anything is installed, or "Up to date"
-  when there is nothing to do. When something must be closed before a part can be changed (OBS for
-  the plugins, LMU for the layer), or OBS Studio wasn't found, the band says so in amber under the
-  name.
-- **Each row** holds the part's icon, teal when it is installed and grey when it isn't, its name, the
-  version installed as its DLL's Properties show it (such as `0.1.0+14.g31637d5`), what the part adds,
-  and the buttons that fit what is installed.
-- **The footer** holds **Uninstall all**, in red, and **Close**.
-
-| Buttons | What is installed |
-|---|---|
-| **Install** | Nothing of the part |
-| **Uninstall** | The same build as the one in setup, in its place |
-| **Update** and **Uninstall** | A different build from the one in setup. Setup compares the files themselves, so a build of the same version that differs counts too |
-| **Repair** and **Uninstall** | The same build, out of place: a plugin in the folders of another OBS version, or a layer that is switched off, missing from OpenXR's list, missing its files, or registered from another folder too |
-
-Setup reads the PC again whenever its window is activated. So after closing OBS or LMU, click the
-window and the buttons follow.
-
 ## Installing and removing
 
 - Each row's buttons change that part alone. **Install all** (or **Update all**, once anything is
