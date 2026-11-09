@@ -1,0 +1,9 @@
+// Copyright (C) 2026 Anton Podolsky
+// SPDX-License-Identifier: GPL-2.0-or-later
+// The files SimOptix Setup carries inside its exe, by the resource names in setup_parts.h. build.bat
+// builds the plugins first and takes the OpenXR layer as it is.
+
+VR_MIRROR_DLL RCDATA "..\\vr_mirror\\obs_plugin\\bin\\simoptix_vr_mirror.dll"
+OVERLAYS_DLL RCDATA "..\\overlays\\obs_plugin\\bin\\simoptix_overlays.dll"
+OPENXR_LAYER_DLL RCDATA "..\\vr_mirror\\frame_sources\\openxr\\bin\\XR_APILAYER_SIMOPTIX_frame_source.dll"
+OPENXR_LAYER_JSON RCDATA "..\\vr_mirror\\frame_sources\\openxr\\bin\\XR_APILAYER_SIMOPTIX_frame_source.json"
