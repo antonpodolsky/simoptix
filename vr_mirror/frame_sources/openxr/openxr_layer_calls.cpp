@@ -316,6 +316,16 @@ namespace {
     }
 
     XrResult XRAPI_CALL EndFrame(XrSession session, const XrFrameEndInfo* info) {
+        // Only read, before the call goes on: which image the frame shows is decided as it is made.
+        FrameImage image;
+
+        try {
+            if (info) {
+                image = FramesEnding(*info);
+            }
+        } catch (...) {
+        }
+
         XrResult r = g_next.endFrame(session, info);
         try {
             LARGE_INTEGER now;
@@ -323,7 +333,11 @@ namespace {
             if (XR_FAILED(r)) {
                 LogFailure("xrEndFrame", r, g_frameFailures);
             } else if (info) {
-                FramesEnded(*info, now.QuadPart);  // the frame already went on: the copy comes after it
+                FramesEnded(
+                    *info,
+                    image,
+                    now.QuadPart
+                );  // the frame already went on: the copy comes after it
                 OnFrameEnded(*info);
             }
         } catch (...) {

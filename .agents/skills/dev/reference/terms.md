@@ -38,7 +38,7 @@ A new term goes here, and into the table of every README that uses it.
 | output delay | How far VR Mirror's view runs behind the game: about 1 s with Smoothest, about 0.5 s with Smooth, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
 | observer | The debugging code beside the pipeline. It numbers the stamp and writes the frame trace |
 | stamp | The frame number that VR Mirror draws as 15 small squares in the top-left corner of the view, when its Debug setting is on |
-| frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals |
+| frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
 | fake runtime | The stand-in for Pimax's client library (`vr_mirror\e2e\fake_pvr\`) that the e2e tests use in place of a headset and a game |
 | replay | A real session played back through the fake runtime: its head poses, the runtime's predictions, and every game frame at its real arrival time and with the slot it was really drawn for |
 | stage replay | `stage_replay.exe`. It runs the pipeline's stages offline, without the mirror app, the fake runtime or the GPU |
