@@ -74,8 +74,9 @@ above its worst measured run, so a regression still fails. The dust replay's wor
    folder first, so the real app uses the fake without any code changes. The fake mimics what was
    measured on a Pimax headset (a Dream Air) with LMU:
    - a 90 Hz display, with the predicted display slot two vsyncs ahead
-   - LMU's left eye: 2508×2084, its field of view and its 2° eye cant, stored double-gamma-encoded like
-     the real client mirror
+   - LMU's left eye as the client mirror holds it: 2508×2084, in LMU's field of view on the Dream Air
+     through the Pimax runtime (44.5° out and in, 50.1° up, 49.6° down), with each eye turned 2° out.
+     It is sRGB-encoded twice, like the real client mirror.
    - the frame handoff: a legacy shared D3D texture plus a manual-reset event, with frames arriving
      about one frame after they start (±0.5 ms noise)
    - head poses from a motion spec, with constant-velocity prediction for future times
@@ -109,8 +110,9 @@ above its worst measured run, so a regression still fails. The dust replay's wor
    `fake_openxr.exe` beside it. This fake game hands its frames over through the layer's own publisher
    (`vr_mirror\frame_sources\openxr\openxr_publisher.*`: the shared memory, the frame records, the three
    textures, the copy and its "done" marker, the clock reading).
-   - It draws the left eye at 5084×4168 in LMU's field of view (52.6° out, 47.6° in, 44.6° up and down)
-     with the shared image, encoded once as a game draws it. Both eyes are turned 1° out.
+   - It draws the left eye at 5084×4168, in LMU's field of view on the Dream Air through Pimax's OpenXR
+     runtime (52.6° out, 47.6° in, 44.6° up and down), with each eye turned 1° out. It draws the shared
+     image, sRGB-encoded once as a game draws it.
    - Its XrTime is 123.456789 s ahead of the performance counter, so the mirror app must use the clock
      reading.
    - Its timing is fake_pvr's, and `drop_rate`, `queue_lag` and `game_start_s` work the same. When it is
@@ -272,11 +274,11 @@ in `out\local_files\<case>\`.
 | Folder or file | What |
 |---|---|
 | `build.bat` | Builds the fake runtime, the fake OpenXR game, the runner, the local files test with its fake game, and `stage_replay` into `bin\` |
-| `fake_game\` | What both fakes share: the head motion (`fake_game_motion.h`) and the game's image (`fake_game_picture.*`: the direction codes or the cockpit, stored as the faked source stores it) |
-| `fake_layer_game\` | `Le Mans Ultimate.exe`, for the local files test: the fake game that loads the real OpenXR layer's DLL |
+| `fake_game\` | What `fake_pvr\` and `fake_openxr\` share: the head motion (`fake_game_motion.h`) and the game's image (`fake_game_picture.*`: the direction codes or the cockpit, stored as the faked source stores it) |
+| `fake_layer_game\` | `Le Mans Ultimate.exe`: the fake game that loads the real OpenXR layer's DLL, for the local files test |
 | `fake_openxr\` | `fake_openxr.exe`: the fake game with the OpenXR layer's frames, through the layer's own publisher |
 | `local_files\` | `local_files_e2e.exe`: the local files test. Its cases (`local_files_e2e.cpp`), its copy of OBS (`local_files_obs.*`), and the older files it makes and the files it reads (`local_files_folder.*`) |
-| `fake_pvr\` | The fake PVR runtime and game (`libPVRClient64.dll`): replays of real sessions (`fake_pvr_replay.h`) and their real thumbnails (`fake_pvr_thumbs.h`) |
+| `fake_pvr\` | `libPVRClient64.dll`: the fake PVR runtime and game, with replays of real sessions (`fake_pvr_replay.h`) and their real thumbnails (`fake_pvr_thumbs.h`) |
 | `runner\` | `e2e_runner.exe`: the scenarios (`scenarios.*`), running the mirror app (`tool_process.*`), capturing its window (`capture.h`, `patches.h`), the measures (`analysis.*`), and the comparison with Instant (`compare.*`) |
 | `stage_replay\` | `stage_replay.exe`: one run per stage (`runs_*.cpp`), the whole pipeline (`runs_pipeline.cpp`), its scores (`scores.*`), and the golden file (`golden.*`) |
 | `replay\` | The replays of real sessions (`<name>.csv`, each a scenario `replay_<name>`) and their real thumbnails (`<name>.thumbs.png`) |
