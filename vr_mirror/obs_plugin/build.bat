@@ -12,6 +12,7 @@ rem delay the plugins share, the crash dump, the files kept in %%LOCALAPPDATA%%\
 rem telemetry listed by
 rem ..\..\shared\telemetry\sources.bat, which also finds LMU's headers: LMU_SDK; without them the plugin
 rem builds without LMU, and race auto-record reads no game).
+rem Its version comes from ..\..\shared\build\version.bat (VERSION at the repo's root, and git).
 rem Optional argument "install": copies it to OBS's per-machine plugin folder
 rem (C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror\bin\64bit). Close OBS first.
 rem It links against OBS through an import library made here from ..\..\shared\obs_lib\obs.def (the
@@ -22,6 +23,7 @@ call "%~dp0..\..\shared\build\vs_env.bat" || exit /b 1
 cd /d "%~dp0"
 if not exist obj mkdir obj
 if not exist bin mkdir bin
+call ..\..\shared\build\version.bat obj || exit /b 1
 lib /nologo /def:..\..\shared\obs_lib\obs.def /machine:x64 /out:obj\obs.lib >nul || exit /b 1
 call ..\..\shared\telemetry\sources.bat
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\core\build\embed_text.ps1 ^

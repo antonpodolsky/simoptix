@@ -424,6 +424,17 @@ The automated tests are the e2e suite (step 5).
 
 The plugin builds make OBS's import library from `shared\obs_lib\obs.def`.
 
+**The version.** `VERSION` at the repo's root holds SimOptix's version, one number for every part
+(`0.1.0`). `shared\build\version.bat` reads it and adds the commits since the release tag and the
+commit, the way `git describe --tags` gives them (`0.1.0+12.gabc1234`). A build exactly on the release
+tag gets the plain number. Every `build.bat` that makes a shipped file calls it: both plugins and the
+OpenXR layer. It writes the version into `simoptix_version.h` in the build's `obj\`, which is never
+committed.
+- The version names a build for people. It decides nothing at run time.
+- The checks that parts fit together stay separate from it, and change only with what they check:
+  the layout version of the memory the layer shares with VR Mirror (`openxr_share::kVersion`) and of
+  the telemetry area both plugins share (`TelemetryArea::kVersion`).
+
 | Changed | Build | e2e at the end |
 |---|---|---|
 | `vr_mirror\core\`, `vr_mirror\frame_sources\pimax\` | Both plugins (step 4), `vr_mirror\mirror_app\build.bat`, `vr_mirror\e2e\build.bat` | Yes |

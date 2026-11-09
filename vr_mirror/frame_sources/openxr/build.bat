@@ -6,6 +6,7 @@ rem and the check program bin\check\Le Mans Ultimate.exe (check\openxr_check.cpp
 rem carries the game's file name because the layer only wakes up in a program of that name; it is
 rem not the game.
 rem The DLL links the C runtime in (/MT), so it needs nothing else to load.
+rem Its version comes from ..\..\..\shared\build\version.bat (VERSION at the repo's root, and git).
 rem Installing it for the game: install.bat (install.ps1 as administrator; README.md).
 setlocal
 call "%~dp0..\..\..\shared\build\vs_env.bat" || exit /b 1
@@ -14,7 +15,8 @@ if not exist obj mkdir obj
 if not exist obj\check mkdir obj\check
 if not exist bin mkdir bin
 if not exist bin\check mkdir bin\check
-cl /nologo /std:c++17 /EHsc /O2 /W3 /MT /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Fo:obj\ ^
+call ..\..\..\shared\build\version.bat obj || exit /b 1
+cl/nologo /std:c++17 /EHsc /O2 /W3 /MT /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Fo:obj\ ^
    /I..\..\.. /I..\..\..\third_party\openxr ^
    openxr_layer_entry.cpp openxr_layer_calls.cpp openxr_layer_frames.cpp openxr_publisher.cpp ^
    openxr_layer_log.cpp openxr_frame_layout.cpp ^
