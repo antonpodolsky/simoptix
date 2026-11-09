@@ -55,13 +55,17 @@ running program can't delete its own file. Windows deletes that temporary copy a
 | File | What |
 |---|---|
 | `setup_main.cpp` | Starts setup: the window, or the removal with `/uninstall` |
-| `setup_window.cpp` | The window, what its buttons do, and a change's progress |
+| `setup_window.cpp` | The window: what its buttons do, and when it reads the PC again |
+| `setup_controls.cpp` | The window's buttons: placed, labelled, shown and enabled for what the window shows |
 | `setup_run.cpp` | Runs a change on a thread of its own, so the window keeps drawing its progress |
+| `setup_progress.cpp` | What the window shows of a change while it runs: each row's state, the bar, the spinner |
 | `setup_look.cpp` | Where everything in the window goes, and its drawing, but the buttons |
 | `setup_buttons.cpp` | The buttons' look: real Windows buttons, drawn by setup in each state |
-| `setup_dialog.cpp` | Setup's questions, in its own look: the unsigned layer, and Uninstall all |
+| `setup_dialog.cpp` | A question in setup's own look: the band, the reasons, two buttons |
+| `setup_questions.cpp` | The two questions' words: before an unsigned layer, and before Uninstall all |
 | `setup_theme.cpp` | The design in numbers: colours, sizes, fonts, and the title bar's colour |
-| `setup_draw.cpp` | Smooth shapes and icons, with GDI+: the parts' glyphs, ticks, marks, the spinner |
+| `setup_draw.cpp` | Smooth shapes and icons, with GDI+: the parts' glyphs, the marks, the spinner |
+| `setup_gdi.h` | Owners of what GDI hands out, and the canvas that drawing goes on |
 | `setup_status.cpp` | Which buttons each row shows, and whether a part can be changed now |
 | `setup_probe.cpp` | Reads what is installed, the layer's registrations, OBS and LMU |
 | `setup_install.cpp` | Installs and removes each part, and keeps the entry in Windows' installed apps |
