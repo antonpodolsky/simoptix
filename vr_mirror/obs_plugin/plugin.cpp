@@ -23,6 +23,7 @@
 #include "shared/guarded.h"
 #include "shared/log.h"
 #include "shared/telemetry/telemetry.h"
+#include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
 #include "vr_mirror/frame_sources/openxr/openxr_source.h"
 #include "vr_mirror/frame_sources/pimax/pimax_source.h"
 
@@ -215,7 +216,7 @@ namespace {
         obs_register_source(&info);
 
         AudioSync::Start();
-        blog(LOG_INFO, "[simoptix_vr_mirror] loaded");
+        blog(LOG_INFO, "[simoptix_vr_mirror] loaded, version %s", SIMOPTIX_VERSION);
         return true;
     }
 

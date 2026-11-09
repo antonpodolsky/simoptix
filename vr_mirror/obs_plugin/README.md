@@ -46,7 +46,8 @@ So the G-meter, race auto-record and the audio all follow the moment the view sh
 
 1. With OBS closed, run `build.bat install` in this folder. The root `README.md` lists what the build
    needs. The script builds the plugin and copies it to
-   `C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror\bin\64bit`. If you use the Overlays plugin,
+   `C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror\bin\64bit`. It also copies the plugin's
+   `manifest.json` to `data` beside `bin`. OBS 32 reads the plugin's name and version from it. If you use the Overlays plugin,
    install it from the same build.
 2. In OBS, add a **SimOptix: Pimax Mirror** or **SimOptix: OpenXR Mirror** source. For the OpenXR one,
    install the API layer too: close LMU and run `vr_mirror\frame_sources\openxr\install.bat`, which
@@ -68,6 +69,12 @@ Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`, at most two per OB
 10 crash dumps are kept. When OBS starts, the plugins delete the oldest beyond 8, so that session's two
 still fit. The OBS log says how many they deleted. The OBS log marks this plugin's lines
 `[simoptix_vr_mirror]`.
+
+The plugin writes its version to the OBS log when OBS loads it
+(`[simoptix_vr_mirror] loaded, version 0.1.0`). Windows shows the same version in the DLL's
+Properties, under Details. A build of a release shows
+its number (`0.1.0`). Any other build adds the commits since that release and the commit
+(`0.1.0+12.gabc1234`).
 
 ## What the sources show
 

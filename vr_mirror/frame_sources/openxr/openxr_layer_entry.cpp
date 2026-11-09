@@ -26,6 +26,7 @@
 #include "openxr_layer_calls.h"
 #include "openxr_layer_log.h"
 #include "shared/log.h"
+#include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
 
 namespace {
 
@@ -252,8 +253,9 @@ extern "C" XrResult XRAPI_CALL xrNegotiateLoaderApiLayerInterface(
             g_inGame = true;
             if (StartLayerLog()) {
                 CoreLog(
-                    "%s loaded into %ls, process %lu (layer built %s %s)",
+                    "%s %s loaded into %ls, process %lu (layer built %s %s)",
                     kLayerName,
+                    SIMOPTIX_VERSION,
                     kGameExe,
                     GetCurrentProcessId(),
                     __DATE__,

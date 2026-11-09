@@ -1,0 +1,10 @@
+# Copyright (C) 2026 Anton Podolsky
+# SPDX-License-Identifier: GPL-2.0-or-later
+# The list of merged pull requests that GitHub generates under a release's notes
+# (gh release create --generate-notes). Pull requests labelled internal changed nothing a user
+# notices, so the list leaves them out. The notes above it come from CHANGELOG.md
+# (.agents\skills\dev\reference\release.md).
+changelog:
+  exclude:
+    labels:
+      - internal

@@ -25,7 +25,7 @@ this out from the delay alone, not by looking at the view. Without VR Mirror the
 
 | Folder | What |
 |---|---|
-| `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources) and `build.bat` |
+| `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources), the DLL's version resource (`version.rc`) and `build.bat` |
 | `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its Chrono look (`meter_chrono.*`), shapes (`meter_draw.*`) and labels (`meter_text.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
 | `common\` | What any overlay can reuse: text (`text_raster.*`), images (`meter_image.*`), and the 1:1 properties preview (`properties_preview.*`) |
 
@@ -36,7 +36,8 @@ telemetry it stands in for.
 
 1. With OBS closed, run `build.bat install` in `obs_plugin\`. The root `README.md` lists what the build
    needs. The script builds the plugin and copies it to
-   `C:\ProgramData\obs-studio\plugins\simoptix_overlays\bin\64bit`. If you use the VR Mirror plugin,
+   `C:\ProgramData\obs-studio\plugins\simoptix_overlays\bin\64bit`. It also copies the plugin's
+   `manifest.json` to `data` beside `bin`. OBS 32 reads the plugin's name and version from it. If you use the VR Mirror plugin,
    install it from the same build.
 2. In OBS, add a **SimOptix: G-Meter Overlay** source.
 
@@ -48,6 +49,12 @@ Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`, at most two per OB
 10 crash dumps are kept. When OBS starts, the plugins delete the oldest beyond 8, so that session's two
 still fit. The OBS log says how many they deleted. The OBS log marks this plugin's lines
 `[simoptix_overlays]`.
+
+The plugin writes its version to the OBS log when OBS loads it
+(`[simoptix_overlays] loaded, version 0.1.0`). Windows shows the same version in the DLL's
+Properties, under Details. A build of a release shows
+its number (`0.1.0`). Any other build adds the commits since that release and the commit
+(`0.1.0+12.gabc1234`).
 
 ## G-Meter Overlay
 

@@ -8,6 +8,8 @@ Hard checks (the exit code is 1 if one fails):
   - every term in the "Terms coined in this repo" table of .agents\skills\dev\reference\terms.md
     has a row in a terms table at or before its first use (dev skill files may link to terms.md in
     their first lines instead)
+  - CHANGELOG.md has the release script's form: each section "## [x.y.z] - YYYY-MM-DD", newest first,
+    with its link line, only the release script's groups (### Added and the like), and bullets in them
 Review list (printed, never fails): lines with negative statements or plan words, and outside terms
 (the "Outside terms" table of terms.md) used without a row in that document's terms table.
 
@@ -19,6 +21,9 @@ import os
 import re
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "dev"))
+import release  # noqa: E402  the release script's groups and forms
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 SKILL_DIR = os.path.join(ROOT, ".agents", "skills", "dev")
@@ -243,6 +248,56 @@ def CheckTerms(doc, lines, terms):
     return bad
 
 
+def CheckChangelog(lines):
+    """(line, problem) for each place where CHANGELOG.md differs from what release.py writes."""
+    bad = []
+    versions = []
+    links = {}
+    in_group = False
+    for n, line in enumerate(lines, 1):
+        if release.LINK_LINE.match(line):
+            links[line[1 : line.index("]")]] = (n, line)
+            continue
+
+        if line.startswith("## "):
+            m = re.match(r"^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$", line)
+            if not m:
+                bad.append((n, 'a section heading is "## [x.y.z] - YYYY-MM-DD"'))
+            else:
+                versions.append((n, m.group(1)))
+
+            in_group = False
+            continue
+
+        if line.startswith("### "):
+            in_group = line[4:].strip() in release.TYPES.values()
+            if not in_group:
+                bad.append((n, f"a group is one of {', '.join(release.TYPES.values())}"))
+
+            continue
+
+        if in_group and line.strip() and not line.startswith("- "):
+            bad.append((n, 'a line of a group is a bullet, "- "'))
+
+    for (n, version), (_, older) in zip(versions, versions[1:]):
+        if release.version_key(version) <= release.version_key(older):
+            bad.append((n, f"{version} isn't newer than the section below it, {older}"))
+
+    for n, version in versions:
+        if version not in links:
+            bad.append((n, f"{version} has no link line, [{version}]: <its release>"))
+        elif not links[version][1].endswith(f"/releases/tag/v{version}"):
+            bad.append(
+                (links[version][0], f"the link of {version} isn't its release, .../releases/tag/v{version}")
+            )
+
+    for version, (n, _) in links.items():
+        if version not in dict((v, n) for n, v in versions):
+            bad.append((n, f"a link for {version}, which has no section"))
+
+    return bad
+
+
 def main():
     args = sys.argv[1:]
     terms = Terms("Terms coined in this repo")
@@ -264,6 +319,11 @@ def main():
         for n, term in CheckTerms(doc, lines, terms):
             print(f'TERM       {doc}:{n}: "{term}" is used before a table row defines it')
             failed += 1
+
+        if doc == "CHANGELOG.md":
+            for n, problem in CheckChangelog(lines):
+                print(f"CHANGELOG  {doc}:{n}: {problem}")
+                failed += 1
 
         for n, term in CheckTerms(doc, lines, outside):
             review.append(
