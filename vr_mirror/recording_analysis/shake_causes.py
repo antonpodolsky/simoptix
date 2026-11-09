@@ -51,7 +51,7 @@ def LogWindows(path, start, stop):
             pending = {"behind": int(g[1]), "judged": int(g[2])}
         g = re.search(r"game behind: (\d+) frames rendered for an earlier slot.*?(\d+) frames judged", text)
         if g:
-            pending = {"behind": int(g[1]), "judged": int(g[2])}  # the log's wording from 2026-10-31
+            pending = {"behind": int(g[1]), "judged": int(g[2])}  # the log's newer wording
         g = re.search(
             r"ticks in 10 s: (\d+) showed the same.*?(\d+) skipped ahead.*game at ([\d.]+) fps", text
         )

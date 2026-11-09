@@ -134,7 +134,7 @@ drawn_pose`.
 The penalty and detail options try other settings. This is how a change to the slot check is checked
 on real images, which the e2e fake can't always imitate.
 
-**Not an exact copy of core** (2026-10-25). It averages and compares thumbnails as displayed, while core
+**Not an exact copy of core.** It averages and compares thumbnails as displayed, while core
 does both in linear light. Even in linear light it re-times far more frames than the mirror app does in
 e2e on the same thumbnails (`findings\e2e.md`, "Real thumbnails in replays").
 
@@ -160,13 +160,13 @@ e2e on the same thumbnails (`findings\e2e.md`, "Real thumbnails in replays").
 The columns are in `vr_mirror\core\pipeline\observer\README.md`, and the formats the scripts read in
 `vr_mirror\recording_analysis\README.md`. What changed, for reading older traces:
 
-- **OBS traces before 2026-10-31** had the slot the frame was drawn for (`display_slot`) and the
+- **OBS traces with 18 columns, the oldest,** had the slot the frame was drawn for (`display_slot`) and the
   cockpit correction (`corr_*`), instead of `img`'s finding. `trace_common.py` (`FrameLag`) reads the
   drawn slot from that column there, and from comparing `img` with the predictions after.
 - **`edge_clamps` until 1 Nov 2026** counted the clamp after the smoothing, against the followed image
   only. On 1 Nov 2026 a column `edge_repeat_clamps` stood before `edge_shift`, counting the clip against
   the shown image apart.
-- **Until 2026-11-08** the columns `drawn_pose` and `pose_notes` were named `picture_pose` and
+- **In older traces** the columns `drawn_pose` and `pose_notes` are named `picture_pose` and
   `picture_notes`, at the same places. The scripts read the columns by place, so both read the same.
-- **The mirror app's trace** had its own columns until 2026-10-31 (`reference\mirror_app.md`). The e2e
+- **The mirror app's trace** had its own columns in older builds (`reference\mirror_app.md`). The e2e
   runner reads the pose the image was warped from as `img`, else as `raw` in older builds.

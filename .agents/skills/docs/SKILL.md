@@ -115,7 +115,8 @@ assumes.
      Pimax headsets and Le Mans Ultimate". Don't say it as a limit: "Only Pimax is supported".
    - No history in READMEs: no dates of changes, no "was replaced", "used to". History lives in
      commit messages, and for users in `CHANGELOG.md` ("The changelog", below). Findings files keep
-     dated measurements and dead ends, because those are measured facts.
+     measurements and dead ends, because those are measured facts, with no dates (public-text
+     skill).
    - No plans, roadmap codes, "for now", "yet" or "being obtained".
 4. **Cut what gives the reader nothing.** Count words ("two plugins", "in one repo"), "simply",
    "just", "note that", "as you can see", a sentence that restates its heading, and any statement
@@ -146,10 +147,10 @@ assumes.
 9. **Facts first.**
    - Check a claim against the code or a measurement before writing it. Say what was not
      verified.
-   - A number carries its unit and, in findings, its conditions (headset, scenario, date). The date
-     is the day of the work on the code. A driving session or a recording carries no date.
+   - A number carries its unit and, in findings, its conditions (headset, scenario, build). A build
+     is named by its commit hash or pull request, never by a date.
    - Docs are public. Nothing personal goes in them: no secrets, tokens or values of environment
-     variables, no local paths or machine names, and no recording names, session dates or times,
+     variables, no local paths or machine names, no dates or clock times, and no recording names,
      tracks or cars. The public-text skill (`.agents\skills\public-text\SKILL.md`) has the full list
      and the check.
    - Keep every fact when rewriting. Remove fluff, not information.
@@ -210,8 +211,9 @@ reader. It has one section per release, newest first, in the Keep a Changelog fo
 The dev skill's files are read by people and agents in the middle of work. They need the facts fast.
 - **Findings** (`findings\<part>.md`): one section per subject. Inside it, one bullet or short
   paragraph per finding, with what was measured or tried, the numbers with their conditions, the
-  date, and the conclusion. A recording or a driving session is named by what it shows or by a
-  letter, never by its file name, date, track or car (public-text skill). A dead end says why it was dropped, with the measured reason. Keep the
+  build (a commit hash or pull request), and the conclusion. No dates: a recording or a driving
+  session is named by what it shows or by a letter, never by its file name, date, track or car, and
+  a run by its number (public-text skill). A dead end says why it was dropped, with the measured reason. Keep the
   history a measurement needs ("before the fix: 1.6 %, after: 0 %"), and nothing else.
 - **Reference** (`reference\*.md`): procedures as numbered steps, options and file formats as
   tables, and the reasons a step exists.

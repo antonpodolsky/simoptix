@@ -8,9 +8,9 @@ Terms: `reference\terms.md`. How the telemetry works: `shared\telemetry\README.m
 - LMU's signal for "new data" isn't documented as waking more than one waiting reader per update. The
   fake LMU (`shared\telemetry\games\lmu\fake`), written to match what was seen of LMU, wakes only one.
 - So two readers might each see only part of the updates. With one reader the question doesn't arise.
-- Not checked: what LMU itself does. LMU wasn't running when this was written (2026-11-06).
+- Not checked: what LMU itself does. LMU wasn't running when this was written.
 
-## One reader for both plugins (2026-11-06)
+## One reader for both plugins
 
 Checked with the fake LMU and no headset.
 
@@ -39,7 +39,7 @@ Checked with the fake LMU and no headset.
 - **Not checked:** the real game (LMU wasn't running), and VR Mirror's real delay (it needs the
   headset).
 
-## The games behind one interface (2026-11-06)
+## The games behind one interface
 
 - A throwaway second game was built with no overlay file touched.
 - The plugin was built with and without LMU's headers.
@@ -50,11 +50,11 @@ Checked with the fake LMU and no headset.
 - While no game runs, the thread wakes once a second (10 times before), from the code. It logs nothing
   then.
 
-## The overlays on the telemetry model (2026-11-06)
+## The overlays on the telemetry model
 
 - The grip logic replayed both recorded sessions, dry and as wet, with output identical byte for byte
-  to before. The replay tool was `tools\lmu\grip_replay`, removed on 2026-11-07 with the other one-off
-  tools. The grip logic itself went the same day (`findings\overlays.md`).
+  to before. The replay tool was `tools\lmu\grip_replay`, since removed with the other one-off
+  tools. The grip logic itself went with it (`findings\overlays.md`).
 - Race auto-record behaved as before with `lmu_fake --race`.
 - The G-meter's axis conversion is exact: only the signs and the order of the axes change. Not
   checked: its image before and after.

@@ -5,18 +5,18 @@ and the runtime's last pose prediction for each display slot. Cached (reading a 
 two takes minutes). Knows nothing about recordings or video.
 
 Tick formats (`_ticks.csv`, one row per OBS tick; vr_mirror\core\pipeline\observer\README.md):
-- 18 columns, before 2026-10-31: stamp ... view_w; `display_slot` is the slot the frame was drawn for.
-- 26 columns, from 2026-10-31: then picture_pose, draw, presented, zoom, edge_clamps, slot_lead,
+- 18 columns, the oldest: stamp ... view_w; `display_slot` is the slot the frame was drawn for.
+- 26 columns: then picture_pose, draw, presented, zoom, edge_clamps, slot_lead,
   edge_planned, view_time; `slot` is the slot the frame arrived for.
-- 31 columns, 2026-11-01: then followed_serial, edge_repeat_clamps, edge_shift, aspect, picture_notes.
-- 30 columns, since 2026-11-02: as 31 without edge_repeat_clamps. Since 2026-11-08 two of them are
-  named drawn_pose and pose_notes (picture_pose and picture_notes before), at the same places.
+- 31 columns, for a short time: then followed_serial, edge_repeat_clamps, edge_shift, aspect, picture_notes.
+- 30 columns, the newest: as 31 without edge_repeat_clamps. In newer traces two of them are named
+  drawn_pose and pose_notes (picture_pose and picture_notes in older ones), at the same places.
 
 The numeric layout (`num`), column by column:
   0 stamp, 1 tick, 2 serial, 3 arrival, 4 smooth, 5 slot, 6-9 img, 10-13 raw, 14-17 view (x, y, z, w),
   18 draw, 19 presented, 20 zoom, 21 edge_clamps, 22 slot_lead, 23 edge_planned, 24 view_time,
   25 followed_serial, 26 edge_repeat_clamps, 27 edge_shift, 28 aspect
-NaN where the trace's format has no such column (18-26 before 2026-10-31), -1 for 25-28 where it has
+NaN where the trace's format has no such column (18-26 in the 18-column format), -1 for 25-28 where it has
 none since. `kind` is the drawn_pose column, `notes` the drawn pose stage's notes (text). Times in PVR
 seconds.
 """
@@ -33,13 +33,13 @@ N_COLUMNS = 29
 def Row(v):
     """One tick row's fields -> (numbers, drawn_pose, notes) in the layout above."""
     n = len(v)
-    if n < 26:  # before 2026-10-31
+    if n < 26:  # the 18-column format
         return [float(x) for x in v[:18]] + [np.nan] * 7 + [-1.0] * 4, "", ""
 
     nums = [float(x) for x in v[:18]] + [float(x) for x in v[19:26]]
-    if n >= 31:  # 2026-11-01: with edge_repeat_clamps
+    if n >= 31:  # with edge_repeat_clamps
         extra, note = [float(x) for x in v[26:30]], v[30]
-    elif n == 30:  # since 2026-11-02: edge_repeat_clamps dropped
+    elif n == 30:  # edge_repeat_clamps dropped
         extra, note = [float(v[26]), -1.0, float(v[27]), float(v[28])], v[29]
     else:
         extra, note = [-1.0] * 4, ""

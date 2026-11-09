@@ -12,7 +12,7 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
 
 - **Another API layer already loads into LMU in these tests.** OpenXR Toolkit is installed (registered
   in HKLM, switched on), and its log shows it active in LMU.
-  - Its DLL's certificate expired on 2024-02-27, and the signature has no timestamp. So Windows reports
+  - Its DLL's certificate has expired, and the signature has no timestamp. So Windows reports
     the signature as not valid.
   - Whether that game was online is not known.
 - **The game's image buffers**, from that OpenXR Toolkit log: two, one per eye, 5084×4168 each, format
@@ -60,19 +60,19 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
 
 ## The check program
 
-- **2026-11-06, no headset.** The layer loaded through SteamVR's OpenXR loader (1.1.62), joined the
+- **No headset.** The layer loaded through SteamVR's OpenXR loader (1.1.62), joined the
   chain and reached the Pimax runtime.
   - OpenXR Toolkit sat before it in the chain and added four extensions to the instance.
   - Switched on for one program, the layer counts as "explicit". In the game both layers are
     "implicit", and their order there may differ.
   - Under another program name, the layer passed everything through and wrote nothing.
   - Sessions and frames couldn't be checked: the runtime reported no headset (error −35).
-- **2026-11-06, with the headset.** The check passed with the layer in the chain: a D3D11 session on
+- **With the headset.** The check passed with the layer in the chain: a D3D11 session on
   the Pimax Dream Air, two 5084×4168 buffers in format 29, 1,100 frames, and a clean shutdown.
   - The layer logged the frame layout once, and "900 frames in 10.0 s, 89.97 per second", with nothing
     skipped.
   - OpenXR Toolkit added a third buffer of its own, 2048×2048.
-- **2026-11-07, the copy** (Pimax OpenXR 0.1.0, Dream Air, 1,100 frames). Copying the left eye
+- **The copy** (Pimax OpenXR 0.1.0, Dream Air, 1,100 frames). Copying the left eye
   after `xrEndFrame` has gone on to the runtime works on Pimax's runtime.
   - Every record held what was submitted.
   - The reader appeared, and the textures were made 0.3 s after the session began, in 0.5 ms. From
@@ -139,7 +139,7 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
 
 - **The half-drawn frame in a 4K recording** (issue 12) is one game frame, after a 64 ms
   stall, with the sun strip, the driver's arms and the wheel rim missing. Whether LMU drew it so or the
-  layer copied it unfinished is not known. Read in the code on 2026-11-09:
+  layer copied it unfinished is not known. Read in the code:
   - The two frames "0.005 ms apart" after the stall are two copies VR Mirror saw finished at once. VR
     Mirror counts a frame as arrived when it sees its copy finished, and the layer checks its copies
     only when the game ends its next frame. They say nothing about how the game ended those frames.
@@ -155,7 +155,7 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
   - Measured in e2e `openxr_stall` (a render thread, the runtime holding xrEndFrame until vsync, a
     64 ms stall every 3 s): with the old order 0.73–0.75° rms image/pose mismatch on screen, 2.8–4.5°
     in the worst frame. With the fix 0.053° rms, at most 0.153°, as `openxr_stabilization` (0.05°).
-- **To tell the game from the layer at the next flicker** (2026-11-09), each frame's record now says
+- **To tell the game from the layer at the next flicker** (#17), each frame's record now says
   which swapchain image it showed, how many images the game held, how many it released while the
   frame was in xrEndFrame, and the threads that released the image and ended the frame. The OpenXR
   source writes them to `trace_<time>_openxr.csv` with Debug on, and logs once a session whether the

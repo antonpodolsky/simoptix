@@ -16,7 +16,7 @@ explains the cockpit) is known where the head moved enough to tell. A jump is th
 usage: python -I shake_traced.py <out folder of analyse_recording.py>
 (analyse_recording.py runs it; it needs that folder's shake.npz and lineup.npz.)
 Angles in degrees; jumps in px of the 1920x1080 picture, as shake.py and shake_causes.py count them.
-Needs a trace from 2026-10-31 on (zoom, edge counters, view time).
+Needs a trace with 26 or more columns (zoom, edge counters, view time).
 """
 
 import os
@@ -37,7 +37,7 @@ CANT = np.array([0.0, 0.0175, 0.0, 0.9998])  # eye 0's orientation in the head
 ASPECT = 16 / 9
 
 # The view looks at the image's middle, with the mean of its half-angles on each side
-# (vr_mirror\core\pipeline\pipeline_types.h ImageMiddle and GeometryFor, from 2026-11-08; before, it
+# (vr_mirror\core\pipeline\pipeline_types.h ImageMiddle and GeometryFor; in older builds it
 # looked along the eye's axis and was as wide as the narrower side).
 _YAW = (np.arctan(EYE["R"]) - np.arctan(EYE["L"])) / 2
 _PITCH = (np.arctan(EYE["U"]) - np.arctan(EYE["D"])) / 2
@@ -48,7 +48,7 @@ AIM = Qmul(
 WIDE = np.tan((np.arctan(EYE["L"]) + np.arctan(EYE["R"])) / 2)
 TALL = np.tan((np.arctan(EYE["U"]) + np.arctan(EYE["D"])) / 2)
 
-# vr_mirror\core\pipeline\picture_room\picture_room.h kStopShare (before 2026-11-05: 5_edges kEdge)
+# vr_mirror\core\pipeline\picture_room\picture_room.h kStopShare (in older builds: 5_edges kEdge)
 EDGE = 0.95
 LAGS = np.arange(-3, 2)  # candidate true slots, display periods from the slot the frame arrived for
 
@@ -74,7 +74,7 @@ def Matrix(q):
     )
 
 
-# ---- the plugin's edge test (vr_mirror\core\pipeline\picture_room\, before 2026-11-05 5_edges\), vectorised
+# ---- the plugin's edge test (vr_mirror\core\pipeline\picture_room\, in older builds 5_edges\), vectorised
 # ----
 def Fits(picture, view, zoom):
     tw = WIDE / zoom
@@ -188,8 +188,8 @@ def Run(shake_npz, rows, trace, rec, video_name, out):
     repeat = have & (serial == ps)
     skip = have & (serial > ps + 1)
 
-    # A repeated frame shown for another: the trace says which frame the view followed (since
-    # 2026-11-01), except where the view followed the OBS tick's own moment: then the plugin writes the
+    # A repeated frame shown for another: the trace says which frame the view followed (traces
+    # with 30 or 31 columns), except where the view followed the OBS tick's own moment: then the plugin writes the
     # tick's id there (1 << 62 | tick count, vr_mirror\obs_plugin\plugin.cpp): it followed no game frame, so
     # none is shown for another (a repeat still counts as one). Older traces only let it be guessed from the
     # two poses differing.
@@ -287,7 +287,7 @@ def Run(shake_npz, rows, trace, rec, video_name, out):
     share_follow[have] = RoomShare(raw[have], view[have], zoom[have])
     share_shown[have] = RoomShare(img[have], view[have], zoom[have])
     at_edge = lambda s: np.abs(s - EDGE) < 0.002
-    if num.shape[1] > 25 and (T[:, 26] >= 0).all():  # counted by the trace since 2026-11-01
+    if num.shape[1] > 25 and (T[:, 26] >= 0).all():  # counted by traces with 30 or 31 columns
         clip_here = have & (T[:, 26] - num[prev, 26] > 0)
     else:
         clip_here = stand_in & at_edge(share_shown) & ~(at_edge(share_follow) & clamp_here)

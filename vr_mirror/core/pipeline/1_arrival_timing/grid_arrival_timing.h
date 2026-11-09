@@ -27,7 +27,7 @@ private:
     static constexpr int kOffsets = 45;  // half a second of arrivals
     // Display periods: a frame whose arrival + offset falls more than kLateBefore before its nearest
     // slot gets the slot before when the previous frame left that one free and fell within kOnTime of
-    // its own slot. Measured on 4.4 h of traced driving (2026-11-05): rounding to the nearest slot gave
+    // its own slot. Measured on 4.4 h of traced driving: rounding to the nearest slot gave
     // two consecutive frames the same slot 237 times, most of them after a late frame that fell 0.3 to
     // 0.5 periods before its slot; the video showed that frame lined up from the next slot's head pose
     // (a one-frame jolt, 3.5 px at 7:39 of race F). Early arrivals fade out by 0.2 periods

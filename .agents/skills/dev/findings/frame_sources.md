@@ -104,10 +104,10 @@ The Pimax compositor's own output, before lens distortion, both eyes side by sid
 
 ## The PVR declarations
 
-Since 2026-11-08 the Pimax frame source and the e2e fake runtime use the project's own declarations
+The Pimax frame source and the e2e fake runtime use the project's own declarations
 of Pimax's client interface (`vr_mirror\frame_sources\pimax\pvr_interface.h`), written from scratch.
 They replace the headers of Pimax's PC SDK 1.26.1, which say "All Rights reserved" and come with no
-licence. Checked on 2026-11-08:
+licence. Checked when the declarations were written:
 
 - **Layout:** the layout check (`vr_mirror\frame_sources\pimax\check\`) passes against the SDK 1.26.1
   headers. Five deliberate mistakes each failed it: a table entry moved, a field moved, a parameter's

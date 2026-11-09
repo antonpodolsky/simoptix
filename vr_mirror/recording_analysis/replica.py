@@ -175,7 +175,7 @@ def main():
         type=float,
         default=0.3,
         help="leave out this fraction of the texels with the least detail before trimming "
-        "(core: 0.3; 0 = the matching before 2026-10-24)",
+        "(core: 0.3; 0 = the matching of older builds)",
     )
 
     ap.add_argument(

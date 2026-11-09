@@ -352,8 +352,8 @@ namespace {
     };
 
     WrongPoseLimits ReplayLimits(const std::string& stem) {
-        // Limits above the target where the 64x32 thumbnails can't tell the lags apart (2026-10-27,
-        // .agents\skills\dev\findings\e2e.md, "Why the dust replay fails"), each just above its worst
+        // Limits above the target where the 64x32 thumbnails can't tell the lags apart
+        // (.agents\skills\dev\findings\e2e.md, "Why the dust replay fails"), each just above its worst
         // measured run. Instant
         // decides from the frames before each one only; Look-ahead in hindsight.
         WrongPoseLimits l;

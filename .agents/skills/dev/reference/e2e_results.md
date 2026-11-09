@@ -4,13 +4,13 @@ Terms: `reference\terms.md`. How to run the suite: `reference\e2e.md`. What each
 `vr_mirror\e2e\README.md`.
 
 Compare every e2e run with these numbers. When they change for a reason, update them here in the same
-commit. Each section says its date and its conditions. From run 8 on, Instant / Look-ahead is the
+commit. Each section says its build and its conditions. From run 8 on, Instant / Look-ahead is the
 order of two numbers. Before it, Instant / Smooth / Smoothest is the order of three, and Smooth is
 today's Look-ahead. A row may say otherwise.
 
-## The latest runs (2026-11-08 and 09)
+## The latest runs
 
-**Run 8 (2026-11-09): Smoothest dropped, Smooth renamed Look-ahead.** LMU, OBS and Pimax Play were
+**Run 8 (#22): Smoothest dropped, Smooth renamed Look-ahead.** LMU, OBS and Pimax Play were
 closed. The 38 runs took 558 s. 36 of 38 passed, and all 19 comparisons with Instant.
 - Two Instant runs failed, whose code and pipeline output the change leaves as they were
   (`stage_replay --golden` byte for byte):
@@ -101,7 +101,7 @@ was closed and OBS open. Whether Pimax Play ran was not checked.
   - `black_borders` still tilts 1.13–1.15° at its worst, at level pitch. It is 0.31° looking up or
     down.
 
-**Run 7 (2026-11-09): the layer's image noted before xrEndFrame, with `openxr_stall` and the fake game
+**Run 7 (#17): the layer's image noted before xrEndFrame, with `openxr_stall` and the fake game
 through the layer's frame code** (issue 12). LMU, OBS and Pimax Play were closed. The 57 runs took
 837 s. 54 of 57 passed, and 17 of 19 comparisons with Instant.
 - `openxr_stall_smoothest` failed: 5.9% from the wrong pose, 20.5° worst on screen. Another test
@@ -124,7 +124,7 @@ through the layer's frame code** (issue 12). LMU, OBS and Pimax Play were closed
 | openxr_game_behind | pass: no frame from the wrong pose, no stall, jitter 2.8 / 1.1 / 1.1 of the head's |
 | openxr_black_borders | pass: 0% black, no stall, jitter 1.6 / 0.20 / 0.20 of the head's |
 | openxr_game_starts_late | pass: the game's first frame missed at all three (the limit: the layer learns the image's size from it), none after, no frame from the wrong pose |
-| openxr_stall | pass (2026-11-09, run 7's rerun): image/pose mismatch 0.053–0.054° rms at all three, worst frame 0.147–0.149°, no game frame missed, 88.6–88.7 fps. With the image looked up after xrEndFrame, as the layer did before: 0.73–0.75° rms, worst 2.8–4.5° |
+| openxr_stall | pass (run 7's rerun): image/pose mismatch 0.053–0.054° rms at all three, worst frame 0.147–0.149°, no game frame missed, 88.6–88.7 fps. With the image looked up after xrEndFrame, as the layer did before: 0.73–0.75° rms, worst 2.8–4.5° |
 
 **Compared with Instant, four fail in run 1, all on the horizon's worst tilt.** The limit: Smooth and
 Smoothest at most 0.05° worse than Instant.
@@ -140,7 +140,7 @@ Smoothest at most 0.05° worse than Instant.
 The 14 other comparisons pass, the Pimax ones among them. Not explained (`findings\pipeline.md`, "The
 reported slot and pose"). The limit stays as it is.
 
-## The baseline (2026-10-26)
+## The baseline
 
 A 320×180 window, LMU closed, Pimax Play open (see below), after the fix in `findings\e2e.md`,
 "Smoothing compared with Instant: what it found".
@@ -157,10 +157,10 @@ A 320×180 window, LMU closed, Pimax Play open (see below), after the fix in `fi
 | replay_false_retiming_short_hiccup | pass: 0% from the wrong pose at all three |
 | replay_queued_late_frames | pass: 6.9–9.7% / 4.4–5.5% / 4.6–8.5% from the wrong pose (limits 12 / 7 / 10%, target 4%). Worst 0.69–0.74 / 0.38 / 0.38° |
 | replay_false_retiming_featureless_cockpit | pass: 1.3–1.4% / 0.1–0.2% / 0.1–0.2% from the wrong pose (limits 2.5 / 1 / 1%). Worst 1.39 / 0.08–0.14 / 0.14° |
-| replay_late_frame_same_slot | pass: no frame from the wrong pose at all three (2026-11-05, the build before fails with 1 frame, 0.17°) |
+| replay_late_frame_same_slot | pass: no frame from the wrong pose at all three (the build before the fix for a single late frame fails with 1 frame, 0.17°) |
 
 - **Compared with Instant, all pass** (`vr_mirror\e2e\README.md`, "Smoothing compared with Instant").
-- **The replays' numbers** are from four runs on 2026-10-27, with Smooth and Smoothest frames judged in
+- **The replays' numbers** are from four earlier runs, with Smooth and Smoothest frames judged in
   hindsight and decided at all (the flush fix in `findings\e2e.md`). LMU, OBS, Steam and Pimax Play
   closed.
 - **The look-ahead's delay.** The look-ahead runs compare each frame's view with the head at the frame's
@@ -169,7 +169,7 @@ A 320×180 window, LMU closed, Pimax Play open (see below), after the fix in `fi
   1034 ms from arrival). So the runner takes the head at the presented time minus that delay (0 for
   Instant). The delay is steady to 2.3–2.5 ms, as Instant's 4 ms is.
 
-**Two scenarios fail now and then,** on the build of 2026-11-05 and the one before alike. The cause is
+**Two scenarios fail now and then,** on the build with the fix for a single late frame and the one before alike. The cause is
 not known.
 - `replay_false_retiming_short_hiccup_smooth`: 3.5–4.0% of game frames missed (limit 1%) in 1 run of
   10 on the new build, and 1 of 9 on the old one. 0% in the others.
@@ -177,15 +177,15 @@ not known.
   Its jitter ratio varies a lot between runs at Instant: 2.1–4.7 on both builds.
 
 **Pimax Play running during a run disturbs it,** because its compositor keeps rendering to the headset.
-On 2026-10-26, with Pimax Play open, one run in five of `stabilization` (new and old builds alike) had
+In the baseline's runs, with Pimax Play open, one run in five of `stabilization` (new and old builds alike) had
 the mirror app's arrival timing noise at 1.46 ms rms instead of 0.52, 7.2% of game frames missed, and a
 jitter ratio of 2.24. The reruns passed (0.42–0.47). Close Pimax Play for runs that are compared.
 
 **The featureless replay varies by a frame or two from run to run** (993 frames, 13–16 from the wrong
-pose). On 2026-10-26 four runs gave 1.40–1.58%. Three runs of the build before the other images were
+pose). In the baseline's runs four gave 1.40–1.58%. Three runs of the build before the other images were
 retired gave 1.30–1.49%. The worst frame was 1.389° in all of them.
 
-## Stage replay baseline (2026-10-30)
+## Stage replay baseline
 
 The configuration of the time (grid, image, fixed delay, predicted, planned, rotation), drawn as the
 window at zoom 1.5, by smoothing. Lower is better in every column.
@@ -203,7 +203,7 @@ window at zoom 1.5, by smoothing. Lower is better in every column.
 - `--drawn_pose arrival_slot` (was `--frame_matching none`) on `queued_late_frames`: 9.32% from the
   wrong pose. e2e without the matching: 9.7%.
 - `--drawn_pose measured`: 98.15%, because the measured head is never exactly the pose a frame was
-  drawn with. The measured drawn pose was removed on 2026-11-07.
+  drawn with. The measured drawn pose has since been removed.
 - Instant's dead zone holds a slow view still, so it reads lowest while still, as in e2e.
 - **Not explained:** on the synthetic motions the look-ahead reads higher than Instant in small moves
   (`racing+heartbeat` 0.034° against 0.007°), where e2e's shake measure, on the presented frames, finds
@@ -211,12 +211,12 @@ window at zoom 1.5, by smoothing. Lower is better in every column.
   predictions and no presentation. Which part of the look-ahead's path the fit leaves was not looked
   into.
 
-## Proven to fail (2026-10-25, the last rows 2026-11-08)
+## Proven to fail
 
 Each test, run with what it checks broken, against the build of the time. "Broken" is a setting, a fake
 that draws less, or the build that had the bug, made from its commit and run with `--tool`.
 - Run at 320×180.
-- The settings `stabilize` and `roll_lock` were removed on 2026-11-07. `--set smoothing=0` switches
+- The settings `stabilize` and `roll_lock` have since been removed. `--set smoothing=0` switches
   stabilization off, and the horizon is always level.
 - "The tool" is the mirror app's old name.
 
@@ -234,19 +234,19 @@ that draws less, or the build that had the bug, made from its commit and run wit
 | black_borders_low_zoom_smooth | the same | the edge limit on 1.57% of frames (limit 0.5%): fails | 0% |
 | stabilization_smoothest, _smooth | Instant smoothing on the same motion (stabilization) | jitter 0.39–0.44 of the head's (limit 0.1): fails | 0.012–0.026 |
 | black_borders_smoothest | Instant on the same motion (black_borders) | jitter 1.8–2.8 of the head's (limit 1.0): fails | 0.19–0.27 |
-| comparison: featureless_cockpit | the view for the slot a late frame was drawn for (before `ShownTime`, 2026-10-26) | smoothed jitter 0.031 / 0.032° against Instant's 0.002° (allowed 0.007°): fails | 0.002 / 0.001° |
+| comparison: featureless_cockpit | the view for the slot a late frame was drawn for (before `ShownTime`) | smoothed jitter 0.031 / 0.032° against Instant's 0.002° (allowed 0.007°): fails | 0.002 / 0.001° |
 | replay_false_retiming_head_turns_smoothest | the pose predictions kept for 0.7 s instead of 2.8 s (a frame's prediction gone when it is shown) | 90.8% from the wrong pose | 0–0.1% |
-| queued_cockpit | the cockpit correction without its pull back to the head poses (time constant 1000 s) | correction drift 1.43° (limit 0.5°): fails. Visible jumps 0.6%. With the pose drift that replaced it (2026-10-31): 2.34°: fails. Visible jumps 0.5% | 0.09°. Pose drift 0.29–0.31° |
+| queued_cockpit | the cockpit correction without its pull back to the head poses (time constant 1000 s) | correction drift 1.43° (limit 0.5°): fails. Visible jumps 0.6%. With the pose drift that replaced it: 2.34°: fails. Visible jumps 0.5% | 0.09°. Pose drift 0.29–0.31° |
 | replay_queued_late_frames | no frame matching (the build just before it) | 9.7% from the wrong pose (then limit 4%), worst 0.69° | 6.9–9.7% at Instant: within its 12% now, so not caught |
 | replay_queued_late_frames_smoothest | held frames' thumbnails not submitted (the build before that was fixed) | 12.2–12.4% from the wrong pose (limit 10%), 22% of frames undecided | 4.6–8.5% |
 | replay_false_retiming_head_turns | the first build with frame matching | 9.1% (limit 1%), worst 0.33° | 0.1% |
 | replay_false_retiming_short_hiccup | the first build with frame matching | 26.6%, worst 0.59° | 0% |
 | replay_false_retiming_short_hiccup | the build whose gate opened on two drops | 7.4%, worst 0.37° | 0% |
 | replay_false_retiming_featureless_cockpit | the build before featureless texels were left out | 3.4% (Instant limit 2.5%), worst 1.39° | 1.3–1.4% |
-| replay_late_frame_same_slot, _smooth, _smoothest | the arrival timing rounding to the nearest slot (the build of 2026-11-05) | 1 frame from the wrong pose (0.10–0.11%, limit 0), the late frame, 0.170° off: fails at all three | 0 frames, 0.000° |
-| stabilization (view width, 2026-11-08) | the build before the view looked at the image's middle (`main` at e58e8fe, zoom 1.5) | width 42.64° against 43.07° asked: 0.44° off (limit 0.2°): fails | 0.08° off |
-| openxr_stabilization (view width and direction, 2026-11-08) | the same build | width 40.04° against 43.47° asked: 3.43° off: fails. Image/pose mismatch 2.02° rms (limit 1.5°): fails | 0.08° off, 0.05° rms |
-| black_borders (tilt looking up or down, 2026-11-08) | the same build | 1.21° (limit 0.5°): fails | 0.31° |
+| replay_late_frame_same_slot, _smooth, _smoothest | the arrival timing rounding to the nearest slot (the build before the fix for a single late frame) | 1 frame from the wrong pose (0.10–0.11%, limit 0), the late frame, 0.170° off: fails at all three | 0 frames, 0.000° |
+| stabilization (view width) | the build before the view looked at the image's middle (`main` at e58e8fe, zoom 1.5) | width 42.64° against 43.07° asked: 0.44° off (limit 0.2°): fails | 0.08° off |
+| openxr_stabilization (view width and direction) | the same build | width 40.04° against 43.47° asked: 3.43° off: fails. Image/pose mismatch 2.02° rms (limit 1.5°): fails | 0.08° off, 0.05° rms |
+| black_borders (tilt looking up or down) | the same build | 1.21° (limit 0.5°): fails | 0.31° |
 | openxr_black_borders (the same) | the same build | 0.64°: fails. With the aim at the image's middle and the camera not levelled: 2.01° (Smooth 2.10°) | 0.11° |
 
 `head_still` first passed broken too. Its head's tremor was all at 5–8 Hz, which the jitter measure
@@ -254,7 +254,7 @@ barely sees: a quadratic fit over ±50 ms takes up 90% of 8 Hz and more below, 6
 15 Hz. So it measured 0.003°, and its head tilted under 0.1°. Its motion has had a fine shake and a lean
 since (`vr_mirror\e2e\README.md`, "Scenarios"), with the limits unchanged.
 
-## Window size (2026-10-25)
+## Window size
 
 Every scenario runs the mirror app in a 320×180 window, its smallest (`--output` overrides). What is
 read from the window reads the same as at larger sizes:

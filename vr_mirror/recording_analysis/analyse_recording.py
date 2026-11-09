@@ -10,7 +10,7 @@ Finds the OBS log that recorded it and the frame trace that was open (sources.py
 2. fits the cockpit's motion and its steps (shake.py), with the log's 10 s stats (shake_causes.py);
 3. with a trace and stamps: lines the recording up with the trace (lineup.py: the stamp occurrence
    where the trace's single repeated game frames fall on frames that froze in the video), classifies each jump by the trace
-   (shake_traced.py, traces from 2026-10-31 on), the cadence (cadence.py) and the timing events
+   (shake_traced.py, traces with 26 or more columns), the cadence (cadence.py) and the timing events
    (events.py).
 Everything goes into the output folder (default: a new folder '<recording> analysis' in the folder
 SIMOPTIX_DATA names, else beside the recording): one report per step (.txt), their data (.npz, .csv), run.json (what
@@ -232,7 +232,7 @@ def main():
                     F("traced"),
                 )
             else:
-                Say("the trace is from before 2026-10-31 (18 columns): no per-jump causes")
+                Say("the trace has the oldest format (18 columns): no per-jump causes")
 
         Say("cadence and events")
         Report(F("cadence.txt"), cadence.Run, cad, name)

@@ -7,8 +7,8 @@
 // the frame was presented or the next one came, and the stages' stats as "#stats," lines. Logic only: rows
 // are formatted on the stack, nothing allocated. Knows nothing about files, D3D, OBS or the stages' methods.
 //
-// The first 19 columns are the OBS plugin's frame trace since 2026-10-31 (vr_mirror\recording_analysis reads
-// them by position); the mirror app's trace (e2e) is read by column name.
+// The first 19 columns are the OBS plugin's frame trace with 26 or more columns (vr_mirror\recording_analysis
+// reads them by position); the mirror app's trace (e2e) is read by column name.
 #pragma once
 
 #include <cstdint>

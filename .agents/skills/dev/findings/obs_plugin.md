@@ -11,7 +11,7 @@ This file holds what was measured on the plugin, and what was tried.
 
 ## Smoothing and zoom
 
-- **Smoothest dropped, Smooth renamed Look-ahead (2026-11-09).** Smoothest ran a second behind the
+- **Smoothest dropped, Smooth renamed Look-ahead (#22).** Smoothest ran a second behind the
   game, and the OpenXR source keeps a copy of every frame in that time. At the layer's full
   5084x4168 that is about 97 images and 8.2 GB of video memory, too much beside the game. Under the
   4 GB cap each image shrinks to about 3580 px wide, so a 3840x2160 canvas gets 74% of native at zoom
@@ -36,7 +36,7 @@ This file holds what was measured on the plugin, and what was tried.
   - zoom 1.1: the view gets shakier than with Instant
 
   Hence the advice in the README not to go below about 1.2 with Smooth or Smoothest.
-- **The edges in the smoothing** (2026-11-01, `findings\e2e.md`, "The edges in the smoothing"). The
+- **The edges in the smoothing** (`findings\e2e.md`, "The edges in the smoothing"). The
   source draws on OBS's clock, so each tick shows a game image drawn for a slightly later moment, or
   the previous one again. Since this date the smoothing keeps the view inside that image and plans
   ahead for it. Before, a hard clip after the smoothing cut the view. With the mirror app drawing like
@@ -51,7 +51,7 @@ This file holds what was measured on the plugin, and what was tried.
 
 ## Audio sync
 
-- **The shift, checked in OBS** (2026-10-26, no game, so the delay stayed at its warm-up value):
+- **The shift, checked in OBS** (no game, so the delay stayed at its warm-up value):
   - with the source shown: LMU's sound −120 → +950 ms, Mic/Aux 0 → +1070 ms
   - with the source hidden: back to −120 and 0 ms
 - **LMU's sound trails the image** by about 120 ms, so it needs about −120 ms of its own Sync Offset
@@ -70,14 +70,15 @@ This file holds what was measured on the plugin, and what was tried.
   takes about 0.09 s to start recording (measured from the log).
 - **Checked in OBS with `lmu_fake --race`:**
 
-  | Date | Build | Start after the lights | Stop after the car stood still |
-  |---|---|---|---|
-  | 2026-10-25 | The switch still in the G-meter source | 0.24 s | 5.1 s |
-  | 2026-11-06 | The overlays on the telemetry model | 0.1 s | 5.0 s |
-  | 2026-11-06 | The switch in the Pimax source, no headset | 0.24 s | 5.25 s |
-  | 2026-11-06 | The same, with a 0.5 s delay written in for the headset's | 0.53 s | 5.54 s |
+  | Build | Start after the lights | Stop after the car stood still |
+  |---|---|---|
+  | The switch still in the G-meter source | 0.24 s | 5.1 s |
+  | The overlays on the telemetry model | 0.1 s | 5.0 s |
+  | The switch in the Pimax source, no headset | 0.24 s | 5.25 s |
+  | The same, with a 0.5 s delay written in for the headset's | 0.53 s | 5.54 s |
 
-  On 2026-10-25 a practice session with the same phases recorded nothing, as it should. The delay
+  With the first of these builds, a practice session with the same phases recorded nothing, as it
+  should. The delay
   test is in `findings\telemetry.md`.
 - **Not checked:**
   - that LMU's countdown phase begins exactly when "hold speed" shows
@@ -111,7 +112,7 @@ This file holds what was measured on the plugin, and what was tried.
   of repeats.
 - **At a steady 90 fps the repeats match the frames the game never rendered.** In two race
   traces: 1,506 repeats against 1,648 missing frames. OBS's clock against the headset's adds about
-  one skip every 1000 s (data folder: `2026-10 resync check`).
+  one skip every 1000 s (the data folder's resync check).
 - **CPU is counted in cycles,** because `GetThreadTimes` charges whole 15.6 ms timer ticks and can't
   see a thread that runs a few microseconds at a time. Checked: a thread spinning flat out reads
   99.9%.
@@ -120,7 +121,7 @@ This file holds what was measured on the plugin, and what was tried.
 
 ### Footprint without a game
 
-Measured on 2026-10-26: Pimax Play running, the headset connected but not worn, no game, the source
+Measured with Pimax Play running, the headset connected but not worn, no game, the source
 shown, 10 s stretches. "Before" is the build before the idle state, with the footprint counters
 added to it. "Idle" is the first build with the idle back-off.
 
@@ -153,10 +154,10 @@ added to it. "Idle" is the first build with the idle back-off.
   took the frames warped from the wrong pose:
   - where the cockpit is dark and featureless: to 0.1–0.2% (Instant: 1.3–1.4%)
   - in a dust-cloud queue: to 4.4–8.5% (Instant: 6.9–9.7%)
-- **The cockpit correction** (`drawn_pose` 2) is the plugin's choice since 2026-11-01.
+- **The cockpit correction** (`drawn_pose` 2) is the plugin's choice.
   - In e2e, with the game at 82 fps and a detailed cockpit, it took the image's visible jumps from
     12.7–29.3% of frames to 1.1–1.2% (`findings\e2e.md`, "The cockpit correction").
-  - As the default it failed all four real-race replays (2026-10-31). Visible jumps: 14.7–19.1% in
+  - As the default it failed all four real-race replays. Visible jumps: 14.7–19.1% in
     the dust cloud against 0.8–1.8%, and 11.8–12.3% in the dark cockpit against 0–1.9%. Their 64×32
     thumbnails are too blurry to judge it, but it didn't fall back on them either.
   - So the plugin uses it by choice, to be judged in real recordings. The mirror app and e2e keep the
@@ -174,7 +175,7 @@ What OBS does with the plugin's `manifest.json`. All of it holds for Overlays' m
 - **OBS 32.2.2 reads it** from the plugin's data folder when it loads the plugin, and writes no log
   line about it (`obs_module_load_metadata` in
   [libobs/obs-module.c](https://github.com/obsproject/obs-studio/blob/32.2.2/libobs/obs-module.c)).
-  Checked on 2026-11-09 with the local files test's private OBS, its `OBS_PLUGINS_DATA_PATH` naming a
+  Checked with the local files test's private OBS, its `OBS_PLUGINS_DATA_PATH` naming a
   folder with both manifests. The Plugin Manager's record (`modules.json` in the `plugin_manager`
   folder of OBS's config) then held each plugin's `id` (`simoptix_vr_mirror`, `simoptix_overlays`) and
   `version` (`0.1.0+14.g31637d5`). Without the manifests both were empty.

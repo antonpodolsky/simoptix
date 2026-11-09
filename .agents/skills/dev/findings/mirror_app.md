@@ -2,7 +2,7 @@
 
 Terms: `reference\terms.md`. What the mirror app is: `vr_mirror\mirror_app\README.md`.
 
-Until 2026-11-07 the mirror app was also a tuning tool, with keys for every setting of the pipeline.
+In older builds the mirror app was also a tuning tool, with keys for every setting of the pipeline.
 It also held the offline smoothing simulations that the studies below were made with
 (`sim_filter.cpp`, `sim_lookahead*.cpp`, `sim_lookahead_*.h`). That code was removed on that date.
 
@@ -31,7 +31,7 @@ In the studies, **"today"** means Instant's filter as it was then, and as it sti
   Capture on the mirror app hooks its own presents and avoids this. It was used for the 90 fps recordings measured
   there.
 
-## Study 1: look-ahead with a short delay (offline, 2026-10-26)
+## Study 1: look-ahead with a short delay (offline)
 
 **The question.** The output is a recording, so the image may run a fixed delay D behind it. Up to
 about 150 ms seemed free, because the game's audio already trails the image by about 120 ms. Then the
@@ -67,7 +67,7 @@ through a `PoseSource` of the recorded poses): "Core's pipeline on the same pose
 outputs, the extracted traces' paths and the helper scripts are in the data folder's `lookahead_sim\`.
 
 **Head poses.** The `P` rows (the measured head pose, about 730 Hz) of the four OBS plugin frame
-traces in the data folder's `2026-10 late frames after drops\trace\`, slerped onto the 90 Hz display
+traces in the data folder's late frames after drops (its trace folder), slerped onto the 90 Hz display
 grid. That is 4.3 h with game frames arriving, from four sessions: races A and D, session B, and the
 short session C.
 
@@ -187,7 +187,7 @@ On the still part, every row of both tables except the last two leaves under 0.0
   - per session: today 4.43–4.86°, forward-backward at 144 ms and 1 Hz 1.26–1.34°
   - on the four e2e replays (12 s each, no still part): today 4.82°, forward-backward at 122 ms 2.83°
 
-### Core's pipeline on the same poses (2026-10-30)
+### Core's pipeline on the same poses
 
 `sim_lookahead.exe` given a zoom (`ZOOM`) ran core's pipeline itself (`vr_mirror\core\pipeline`):
 Instant's catch-up, the look-ahead's edge planning and the last-resort limit included, with LMU's eye
@@ -242,7 +242,7 @@ headset not handled), 1.38 million frames. Jitter is as a share of the head's, a
   takes about 160 ms to rise and its cutoff stays near min cutoff. Its view lies between today's and
   the one D ahead, within 0.1° of the latter in p99, but without the leads in flicks.
 
-## Study 2: other smoothing methods (offline, 2026-10-26)
+## Study 2: other smoothing methods (offline)
 
 **The question,** before designing the look-ahead smoothing and its edge handling: how do other ways of
 smoothing with future samples, of levelling the horizon, and of handling the zoom do on the recorded
