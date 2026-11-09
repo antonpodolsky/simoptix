@@ -10,6 +10,23 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 9 (6638ff6): the OpenXR source keeps the game's image at full size near 1:1, and the memory
+cap is 4.7 GB.** LMU, OBS and Pimax Play were closed. 37 of 38 runs passed, and all 19 comparisons
+with Instant. At e2e's 320×180 window the source still stores a shrunk image, as before.
+- `openxr_black_borders` at Instant had one stall mid-turn, as `openxr_black_borders` at Smooth in run
+  7. A rerun at both smoothings passed with its comparison: no stall, no black.
+- `stabilization` 0.42 / 0.015 of the head's shake, `dropped_frames` 0.53 / 0.027,
+  `replay_queued_late_frames` 8.9 / 5.3% from the wrong pose, the featureless replay 1.60 / 0.21%,
+  and `game_starts_late` 4.8 runtime calls/s idle.
+- Recorded view jitter: `stabilization` 0.130 / 0.116°, `dropped_frames` 0.187 / 0.159°.
+- Worst horizon tilt: `openxr_stabilization` 0.187 / 0.177°, `openxr_dropped_frames` 0.217 / 0.159°,
+  `openxr_game_behind` 0.154 / 0.165°, `openxr_black_borders` 0.213 / 0.170°, `stabilization` 0.135 /
+  0.104°.
+- `openxr_stall`: image/pose mismatch 0.054 / 0.053° rms, worst frame 0.152 / 0.145°.
+- The view's width is 0.07–0.14° off what its zoom asks for in all 20 runs that read it (limit
+  0.2°).
+- Look-ahead shows each frame 534 ms after its arrival (median), Instant 4.3 ms.
+
 **Run 8 (#22): Smoothest dropped, Smooth renamed Look-ahead.** LMU, OBS and Pimax Play were
 closed. The 38 runs took 558 s. 36 of 38 passed, and all 19 comparisons with Instant.
 - Two Instant runs failed, whose code and pipeline output the change leaves as they were
