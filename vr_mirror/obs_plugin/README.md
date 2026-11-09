@@ -69,6 +69,10 @@ Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`, at most two per OB
 still fit. The OBS log says how many they deleted. The OBS log marks this plugin's lines
 `[simoptix_vr_mirror]`.
 
+Windows shows the plugin's version in the DLL's Properties, under Details. A build of a release shows
+its number (`0.1.0`). Any other build adds the commits since that release and the commit
+(`0.1.0+12.gabc1234`).
+
 ## What the sources show
 
 **SimOptix: Pimax Mirror** shows the Pimax game eye, a half-size copy of the left eye the game

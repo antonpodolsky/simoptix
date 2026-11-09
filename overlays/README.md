@@ -25,7 +25,7 @@ this out from the delay alone, not by looking at the view. Without VR Mirror the
 
 | Folder | What |
 |---|---|
-| `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources) and `build.bat` |
+| `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources), the DLL's version resource (`version.rc`) and `build.bat` |
 | `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its Chrono look (`meter_chrono.*`), shapes (`meter_draw.*`) and labels (`meter_text.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
 | `common\` | What any overlay can reuse: text (`text_raster.*`), images (`meter_image.*`), and the 1:1 properties preview (`properties_preview.*`) |
 
@@ -48,6 +48,10 @@ Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`, at most two per OB
 10 crash dumps are kept. When OBS starts, the plugins delete the oldest beyond 8, so that session's two
 still fit. The OBS log says how many they deleted. The OBS log marks this plugin's lines
 `[simoptix_overlays]`.
+
+Windows shows the plugin's version in the DLL's Properties, under Details. A build of a release shows
+its number (`0.1.0`). Any other build adds the commits since that release and the commit
+(`0.1.0+12.gabc1234`).
 
 ## G-Meter Overlay
 

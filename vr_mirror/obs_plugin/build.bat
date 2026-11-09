@@ -12,7 +12,8 @@ rem delay the plugins share, the crash dump, the files kept in %%LOCALAPPDATA%%\
 rem telemetry listed by
 rem ..\..\shared\telemetry\sources.bat, which also finds LMU's headers: LMU_SDK; without them the plugin
 rem builds without LMU, and race auto-record reads no game).
-rem Its version comes from ..\..\shared\build\version.bat (VERSION at the repo's root, and git).
+rem Its version comes from ..\..\shared\build\version.bat (VERSION at the repo's root, and git),
+rem and goes into the DLL's version resource (version.rc).
 rem Optional argument "install": copies it to OBS's per-machine plugin folder
 rem (C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror\bin\64bit). Close OBS first.
 rem It links against OBS through an import library made here from ..\..\shared\obs_lib\obs.def (the
@@ -26,6 +27,7 @@ if not exist bin mkdir bin
 call ..\..\shared\build\version.bat obj || exit /b 1
 lib /nologo /def:..\..\shared\obs_lib\obs.def /machine:x64 /out:obj\obs.lib >nul || exit /b 1
 call ..\..\shared\telemetry\sources.bat
+rc /nologo /i ..\.. /i obj /fo obj\version.res version.rc || exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\core\build\embed_text.ps1 ^
    ..\core\pipeline\5_warp\warp.hlsli obj\warp_hlsli.h kWarpHlsli || exit /b 1
 cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Fo:obj\ ^
@@ -38,7 +40,8 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_S
    @..\core\build\common.rsp @..\core\build\pipeline.rsp @..\core\build\adapters.rsp ^
    @..\frame_sources\pimax\pimax.rsp @..\frame_sources\openxr\openxr.rsp ^
    /LD /Fe:bin\%NAME%.dll ^
-   /link obj\obs.lib d3d11.lib dxgi.lib winmm.lib user32.lib d3dcompiler.lib dbghelp.lib || exit /b 1
+   /link obj\version.res obj\obs.lib d3d11.lib dxgi.lib winmm.lib user32.lib d3dcompiler.lib ^
+   dbghelp.lib || exit /b 1
 if /i "%~1"=="install" (
    if not exist "C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit" ^
       mkdir "C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit"

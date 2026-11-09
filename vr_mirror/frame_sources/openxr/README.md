@@ -155,6 +155,7 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 | `openxr_layer_log.*` | The log file. `shared\local_files.*` names it and keeps the newest |
 | `XR_APILAYER_SIMOPTIX_frame_source.json` | The manifest: how OpenXR finds the DLL |
 | `frame_source.def` | The DLL's one exported function |
+| `openxr_layer_version.rc` | The DLL's version resource, which Windows shows in its Properties, under Details |
 | `build.bat` | Builds the DLL, unsigned, and the check program into `bin\` |
 | `install.bat`, `uninstall.bat` | Double-click to install or remove the layer. They ask for administrator rights and run the scripts below |
 | `install.ps1`, `uninstall.ps1` | Install or remove the layer for every user (as administrator). `install.ps1` shows the installed DLL's signature |

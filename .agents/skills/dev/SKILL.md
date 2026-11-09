@@ -430,6 +430,10 @@ commit, the way `git describe --tags` gives them (`0.1.0+12.gabc1234`). A build 
 tag gets the plain number. Every `build.bat` that makes a shipped file calls it: both plugins and the
 OpenXR layer. It writes the version into `simoptix_version.h` in the build's `obj\`, which is never
 committed.
+- Each of the three DLLs carries it in its version resource (VERSIONINFO), which Windows shows in the
+  file's Properties. `shared\build\version_info.rc` is that resource, and each DLL's own `.rc` names
+  the file and includes it. The file version is `major.minor.patch.<commits since the tag>`, and the
+  product version is the full string.
 - The version names a build for people. It decides nothing at run time.
 - The checks that parts fit together stay separate from it, and change only with what they check:
   the layout version of the memory the layer shares with VR Mirror (`openxr_share::kVersion`) and of
