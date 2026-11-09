@@ -54,14 +54,14 @@ private:
         COLORREF ground = theme::kList;
     };
 
-    void PlaceRow(
-        size_t row,
-        const WindowLayout& layout,
-        const ThemeFonts& fonts,
-        bool inRun,
-        const PartStatus& status,
-        bool busy
-    ) const;
+    // What every row's buttons are placed with.
+    struct RowPlacement {
+        const WindowLayout& layout;
+        const ThemeFonts& fonts;
+        bool busy;
+    };
+
+    void PlaceRow(size_t row, const RowPlacement& placement, bool inRun, const PartStatus& status) const;
     const Button* Find(HWND hwnd) const;
 
     Button main_;

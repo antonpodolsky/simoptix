@@ -31,17 +31,19 @@ namespace {
 
     // True when Windows gave the font the face it was asked for, and not a substitute.
     bool HasFace(HFONT font, const wchar_t* name) {
-        const HDC screen = GetDC(nullptr);
+        const ScreenDc screen;
 
-        if (!screen) {
+        if (!screen.Get()) {
             return false;
         }
 
-        const HGDIOBJ old = SelectObject(screen, font);
+        const SelectedObject selected(screen.Get(), font);
         wchar_t chosen[LF_FACESIZE] = {};
-        GetTextFaceW(screen, LF_FACESIZE, chosen);
-        SelectObject(screen, old);
-        ReleaseDC(nullptr, screen);
+
+        if (GetTextFaceW(screen.Get(), LF_FACESIZE, chosen) == 0) {
+            return false;
+        }
+
         return _wcsicmp(chosen, name) == 0;
     }
 
@@ -66,6 +68,7 @@ ThemeFonts MakeThemeFonts(UINT dpi) {
     fonts.body = MakeFont(kTextRegular, 14, dpi);
     fonts.secondary = MakeFont(kTextRegular, 12, dpi);
     fonts.secondaryStrong = MakeFont(kTextSemibold, 12, dpi);
+
     return fonts;
 }
 

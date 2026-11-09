@@ -29,6 +29,7 @@ bool FindEmbeddedFile(const wchar_t* resource, EmbeddedFile* file, std::wstring*
 
     file->data = data;
     file->size = SizeofResource(nullptr, info);
+
     return true;
 }
 
@@ -48,41 +49,56 @@ bool HasSameBytes(const std::wstring& path, const EmbeddedFile& file) {
     }
 
     std::vector<char> bytes(file.size);
+    const DWORD wanted = static_cast<DWORD>(bytes.size());
     DWORD read = 0;
+    const BOOL readAll = ReadFile(handle.Get(), bytes.data(), wanted, &read, nullptr);
 
-    if (!ReadFile(handle.Get(), bytes.data(), static_cast<DWORD>(bytes.size()), &read, nullptr)
-        || read != bytes.size()) {
+    if (!readAll || read != bytes.size()) {
         return false;
     }
 
     return std::memcmp(bytes.data(), file.data, file.size) == 0;
 }
 
-bool WriteEmbeddedFile(const EmbeddedFile& file, const std::wstring& path, std::wstring* error) {
-    const std::wstring temporary = path + L".new";
+namespace {
 
-    {
+    // Writes the file at `path`, making it or emptying it first. The handle is closed on return.
+    bool WriteWholeFile(const EmbeddedFile& file, const std::wstring& path, std::wstring* error) {
         const UniqueHandle handle(
-            CreateFileW(temporary.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr)
+            CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr)
         );
 
         if (!handle) {
-            *error = L"Can't write " + temporary + L": " + DescribeLastError();
+            *error = L"Can't write " + path + L": " + DescribeLastError();
             return false;
         }
 
+        const DWORD size = static_cast<DWORD>(file.size);
         DWORD written = 0;
+        const BOOL wroteAll = WriteFile(handle.Get(), file.data, size, &written, nullptr);
 
-        if (!WriteFile(handle.Get(), file.data, static_cast<DWORD>(file.size), &written, nullptr)
-            || written != file.size) {
-            *error = L"Can't write " + temporary + L": " + DescribeLastError();
+        if (!wroteAll || written != file.size) {
+            *error = L"Can't write " + path + L": " + DescribeLastError();
             return false;
         }
+
+        return true;
+    }
+
+}
+
+bool WriteEmbeddedFile(const EmbeddedFile& file, const std::wstring& path, std::wstring* error) {
+    const std::wstring temporary = path + L".new";
+
+    // A leftover temporary file would only confuse, and the old file stays as it was.
+    if (!WriteWholeFile(file, temporary, error)) {
+        (void)DeleteFileW(temporary.c_str());
+        return false;
     }
 
     if (!MoveFileExW(temporary.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
         *error = L"Can't replace " + path + L": " + DescribeLastError();
-        (void)DeleteFileW(temporary.c_str());  // the old file stays, and a leftover would only confuse
+        (void)DeleteFileW(temporary.c_str());
         return false;
     }
 

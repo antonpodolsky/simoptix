@@ -11,6 +11,7 @@
 
 #include <string>
 
+#include "setup_gdi.h"
 #include "setup_theme.h"
 
 enum class ButtonKind {
@@ -20,7 +21,7 @@ enum class ButtonKind {
     kDangerText,  // Uninstall all: red text in the footer, the same
     kStandard,    // Close, and the dialogs' other buttons
     kAccentFill,  // a dialog's default button
-    kDangerFill,  // the Uninstall all dialog's confirm
+    kDangerFill,  // the Uninstall all question's confirm
 };
 
 struct ButtonState {
@@ -30,21 +31,23 @@ struct ButtonState {
     bool focused = false;  // has the focus, and the keyboard is in use, so the ring shows
 };
 
+// One button as it is to be drawn.
+struct ButtonLook {
+    ButtonKind kind = ButtonKind::kStandard;
+    ButtonState state;
+    COLORREF ground = theme::kList;  // the area it stands on: the band, the list or the footer
+    std::wstring label;
+};
+
+// The state Windows keeps for `button`: hot, pressed, disabled, and focused when the keyboard is in use.
+ButtonState ReadButtonState(HWND button);
+
 // The font a kind's label is drawn in.
 HFONT ButtonFont(ButtonKind kind, const ThemeFonts& fonts);
 
-// Draws the whole control in `dc`, which is the button's own: the ground it stands on (the band, the
-// list or the footer) where it shows around the button, the button, its label and the focus ring.
-void PaintButton(
-    HDC dc,
-    const RECT& control,
-    ButtonKind kind,
-    const ButtonState& state,
-    COLORREF ground,
-    const std::wstring& label,
-    const ThemeFonts& fonts,
-    UINT dpi
-);
+// Draws the whole control on the canvas, which is the button's own: the ground around the button, the
+// button, its label and the focus ring.
+void PaintButton(const Canvas& canvas, const RECT& control, const ButtonLook& look, const ThemeFonts& fonts);
 
 // A text action's width: its label and 10 px on each side.
 int TextActionWidth(ButtonKind kind, const std::wstring& label, const ThemeFonts& fonts, UINT dpi);

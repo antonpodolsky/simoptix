@@ -7,6 +7,10 @@
 
 namespace {
 
+    // Both questions put the risky answer first and the safe one, their default, second.
+    constexpr size_t kGoOn = 0;
+    constexpr size_t kStop = 1;
+
     // "the VR Mirror OBS plugin, the Overlays OBS plugin and the OpenXR layer"
     std::wstring ListParts(const std::vector<PartId>& parts) {
         std::wstring names;
@@ -25,21 +29,29 @@ namespace {
 }
 
 bool AskInstallRefusedLayer(HWND owner, const std::wstring& problem) {
-    DialogSpec question;
-    question.title = L"Install a layer Easy Anti-Cheat refuses?";
-    question.paragraphs = {problem, UnsignedLayerConsequence()};
-    question.buttons = {
-        {{L"Install anyway", ButtonKind::kStandard}, {L"Don't install", ButtonKind::kAccentFill}}
+    const DialogSpec question = {
+        L"Install a layer Easy Anti-Cheat refuses?",
+        {problem, UnsignedLayerConsequence()},
+        {{
+            {L"Install anyway", ButtonKind::kStandard},
+            {L"Don't install", ButtonKind::kAccentFill},
+        }},
+        kStop,
     };
-    question.defaultButton = 1;
-    return AskSetupQuestion(owner, question) == 0;
+
+    return AskSetupQuestion(owner, question) == kGoOn;
 }
 
 bool AskUninstallAll(HWND owner, const std::vector<PartId>& parts) {
-    DialogSpec question;
-    question.title = L"Uninstall all of SimOptix?";
-    question.paragraphs = {L"Setup removes " + ListParts(parts) + L" from this PC."};
-    question.buttons = {{{L"Uninstall all", ButtonKind::kDangerFill}, {L"Cancel", ButtonKind::kAccentFill}}};
-    question.defaultButton = 1;
-    return AskSetupQuestion(owner, question) == 0;
+    const DialogSpec question = {
+        L"Uninstall all of SimOptix?",
+        {L"Setup removes " + ListParts(parts) + L" from this PC."},
+        {{
+            {L"Uninstall all", ButtonKind::kDangerFill},
+            {L"Cancel", ButtonKind::kAccentFill},
+        }},
+        kStop,
+    };
+
+    return AskSetupQuestion(owner, question) == kGoOn;
 }

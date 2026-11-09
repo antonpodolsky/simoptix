@@ -23,27 +23,33 @@ namespace {
         }
 
         CoTaskMemFree(path);  // also when the call failed, as its documentation asks
+
         return result;
     }
 
-    std::wstring ObsFolderFromRegistry() {
+    // The default value of HKEY_LOCAL_MACHINE\<key>, a string, into `data`, or only its size when `data`
+    // is nullptr.
+    LSTATUS GetDefaultString(const wchar_t* key, wchar_t* data, DWORD* bytes) {
+        return RegGetValueW(HKEY_LOCAL_MACHINE, key, nullptr, RRF_RT_REG_SZ, nullptr, data, bytes);
+    }
+
+    // The default value of HKEY_LOCAL_MACHINE\<key>, a string. Empty when there is none.
+    std::wstring ReadDefaultString(const wchar_t* key) {
         DWORD bytes = 0;
-        const wchar_t* key = L"SOFTWARE\\OBS Studio";
 
-        if (RegGetValueW(HKEY_LOCAL_MACHINE, key, nullptr, RRF_RT_REG_SZ, nullptr, nullptr, &bytes)
-            != ERROR_SUCCESS) {
+        if (GetDefaultString(key, nullptr, &bytes) != ERROR_SUCCESS) {
             return L"";
         }
 
-        std::wstring folder(bytes / sizeof(wchar_t), L'\0');
+        std::wstring value(bytes / sizeof(wchar_t), L'\0');
 
-        if (RegGetValueW(HKEY_LOCAL_MACHINE, key, nullptr, RRF_RT_REG_SZ, nullptr, folder.data(), &bytes)
-            != ERROR_SUCCESS) {
+        if (GetDefaultString(key, value.data(), &bytes) != ERROR_SUCCESS) {
             return L"";
         }
 
-        folder.resize(wcsnlen(folder.c_str(), folder.size()));
-        return folder;
+        value.resize(wcsnlen(value.c_str(), value.size()));
+
+        return value;
     }
 
     // The file's version resource, empty when it has none.
@@ -72,13 +78,14 @@ namespace {
 
         void* fixed = nullptr;
         UINT fixedSize = 0;
+        const BOOL found = VerQueryValueW(block.data(), L"\\", &fixed, &fixedSize);
 
-        if (!VerQueryValueW(block.data(), L"\\", &fixed, &fixedSize)
-            || fixedSize < sizeof(VS_FIXEDFILEINFO)) {
+        if (!found || fixedSize < sizeof(VS_FIXEDFILEINFO)) {
             return false;
         }
 
         *version = *static_cast<const VS_FIXEDFILEINFO*>(fixed);
+
         return true;
     }
 
@@ -98,12 +105,9 @@ std::wstring DescribeLastError() {
         nullptr
     );
 
+    // Windows ends its text with a line break.
     std::wstring message(text, length);
-
-    while (!message.empty()
-           && (message.back() == L'\n' || message.back() == L'\r' || message.back() == L' ')) {
-        message.pop_back();
-    }
+    message.erase(message.find_last_not_of(L"\r\n ") + 1);
 
     return message + L" (" + std::to_wstring(code) + L")";
 }
@@ -133,7 +137,7 @@ std::wstring OwnExePath() {
 
 ObsInstall FindObs() {
     ObsInstall obs;
-    std::wstring folder = ObsFolderFromRegistry();
+    std::wstring folder = ReadDefaultString(L"SOFTWARE\\OBS Studio");
 
     if (folder.empty()) {
         folder = ProgramFilesFolder() + L"\\obs-studio";
@@ -148,17 +152,23 @@ ObsInstall FindObs() {
     // obs64.exe 32.2.2 carries its version only as the file version. Its product version is 0.0.0.
     obs.found = true;
     obs.major = HIWORD(version.dwFileVersionMS);
+
     return obs;
 }
 
 std::wstring ReadProductVersion(const std::wstring& path) {
     std::vector<char> block = ReadVersionBlock(path);
+
+    if (block.empty()) {
+        return L"";
+    }
+
+    const wchar_t* translations = L"\\VarFileInfo\\Translation";
     void* translation = nullptr;
     UINT translationSize = 0;
+    const BOOL found = VerQueryValueW(block.data(), translations, &translation, &translationSize);
 
-    if (block.empty()
-        || !VerQueryValueW(block.data(), L"\\VarFileInfo\\Translation", &translation, &translationSize)
-        || translationSize < 2 * sizeof(WORD)) {
+    if (!found || translationSize < 2 * sizeof(WORD)) {
         return L"";
     }
 
@@ -238,6 +248,7 @@ bool EqualsNoCase(const std::wstring& text, const std::wstring& other) {
         static_cast<int>(other.size()),
         TRUE
     );
+
     return result == CSTR_EQUAL;
 }
 

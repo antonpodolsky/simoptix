@@ -32,6 +32,21 @@ namespace {
     const wchar_t* const kTitle = L"SimOptix Setup";
     const DWORD kStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN;
 
+    // Adds `reason` to `reasons`, unless it is empty or there already.
+    void AddReasonOnce(const std::wstring& reason, std::vector<std::wstring>* reasons) {
+        if (reason.empty()) {
+            return;
+        }
+
+        for (const std::wstring& known : *reasons) {
+            if (known == reason) {
+                return;
+            }
+        }
+
+        reasons->push_back(reason);
+    }
+
     class SetupWindow {
     public:
         explicit SetupWindow(HINSTANCE instance) : instance_(instance) {}
@@ -44,6 +59,8 @@ namespace {
 
         void ApplyDpi(UINT dpi);
         void FitWindow();
+        void MoveTo(const RECT& frame);
+        void Redraw(const RECT* area);
         void PaintBuffered();
 
         void Refresh();
@@ -56,17 +73,18 @@ namespace {
         void OnCommand(int id);
         bool ConfirmLayer(const std::vector<PartId>& parts);
         void StartRun(Change change, const std::vector<PartId>& parts);
+        void StartFrameTimer();
         void OnPartStarted(size_t index);
         void OnPartDone(size_t index, const std::wstring& error);
         void OnRunFinished();
         void OnResultsShown();
         void OnFrame();
 
+        // Everything here belongs to the window's thread. The run's thread only posts it messages.
         HINSTANCE instance_;
         HWND hwnd_ = nullptr;
         ThemeFonts fonts_;
         WindowLayout layout_;
-
         WindowButtons buttons_;
 
         SignatureKind setupLayerSignature_ = SignatureKind::kNone;
@@ -80,23 +98,34 @@ namespace {
         bool busy_ = false;
     };
 
-    bool SetupWindow::Create() {
-        EmbeddedFile layer;
+    // The layer inside setup never changes while setup runs, so its signature is checked once.
+    SignatureKind CheckSetupLayerSignature() {
+        const Part& layer = PartOf(PartId::kOpenXrLayer);
+        EmbeddedFile file;
         std::wstring error;
 
-        if (FindEmbeddedFile(PartOf(PartId::kOpenXrLayer).dllResource, &layer, &error)) {
-            setupLayerSignature_ = CheckEmbeddedSignature(layer, PartOf(PartId::kOpenXrLayer).dllName);
+        if (!FindEmbeddedFile(layer.dllResource, &file, &error)) {
+            return SignatureKind::kNone;
         }
 
+        return CheckEmbeddedSignature(file, layer.dllName);
+    }
+
+    bool RegisterWindowClass(WNDPROC procedure, HINSTANCE instance) {
         WNDCLASSEXW windowClass = {};
         windowClass.cbSize = sizeof(windowClass);
-        windowClass.lpfnWndProc = Procedure;
-        windowClass.hInstance = instance_;
+        windowClass.lpfnWndProc = procedure;
+        windowClass.hInstance = instance;
         windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-        windowClass.hIcon = LoadIconW(instance_, MAKEINTRESOURCEW(kSetupIconId));
+        windowClass.hIcon = LoadIconW(instance, MAKEINTRESOURCEW(kSetupIconId));
         windowClass.lpszClassName = kClassName;
+        return RegisterClassExW(&windowClass) != 0;
+    }
 
-        if (!RegisterClassExW(&windowClass)) {
+    bool SetupWindow::Create() {
+        setupLayerSignature_ = CheckSetupLayerSignature();
+
+        if (!RegisterWindowClass(Procedure, instance_)) {
             return false;
         }
 
@@ -121,10 +150,12 @@ namespace {
 
         ApplyBandCaption(hwnd_);
         buttons_.Create(hwnd_, instance_);
-        fonts_ = MakeThemeFonts(GetDpiForWindow(hwnd_));
+
+        // The facts first, because a second reason to close makes the window taller.
         Refresh();
         ApplyDpi(GetDpiForWindow(hwnd_));
         ShowWindow(hwnd_, SW_SHOWNORMAL);
+
         return true;
     }
 
@@ -154,6 +185,7 @@ namespace {
                 if (LOWORD(wParam) != WA_INACTIVE && !busy_) {
                     Refresh();
                 }
+
                 break;
 
             case WM_COMMAND:
@@ -161,14 +193,16 @@ namespace {
                     OnCommand(LOWORD(wParam));
                     return 0;
                 }
+
                 break;
 
             case WM_NOTIFY: {
-                auto* draw = reinterpret_cast<NMCUSTOMDRAW*>(lParam);
+                const auto* draw = reinterpret_cast<const NMCUSTOMDRAW*>(lParam);
 
                 if (draw->hdr.code == NM_CUSTOMDRAW && buttons_.Owns(draw->hdr.hwndFrom)) {
                     return buttons_.Paint(*draw, fonts_, layout_.dpi);
                 }
+
                 break;
             }
 
@@ -201,23 +235,17 @@ namespace {
 
             case WM_DPICHANGED: {
                 const auto* suggested = reinterpret_cast<const RECT*>(lParam);
-                SetWindowPos(
-                    hwnd_,
-                    nullptr,
-                    suggested->left,
-                    suggested->top,
-                    suggested->right - suggested->left,
-                    suggested->bottom - suggested->top,
-                    SWP_NOZORDER | SWP_NOACTIVATE
-                );
+                MoveTo(*suggested);
                 ApplyDpi(HIWORD(wParam));
                 return 0;
             }
 
             case WM_CLOSE:
+                // A run can't be stopped halfway, so the window waits for it.
                 if (busy_) {
-                    return 0;  // a run can't be stopped halfway, so the window waits for it
+                    return 0;
                 }
+
                 break;
 
             case WM_DESTROY:
@@ -231,47 +259,51 @@ namespace {
     void SetupWindow::ApplyDpi(UINT dpi) {
         fonts_ = MakeThemeFonts(dpi);
         layout_ = LayOut(dpi, view_.reasons.size());
+
         FitWindow();
         PlaceButtons();
-        InvalidateRect(hwnd_, nullptr, FALSE);
+        Redraw(nullptr);
     }
 
+    // The window's frame for the layout's client area, where the window stands.
     void SetupWindow::FitWindow() {
         RECT frame = {0, 0, layout_.client.cx, layout_.client.cy};
         AdjustWindowRectExForDpi(&frame, kStyle, FALSE, 0, layout_.dpi);
-        SetWindowPos(
-            hwnd_,
-            nullptr,
-            0,
-            0,
-            frame.right - frame.left,
-            frame.bottom - frame.top,
-            SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE
-        );
+
+        RECT now = {};
+        GetWindowRect(hwnd_, &now);
+        MoveTo({now.left, now.top, now.left + frame.right - frame.left, now.top + frame.bottom - frame.top});
+    }
+
+    void SetupWindow::MoveTo(const RECT& frame) {
+        const int width = frame.right - frame.left;
+        const int height = frame.bottom - frame.top;
+
+        // A window that can't be moved keeps its place and size, which only looks off.
+        (void)
+            SetWindowPos(hwnd_, nullptr, frame.left, frame.top, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    void SetupWindow::Redraw(const RECT* area) {
+        // Fails only for a window that is gone, which needs no drawing.
+        (void)InvalidateRect(hwnd_, area, FALSE);
     }
 
     // Drawn into a bitmap first and copied in one go, so the window doesn't flicker while it redraws.
     void SetupWindow::PaintBuffered() {
         PAINTSTRUCT paint;
         const HDC dc = BeginPaint(hwnd_, &paint);
-        const HDC buffer = CreateCompatibleDC(dc);
-        const HBITMAP bitmap = CreateCompatibleBitmap(dc, layout_.client.cx, layout_.client.cy);
+        const UniqueMemoryDc buffer(CreateCompatibleDC(dc));
+        const UniqueBitmap bitmap(CreateCompatibleBitmap(dc, layout_.client.cx, layout_.client.cy));
 
         if (buffer && bitmap) {
-            const HGDIOBJ old = SelectObject(buffer, bitmap);
-            PaintWindow(buffer, layout_, fonts_, view_);
-            BitBlt(dc, 0, 0, layout_.client.cx, layout_.client.cy, buffer, 0, 0, SRCCOPY);
-            SelectObject(buffer, old);
+            const SelectedObject selected(buffer.get(), bitmap.get());
+            PaintWindow(buffer.get(), layout_, fonts_, view_);
+
+            // A failed copy leaves the window as it was until it is drawn again.
+            (void)BitBlt(dc, 0, 0, layout_.client.cx, layout_.client.cy, buffer.get(), 0, 0, SRCCOPY);
         } else {
             PaintWindow(dc, layout_, fonts_, view_);
-        }
-
-        if (bitmap) {
-            DeleteObject(bitmap);
-        }
-
-        if (buffer) {
-            DeleteDC(buffer);
         }
 
         EndPaint(hwnd_, &paint);
@@ -294,7 +326,7 @@ namespace {
         }
 
         PlaceButtons();
-        InvalidateRect(hwnd_, nullptr, FALSE);
+        Redraw(nullptr);
     }
 
     // The rows' run states stay as they are: a run changes them, and its end clears them.
@@ -309,16 +341,7 @@ namespace {
             view_.rows[i].version = facts_.parts[i].installedVersion;
             view_.upToDate = view_.upToDate && status.action == PartAction::kNone;
 
-            const std::wstring& reason = status.installBlockedBy;
-            bool known = reason.empty();
-
-            for (const std::wstring& shown : view_.reasons) {
-                known = known || shown == reason;
-            }
-
-            if (!known) {
-                view_.reasons.push_back(reason);
-            }
+            AddReasonOnce(status.installBlockedBy, &view_.reasons);
         }
     }
 
@@ -332,6 +355,7 @@ namespace {
         allowed.canInstallAll = !PartsToInstall().empty();
         allowed.canUninstallAll = !PartsToUninstall().empty();
         allowed.anythingInstalled = AnythingInstalled();
+
         buttons_.Place(layout_, fonts_, view_, statuses_, allowed);
     }
 
@@ -437,21 +461,27 @@ namespace {
         busy_ = true;
         progress_.Start(change, parts, statuses_, GetTickCount64(), &view_);
         PlaceButtons();
-        InvalidateRect(hwnd_, nullptr, FALSE);
+        Redraw(nullptr);
 
         run_.Start(hwnd_, change, parts, facts_.system);
-        SetTimer(hwnd_, kFrameTimer, kFrameMs, nullptr);
+        StartFrameTimer();
+    }
+
+    // Without the frame timer the spinner stands still and the bar jumps to each step. The run itself
+    // doesn't need it.
+    void SetupWindow::StartFrameTimer() {
+        (void)SetTimer(hwnd_, kFrameTimer, kFrameMs, nullptr);
     }
 
     void SetupWindow::OnPartStarted(size_t index) {
         progress_.PartStarted(index, &view_);
-        InvalidateRect(hwnd_, nullptr, FALSE);
+        Redraw(nullptr);
     }
 
     void SetupWindow::OnPartDone(size_t index, const std::wstring& error) {
         progress_.PartDone(index, error, GetTickCount64(), &view_);
-        SetTimer(hwnd_, kFrameTimer, kFrameMs, nullptr);
-        InvalidateRect(hwnd_, nullptr, FALSE);
+        StartFrameTimer();
+        Redraw(nullptr);
     }
 
     // Updates the entry in Windows' installed apps, shows what failed, and keeps the results a moment.
@@ -472,12 +502,17 @@ namespace {
             MessageBoxW(hwnd_, message.c_str(), kTitle, MB_OK | MB_ICONERROR);
         }
 
-        SetTimer(hwnd_, kResultsTimer, kTicksShownMs, nullptr);
+        // Without the timer the results would stand for good, so they go at once.
+        if (!SetTimer(hwnd_, kResultsTimer, kTicksShownMs, nullptr)) {
+            OnResultsShown();
+        }
     }
 
     void SetupWindow::OnResultsShown() {
-        KillTimer(hwnd_, kResultsTimer);
-        KillTimer(hwnd_, kFrameTimer);
+        // A timer that isn't running is no error.
+        (void)KillTimer(hwnd_, kResultsTimer);
+        (void)KillTimer(hwnd_, kFrameTimer);
+
         progress_.Clear(&view_);
         busy_ = false;
         Refresh();
@@ -487,17 +522,17 @@ namespace {
     void SetupWindow::OnFrame() {
         const bool moving = progress_.Animate(GetTickCount64(), &view_);
         const RECT bar = RunBarRect(layout_);
-        InvalidateRect(hwnd_, &bar, FALSE);
+        Redraw(&bar);
 
         for (size_t i = 0; i < view_.rows.size(); ++i) {
             if (view_.rows[i].run == RunState::kBusy) {
                 const RECT state = RunStateRect(layout_, i);
-                InvalidateRect(hwnd_, &state, FALSE);
+                Redraw(&state);
             }
         }
 
         if (!moving) {
-            KillTimer(hwnd_, kFrameTimer);
+            (void)KillTimer(hwnd_, kFrameTimer);  // stops now or at the next tick, either is fine
         }
     }
 
@@ -512,7 +547,7 @@ int RunSetupWindow(HINSTANCE instance) {
         return 1;
     }
 
-    MSG message;
+    MSG message = {};
 
     while (GetMessageW(&message, nullptr, 0, 0) > 0) {
         if (!IsDialogMessageW(GetActiveWindow(), &message)) {

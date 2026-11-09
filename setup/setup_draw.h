@@ -1,14 +1,16 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The shapes and icons of SimOptix Setup's design, drawn smooth (anti-aliased) with GDI+, which is part
-// of Windows: rounded rectangles, the three parts' line glyphs, the tick, the warning and error marks,
-// and the spinner. Every size is in pixels at 96 DPI and scaled to `dpi`; every position is in the
-// device's pixels. Knows nothing about where on the window a shape goes.
+// of Windows: rounded rectangles, the three parts' line glyphs, the round marks (tick, warning, error)
+// and the spinner. Sizes and radii are in pixels at 96 DPI and scaled to the canvas. Positions and
+// rectangles are the canvas's own pixels. Knows nothing about where on the window a shape goes.
 #pragma once
 
 #include <windows.h>
 
-// Starts GDI+ for the process and shuts it down. One lives in wWinMain, around everything that draws.
+#include "setup_gdi.h"
+
+// Starts GDI+ for the process and shuts it down. One lives around everything that draws.
 class GdiplusSession {
 public:
     GdiplusSession();
@@ -22,29 +24,32 @@ private:
 
 enum class Glyph { kVrMirror, kOverlays, kOpenXrLayer };
 
-// `radius` in the device's pixels.
-void FillRoundRect(HDC dc, const RECT& rect, int radius, COLORREF fill);
+enum class Mark { kTick, kWarning, kError };
+
+struct MarkColours {
+    COLORREF circle;
+    COLORREF symbol;  // the check, the exclamation mark or the cross
+};
 
 // A standard button's body: a 1 px stroke, darker along the bottom edge, around the fill.
-void FillStrokedRoundRect(
-    HDC dc,
-    const RECT& rect,
-    int radius,
-    COLORREF fill,
-    COLORREF stroke,
-    COLORREF bottom
-);
+struct StrokedColours {
+    COLORREF fill;
+    COLORREF stroke;
+    COLORREF bottom;
+};
+
+void FillRoundRect(const Canvas& canvas, const RECT& rect, int radius, COLORREF fill);
+void FillStrokedRoundRect(const Canvas& canvas, const RECT& rect, int radius, const StrokedColours& colours);
 
 // A 2 px ring, 1 px outside `rect`, for the keyboard focus.
-void DrawFocusRing(HDC dc, const RECT& rect, int radius, COLORREF colour, UINT dpi);
+void DrawFocusRing(const Canvas& canvas, const RECT& rect, int radius, COLORREF colour);
 
-// A part's glyph in a 24 px box with its top left at `left`, `top`.
-void DrawGlyph(HDC dc, Glyph glyph, int left, int top, UINT dpi, COLORREF colour);
+// A part's glyph in a 24 px box whose top left is `at`.
+void DrawGlyph(const Canvas& canvas, Glyph glyph, POINT at, COLORREF colour);
 
-// The round marks, `size` px at 96 DPI: a tick, a warning (an exclamation mark) and an error (a cross).
-void DrawTick(HDC dc, int left, int top, int size, UINT dpi, COLORREF circle, COLORREF mark);
-void DrawWarning(HDC dc, int left, int top, int size, UINT dpi, COLORREF circle, COLORREF mark);
-void DrawError(HDC dc, int left, int top, int size, UINT dpi, COLORREF circle, COLORREF mark);
+// A round mark `size` px wide, whose top left is `at`.
+void DrawMark(const Canvas& canvas, Mark mark, POINT at, int size, const MarkColours& colours);
 
-// The spinner in a 16 px box: an arc of 14 px on a circle of radius 6.5, starting at `angleDeg`.
-void DrawSpinner(HDC dc, int left, int top, UINT dpi, COLORREF colour, float angleDeg);
+// The spinner in a 16 px box whose top left is `at`: an arc of 14 px on a circle of radius 6.5, starting
+// at `angleDeg`.
+void DrawSpinner(const Canvas& canvas, POINT at, COLORREF colour, float angleDeg);

@@ -28,16 +28,19 @@ namespace {
     // The control is larger than the button it draws by the focus ring's room on each side.
     void PlaceControl(HWND control, const RECT& button, UINT dpi) {
         const int outset = ScaleToDpi(kFocusOutset, dpi);
-        MoveWindow(
-            control,
-            button.left - outset,
-            button.top - outset,
-            button.right - button.left + 2 * outset,
-            button.bottom - button.top + 2 * outset,
-            TRUE
-        );
+        const int width = button.right - button.left + 2 * outset;
+        const int height = button.bottom - button.top + 2 * outset;
+
+        // A button that can't be moved stays where it was, which shows: nothing to recover here.
+        (void)MoveWindow(control, button.left - outset, button.top - outset, width, height, TRUE);
     }
 
+    void SetLabel(HWND control, const wchar_t* label) {
+        // A label that can't be set keeps its old text, and the button still works.
+        (void)SetWindowTextW(control, label);
+    }
+
+    // EnableWindow and ShowWindow return the control's earlier state, not an error.
     void Show(HWND control, bool shown, bool enabled) {
         EnableWindow(control, enabled);
         ShowWindow(control, shown ? SW_SHOW : SW_HIDE);
@@ -50,23 +53,14 @@ void WindowButtons::Create(HWND window, HINSTANCE instance) {
 
     for (size_t i = 0; i < kParts.size(); ++i) {
         const int index = static_cast<int>(i);
-        rowMain_[i] = {
-            MakeButton(window, instance, L"Install", kRowMainId + index),
-            ButtonKind::kTextAccent,
-            kList
-        };
-        rowUninstall_[i] = {
-            MakeButton(window, instance, L"Uninstall", kRowUninstallId + index),
-            ButtonKind::kText,
-            kList
-        };
+        const HWND install = MakeButton(window, instance, L"Install", kRowMainId + index);
+        const HWND uninstall = MakeButton(window, instance, L"Uninstall", kRowUninstallId + index);
+        rowMain_[i] = {install, ButtonKind::kTextAccent, kList};
+        rowUninstall_[i] = {uninstall, ButtonKind::kText, kList};
     }
 
-    uninstallAll_ = {
-        MakeButton(window, instance, L"Uninstall all", kUninstallAllId),
-        ButtonKind::kDangerText,
-        kFooter
-    };
+    const HWND uninstallAll = MakeButton(window, instance, L"Uninstall all", kUninstallAllId);
+    uninstallAll_ = {uninstallAll, ButtonKind::kDangerText, kFooter};
     close_ = {MakeButton(window, instance, L"Close", kCloseId), ButtonKind::kStandard, kFooter};
 }
 
@@ -79,12 +73,14 @@ void WindowButtons::Place(
 ) const {
     const UINT dpi = layout.dpi;
 
-    SetWindowTextW(main_.hwnd, allowed.anythingInstalled ? L"Update all" : L"Install all");
+    SetLabel(main_.hwnd, allowed.anythingInstalled ? L"Update all" : L"Install all");
     PlaceControl(main_.hwnd, layout.main, dpi);
     Show(main_.hwnd, !view.running && !view.upToDate, !allowed.busy && allowed.canInstallAll);
 
+    const RowPlacement placement = {layout, fonts, allowed.busy};
+
     for (size_t i = 0; i < kParts.size(); ++i) {
-        PlaceRow(i, layout, fonts, view.rows[i].run != RunState::kNone, statuses[i], allowed.busy);
+        PlaceRow(i, placement, view.rows[i].run != RunState::kNone, statuses[i]);
     }
 
     const int width = TextActionWidth(ButtonKind::kDangerText, L"Uninstall all", fonts, dpi);
@@ -99,34 +95,32 @@ void WindowButtons::Place(
 // A row's text actions stand right-aligned, Uninstall last. A row in a run shows its state instead.
 void WindowButtons::PlaceRow(
     size_t row,
-    const WindowLayout& layout,
-    const ThemeFonts& fonts,
+    const RowPlacement& placement,
     bool inRun,
-    const PartStatus& status,
-    bool busy
+    const PartStatus& status
 ) const {
     const bool showMain = !inRun && status.action != PartAction::kNone;
     const bool showUninstall = !inRun && status.hasSomething;
-    const UINT dpi = layout.dpi;
-    const int top = layout.rowTops[row] + ScaleToDpi(kActionsTop, dpi);
+    const UINT dpi = placement.layout.dpi;
+    const int top = placement.layout.rowTops[row] + ScaleToDpi(kActionsTop, dpi);
     const int bottom = top + ScaleToDpi(kTextActionHeight, dpi);
     int right = ScaleToDpi(kActionsRight, dpi);
 
     if (showUninstall) {
-        const int width = TextActionWidth(ButtonKind::kText, L"Uninstall", fonts, dpi);
+        const int width = TextActionWidth(ButtonKind::kText, L"Uninstall", placement.fonts, dpi);
         PlaceControl(rowUninstall_[row].hwnd, {right - width, top, right, bottom}, dpi);
         right -= width + ScaleToDpi(kActionGap, dpi);
     }
 
     if (showMain) {
         const wchar_t* label = ActionLabel(status.action);
-        const int width = TextActionWidth(ButtonKind::kTextAccent, label, fonts, dpi);
-        SetWindowTextW(rowMain_[row].hwnd, label);
+        const int width = TextActionWidth(ButtonKind::kTextAccent, label, placement.fonts, dpi);
+        SetLabel(rowMain_[row].hwnd, label);
         PlaceControl(rowMain_[row].hwnd, {right - width, top, right, bottom}, dpi);
     }
 
-    Show(rowMain_[row].hwnd, showMain, !busy && status.installBlockedBy.empty());
-    Show(rowUninstall_[row].hwnd, showUninstall, !busy && status.removeBlockedBy.empty());
+    Show(rowMain_[row].hwnd, showMain, !placement.busy && status.installBlockedBy.empty());
+    Show(rowUninstall_[row].hwnd, showUninstall, !placement.busy && status.removeBlockedBy.empty());
 }
 
 LRESULT WindowButtons::Paint(const NMCUSTOMDRAW& draw, const ThemeFonts& fonts, UINT dpi) const {
@@ -136,18 +130,12 @@ LRESULT WindowButtons::Paint(const NMCUSTOMDRAW& draw, const ThemeFonts& fonts, 
         return CDRF_DODEFAULT;
     }
 
-    const LRESULT buttonState = SendMessageW(button->hwnd, BM_GETSTATE, 0, 0);
-    const LRESULT cues = SendMessageW(button->hwnd, WM_QUERYUISTATE, 0, 0);
-
-    ButtonState state;
-    state.hot = (buttonState & BST_HOT) != 0;
-    state.pressed = (buttonState & BST_PUSHED) != 0;
-    state.disabled = !IsWindowEnabled(button->hwnd);
-    state.focused = (buttonState & BST_FOCUS) != 0 && !(cues & UISF_HIDEFOCUS);
-
     wchar_t label[64] = {};
     GetWindowTextW(button->hwnd, label, static_cast<int>(std::size(label)));
-    PaintButton(draw.hdc, draw.rc, button->kind, state, button->ground, label, fonts, dpi);
+
+    const ButtonLook look = {button->kind, ReadButtonState(button->hwnd), button->ground, label};
+    PaintButton({draw.hdc, dpi}, draw.rc, look, fonts);
+
     return CDRF_SKIPDEFAULT;
 }
 

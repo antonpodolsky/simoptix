@@ -15,13 +15,44 @@ namespace {
     const DWORD kStyle = WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_CLIPCHILDREN;
     constexpr int kFirstButtonId = 100;
 
+    // Registers the questions' window class. Another question may have registered it already, and that
+    // registration serves as well.
+    void RegisterQuestionClass(WNDPROC procedure, HINSTANCE instance) {
+        WNDCLASSEXW windowClass = {};
+        windowClass.cbSize = sizeof(windowClass);
+        windowClass.lpfnWndProc = procedure;
+        windowClass.hInstance = instance;
+        windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+        windowClass.lpszClassName = kClassName;
+
+        // Fails only when the class is registered already, or when the window can't be made either:
+        // CreateWindowExW then reports it.
+        (void)RegisterClassExW(&windowClass);
+    }
+
+    // The window's frame for a client area of `client`, centred over `owner`.
+    RECT FrameOver(HWND owner, SIZE client, UINT dpi) {
+        RECT frame = {0, 0, client.cx, client.cy};
+        AdjustWindowRectExForDpi(&frame, kStyle, FALSE, 0, dpi);
+
+        RECT ownerRect = {};
+        GetWindowRect(owner, &ownerRect);
+
+        const int width = frame.right - frame.left;
+        const int height = frame.bottom - frame.top;
+        const int left = (ownerRect.left + ownerRect.right - width) / 2;
+        const int top = (ownerRect.top + ownerRect.bottom - height) / 2;
+        return {left, top, left + width, top + height};
+    }
+
     class Question {
     public:
-        Question(const DialogSpec& spec, size_t* answer) : spec_(spec), answer_(answer) {}
+        explicit Question(const DialogSpec& spec) : spec_(spec), answer_(spec.defaultButton) {}
 
         bool Create(HWND owner);
         bool IsOpen() const { return open_; }
         HWND Window() const { return hwnd_; }
+        size_t Answer() const { return answer_; }
 
     private:
         static LRESULT CALLBACK Procedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -29,12 +60,15 @@ namespace {
 
         int Scale(int pixels) const { return ScaleToDpi(pixels, dpi_); }
         int BodyHeight() const;
+        void CreateButtons(SIZE client, HINSTANCE instance);
         void Paint(HDC dc) const;
-        LRESULT PaintButton(NMCUSTOMDRAW* draw) const;
-        void Answer(size_t button);
+        void PaintHeader(const Canvas& canvas, const RECT& header) const;
+        void PaintBody(const Canvas& canvas, const RECT& body) const;
+        LRESULT PaintButtonControl(const NMCUSTOMDRAW& draw) const;
+        void Choose(size_t button);
 
         const DialogSpec& spec_;
-        size_t* answer_;
+        size_t answer_;
         HWND hwnd_ = nullptr;
         UINT dpi_ = 96;
         ThemeFonts fonts_;
@@ -43,69 +77,52 @@ namespace {
     };
 
     int Question::BodyHeight() const {
-        const HDC screen = GetDC(nullptr);
-        int height = 0;
+        const ScreenDc screen;
 
-        if (!screen) {
-            return height;
+        if (!screen.Get()) {
+            return 0;
         }
 
+        const SelectedObject font(screen.Get(), fonts_.body.get());
         const int width = Scale(kDialogWidth - 2 * kMargin);
-        const HGDIOBJ old = SelectObject(screen, fonts_.body.get());
+        int height = Scale(kDialogBodyTop) + Scale(kDialogBodyBottom);
 
         for (size_t i = 0; i < spec_.paragraphs.size(); ++i) {
+            constexpr UINT kMeasure = DT_WORDBREAK | DT_NOPREFIX | DT_CALCRECT;
             RECT area = {0, 0, width, 0};
-            DrawTextW(
-                screen,
-                spec_.paragraphs[i].c_str(),
-                -1,
-                &area,
-                DT_WORDBREAK | DT_NOPREFIX | DT_CALCRECT
-            );
+            DrawTextW(screen.Get(), spec_.paragraphs[i].c_str(), -1, &area, kMeasure);
             height += area.bottom + (i > 0 ? Scale(kDialogParagraphGap) : 0);
         }
 
-        SelectObject(screen, old);
-        ReleaseDC(nullptr, screen);
-        return Scale(kDialogBodyTop) + height + Scale(kDialogBodyBottom);
+        return height;
     }
 
     bool Question::Create(HWND owner) {
         dpi_ = GetDpiForWindow(owner);
         fonts_ = MakeThemeFonts(dpi_);
 
-        WNDCLASSEXW windowClass = {};
-        windowClass.cbSize = sizeof(windowClass);
-        windowClass.lpfnWndProc = Procedure;
-        windowClass.hInstance = GetModuleHandleW(nullptr);
-        windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-        windowClass.lpszClassName = kClassName;
-        RegisterClassExW(&windowClass);  // fails harmlessly when an earlier question registered it
+        const HINSTANCE instance = GetModuleHandleW(nullptr);
+        RegisterQuestionClass(Procedure, instance);
 
-        const int width = Scale(kDialogWidth);
-        const int height = Scale(kDialogHeaderHeight) + BodyHeight() + Scale(kDialogFooterHeight);
-        RECT frame = {0, 0, width, height};
-        AdjustWindowRectExForDpi(&frame, kStyle, FALSE, 0, dpi_);
+        const SIZE client = {
+            Scale(kDialogWidth),
+            Scale(kDialogHeaderHeight) + BodyHeight() + Scale(kDialogFooterHeight),
+        };
 
-        RECT ownerRect = {};
-        GetWindowRect(owner, &ownerRect);
-        const int frameWidth = frame.right - frame.left;
-        const int frameHeight = frame.bottom - frame.top;
-        const int left = (ownerRect.left + ownerRect.right - frameWidth) / 2;
-        const int top = (ownerRect.top + ownerRect.bottom - frameHeight) / 2;
+        const RECT frame = FrameOver(owner, client, dpi_);
 
         hwnd_ = CreateWindowExW(
             WS_EX_DLGMODALFRAME,
             kClassName,
             L"SimOptix Setup",
             kStyle,
-            left,
-            top,
-            frameWidth,
-            frameHeight,
+            frame.left,
+            frame.top,
+            frame.right - frame.left,
+            frame.bottom - frame.top,
             owner,
             nullptr,
-            windowClass.hInstance,
+            instance,
             this
         );
 
@@ -114,35 +131,41 @@ namespace {
         }
 
         ApplyBandCaption(hwnd_);
-
-        // The buttons, right-aligned in the footer, the default one with the focus.
-        const int buttonWidth = Scale(kDialogButtonWidth);
-        const int outset = Scale(kFocusOutset);
-        const int buttonTop = height - Scale(kDialogFooterHeight) + Scale(16);
-        int right = width - Scale(kMargin);
-
-        for (size_t i = buttons_.size(); i-- > 0;) {
-            const DWORD defaultStyle = i == spec_.defaultButton ? BS_DEFPUSHBUTTON : BS_PUSHBUTTON;
-            buttons_[i] = CreateWindowExW(
-                0,
-                L"BUTTON",
-                spec_.buttons[i].label.c_str(),
-                WS_CHILD | WS_VISIBLE | WS_TABSTOP | defaultStyle,
-                right - buttonWidth - outset,
-                buttonTop - outset,
-                buttonWidth + 2 * outset,
-                Scale(kButtonHeight) + 2 * outset,
-                hwnd_,
-                reinterpret_cast<HMENU>(static_cast<INT_PTR>(kFirstButtonId + i)),
-                windowClass.hInstance,
-                nullptr
-            );
-            right -= buttonWidth + Scale(kDialogButtonGap);
-        }
+        CreateButtons(client, instance);
 
         ShowWindow(hwnd_, SW_SHOW);
         SetFocus(buttons_[spec_.defaultButton]);
         return true;
+    }
+
+    // The buttons stand right-aligned in the footer, in the spec's order.
+    void Question::CreateButtons(SIZE client, HINSTANCE instance) {
+        const int outset = Scale(kFocusOutset);
+        const int width = Scale(kDialogButtonWidth) + 2 * outset;
+        const int height = Scale(kButtonHeight) + 2 * outset;
+        const int top = client.cy - Scale(kDialogFooterHeight) + Scale(kDialogButtonTop) - outset;
+        int right = client.cx - Scale(kMargin) + outset;
+
+        for (size_t i = buttons_.size(); i-- > 0;) {
+            const DWORD style = i == spec_.defaultButton ? BS_DEFPUSHBUTTON : BS_PUSHBUTTON;
+
+            buttons_[i] = CreateWindowExW(
+                0,
+                L"BUTTON",
+                spec_.buttons[i].label.c_str(),
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | style,
+                right - width,
+                top,
+                width,
+                height,
+                hwnd_,
+                reinterpret_cast<HMENU>(static_cast<INT_PTR>(kFirstButtonId + i)),
+                instance,
+                nullptr
+            );
+
+            right -= Scale(kDialogButtonWidth + kDialogButtonGap);
+        }
     }
 
     LRESULT CALLBACK Question::Procedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -169,26 +192,29 @@ namespace {
         switch (message) {
             case WM_COMMAND: {
                 const int id = LOWORD(wParam);
+                const int buttonCount = static_cast<int>(buttons_.size());
 
-                // Enter, Escape and the default button all give the default answer.
+                // Enter and Escape give the default answer.
                 if (id == IDOK || id == IDCANCEL) {
-                    Answer(spec_.defaultButton);
-                } else if (id >= kFirstButtonId && id < kFirstButtonId + static_cast<int>(buttons_.size())) {
-                    Answer(static_cast<size_t>(id - kFirstButtonId));
+                    Choose(spec_.defaultButton);
+                } else if (id >= kFirstButtonId && id < kFirstButtonId + buttonCount) {
+                    Choose(static_cast<size_t>(id - kFirstButtonId));
                 }
+
                 return 0;
             }
 
             case WM_CLOSE:
-                Answer(spec_.defaultButton);
+                Choose(spec_.defaultButton);
                 return 0;
 
             case WM_NOTIFY: {
-                auto* draw = reinterpret_cast<NMCUSTOMDRAW*>(lParam);
+                const auto* draw = reinterpret_cast<const NMCUSTOMDRAW*>(lParam);
 
                 if (draw->hdr.code == NM_CUSTOMDRAW) {
-                    return PaintButton(draw);
+                    return PaintButtonControl(*draw);
                 }
+
                 break;
             }
 
@@ -208,105 +234,98 @@ namespace {
     }
 
     void Question::Paint(HDC dc) const {
+        const Canvas canvas = {dc, dpi_};
         RECT client = {};
         GetClientRect(hwnd_, &client);
-        const int header = Scale(kDialogHeaderHeight);
+
+        const int headerBottom = Scale(kDialogHeaderHeight);
         const int footerTop = client.bottom - Scale(kDialogFooterHeight);
+        PaintHeader(canvas, {0, 0, client.right, headerBottom});
+        PaintBody(canvas, {0, headerBottom, client.right, footerTop});
 
-        const UniqueBrush band(CreateSolidBrush(kBand));
-        const UniqueBrush list(CreateSolidBrush(kList));
         const UniqueBrush footer(CreateSolidBrush(kFooter));
-        const RECT headerRect = {0, 0, client.right, header};
-        const RECT bodyRect = {0, header, client.right, footerTop};
         const RECT footerRect = {0, footerTop, client.right, client.bottom};
-        FillRect(dc, &headerRect, band.get());
-        FillRect(dc, &bodyRect, list.get());
-        FillRect(dc, &footerRect, footer.get());
 
-        DrawWarning(
-            dc,
-            Scale(kDialogIconLeft),
-            Scale(kDialogIconTop),
-            kDialogIconSize,
-            dpi_,
-            kReasonToClose,
-            kBand
-        );
+        if (footer) {
+            FillRect(dc, &footerRect, footer.get());
+        }
+    }
 
-        SetBkMode(dc, TRANSPARENT);
-        SelectObject(dc, fonts_.dialogTitle.get());
-        SetTextColor(dc, kBandText);
-        RECT title = {Scale(kDialogTitleLeft), Scale(kDialogTitleTop), client.right - Scale(kMargin), header};
-        DrawTextW(dc, spec_.title.c_str(), -1, &title, DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
+    // The band's colour, the warning mark and the question.
+    void Question::PaintHeader(const Canvas& canvas, const RECT& header) const {
+        const UniqueBrush band(CreateSolidBrush(kBand));
 
-        SelectObject(dc, fonts_.body.get());
-        int top = header + Scale(kDialogBodyTop);
+        if (band) {
+            FillRect(canvas.dc, &header, band.get());
+        }
+
+        const POINT iconAt = {Scale(kDialogIconLeft), Scale(kDialogIconTop)};
+        DrawMark(canvas, Mark::kWarning, iconAt, kDialogIconSize, {kReasonToClose, kBand});
+
+        const SelectedObject font(canvas.dc, fonts_.dialogTitle.get());
+        SetBkMode(canvas.dc, TRANSPARENT);
+        SetTextColor(canvas.dc, kBandText);
+
+        RECT title =
+            {Scale(kDialogTitleLeft), Scale(kDialogTitleTop), header.right - Scale(kMargin), header.bottom};
+        DrawTextW(canvas.dc, spec_.title.c_str(), -1, &title, DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
+    }
+
+    // The paragraphs, the first in the main text colour and the rest in grey.
+    void Question::PaintBody(const Canvas& canvas, const RECT& body) const {
+        const UniqueBrush list(CreateSolidBrush(kList));
+
+        if (list) {
+            FillRect(canvas.dc, &body, list.get());
+        }
+
+        const SelectedObject font(canvas.dc, fonts_.body.get());
+        SetBkMode(canvas.dc, TRANSPARENT);
+        int top = body.top + Scale(kDialogBodyTop);
 
         for (size_t i = 0; i < spec_.paragraphs.size(); ++i) {
-            SetTextColor(dc, i == 0 ? kText : kText2);
-            RECT area = {Scale(kMargin), top, client.right - Scale(kMargin), footerTop};
+            const wchar_t* text = spec_.paragraphs[i].c_str();
+            RECT area = {Scale(kMargin), top, body.right - Scale(kMargin), body.bottom};
             RECT measured = area;
-            DrawTextW(
-                dc,
-                spec_.paragraphs[i].c_str(),
-                -1,
-                &measured,
-                DT_WORDBREAK | DT_NOPREFIX | DT_CALCRECT
-            );
-            DrawTextW(dc, spec_.paragraphs[i].c_str(), -1, &area, DT_WORDBREAK | DT_NOPREFIX);
+            DrawTextW(canvas.dc, text, -1, &measured, DT_WORDBREAK | DT_NOPREFIX | DT_CALCRECT);
+
+            SetTextColor(canvas.dc, i == 0 ? kText : kText2);
+            DrawTextW(canvas.dc, text, -1, &area, DT_WORDBREAK | DT_NOPREFIX);
             top = measured.bottom + Scale(kDialogParagraphGap);
         }
     }
 
-    LRESULT Question::PaintButton(NMCUSTOMDRAW* draw) const {
-        if (draw->dwDrawStage != CDDS_PREPAINT) {
+    LRESULT Question::PaintButtonControl(const NMCUSTOMDRAW& draw) const {
+        if (draw.dwDrawStage != CDDS_PREPAINT) {
             return CDRF_DODEFAULT;
         }
 
-        const HWND button = draw->hdr.hwndFrom;
-        const size_t index = button == buttons_[0] ? 0 : 1;
-        const LRESULT buttonState = SendMessageW(button, BM_GETSTATE, 0, 0);
-        const LRESULT cues = SendMessageW(button, WM_QUERYUISTATE, 0, 0);
+        const size_t index = draw.hdr.hwndFrom == buttons_[0] ? 0 : 1;
+        const DialogButton& button = spec_.buttons[index];
+        const ButtonLook look = {button.kind, ReadButtonState(draw.hdr.hwndFrom), kFooter, button.label};
+        PaintButton({draw.hdc, dpi_}, draw.rc, look, fonts_);
 
-        ButtonState state;
-        state.hot = (buttonState & BST_HOT) != 0;
-        state.pressed = (buttonState & BST_PUSHED) != 0;
-        state.disabled = !IsWindowEnabled(button);
-        state.focused = (buttonState & BST_FOCUS) != 0 && !(cues & UISF_HIDEFOCUS);
-
-        ::PaintButton(
-            draw->hdc,
-            draw->rc,
-            spec_.buttons[index].kind,
-            state,
-            kFooter,
-            spec_.buttons[index].label,
-            fonts_,
-            dpi_
-        );
         return CDRF_SKIPDEFAULT;
     }
 
-    void Question::Answer(size_t button) {
-        *answer_ = button;
+    void Question::Choose(size_t button) {
+        answer_ = button;
         open_ = false;
     }
 
 }
 
 size_t AskSetupQuestion(HWND owner, const DialogSpec& spec) {
-    size_t answer = spec.defaultButton;
-    Question question(spec, &answer);
-
+    Question question(spec);
     EnableWindow(owner, FALSE);
 
     if (!question.Create(owner)) {
         EnableWindow(owner, TRUE);
-        return answer;
+        return question.Answer();
     }
 
     // The question's own message loop, as a modal dialog has: the owner stays disabled until it ends.
-    MSG message;
+    MSG message = {};
 
     while (question.IsOpen() && GetMessageW(&message, nullptr, 0, 0) > 0) {
         if (!IsDialogMessageW(question.Window(), &message)) {
@@ -323,5 +342,6 @@ size_t AskSetupQuestion(HWND owner, const DialogSpec& spec) {
     EnableWindow(owner, TRUE);
     SetActiveWindow(owner);
     DestroyWindow(question.Window());
-    return answer;
+
+    return question.Answer();
 }

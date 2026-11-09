@@ -19,18 +19,14 @@ namespace {
 
     // The part's DLL decides whether it is installed. It is the same build only when its manifest is
     // the same too, so a copy with a missing or older manifest counts as different.
-    InstalledCopy
-    CompareCopy(const Part& part, const std::wstring& dllPath, const std::wstring& manifestPath) {
-        if (!FileExists(dllPath)) {
+    InstalledCopy CompareCopy(const Part& part, const std::wstring& dll, const std::wstring& manifest) {
+        if (!FileExists(dll)) {
             return InstalledCopy::kNone;
         }
 
-        if (!IsSameAsEmbedded(dllPath, part.dllResource)
-            || !IsSameAsEmbedded(manifestPath, part.manifestResource)) {
-            return InstalledCopy::kDifferent;
-        }
-
-        return InstalledCopy::kSame;
+        const bool sameDll = IsSameAsEmbedded(dll, part.dllResource);
+        const bool sameManifest = IsSameAsEmbedded(manifest, part.manifestResource);
+        return sameDll && sameManifest ? InstalledCopy::kSame : InstalledCopy::kDifferent;
     }
 
     PluginLayout OtherLayout(PluginLayout layout) {

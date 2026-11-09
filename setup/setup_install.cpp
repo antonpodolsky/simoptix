@@ -23,23 +23,24 @@ namespace {
         return WriteEmbeddedFile(file, path, error);
     }
 
-    bool InstallPlugin(const Part& part, const SystemFacts& system, std::wstring* error) {
-        const std::wstring folder = PluginFolder(part);
-        const bool flat = system.obsLayout == PluginLayout::kFlat;
-        const std::wstring dllFolder = flat ? folder : folder + L"\\bin\\64bit";
-
-        if (!CreateFolders(dllFolder, error) || !CreateFolders(folder + L"\\data", error)) {
+    // A part's DLL, then its manifest, so that a manifest is never there without its DLL.
+    bool WritePartFiles(
+        const Part& part,
+        const std::wstring& dllPath,
+        const std::wstring& manifestPath,
+        std::wstring* error
+    ) {
+        if (!WritePartFile(part.dllResource, dllPath, error)) {
             return false;
         }
 
-        // The DLL goes first, so a manifest is never there without its DLL.
-        if (!WritePartFile(part.dllResource, PluginDllPath(part, system.obsLayout), error)
-            || !WritePartFile(part.manifestResource, PluginManifestPath(part), error)) {
-            return false;
-        }
+        return WritePartFile(part.manifestResource, manifestPath, error);
+    }
 
-        if (flat) {
-            return RemoveFolderTree(folder + L"\\bin", error);
+    // The plugin's DLL in the layout the OBS found doesn't use, which OBS would load twice or flag.
+    bool RemoveOtherLayout(const Part& part, PluginLayout layout, std::wstring* error) {
+        if (layout == PluginLayout::kFlat) {
+            return RemoveFolderTree(PluginFolder(part) + L"\\bin", error);
         }
 
         const std::wstring flatDll = PluginDllPath(part, PluginLayout::kFlat);
@@ -50,6 +51,22 @@ namespace {
         }
 
         return true;
+    }
+
+    bool InstallPlugin(const Part& part, const SystemFacts& system, std::wstring* error) {
+        const std::wstring folder = PluginFolder(part);
+        const std::wstring dll = PluginDllPath(part, system.obsLayout);
+        const std::wstring dllFolder = dll.substr(0, dll.find_last_of(L'\\'));
+
+        if (!CreateFolders(dllFolder, error) || !CreateFolders(folder + L"\\data", error)) {
+            return false;
+        }
+
+        if (!WritePartFiles(part, dll, PluginManifestPath(part), error)) {
+            return false;
+        }
+
+        return RemoveOtherLayout(part, system.obsLayout, error);
     }
 
     bool UnregisterLayers(const std::wstring& except, std::wstring* error) {
@@ -69,9 +86,7 @@ namespace {
             return false;
         }
 
-        // The DLL goes first, so a manifest is never there without its DLL.
-        if (!WritePartFile(part.dllResource, LayerDllPath(), error)
-            || !WritePartFile(part.manifestResource, manifest, error)) {
+        if (!WritePartFiles(part, LayerDllPath(), manifest, error)) {
             return false;
         }
 
@@ -92,6 +107,7 @@ namespace {
         }
 
         RemoveFolderIfEmpty(SimOptixFolder());
+
         return true;
     }
 
@@ -189,5 +205,6 @@ bool UpdateAppEntry(bool anythingInstalled, std::wstring* error) {
     }
 
     RemoveInstalledSetup();
+
     return true;
 }

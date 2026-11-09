@@ -38,115 +38,93 @@ namespace {
         return Glyph::kOpenXrLayer;
     }
 
+    // Text and fills on the window's canvas. Positions are the canvas's pixels.
     class Painter {
     public:
-        Painter(HDC dc, UINT dpi) : dc_(dc), dpi_(dpi) { SetBkMode(dc_, TRANSPARENT); }
+        explicit Painter(const Canvas& canvas) : canvas_(canvas) { SetBkMode(canvas_.dc, TRANSPARENT); }
 
-        int Scale(int pixels) const { return ScaleToDpi(pixels, dpi_); }
-        UINT Dpi() const { return dpi_; }
-        HDC Dc() const { return dc_; }
+        const Canvas& Surface() const { return canvas_; }
+        int Scale(int pixels) const { return canvas_.Scale(pixels); }
 
         void Fill(const RECT& area, COLORREF colour) const {
             const UniqueBrush brush(CreateSolidBrush(colour));
-            FillRect(dc_, &area, brush.get());
+
+            if (brush) {
+                FillRect(canvas_.dc, &area, brush.get());
+            }
         }
 
-        // Draws `text` on one line from `left`, `top`, and returns its right edge.
-        int Text(const std::wstring& text, int left, int top, HFONT font, COLORREF colour) const {
-            SelectObject(dc_, font);
-            SetTextColor(dc_, colour);
-            RECT area = {left, top, left, top};
-            DrawTextW(dc_, text.c_str(), -1, &area, DT_SINGLELINE | DT_NOPREFIX | DT_CALCRECT);
-            DrawTextW(dc_, text.c_str(), -1, &area, DT_SINGLELINE | DT_NOPREFIX);
+        // Draws `text` on one line from its top left, and returns its right edge.
+        int Text(const std::wstring& text, POINT at, HFONT font, COLORREF colour) const {
+            const SelectedObject selected(canvas_.dc, font);
+            SetTextColor(canvas_.dc, colour);
+
+            RECT area = {at.x, at.y, at.x, at.y};
+            DrawTextW(canvas_.dc, text.c_str(), -1, &area, DT_SINGLELINE | DT_NOPREFIX | DT_CALCRECT);
+            DrawTextW(canvas_.dc, text.c_str(), -1, &area, DT_SINGLELINE | DT_NOPREFIX);
             return area.right;
         }
 
-        // Draws `text` on one line, ending at `right`.
-        void
-        TextRightAligned(const std::wstring& text, int right, int top, HFONT font, COLORREF colour) const {
-            Text(text, right - MeasureText(font, text), top, font, colour);
+        // Draws `text` on one line from its top right.
+        void TextRightAligned(const std::wstring& text, POINT topRight, HFONT font, COLORREF colour) const {
+            Text(text, {topRight.x - MeasureText(font, text), topRight.y}, font, colour);
         }
 
-        // Draws `text` wrapped into `area`.
         void Wrapped(const std::wstring& text, RECT area, HFONT font, COLORREF colour) const {
-            SelectObject(dc_, font);
-            SetTextColor(dc_, colour);
-            DrawTextW(dc_, text.c_str(), -1, &area, DT_WORDBREAK | DT_NOPREFIX);
+            const SelectedObject selected(canvas_.dc, font);
+            SetTextColor(canvas_.dc, colour);
+            DrawTextW(canvas_.dc, text.c_str(), -1, &area, DT_WORDBREAK | DT_NOPREFIX);
         }
 
-        // Where a line of `font` drawn from `top` has its baseline.
-        int Baseline(int top, HFONT font) const {
-            SelectObject(dc_, font);
-            TEXTMETRICW metrics = {};
-            GetTextMetricsW(dc_, &metrics);
-            return top + metrics.tmAscent;
-        }
-
-        // The top a line of `font` needs for its baseline to be at `baseline`.
-        int TopForBaseline(int baseline, HFONT font) const { return baseline - (Baseline(0, font)); }
+        // How far a line of `font` has its baseline below its top.
+        int Ascent(HFONT font) const { return Metrics(font).tmAscent; }
 
         // The top a line of `font` needs to stand centred on `middle`.
-        int TopForMiddle(int middle, HFONT font) const {
-            SelectObject(dc_, font);
-            TEXTMETRICW metrics = {};
-            GetTextMetricsW(dc_, &metrics);
-            return middle - metrics.tmHeight / 2;
-        }
+        int TopForMiddle(int middle, HFONT font) const { return middle - Metrics(font).tmHeight / 2; }
 
     private:
-        HDC dc_;
-        UINT dpi_;
+        TEXTMETRICW Metrics(HFONT font) const {
+            const SelectedObject selected(canvas_.dc, font);
+            TEXTMETRICW metrics = {};
+            GetTextMetricsW(canvas_.dc, &metrics);
+            return metrics;
+        }
+
+        const Canvas& canvas_;
     };
 
-    void PaintMainArea(const Painter& paint, const ThemeFonts& fonts, const WindowView& view) {
+    // The run's label and count above its bar, and the bar.
+    void PaintRunBar(const Painter& paint, const ThemeFonts& fonts, const WindowView& view) {
+        const int left = paint.Scale(kRunLeft);
         const int right = paint.Scale(kActionsRight);
+        const int labelTop = paint.Scale(kRunLabelTop);
+        paint.Text(view.runLabel, {left, labelTop}, fonts.secondary.get(), kBandText3);
+        paint.TextRightAligned(view.runCount, {right, labelTop}, fonts.secondary.get(), kBandText2);
 
-        if (view.running) {
-            const int left = paint.Scale(kRunLeft);
-            const int width = paint.Scale(kRunWidth);
-            const int labelTop = paint.Scale(kRunLabelTop);
-            paint.Text(view.runLabel, left, labelTop, fonts.secondary.get(), kBandText3);
-            paint.TextRightAligned(view.runCount, right, labelTop, fonts.secondary.get(), kBandText2);
+        const int barTop = paint.Scale(kRunBarTop);
+        const int barBottom = barTop + paint.Scale(kRunBarHeight);
+        const int fill = static_cast<int>((right - left) * view.barFraction + 0.5f);
+        const int radius = kRunBarHeight / 2;
+        FillRoundRect(paint.Surface(), {left, barTop, right, barBottom}, radius, kBandTrack);
 
-            const int barTop = paint.Scale(kRunBarTop);
-            const int barHeight = paint.Scale(kRunBarHeight);
-            const int fill = static_cast<int>(width * view.barFraction + 0.5f);
-            FillRoundRect(
-                paint.Dc(),
-                {left, barTop, left + width, barTop + barHeight},
-                barHeight / 2,
-                kBandTrack
-            );
-
-            // A fill under 4 px is too small to read as a bar.
-            if (fill >= paint.Scale(4)) {
-                FillRoundRect(
-                    paint.Dc(),
-                    {left, barTop, left + fill, barTop + barHeight},
-                    barHeight / 2,
-                    kBandAccent
-                );
-            }
-            return;
+        // A fill under 4 px is too small to read as a bar.
+        if (fill >= paint.Scale(4)) {
+            FillRoundRect(paint.Surface(), {left, barTop, left + fill, barBottom}, radius, kBandAccent);
         }
+    }
 
-        if (!view.upToDate) {
-            return;  // the main action's button stands here
-        }
-
+    // A tick and "Up to date", right-aligned where the main action stands otherwise.
+    void PaintUpToDate(const Painter& paint, const ThemeFonts& fonts) {
         const std::wstring label = L"Up to date";
-        const int labelWidth = MeasureText(fonts.strong.get(), label);
+        const HFONT font = fonts.strong.get();
+        const int right = paint.Scale(kActionsRight);
+        const int labelLeft = right - MeasureText(font, label);
         const int tick = paint.Scale(kUpToDateTick);
-        const int tickLeft = right - labelWidth - paint.Scale(kUpToDateGap) - tick;
         const int top = paint.Scale(kUpToDateTop);
-        DrawTick(paint.Dc(), tickLeft, top, kUpToDateTick, paint.Dpi(), kBandAccent, kOnBandAccent);
-        paint.Text(
-            label,
-            right - labelWidth,
-            paint.TopForMiddle(top + tick / 2, fonts.strong.get()),
-            fonts.strong.get(),
-            kBandText
-        );
+
+        const POINT tickAt = {labelLeft - paint.Scale(kUpToDateGap) - tick, top};
+        DrawMark(paint.Surface(), Mark::kTick, tickAt, kUpToDateTick, {kBandAccent, kOnBandAccent});
+        paint.Text(label, {labelLeft, paint.TopForMiddle(top + tick / 2, font)}, font, kBandText);
     }
 
     void PaintBand(
@@ -157,56 +135,36 @@ namespace {
     ) {
         paint.Fill({0, 0, layout.client.cx, layout.bandHeight}, kBand);
 
-        const int logo = paint.Scale(kLogoSize);
         const int logoLeft = paint.Scale(kLogoLeft);
         const int logoTop = paint.Scale(kLogoTop);
-        FillRoundRect(
-            paint.Dc(),
-            {logoLeft, logoTop, logoLeft + logo, logoTop + logo},
-            paint.Scale(kLogoRadius),
-            kBandAccent
-        );
+        const int logo = paint.Scale(kLogoSize);
+        const RECT logoRect = {logoLeft, logoTop, logoLeft + logo, logoTop + logo};
+        FillRoundRect(paint.Surface(), logoRect, kLogoRadius, kBandAccent);
 
-        const bool reason = !view.reasons.empty();
+        const bool hasReason = !view.reasons.empty();
         const int textLeft = paint.Scale(kTitleLeft);
-        paint.Text(
-            L"SimOptix",
-            textLeft,
-            paint.Scale(reason ? kTitleTopWithReason : kTitleTop),
-            fonts.title.get(),
-            kBandText
-        );
-        paint.Text(
-            L"Setup " + view.setupVersion,
-            textLeft,
-            paint.Scale(reason ? kSubtitleTopWithReason : kSubtitleTop),
-            fonts.secondary.get(),
-            kBandText2
-        );
+        const int titleTop = paint.Scale(hasReason ? kTitleTopWithReason : kTitleTop);
+        const int subtitleTop = paint.Scale(hasReason ? kSubtitleTopWithReason : kSubtitleTop);
+        paint.Text(L"SimOptix", {textLeft, titleTop}, fonts.title.get(), kBandText);
+        paint.Text(L"Setup " + view.setupVersion, {textLeft, subtitleTop}, fonts.secondary.get(), kBandText2);
 
         for (size_t i = 0; i < view.reasons.size(); ++i) {
             const int top = paint.Scale(kReasonTop + static_cast<int>(i) * kSecondReasonHeight);
-            DrawWarning(
-                paint.Dc(),
-                textLeft,
-                top + paint.Scale(1),
-                kReasonIconSize,
-                paint.Dpi(),
-                kReasonToClose,
-                kBand
-            );
-            paint.Text(
-                view.reasons[i],
-                paint.Scale(kReasonTextLeft),
-                top,
-                fonts.secondary.get(),
-                kReasonToClose
-            );
+            const POINT iconAt = {textLeft, top + paint.Scale(1)};
+            const POINT textAt = {paint.Scale(kReasonTextLeft), top};
+            DrawMark(paint.Surface(), Mark::kWarning, iconAt, kReasonIconSize, {kReasonToClose, kBand});
+            paint.Text(view.reasons[i], textAt, fonts.secondary.get(), kReasonToClose);
         }
 
-        PaintMainArea(paint, fonts, view);
+        // Otherwise the main action's button stands here.
+        if (view.running) {
+            PaintRunBar(paint, fonts, view);
+        } else if (view.upToDate) {
+            PaintUpToDate(paint, fonts);
+        }
     }
 
+    // What a row in a run shows on its right: Waiting, a spinner while busy, then a tick or a cross.
     void PaintRunState(
         const Painter& paint,
         const ThemeFonts& fonts,
@@ -215,44 +173,67 @@ namespace {
         float spinnerDeg
     ) {
         const int right = paint.Scale(kActionsRight);
-        const int icon = paint.Scale(kRunIconSize);
-        const int iconTop = middle - icon / 2;
-        const int gap = paint.Scale(kRunStateGap);
 
         if (row.run == RunState::kWaiting) {
-            paint.TextRightAligned(
-                L"Waiting",
-                right,
-                paint.TopForMiddle(middle, fonts.secondary.get()),
-                fonts.secondary.get(),
-                kText2
-            );
+            const HFONT font = fonts.secondary.get();
+            paint.TextRightAligned(L"Waiting", {right, paint.TopForMiddle(middle, font)}, font, kText2);
             return;
         }
 
         const bool busy = row.run == RunState::kBusy;
+        const bool failed = row.run == RunState::kFailed;
         const HFONT font = busy ? fonts.secondaryStrong.get() : fonts.secondary.get();
-        std::wstring word = DoneWord(row.verb);
-        COLORREF colour = kText;
+        const std::wstring word = busy ? std::wstring(RunningWord(row.verb)) + L"…"
+                                       : (failed ? L"Failed" : DoneWord(row.verb));
+        const int wordLeft = right - MeasureText(font, word);
+        paint.Text(word, {wordLeft, paint.TopForMiddle(middle, font)}, font, busy ? kAccentText : kText);
+
+        const int icon = paint.Scale(kRunIconSize);
+        const POINT iconAt = {wordLeft - paint.Scale(kRunStateGap) - icon, middle - icon / 2};
 
         if (busy) {
-            word = std::wstring(RunningWord(row.verb)) + L"…";
-            colour = kAccentText;
-        } else if (row.run == RunState::kFailed) {
-            word = L"Failed";
-        }
-
-        const int wordWidth = MeasureText(font, word);
-        const int iconLeft = right - wordWidth - gap - icon;
-        paint.Text(word, right - wordWidth, paint.TopForMiddle(middle, font), font, colour);
-
-        if (busy) {
-            DrawSpinner(paint.Dc(), iconLeft, iconTop, paint.Dpi(), kAccentText, spinnerDeg);
-        } else if (row.run == RunState::kFailed) {
-            DrawError(paint.Dc(), iconLeft, iconTop, kRunIconSize, paint.Dpi(), kError, RGB(255, 255, 255));
+            DrawSpinner(paint.Surface(), iconAt, kAccentText, spinnerDeg);
+        } else if (failed) {
+            DrawMark(paint.Surface(), Mark::kError, iconAt, kRunIconSize, {kError, kOnFill});
         } else {
-            DrawTick(paint.Dc(), iconLeft, iconTop, kRunIconSize, paint.Dpi(), kSuccess, RGB(255, 255, 255));
+            DrawMark(paint.Surface(), Mark::kTick, iconAt, kRunIconSize, {kSuccess, kOnFill});
         }
+    }
+
+    // The part's icon on its tile: teal when installed, grey when not.
+    void PaintTile(const Painter& paint, const Part& part, bool installed, int rowTop) {
+        const int tile = paint.Scale(kTileSize);
+        const int left = paint.Scale(kTileLeft);
+        const int top = rowTop + paint.Scale(kTileTop);
+        const RECT tileRect = {left, top, left + tile, top + tile};
+        const COLORREF tileColour = installed ? kTileInstalled : kTileNotInstalled;
+        FillRoundRect(paint.Surface(), tileRect, kTileRadius, tileColour);
+
+        const POINT glyphAt = {left + paint.Scale(kGlyphInset), top + paint.Scale(kGlyphInset)};
+        DrawGlyph(paint.Surface(), GlyphOf(part.id), glyphAt, installed ? kAccentText : kGlyphNotInstalled);
+    }
+
+    // The name, and after it on the same baseline the installed version, then what the part adds.
+    void PaintRowText(
+        const Painter& paint,
+        const ThemeFonts& fonts,
+        const Part& part,
+        const RowView& row,
+        int rowTop
+    ) {
+        const int left = paint.Scale(kNameLeft);
+        const int nameTop = rowTop + paint.Scale(kNameTop);
+        const int nameRight = paint.Text(part.shownName, {left, nameTop}, fonts.strong.get(), kText);
+
+        const int baseline = nameTop + paint.Ascent(fonts.strong.get());
+        const int versionLeft = nameRight + paint.Scale(kVersionGap);
+        const int versionTop = baseline - paint.Ascent(fonts.secondary.get());
+        paint.Text(row.version, {versionLeft, versionTop}, fonts.secondary.get(), kText2);
+
+        const int descriptionTop = rowTop + paint.Scale(kDescriptionTop);
+        const int descriptionRight = left + paint.Scale(kDescriptionWidth);
+        const RECT description = {left, descriptionTop, descriptionRight, rowTop + paint.Scale(kRowHeight)};
+        paint.Wrapped(part.description, description, fonts.secondary.get(), kText2);
     }
 
     void
@@ -260,49 +241,16 @@ namespace {
         const RowView& row = view.rows[index];
         const Part& part = kParts[index];
         const int width = paint.Scale(kWidth);
-        const int height = paint.Scale(kRowHeight);
+        const int bottom = top + paint.Scale(kRowHeight);
 
-        paint.Fill({0, top, width, top + height}, kList);
-        paint.Fill({0, top + height - paint.Scale(1), width, top + height}, kDivider);
+        paint.Fill({0, top, width, bottom}, kList);
+        paint.Fill({0, bottom - paint.Scale(1), width, bottom}, kDivider);
 
-        const int tile = paint.Scale(kTileSize);
-        const int tileLeft = paint.Scale(kTileLeft);
-        const int tileTop = top + paint.Scale(kTileTop);
-        const RECT tileRect = {tileLeft, tileTop, tileLeft + tile, tileTop + tile};
-        FillRoundRect(
-            paint.Dc(),
-            tileRect,
-            paint.Scale(kTileRadius),
-            row.installed ? kTileInstalled : kTileNotInstalled
-        );
-        DrawGlyph(
-            paint.Dc(),
-            GlyphOf(part.id),
-            tileLeft + paint.Scale(kGlyphInset),
-            tileTop + paint.Scale(kGlyphInset),
-            paint.Dpi(),
-            row.installed ? kAccentText : kGlyphNotInstalled
-        );
-
-        const int nameLeft = paint.Scale(kNameLeft);
-        const int nameTop = top + paint.Scale(kNameTop);
-        const int nameRight = paint.Text(part.shownName, nameLeft, nameTop, fonts.strong.get(), kText);
-        const int baseline = paint.Baseline(nameTop, fonts.strong.get());
-        paint.Text(
-            row.version,
-            nameRight + paint.Scale(kVersionGap),
-            paint.TopForBaseline(baseline, fonts.secondary.get()),
-            fonts.secondary.get(),
-            kText2
-        );
-
-        const int descriptionTop = top + paint.Scale(kDescriptionTop);
-        const RECT description =
-            {nameLeft, descriptionTop, nameLeft + paint.Scale(kDescriptionWidth), top + height};
-        paint.Wrapped(part.description, description, fonts.secondary.get(), kText2);
+        PaintTile(paint, part, row.installed, top);
+        PaintRowText(paint, fonts, part, row, top);
 
         if (row.run != RunState::kNone) {
-            PaintRunState(paint, fonts, row, top + height / 2, view.spinnerDeg);
+            PaintRunState(paint, fonts, row, (top + bottom) / 2, view.spinnerDeg);
         }
     }
 
@@ -310,16 +258,17 @@ namespace {
 
 WindowLayout LayOut(UINT dpi, size_t reasonCount) {
     const auto scale = [dpi](int pixels) { return ScaleToDpi(pixels, dpi); };
-    const int grow = reasonCount > 1 ? kSecondReasonHeight : 0;
+    const int bandHeight = kBandHeight + (reasonCount > 1 ? kSecondReasonHeight : 0);
+
     WindowLayout layout;
     layout.dpi = dpi;
-    layout.bandHeight = scale(kBandHeight + grow);
+    layout.bandHeight = scale(bandHeight);
 
     for (size_t i = 0; i < layout.rowTops.size(); ++i) {
-        layout.rowTops[i] = scale(kBandHeight + grow + static_cast<int>(i) * kRowHeight);
+        layout.rowTops[i] = scale(bandHeight + static_cast<int>(i) * kRowHeight);
     }
 
-    layout.footerTop = scale(kBandHeight + grow + static_cast<int>(kParts.size()) * kRowHeight);
+    layout.footerTop = scale(bandHeight + static_cast<int>(kParts.size()) * kRowHeight);
     layout.client = {scale(kWidth), layout.footerTop + scale(kFooterHeight)};
     layout.main =
         {scale(kMainLeft), scale(kMainTop), scale(kMainLeft + kMainWidth), scale(kMainTop + kMainHeight)};
@@ -327,11 +276,13 @@ WindowLayout LayOut(UINT dpi, size_t reasonCount) {
     const int buttonTop = layout.footerTop + scale(kFooterButtonTop);
     layout.close =
         {scale(kCloseLeft), buttonTop, scale(kCloseLeft + kCloseWidth), buttonTop + scale(kButtonHeight)};
+
     return layout;
 }
 
 void PaintWindow(HDC dc, const WindowLayout& layout, const ThemeFonts& fonts, const WindowView& view) {
-    const Painter paint(dc, layout.dpi);
+    const Canvas canvas = {dc, layout.dpi};
+    const Painter paint(canvas);
 
     PaintBand(paint, layout, fonts, view);
 
@@ -354,17 +305,19 @@ RECT RunStateRect(const WindowLayout& layout, size_t row) {
 }
 
 int MeasureText(HFONT font, const std::wstring& text) {
-    const HDC screen = GetDC(nullptr);
+    const ScreenDc screen;
 
-    if (!screen) {
+    if (!screen.Get()) {
         return 0;
     }
 
-    const HGDIOBJ old = SelectObject(screen, font);
+    const SelectedObject selected(screen.Get(), font);
     SIZE size = {};
-    GetTextExtentPoint32W(screen, text.c_str(), static_cast<int>(text.size()), &size);
-    SelectObject(screen, old);
-    ReleaseDC(nullptr, screen);
+
+    if (!GetTextExtentPoint32W(screen.Get(), text.c_str(), static_cast<int>(text.size()), &size)) {
+        return 0;
+    }
+
     return size.cx;
 }
 

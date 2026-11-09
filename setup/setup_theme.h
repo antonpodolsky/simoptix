@@ -8,8 +8,7 @@
 
 #include <windows.h>
 
-#include <memory>
-#include <type_traits>
+#include "setup_gdi.h"
 
 namespace theme {
 
@@ -47,12 +46,16 @@ namespace theme {
     constexpr COLORREF kDangerTextDisabled = RGB(0xE0, 0xA9, 0xA3);
     constexpr COLORREF kFooterActionHover = RGB(0xEB, 0xEB, 0xEB);
     constexpr COLORREF kFooterActionPressed = RGB(0xE3, 0xE3, 0xE3);
+    constexpr COLORREF kOnFill = RGB(0xFF, 0xFF, 0xFF);  // a filled button's label, ticks and crosses
     constexpr COLORREF kDangerFill = RGB(0xC4, 0x2B, 0x1C);
     constexpr COLORREF kDangerFillHover = RGB(0xAE, 0x26, 0x18);
     constexpr COLORREF kDangerFillPressed = RGB(0x92, 0x1F, 0x14);
+    constexpr COLORREF kDangerFillDisabled = RGB(0xF5, 0xD7, 0xD4);
+    constexpr COLORREF kOnDangerFillDisabled = RGB(0xB0, 0x64, 0x5C);
     constexpr COLORREF kAccentFill = RGB(0x0F, 0x7B, 0x83);
     constexpr COLORREF kAccentFillHover = RGB(0x0C, 0x6B, 0x72);
     constexpr COLORREF kAccentFillPressed = RGB(0x0A, 0x5C, 0x62);
+    constexpr COLORREF kAccentFillDisabled = RGB(0xC2, 0xC2, 0xC2);
     constexpr COLORREF kStandard = RGB(0xFE, 0xFE, 0xFE);
     constexpr COLORREF kStandardHover = RGB(0xF6, 0xF6, 0xF6);
     constexpr COLORREF kStandardPressed = RGB(0xF0, 0xF0, 0xF0);
@@ -98,6 +101,7 @@ namespace theme {
     constexpr int kDialogTitleLeft = 60, kDialogTitleTop = 21;
     constexpr int kDialogBodyTop = 20, kDialogBodyBottom = 24, kDialogParagraphGap = 12;
     constexpr int kDialogButtonWidth = 132, kDialogButtonGap = 8;
+    constexpr int kDialogButtonTop = 16;  // below the footer's top
 
     // Timing, in milliseconds.
     constexpr int kFrameMs = 16;          // the timer while anything moves
@@ -106,13 +110,6 @@ namespace theme {
     constexpr int kTicksShownMs = 3000;   // the results stay this long after a run
 
 }
-
-struct GdiDeleter {
-    void operator()(HGDIOBJ object) const { DeleteObject(object); }
-};
-
-using UniqueFont = std::unique_ptr<std::remove_pointer_t<HFONT>, GdiDeleter>;
-using UniqueBrush = std::unique_ptr<std::remove_pointer_t<HBRUSH>, GdiDeleter>;
 
 // The design's type at one display scale. Segoe UI Variable on Windows 11, Segoe UI where it is missing.
 struct ThemeFonts {
@@ -133,8 +130,3 @@ void ApplyBandCaption(HWND window);
 
 // The resource id of setup's icon (setup.rc).
 constexpr int kSetupIconId = 1;
-
-// Pixels at 96 DPI to pixels at `dpi`.
-inline int ScaleToDpi(int pixels, UINT dpi) {
-    return MulDiv(pixels, static_cast<int>(dpi), 96);
-}

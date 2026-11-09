@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "setup_buttons.h"
 
+#include <commctrl.h>
+
 #include "setup_draw.h"
 #include "setup_look.h"
 
@@ -9,9 +11,10 @@ using namespace theme;
 
 namespace {
 
-    // How a button looks in one state. A fill of kNoFill draws no body: the text actions at rest.
+    // A fill of kNoFill draws no body: the text actions at rest.
     constexpr COLORREF kNoFill = CLR_INVALID;
 
+    // How a button looks in one state.
     struct Colours {
         COLORREF fill = kNoFill;
         COLORREF stroke = kNoFill;  // with a darker bottom edge: the standard button only
@@ -19,43 +22,103 @@ namespace {
         COLORREF text = kText;
     };
 
-    Colours MainColours(const ButtonState& state) {
-        if (state.disabled) {
-            return {kBandDisabled, kNoFill, kNoFill, kOnBandDisabled};
-        }
+    // A text action's colours: its text in each state, and a fill only under the mouse.
+    struct TextActionSet {
+        COLORREF rest;
+        COLORREF hot;
+        COLORREF pressed;
+        COLORREF disabled;
+        COLORREF hotFill;
+        COLORREF pressedFill;
+    };
 
-        const COLORREF fill = state.pressed ? kBandAccentPressed
-                                            : (state.hot ? kBandAccentHover : kBandAccent);
-        return {fill, kNoFill, kNoFill, kOnBandAccent};
-    }
+    // A filled button's colours: its fill in each state, and its label.
+    struct FillSet {
+        COLORREF rest;
+        COLORREF hot;
+        COLORREF pressed;
+        COLORREF disabled;
+        COLORREF text;
+        COLORREF disabledText;
+    };
 
-    Colours
-    TextColours(const ButtonState& state, COLORREF rest, COLORREF hot, COLORREF pressed, COLORREF disabled) {
+    constexpr TextActionSet kAccentTextSet = {
+        kAccentText,
+        kAccentText,
+        kAccentTextPressed,
+        kTextDisabled,
+        kTextActionHover,
+        kTextActionPressed,
+    };
+
+    constexpr TextActionSet kGreyTextSet = {
+        kText2,
+        kText,
+        kText,
+        kTextDisabled,
+        kTextActionHover,
+        kTextActionPressed,
+    };
+
+    constexpr TextActionSet kDangerTextSet = {
+        kDangerText,
+        kDangerText,
+        kDangerTextPressed,
+        kDangerTextDisabled,
+        kFooterActionHover,
+        kFooterActionPressed,
+    };
+
+    constexpr FillSet kMainSet = {
+        kBandAccent,
+        kBandAccentHover,
+        kBandAccentPressed,
+        kBandDisabled,
+        kOnBandAccent,
+        kOnBandDisabled,
+    };
+
+    constexpr FillSet kAccentFillSet = {
+        kAccentFill,
+        kAccentFillHover,
+        kAccentFillPressed,
+        kAccentFillDisabled,
+        kOnFill,
+        kOnFill,
+    };
+
+    constexpr FillSet kDangerFillSet = {
+        kDangerFill,
+        kDangerFillHover,
+        kDangerFillPressed,
+        kDangerFillDisabled,
+        kOnFill,
+        kOnDangerFillDisabled,
+    };
+
+    Colours TextActionColours(const ButtonState& state, const TextActionSet& set) {
         if (state.disabled) {
-            return {kNoFill, kNoFill, kNoFill, disabled};
+            return {kNoFill, kNoFill, kNoFill, set.disabled};
         }
 
         if (state.pressed) {
-            return {kTextActionPressed, kNoFill, kNoFill, pressed};
+            return {set.pressedFill, kNoFill, kNoFill, set.pressed};
         }
 
         if (state.hot) {
-            return {kTextActionHover, kNoFill, kNoFill, hot};
+            return {set.hotFill, kNoFill, kNoFill, set.hot};
         }
 
-        return {kNoFill, kNoFill, kNoFill, rest};
+        return {kNoFill, kNoFill, kNoFill, set.rest};
     }
 
-    Colours DangerTextColours(const ButtonState& state) {
+    Colours FillColours(const ButtonState& state, const FillSet& set) {
         if (state.disabled) {
-            return {kNoFill, kNoFill, kNoFill, kDangerTextDisabled};
+            return {set.disabled, kNoFill, kNoFill, set.disabledText};
         }
 
-        if (state.pressed) {
-            return {kFooterActionPressed, kNoFill, kNoFill, kDangerTextPressed};
-        }
-
-        return {state.hot ? kFooterActionHover : kNoFill, kNoFill, kNoFill, kDangerText};
+        const COLORREF fill = state.pressed ? set.pressed : (state.hot ? set.hot : set.rest);
+        return {fill, kNoFill, kNoFill, set.text};
     }
 
     Colours StandardColours(const ButtonState& state) {
@@ -75,60 +138,56 @@ namespace {
         return {state.hot ? kStandardHover : kStandard, kStandardStroke, kStandardBottom, kText};
     }
 
-    Colours FillColours(
-        const ButtonState& state,
-        COLORREF rest,
-        COLORREF hot,
-        COLORREF pressed,
-        COLORREF disabled,
-        COLORREF disabledText
-    ) {
-        if (state.disabled) {
-            return {disabled, kNoFill, kNoFill, disabledText};
-        }
-
-        const COLORREF fill = state.pressed ? pressed : (state.hot ? hot : rest);
-        return {fill, kNoFill, kNoFill, RGB(255, 255, 255)};
-    }
-
     Colours ColoursOf(ButtonKind kind, const ButtonState& state) {
         switch (kind) {
             case ButtonKind::kMain:
-                return MainColours(state);
+                return FillColours(state, kMainSet);
             case ButtonKind::kTextAccent:
-                return TextColours(state, kAccentText, kAccentText, kAccentTextPressed, kTextDisabled);
+                return TextActionColours(state, kAccentTextSet);
             case ButtonKind::kText:
-                return TextColours(state, kText2, kText, kText, kTextDisabled);
+                return TextActionColours(state, kGreyTextSet);
             case ButtonKind::kDangerText:
-                return DangerTextColours(state);
+                return TextActionColours(state, kDangerTextSet);
             case ButtonKind::kStandard:
                 return StandardColours(state);
             case ButtonKind::kAccentFill:
-                return FillColours(
-                    state,
-                    kAccentFill,
-                    kAccentFillHover,
-                    kAccentFillPressed,
-                    RGB(0xC2, 0xC2, 0xC2),
-                    RGB(255, 255, 255)
-                );
+                return FillColours(state, kAccentFillSet);
             case ButtonKind::kDangerFill:
                 break;
         }
-        return FillColours(
-            state,
-            kDangerFill,
-            kDangerFillHover,
-            kDangerFillPressed,
-            RGB(0xF5, 0xD7, 0xD4),
-            RGB(0xB0, 0x64, 0x5C)
-        );
+        return FillColours(state, kDangerFillSet);
     }
 
     int RadiusOf(ButtonKind kind) {
         return kind == ButtonKind::kMain ? kMainRadius : kButtonRadius;
     }
 
+    void DrawLabel(
+        const Canvas& canvas,
+        RECT body,
+        const ButtonLook& look,
+        const ThemeFonts& fonts,
+        COLORREF colour
+    ) {
+        const SelectedObject font(canvas.dc, ButtonFont(look.kind, fonts));
+        SetBkMode(canvas.dc, TRANSPARENT);
+        SetTextColor(canvas.dc, colour);
+        constexpr UINT kCentred = DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX;
+        DrawTextW(canvas.dc, look.label.c_str(), -1, &body, kCentred);
+    }
+
+}
+
+ButtonState ReadButtonState(HWND button) {
+    const LRESULT buttonState = SendMessageW(button, BM_GETSTATE, 0, 0);
+    const LRESULT cues = SendMessageW(button, WM_QUERYUISTATE, 0, 0);
+
+    ButtonState state;
+    state.hot = (buttonState & BST_HOT) != 0;
+    state.pressed = (buttonState & BST_PUSHED) != 0;
+    state.disabled = !IsWindowEnabled(button);
+    state.focused = (buttonState & BST_FOCUS) != 0 && !(cues & UISF_HIDEFOCUS);
+    return state;
 }
 
 HFONT ButtonFont(ButtonKind kind, const ThemeFonts& fonts) {
@@ -147,39 +206,29 @@ HFONT ButtonFont(ButtonKind kind, const ThemeFonts& fonts) {
     return fonts.body.get();
 }
 
-void PaintButton(
-    HDC dc,
-    const RECT& control,
-    ButtonKind kind,
-    const ButtonState& state,
-    COLORREF ground,
-    const std::wstring& label,
-    const ThemeFonts& fonts,
-    UINT dpi
-) {
-    const UniqueBrush groundBrush(CreateSolidBrush(ground));
-    FillRect(dc, &control, groundBrush.get());
+void PaintButton(const Canvas& canvas, const RECT& control, const ButtonLook& look, const ThemeFonts& fonts) {
+    const UniqueBrush ground(CreateSolidBrush(look.ground));
 
-    const int outset = ScaleToDpi(kFocusOutset, dpi);
-    const RECT body =
-        {control.left + outset, control.top + outset, control.right - outset, control.bottom - outset};
-    const int radius = ScaleToDpi(RadiusOf(kind), dpi);
-    const Colours colours = ColoursOf(kind, state);
-
-    if (colours.stroke != kNoFill) {
-        FillStrokedRoundRect(dc, body, radius, colours.fill, colours.stroke, colours.bottom);
-    } else if (colours.fill != kNoFill) {
-        FillRoundRect(dc, body, radius, colours.fill);
+    if (ground) {
+        FillRect(canvas.dc, &control, ground.get());
     }
 
-    SetBkMode(dc, TRANSPARENT);
-    SetTextColor(dc, colours.text);
-    SelectObject(dc, ButtonFont(kind, fonts));
-    RECT text = body;
-    DrawTextW(dc, label.c_str(), -1, &text, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    const int outset = canvas.Scale(kFocusOutset);
+    const RECT body =
+        {control.left + outset, control.top + outset, control.right - outset, control.bottom - outset};
+    const int radius = RadiusOf(look.kind);
+    const Colours colours = ColoursOf(look.kind, look.state);
 
-    if (state.focused && !state.disabled) {
-        DrawFocusRing(dc, body, radius, ground == kBand ? kBandText : kFocusRing, dpi);
+    if (colours.stroke != kNoFill) {
+        FillStrokedRoundRect(canvas, body, radius, {colours.fill, colours.stroke, colours.bottom});
+    } else if (colours.fill != kNoFill) {
+        FillRoundRect(canvas, body, radius, colours.fill);
+    }
+
+    DrawLabel(canvas, body, look, fonts, colours.text);
+
+    if (look.state.focused && !look.state.disabled) {
+        DrawFocusRing(canvas, body, radius, look.ground == kBand ? kBandText : kFocusRing);
     }
 }
 

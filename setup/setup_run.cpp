@@ -8,10 +8,13 @@
 
 namespace {
 
+    constexpr DWORD kRepostWaitMs = 50;
+
     // Runs on the run's thread.
     void RunChanges(HWND window, Change change, const std::vector<PartId>& parts, const SystemFacts& system) {
         for (size_t i = 0; i < parts.size(); ++i) {
-            PostMessageW(window, kRunPartStarted, i, 0);
+            // A lost start only leaves the row waiting until its result comes.
+            (void)PostMessageW(window, kRunPartStarted, i, 0);
 
             std::wstring error;
             const bool done = change == Change::kInstall ? InstallPart(parts[i], system, &error)
@@ -53,7 +56,11 @@ void ChangeRun::Start(
         } catch (...) {
         }
 
-        PostMessageW(window, kRunFinished, 0, 0);
+        // Without this message the window would wait for the run forever. Posting fails only while its
+        // queue is full, so it is tried again until the window takes it, or is gone.
+        while (!PostMessageW(window, kRunFinished, 0, 0) && IsWindow(window)) {
+            Sleep(kRepostWaitMs);
+        }
     });
 }
 

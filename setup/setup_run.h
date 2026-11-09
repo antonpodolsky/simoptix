@@ -43,5 +43,5 @@ public:
     void Join();
 
 private:
-    std::thread thread_;
+    std::thread thread_;  // started and joined on the window's thread
 };

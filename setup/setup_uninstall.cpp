@@ -19,8 +19,8 @@ namespace {
         MessageBoxW(nullptr, text.c_str(), L"SimOptix Setup", MB_OK | icon);
     }
 
-    // Copies setup to the temporary folder and starts it there with /uninstall.
-    bool StartTemporaryCopy(std::wstring* error) {
+    // Copies setup into a folder of its own in the temporary folder, and returns the copy's path.
+    bool CopyToTemporaryFolder(std::wstring* copy, std::wstring* error) {
         wchar_t temporaryRoot[MAX_PATH + 1] = {};
 
         if (GetTempPathW(static_cast<DWORD>(std::size(temporaryRoot)), temporaryRoot) == 0) {
@@ -28,54 +28,63 @@ namespace {
             return false;
         }
 
-        const std::wstring folder = std::wstring(temporaryRoot) + L"simoptix_uninstall_"
-                                    + std::to_wstring(GetCurrentProcessId());
-        const std::wstring copy = folder + L"\\simoptix_setup.exe";
+        const std::wstring processId = std::to_wstring(GetCurrentProcessId());
+        const std::wstring folder = std::wstring(temporaryRoot) + L"simoptix_uninstall_" + processId;
+        *copy = folder + L"\\simoptix_setup.exe";
 
         if (!CreateFolders(folder, error)) {
             return false;
         }
 
-        if (!CopyFileW(OwnExePath().c_str(), copy.c_str(), FALSE)) {
-            *error = L"Can't copy setup to " + copy + L": " + DescribeLastError();
+        if (!CopyFileW(OwnExePath().c_str(), copy->c_str(), FALSE)) {
+            *error = L"Can't copy setup to " + *copy + L": " + DescribeLastError();
             return false;
         }
 
+        return true;
+    }
+
+    // Starts the copy with /uninstall, telling it to wait for this process to end first. It starts in its
+    // own folder: a program's working folder can't be removed, and this one's may be setup's.
+    bool StartUninstall(const std::wstring& copy, std::wstring* error) {
         std::wstring commandLine = L"\"" + copy + L"\" /uninstall /wait "
                                    + std::to_wstring(GetCurrentProcessId());
+        const std::wstring folder = copy.substr(0, copy.find_last_of(L'\\'));
         STARTUPINFOW startup = {};
         startup.cb = sizeof(startup);
         PROCESS_INFORMATION process = {};
 
-        if (!CreateProcessW(
-                copy.c_str(),
-                commandLine.data(),
-                nullptr,
-                nullptr,
-                FALSE,
-                0,
-                nullptr,
-                folder.c_str(),
-                &startup,
-                &process
-            )) {
+        const BOOL started = CreateProcessW(
+            copy.c_str(),
+            commandLine.data(),
+            nullptr,
+            nullptr,
+            FALSE,
+            0,
+            nullptr,
+            folder.c_str(),
+            &startup,
+            &process
+        );
+
+        if (!started) {
             *error = L"Can't start " + copy + L": " + DescribeLastError();
             return false;
         }
 
+        // The copy runs on its own: its handles are only closed.
         const UniqueHandle processHandle(process.hProcess);
         const UniqueHandle threadHandle(process.hThread);
+
         return true;
     }
 
+    // Waits up to 10 s. After that, the removal tries anyway, and reports a file still in use.
     void WaitForProcess(DWORD id) {
         const UniqueHandle process(OpenProcess(SYNCHRONIZE, FALSE, id));
 
         if (process) {
-            (void)WaitForSingleObject(
-                process.Get(),
-                kWaitForInstalledCopyMs
-            );  // after that, removal tries anyway
+            (void)WaitForSingleObject(process.Get(), kWaitForInstalledCopyMs);
         }
     }
 
@@ -92,11 +101,8 @@ namespace {
         std::wstring errors;
 
         for (const Part& part : kParts) {
-            const PartStatus status = DescribePart(
-                part.id,
-                facts.parts[static_cast<size_t>(part.id)],
-                facts.system
-            );
+            const PartFacts& partFacts = facts.parts[static_cast<size_t>(part.id)];
+            const PartStatus status = DescribePart(part.id, partFacts, facts.system);
             std::wstring error;
 
             if (status.hasSomething && !RemovePart(part.id, &error)) {
@@ -111,9 +117,10 @@ namespace {
 
 int RunUninstall(DWORD waitFor) {
     if (EqualsNoCase(OwnExePath(), InstalledSetupPath())) {
+        std::wstring copy;
         std::wstring error;
 
-        if (!StartTemporaryCopy(&error)) {
+        if (!CopyToTemporaryFolder(&copy, &error) || !StartUninstall(copy, &error)) {
             ShowMessage(L"SimOptix could not be removed.\n\n" + error, MB_ICONERROR);
             return 1;
         }
@@ -128,10 +135,9 @@ int RunUninstall(DWORD waitFor) {
     const Facts facts = ReadFacts(SignatureKind::kNone);
 
     if (facts.system.obsRunning || facts.system.lmuRunning) {
-        ShowMessage(
-            L"Close OBS Studio and Le Mans Ultimate, then uninstall SimOptix again. They hold its files.",
-            MB_ICONWARNING
-        );
+        const wchar_t* message = L"Close OBS Studio and Le Mans Ultimate, then uninstall SimOptix again. "
+                                 L"They hold its files.";
+        ShowMessage(message, MB_ICONWARNING);
         return 1;
     }
 
@@ -153,5 +159,6 @@ int RunUninstall(DWORD waitFor) {
     }
 
     ShowMessage(L"SimOptix was removed: VR Mirror, Overlays and the OpenXR layer.", MB_ICONINFORMATION);
+
     return 0;
 }
