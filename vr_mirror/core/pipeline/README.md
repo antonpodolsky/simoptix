@@ -55,8 +55,8 @@ Two parts sit beside the stages and are not stages:
   - `smoothing` 0 or 1 gives Instant (0 then shows the headset's view as it is), 2 gives Smooth and 3
     gives Smoothest.
   - `drawn_pose` 1 gives the slot check, 2 the cockpit correction and 0 the arrival slot.
-  - A frame source that reports each frame's slot and pose (`FrameReport::kSlotAndPose`, the
-    OpenXR layer) gets stage 1's and stage 2's reported methods, whatever `drawn_pose`
+  - A frame source whose frames report their slot and pose (`FrameReport::kSlotAndPose`, the
+    OpenXR source) gets stage 1's and stage 2's reported methods, whatever `drawn_pose`
     says.
 - `pipeline_builder.*` makes the stages.
   - `Make<Stage>(kind)` makes one stage. No stage sees `MirrorSettings`, and an

@@ -14,7 +14,7 @@ worked, so one can be rebuilt from it.
 | Compositor mirror (the mirror app only) | Pimax's undistorted composited view, both eyes side by side | 2880×1440 for both eyes (about 1440×1200 per eye, against the game eye's 2508×2084). It includes Pimax's own overlays, and showed ghosting on moving objects |
 
 The game eye is a half-size copy of what the game renders: 2508×2084 at Render Quality 1.0, 3134×2604
-at 1.25. But it arrives with every game frame at 90 Hz and costs almost nothing. More detail comes
+at 1.25. But it arrives with every game frame at 90 fps and costs almost nothing. More detail comes
 from Render Quality (`vr_mirror\obs_plugin\README.md`), from the OpenXR layer, or from Pimax adding a
 full-size mirror ("What Pimax could add", below).
 

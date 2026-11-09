@@ -70,7 +70,7 @@ On the output thread it is asked for a frame's times (`FrameTimes`) and the pose
 | `slot_check_drawn_pose.h/.cpp` | `SlotCheckDrawnPose` | `DrawnPoseKind::kSlotCheck` (`drawn_pose` 1, the mirror app's default) | The slot check. It takes Pimax's prediction for the slot each frame was really rendered for, judged from the images. For each pair of candidate slots of two consecutive frames, it re-projects both thumbnails to the pose halfway between those slots' poses and compares them. A forward filter with change penalties picks the slot, only while the timing gate sees a queue. A frame's slot is judged again in hindsight as later frames arrive |
 | `slot_check_drawn_pose_lag.h/.cpp` | `ReprojectionError`, `RotationSensitivity`, `TimingGate`, `LagFilter` | none | The slot check's helpers: the measures, the timing gate and the lag filter. `vr_mirror\recording_analysis\replica.py` mirrors them in Python |
 | `arrival_slot_drawn_pose.h/.cpp` | `ArrivalSlotDrawnPose` (and `PredictedPose`) | `DrawnPoseKind::kArrivalSlot` (`drawn_pose` 0) | Pimax's prediction for the slot each frame arrived for, which is right while the game keeps up. It looks at no images and makes no thumbnails. Use it as a comparison, or without the GPU's thumbnails. `PredictedPose` is how the slot check's kinds turn a slot into a pose |
-| `reported_drawn_pose.h/.cpp` | `ReportedDrawnPose` | `DrawnPoseKind::kReported` (a frame source that reports each frame's slot and pose: the OpenXR layer) | The pose recorded for the slot the frame says it was drawn for (`FrameTimes::drawnSlot`), exactly, whichever slot it is shown in. It looks at no images |
+| `reported_drawn_pose.h/.cpp` | `ReportedDrawnPose` | `DrawnPoseKind::kReported` (a frame source whose frames report their slot and pose: the OpenXR source) | The pose recorded for the slot the frame says it was drawn for (`FrameTimes::drawnSlot`), exactly, whichever slot it is shown in. It looks at no images and makes no thumbnails |
 | `cockpit_drawn_pose.h/.cpp` | `CockpitDrawnPose` | `DrawnPoseKind::kCockpit` (`drawn_pose` 2, the OBS plugin's) | The slot check, run unchanged inside, plus a correction of each frame's pose measured from its fixed cockpit while frames arrive irregularly (below) |
 | `cockpit_drawn_pose_shift.h/.cpp` | `MeasurePatchShift`, `FitCorrection` | none | The cockpit correction's helpers: the patch grid, one patch's move between two frames, and the rotation most patches agree on |
 
@@ -92,7 +92,7 @@ plugin draws frames after their images were read, so this hardly ever applies th
 **Thread:**
 - The stage is fed on the thread that owns the copy device (OBS's copy thread, `FrameRing`, or the
   mirror app's main thread).
-- It is asked on the output thread (OBS's graphics thread, or the mirror app's main thread).
+- It is asked on the host's output thread (OBS's graphics thread, the mirror app's main thread).
 - The slot check's and the cockpit correction's judgements are shared between the two threads under
   their own lock. The lock is held only to copy a few values, and the reprojections and the patch
   measuring run outside it.
