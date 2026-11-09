@@ -29,6 +29,9 @@ it is committed or posted. An edit doesn't take anything out.
 - the dates and clock times of the maintainer's sessions, and how long a named or dated session
   lasted. A count of frames or ticks gives the length away, so it stays only where nothing beside it
   says when or where the session was.
+- the date of work done on a session's data: a study of a recording, its frame trace or its OBS log,
+  or of eye images read from the game. That work is usually done on the day of the session, so its
+  date says when the maintainer drove.
 - tracks, cars, and anything else that says when or what the maintainer drove
 - local paths, user names, machine names, email addresses, tokens and the values of environment
   variables
@@ -41,8 +44,8 @@ frames") or by a letter ("race A"), never by its date or its file name.
 
 These may stay:
 - the maintainer's name, in the copyright lines and the sign-off, and where a screenshot shows it
-- dates of work on the code: a commit, a fix, a release, a run of the e2e suite or of `stage_replay`,
-  an offline study
+- dates of work that uses no session's data: a commit, a fix, a release, a run of the e2e suite or of
+  `stage_replay`
 - commit hashes, and numbers measured in the e2e suite
 - video times inside a recording that has no name or date (`18:31`), when the point needs them
 - paths inside the repo, and folders that are the same on every PC (`%LOCALAPPDATA%\simoptix\`,
@@ -98,6 +101,7 @@ argument that holds double quotes, so `--body "..."` and `-m "..."` break on suc
 | Seen in `<date> <time>.mp4` at 21:14, in the Porsche at Spa | A recording's name, a clock time, a car and a track | Seen in one recording, OpenXR Mirror on Look-ahead |
 | `- 2026-03-14, a race at Sebring, 52 min` (in a findings file) | A session's date, its track and its length | `- race A, the longest of four sessions` |
 | The second start, at 21:05 | A clock time of the maintainer's session | The second start, with the load note |
+| `// Measured 2026-03-14 on six eye images read from the layer` (in a code comment) | A study of a session's data, dated on the session's day | `// Measured on six eye images read from the layer` |
 | The flicker came 41312 frames into the session | The count gives the session's length | The flicker is one output frame, after a 64 ms stall |
 | `# A recording '<date> <time>_s2.mp4' (OBS names files ...)` in a script's help | A real recording's name, in code | `# A recording 'YYYY-MM-DD HH-MM-SS_s2.mp4'` |
 | The plugin folders were recreated by a process running as administrator | The state of the maintainer's PC | (delete, and tell the maintainer in chat) |
