@@ -46,8 +46,16 @@ The rules for writing code are in `.agents\skills\code-style\SKILL.md` (how it l
 `.agents\skills\code-practices\SKILL.md` (how it is built). Read both whenever you write, change or
 review code (C++, HLSL, scripts, Python).
 
-These four skills in `.agents\skills\` are the instructions for every coding agent. `AGENTS.md`,
-`CLAUDE.md`, `.github\copilot-instructions.md` and the skills in `.agents\skills\` only point at them,
+The rules for writing for GitHub are in `.agents\skills\pull-requests\SKILL.md` (pull requests and
+commit messages) and `.agents\skills\issues\SKILL.md` (issues and comments). Read the matching one
+whenever you write a commit message, a pull request, an issue or a comment.
+
+What stays out of everything public is in `.agents\skills\public-text\SKILL.md`. Everything in the repo
+is public, and so are commit messages, branch names and all of GitHub. Read it before you write
+anything that is committed, pushed or posted.
+
+These seven skills in `.agents\skills\` are the instructions for every coding agent. `AGENTS.md`,
+`CLAUDE.md`, `.github\copilot-instructions.md` and the skills in `.claude\skills\` only point at them,
 for the agents that read those files. Change the rules here, never in those files.
 
 ## Rules
@@ -108,6 +116,10 @@ for the agents that read those files. Change the rules here, never in those file
   - Never commit build output, captures or local `.ini` files, or binaries the build can make (OBS's
     import library is made from `shared\obs_lib\obs.def`).
   - Once the repo has its GitHub remote, every change reaches `main` through a pull request (step 7).
+- **Nothing personal in anything public.** Every file in the repo, every commit message and branch
+  name, and everything on GitHub is public and keeps its history. None of it holds recording names,
+  session dates or times, tracks, cars, local paths or details of the maintainer's PC, or anything of
+  how the work went. Check before each commit and each post (public-text skill).
 - **Docs move with the code, each in its place.**
   - READMEs describe the project: what each part is and does, how it behaves, its settings as a user
     sees them, how to use it, and its files. They hold no build, test or working steps, no findings,
@@ -619,8 +631,9 @@ build, then fix.
     passes on the build it should catch (`reference\e2e.md`, "Adding a replay of a real session",
     step 3).
 - **Export:** the trace's P, S and F rows of about 12 s around the moment, with times relative to the
-  file start, and the lag per frame. Add a header that says where the replay comes from and what
-  happened.
+  file start, and the lag per frame. Add a header that says what the replay shows and what happened.
+  The replay is public, so its header and its name hold no recording name, date, clock time, track or
+  car (public-text skill). Those go into the data folder's README.
 - **Test first:** run the new scenario on the current build, where it should fail. Check that it fails
   for the right reason (per-frame analysis of `vr_mirror\e2e\out\<scenario>\`), and that older builds
   it should catch fail too (`--tool <exe>`, built from that commit in a worktree). If the fake can't
@@ -674,7 +687,8 @@ Record what each start of the game showed in `findings\openxr.md`.
 
 - Commit each finished change on its own, without being asked.
 - The subject is `Area: what changed`. The body says why. An agent ends the message with the
-  attribution line its own instructions give, if any.
+  attribution line its own instructions give, if any. Write the message by the pull-requests skill
+  ("Commit messages"), and check a branch's messages before pushing it.
 - Commit with `git commit -s`, the maintainer and every agent alike. It adds a `Signed-off-by:` line
   with the name and email of the git config. That line certifies the Developer Certificate of Origin
   (`CONTRIBUTING.md`, "Sign-off"). An amend or a rebase keeps the line. To add it to the last commit,
@@ -690,21 +704,22 @@ Record what each start of the game showed in `findings\openxr.md`.
   release.
 - Before committing docs, run `python -I .agents\skills\docs\check_docs.py` (the docs skill has the
   checklist).
+- Before every commit, check what is staged for personal information and the like, and read the lines
+  it lists (public-text skill):
+
+  ```
+  python -I .agents\skills\public-text\check_public_text.py --staged
+  ```
 
 ## 7. Bring `main` up
 
 - **Every change goes through a pull request on GitHub,** once the repo has its GitHub remote. Push the
-  worktree's branch, open a pull request against `main` that says what changed, why and what was
-  verified, and merge it on GitHub after its checks. Nothing is pushed to `main` directly.
-- **The pull request feeds the changelog.** Fill in its template (`.github\pull_request_template.md`),
-  and give it exactly one type label (`reference\release.md`, "The changelog, from each pull
-  request"):
-  - A change users notice gets `added`, `changed`, `fixed`, `removed` or `security`, and one to three
-    lines in the description's Changelog section. They are written for a VR sim racer, by the docs
-    skill ("The changelog").
-  - Any other change gets `internal` and an empty Changelog section.
-  - With `gh`: `gh pr create --label <label> --body-file <file>`. The release script refuses a release
-    while a pull request since the last one has no type label.
+  worktree's branch, open a pull request against `main`, and merge it on GitHub after its checks.
+  Nothing is pushed to `main` directly.
+- **Write the pull request by the pull-requests skill** (`.agents\skills\pull-requests\SKILL.md`): its
+  title, its description from the template, which covers this change only, and its one type label,
+  which feeds the changelog. The release script refuses a release while a pull request since the last
+  one has no type label.
 - Until the remote exists, there are two cases:
   - If `main` isn't checked out anywhere, run `git push . <branch>:main` (fast-forward only).
   - If `main` is checked out in the main folder and that folder's tracked files are clean, run
