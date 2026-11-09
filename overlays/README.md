@@ -1,8 +1,8 @@
 # SimOptix: Overlays (OBS plugin)
 
 This plugin draws the game's telemetry over the video, as the **SimOptix: G-Meter Overlay** source.
-It is built against OBS 32.2.2 as `simoptix_overlays.dll`. It works without Pimax, also over a capture
-of a flat-screen game.
+The plugin is built against OBS 32.2.2 as `simoptix_overlays.dll`. It works without Pimax, also over a
+capture of a flat-screen game.
 
 ## Terms
 
@@ -11,11 +11,15 @@ of a flat-screen game.
 | output delay | How far VR Mirror's view runs behind the game: about 1 s with Smoothest, about 0.5 s with Smooth, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
 
 The stabilized headset view comes from a separate plugin, VR Mirror (`vr_mirror\obs_plugin\README.md`).
+When both are installed, they share two things through memory that each opens on its own:
+- the output delay of the VR Mirror source on screen (`shared\program_delay.h`)
+- the game's telemetry, read once for both and handed out already matched to the moment the view
+  shows (`shared\telemetry\README.md`)
+
 While a VR Mirror source is shown, its view trails the game by the output delay. The G-meter stays in
 step with the view. From the delay that VR Mirror publishes, the telemetry works out which moment of
-the game the view is showing, and the G-meter shows what the car was doing at that moment
-(`shared\telemetry\README.md`). It works this out from the delay alone, not by looking at the view.
-Without VR Mirror the delay is 0.
+the game the view is showing, and the G-meter shows what the car was doing at that moment. It works
+this out from the delay alone, not by looking at the view. Without VR Mirror the delay is 0.
 
 ## Folders
 
@@ -109,8 +113,11 @@ Rebuilding the four highest values and the live G at once takes 0.3–0.6 ms on 
   restarts. Starting or stopping it clears the tail and the highest values, so demo numbers never mix
   with real ones. The lap is in `shared\telemetry\demo_lap.cpp`.
 
-Everything else is fixed in `gmeter_source.cpp` (the constants at its top): the force the driver
-feels, the 80 ms smoothing, the 1 s tail, and brake, throttle, ABS and TC always shown.
+Everything else is fixed in the code (`gmeter_source.cpp`, the constants at its top):
+- The dot shows the force the driver feels.
+- The dot is smoothed over 80 ms.
+- The tail is 1 s long.
+- Brake, throttle, ABS and TC are always shown.
 
 ### Placing it in a scene
 
@@ -131,11 +138,11 @@ Add it to the scene above the VR Mirror source.
   plugin takes the window OBS activates as it opens them, with the source's name in its title. This
   works in any OBS language.
 
-LMU's shared memory (the official interface for outside tools) is read once for all meters and for
-VR Mirror's race auto-record. It is read only while something needs it.
-
 ## Telemetry
 
-The overlays read the game's telemetry from `shared\telemetry\` (see its README). One reader serves the
-whole of OBS and is shared with VR Mirror. It runs only while something needs it: a G-meter on screen,
-or race auto-record switched on.
+The G-meter reads LMU's shared memory, the official interface for outside tools, through the telemetry
+both plugins share (`shared\telemetry\README.md`). One reader serves the whole of OBS, and runs only
+while something needs it: a G-meter on screen, or race auto-record switched on.
+
+The plugin that runs the telemetry reader logs the reader's footprint every 10 s while it is connected
+to a game, with that plugin's tag ("footprint: telemetry thread (Le Mans Ultimate) ...").

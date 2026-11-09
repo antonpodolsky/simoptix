@@ -34,8 +34,8 @@ The two sources show the same view. They differ in where the game's image comes 
 | stamp | The frame number drawn as 15 small squares in the top-left corner of the view, when Debug is on |
 | frame trace | The CSV file Debug writes, with one row per drawn frame: its poses and timing |
 
-The G-meter is a separate plugin, Overlays (`overlays\README.md`). When both are installed, they share
-two things through memory that each opens on its own:
+The G-meter comes from a separate plugin, Overlays (`overlays\README.md`). When both are installed,
+they share two things through memory that each opens on its own:
 - the output delay of the VR Mirror source on screen (`shared\program_delay.h`)
 - the game's telemetry, read once for both and handed out already matched to the moment the view
   shows (`shared\telemetry\README.md`)
@@ -52,13 +52,17 @@ So the G-meter, race auto-record and the audio all follow the moment the view sh
    install the API layer too: close LMU and run `vr_mirror\frame_sources\openxr\install.bat`, which
    asks for administrator rights. The dev skill's `reference\openxr.md` has the steps.
 
+Reading LMU needs its telemetry headers from the game's folder at build time, because their licence
+doesn't allow copying them into this repo. The build finds the game in any Steam library. A build
+without the headers says so and reads no game, and race auto-record then records nothing.
+
 A source runs only while it is shown. Hidden (eye icon), it has no threads. The Pimax source then has
 no Pimax session, and the OpenXR source doesn't read the layer, so the layer copies no frames.
 
-The Pimax source takes about 0.4 s to connect and up to about 0.3 s to disconnect. Both happen on a
-thread of their own, so OBS's output never stops for them. The OBS log says "Pimax session ready after
-... ms" (or "OpenXR layer ready after ... ms") and "stopping (source hidden): graphics thread done in
-... ms".
+The Pimax source takes about 0.4 s to connect and up to about 0.3 s to disconnect. The OpenXR source's
+times were not measured. In both sources, connecting and disconnecting happen on a thread of their
+own, so OBS's output never stops for them. The OBS log says "Pimax session ready after ... ms" (or
+"OpenXR layer ready after ... ms") and "stopping (source hidden): graphics thread done in ... ms".
 
 Crash dumps of either plugin go to `%LOCALAPPDATA%\simoptix`, at most two per OBS session. The newest
 10 crash dumps are kept. When OBS starts, the plugins delete the oldest beyond 8, so that session's two
@@ -68,14 +72,17 @@ still fit. The OBS log says how many they deleted. The OBS log marks this plugin
 ## What the sources show
 
 **SimOptix: Pimax Mirror** shows the Pimax game eye, a half-size copy of the left eye the game
-renders. It is 2508×2084 for LMU at Render Quality 1.0 and grows with Render Quality ("Recording at the
+renders. It is 2508×2084 in LMU at Render Quality 1.0 and grows with Render Quality ("Recording at the
 source's native resolution", below). It arrives with every game frame at 90 fps and costs almost
-nothing (`vr_mirror\frame_sources\README.md`).
+nothing (`vr_mirror\frame_sources\pimax\README.md`). The source keeps the image at its own size. Each
+frame's pose is Pimax's prediction for the slot the frame arrived for, and the slot check finds the
+slot a late frame was really drawn for ("When the game falls behind", below).
 
 **SimOptix: OpenXR Mirror** shows the left eye the game itself draws, 5084×4168 in LMU. The layer
-copies it after each frame has gone to the headset, and the source keeps it at the size the canvas
-shows it (below). Each frame says the moment it was drawn for and the pose it was drawn with, so its
-pose is exact and needs no slot check.
+copies it after each frame has gone to the headset, and the copy takes about 0.2 ms of the game's
+graphics card (`vr_mirror\frame_sources\openxr\README.md`). The source keeps the image at the size the
+canvas shows it (below). Each frame says the moment it was drawn for and the pose it was drawn with, so
+its pose is exact and needs no slot check.
 
 ## Settings
 
@@ -97,6 +104,7 @@ core's own):
 - The filtering is sharp (bicubic).
 - Each frame is warped from the pose the game drew it with.
 - The Pimax source runs the slot check while the game is behind ("When the game falls behind", below).
+- The OpenXR source takes the slot and the pose each frame reports.
 - Instant's filter has a 0.5 Hz cutoff, beta 2 and a 0.5° dead zone.
 
 ### Smoothing
@@ -192,12 +200,9 @@ by itself. It is off by default.
 - **It works whenever a VR Mirror source of either kind is in the scene collection,** shown or not.
   With several, it is on while any of them has it ticked.
 
-It reads LMU through the telemetry both plugins share (`shared\telemetry\README.md`). One reader serves
-the whole of OBS, and runs only while something needs it.
-
-Reading LMU needs its telemetry headers from the game's folder at build time, because their licence
-doesn't allow copying them into this repo. The build finds the game in any Steam library. A build
-without the headers says so and reads no game, and race auto-record then records nothing.
+Race auto-record reads LMU's shared memory, the official interface for outside tools, through the
+telemetry both plugins share (`shared\telemetry\README.md`). One reader serves the whole of OBS, and
+runs only while something needs it: a G-meter on screen, or race auto-record switched on.
 
 The OBS log shows each step, in lines that start "LMU race auto-record:":
 - on and off
@@ -217,8 +222,8 @@ source then shows every game frame exactly once, so motion is even.
 
 **The OpenXR source** keeps each frame's image at the size the canvas shows it 1:1, and never above the
 game's own size. So it is native at the canvas's size whenever the game's image is large enough.
-- LMU's left eye has about 2115 pixels per unit of view tangent. That is enough for 1440p at any zoom
-  up to 1.98, and for 4K up to 1.32.
+- LMU's left eye has about 2115 source pixels per unit of view tangent. That is enough for 1440p at any
+  zoom up to 1.98, and for 4K up to 1.32.
 - All stored images together may take at most 4 GB of video memory, which caps each stored image's
   width:
 
@@ -271,8 +276,8 @@ Every 10 s while a source is shown, also while no game runs, the OBS log (Help �
     thread.
   - how long OBS's graphics thread spends each tick choosing the frame and computing the warp (99th
     percentile and longest)
-  - The Overlays plugin logs its telemetry reader's own footprint every 10 s while the reader is
-    connected to a game ("[simoptix_overlays] footprint: telemetry thread (Le Mans Ultimate) ...").
+  - The plugin that runs the telemetry reader logs the reader's footprint every 10 s while it is
+    connected to a game, with that plugin's tag ("footprint: telemetry thread (Le Mans Ultimate) ...").
 - for the OpenXR source, the frames read and the frames that were gone before they were copied
   ("OpenXR frames: ..."). The layer logs its own side, including the copy's time on the graphics card
   (`vr_mirror\frame_sources\openxr\README.md`).
@@ -313,12 +318,13 @@ delay ... ms", about 4–5 ms measured). The frame picker (`vr_mirror\core\pipel
 
 The source idles.
 - The OpenXR source looks for the layer's memory once a second. Otherwise it sleeps until the layer
-  says a frame is copied.
+  says a frame is copied. After 2 s without a game frame (none yet, or the game quit), it goes idle.
+  The OBS log says so once each way: "OpenXR: no game frames for 2 s: idle" and "OpenXR: game frames".
 - After 2 s without a game frame (none yet, or the game quit), the Pimax source stops asking Pimax for
   head poses, the time and the display slots, and only waits for the game's frame signal. It is back at
-  full rate on the game's first frame, and catches that frame (e2e scenario `game_starts_late`).
-- The OBS log says so once each way: "no game frames for 2 s: idle ..." and "game frames again after
-  ... s idle: back to full rate".
+  full rate on the game's first frame, and catches that frame (e2e scenario `game_starts_late`). The
+  OBS log says so once each way: "no game frames for 2 s: idle ..." and "game frames again after ... s
+  idle: back to full rate".
 - With Debug on, the frame trace starts at the game's first frame ("Debug: stamp and frame trace",
   below).
 - The Pimax session itself stays open. The status check, 4 times a second, is how Pimax tells the
