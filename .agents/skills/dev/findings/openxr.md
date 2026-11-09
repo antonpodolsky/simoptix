@@ -3,7 +3,8 @@
 Terms: `reference\terms.md`. What the layer does: `vr_mirror\frame_sources\openxr\README.md`. How to
 build, check and install it, and the Easy Anti-Cheat test plan: `reference\openxr.md`.
 
-This file holds what each start of the game and of the check program showed, in order. File names are
+This file holds what each start of the game and of the check program showed, in order, and what is known
+about the image each frame shows. File names are
 as they were then: the load log was `openxr_layer_loads.log`, and the DLL
 `XR_APILAYER_SIMOPTIX_frame_tap.dll` in `Program Files\simoptix\openxr_layer\`.
 
@@ -93,6 +94,27 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
   - The layer wrote no log in either start: neither `openxr_frame_source.log` nor
     `openxr_frame_source_loads.log` in `%LOCALAPPDATA%\simoptix\` changed. Why not is not known.
   - Not tested: an online session (step 2 of the test in `reference\openxr.md`).
+
+## The image a frame shows
+
+- **The half-drawn frame in a 4K recording** (issue 12, 2026-11-08) is one game frame, after a 64 ms
+  stall, with the sun strip, the driver's arms and the wheel rim missing. Whether LMU drew it so or the
+  layer copied it unfinished is not known. Read in the code on 2026-11-09:
+  - The two frames "0.005 ms apart" after the stall are two copies VR Mirror saw finished at once. VR
+    Mirror counts a frame as arrived when it sees its copy finished, and the layer checks its copies
+    only when the game ends its next frame. They say nothing about how the game ended those frames.
+  - The copy goes on the game's device context after everything the game drew before releasing the
+    image. So a released image is copied whole, unless the game holds all three of its images at once.
+  - The copy goes on the game's immediate context, on the thread that ends the frame. D3D11's immediate
+    context is not safe for two threads at once unless it is protected. Whether LMU ends its frames on
+    another thread than it draws on, and whether its context is protected, is not known.
+- **Fixed: the layer looked up the image after xrEndFrame came back.** OpenXR shows the image the game
+  released last when it called xrEndFrame. A game thread that released the next image during the call
+  made the layer copy the next frame's image with this frame's pose: a whole image, not a half-drawn
+  one. The layer now notes the image before it passes the call on.
+  - Measured in e2e `openxr_stall` (a render thread, the runtime holding xrEndFrame until vsync, a
+    64 ms stall every 3 s): with the old order 0.73–0.75° rms image/pose mismatch on screen, 2.8–4.5°
+    in the worst frame. With the fix 0.053° rms, at most 0.153°, as `openxr_stabilization` (0.05°).
 
 ## LMU started without Easy Anti-Cheat
 

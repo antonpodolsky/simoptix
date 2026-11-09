@@ -24,8 +24,8 @@ It runs every scenario. Name some to run only those (`e2e_runner.exe stabilizati
 list them with `--list`.
 
 - Each scenario opens a small window (320×180) on top of everything, for about 15 s.
-- With every scenario at all three smoothings, that is 54 runs. They took 787 s (about 13 minutes) on
-  2026-11-08.
+- With every scenario at all three smoothings, that is 57 runs. The 54 before `openxr_stall` took
+  787 s (about 13 minutes) on 2026-11-08.
 - Don't use the PC meanwhile. For consistent timing, close LMU, the mirror app, Pimax Play and other
   heavy apps first.
 

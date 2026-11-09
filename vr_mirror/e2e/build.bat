@@ -19,8 +19,9 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /LD /Fo:obj\ ^
 
 if not exist obj\fake_openxr mkdir obj\fake_openxr
 cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /Fo:obj\fake_openxr\ ^
-   /I..\.. /I..\core /Ifake_game ^
-   fake_openxr\fake_openxr.cpp fake_game\fake_game_picture.cpp ..\frame_sources\openxr\openxr_publisher.cpp ^
+   /I..\.. /I..\core /Ifake_game /I..\..\third_party\openxr ^
+   fake_openxr\fake_openxr.cpp fake_openxr\fake_openxr_layer.cpp fake_game\fake_game_picture.cpp ^
+   ..\frame_sources\openxr\openxr_layer_frames.cpp ..\frame_sources\openxr\openxr_publisher.cpp ^
    ..\..\shared\log.cpp /Fe:bin\fake_openxr.exe ^
    /link d3d11.lib dxgi.lib d3dcompiler.lib winmm.lib || exit /b 1
 

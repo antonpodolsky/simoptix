@@ -89,6 +89,7 @@ was closed and OBS open. Whether Pimax Play ran was not checked.
 | openxr_game_behind | pass: no frame from the wrong pose, no stall, jitter 2.8 / 1.1 / 1.1 of the head's |
 | openxr_black_borders | pass: 0% black, no stall, jitter 1.6 / 0.20 / 0.20 of the head's |
 | openxr_game_starts_late | pass: the game's first frame missed at all three (the limit: the layer learns the image's size from it), none after, no frame from the wrong pose |
+| openxr_stall | pass (2026-11-09, run alone): image/pose mismatch 0.053° rms at all three, worst frame 0.153 / 0.144 / 0.148°, no game frame missed, 88.6–88.7 fps. With the image looked up after xrEndFrame, as the layer did before: 0.73–0.75° rms, worst 2.8–4.5° |
 
 **Compared with Instant, four fail in run 1, all on the horizon's worst tilt.** The limit: Smooth and
 Smoothest at most 0.05° worse than Instant.

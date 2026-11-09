@@ -68,6 +68,20 @@ namespace {
         return {f.angleLeft, f.angleRight, f.angleUp, f.angleDown};
     }
 
+    // The frame's first projection layer, if it has a view; nullptr: nothing shown this frame.
+    const XrCompositionLayerProjection* ProjectionOf(const XrFrameEndInfo& info) {
+        for (uint32_t i = 0; i < info.layerCount && info.layers; i++) {
+            const XrCompositionLayerBaseHeader* l = info.layers[i];
+
+            if (l && l->type == XR_TYPE_COMPOSITION_LAYER_PROJECTION) {
+                const auto* projection = reinterpret_cast<const XrCompositionLayerProjection*>(l);
+                return projection->viewCount >= 1 && projection->views ? projection : nullptr;
+            }
+        }
+
+        return nullptr;
+    }
+
 }
 
 void FramesSessionCreated(
@@ -171,21 +185,30 @@ void FramesDisplayPeriod(XrDuration period) {
     g_publisher.SetDisplayPeriod(period);
 }
 
-void FramesEnded(const XrFrameEndInfo& info, int64_t endFrameCounter) {
-    if (!g_publisher.Started()) {
-        return;
-    }
-    const XrCompositionLayerProjection* projection = nullptr;
-    for (uint32_t i = 0; i < info.layerCount && !projection; i++) {
-        const XrCompositionLayerBaseHeader* l = info.layers ? info.layers[i] : nullptr;
-        if (l && l->type == XR_TYPE_COMPOSITION_LAYER_PROJECTION) {
-            projection = reinterpret_cast<const XrCompositionLayerProjection*>(l);
-        }
+FrameImage FramesEnding(const XrFrameEndInfo& info) {
+    const XrCompositionLayerProjection* projection = ProjectionOf(info);
+
+    if (!g_publisher.Started() || !projection) {
+        return {};
     }
 
-    if (!projection || projection->viewCount < 1 || !projection->views) {
-        return;  // nothing shown this frame
+    FrameImage image;
+    image.swapchain = projection->views[0].subImage.swapchain;
+
+    if (const Chain* c = Find(image.swapchain)) {
+        image.index = c->released.load();
     }
+
+    return image;
+}
+
+void FramesEnded(const XrFrameEndInfo& info, const FrameImage& image, int64_t endFrameCounter) {
+    const XrCompositionLayerProjection* projection = ProjectionOf(info);
+
+    if (!g_publisher.Started() || !projection) {
+        return;
+    }
+
     const XrCompositionLayerProjectionView& left = projection->views[0];
     const XrCompositionLayerProjectionView& right = projection->views[projection->viewCount > 1 ? 1 : 0];
     OpenXrPublishedFrame f;
@@ -194,17 +217,16 @@ void FramesEnded(const XrFrameEndInfo& info, int64_t endFrameCounter) {
     f.eye[0] = PoseOf(left.pose), f.eye[1] = PoseOf(right.pose);
     f.fov[0] = FovOf(left.fov), f.fov[1] = FovOf(right.fov);
 
-    // The image the frame shows of that swapchain: the one the game released last (OpenXR's rule).
     ID3D11Texture2D* src = nullptr;
     UINT subresource = 0;
     uint32_t format = 0;
-    if (Chain* c = Find(left.subImage.swapchain)) {
-        const int32_t image = c->released.load();
-        if (image >= 0 && static_cast<uint32_t>(image) < c->imageCount.load(std::memory_order_acquire)) {
-            src = c->images[image];
-            subresource = D3D11CalcSubresource(0, left.subImage.imageArrayIndex, c->mipLevels[image]);
-            format = c->format;
-        }
+    const Chain* c = image.swapchain == left.subImage.swapchain ? Find(image.swapchain) : nullptr;
+    const int32_t i = image.index;
+
+    if (c && i >= 0 && static_cast<uint32_t>(i) < c->imageCount.load(std::memory_order_acquire)) {
+        src = c->images[i];
+        subresource = D3D11CalcSubresource(0, left.subImage.imageArrayIndex, c->mipLevels[i]);
+        format = c->format;
     }
 
     const XrRect2Di& r = left.subImage.imageRect;

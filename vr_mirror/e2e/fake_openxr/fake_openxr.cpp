@@ -1,10 +1,12 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // fake_openxr.exe: a fake game with the OpenXR layer in it, for end-to-end tests of
-// simoptix_vr_mirror.exe with frame_source=openxr. It hands its frames to the tool exactly as the layer
-// does, through the layer's own publisher (vr_mirror\frame_sources\openxr\openxr_publisher.*): the shared
-// memory, the frame records, the three shared textures, the copy after each frame and its "done" marker,
-// and the clock reading. The tool runs unmodified and finds it as it finds the layer in the game.
+// simoptix_vr_mirror.exe with frame_source=openxr. It makes the OpenXR calls a game makes, into the
+// layer's own frame code (fake_openxr_layer.h): a swapchain of three images, each frame's image acquired,
+// drawn into and released, and the frame ended. The layer picks the image each frame shows and hands it
+// to the tool as in the game: the shared memory, the frame records, the three shared textures, the copy
+// after each frame and its "done" marker, and the clock reading. The tool runs unmodified and finds it as
+// it finds the layer in the game.
 //
 //  - Display: 90 Hz. Each frame begins one frame before the vsync it ends at, is drawn for the slot after
 //    that (two vsyncs ahead, as OpenXR's xrWaitFrame predicts) with the head pose predicted for it at its
@@ -14,10 +16,18 @@
 //    (fake_game_picture.h), encoded once as a game draws it.
 //  - Poses: both eyes, each turned 1 deg outward from the head and 32 mm to its side; the head halfway.
 //  - Clock: XrTime is the performance counter in nanoseconds plus 123.456789 s, so the tool must use the
-//    clock reading to place the frames.
+//    clock reading.
 //  - The game misses slots (`drop_rate`) or falls behind (`queue_lag`, with `drop_rate`): its frames end up
 //    to that many slots late for the slot they were drawn for, which they still report.
 //  - No game yet (`game_start_s`): the layer's memory appears that long after the fake starts.
+//  - A render thread (`render_thread=1`): one thread draws each frame and releases its image as soon as
+//    the frame begins, while another ends the frames, and the runtime holds each xrEndFrame until the
+//    frame's vsync. So the next frame's image is released while the frame before is still in xrEndFrame.
+//    Both threads use the device's one context, protected for that as a game must. `drop_rate` and
+//    `queue_lag` don't apply.
+//  - Stalls (`stall_every_s`, `stall_ms`, with the render thread): that often, a frame takes that much
+//    longer to draw. It ends late for the slot it was drawn for, the frames due meanwhile never come,
+//    and the next frame follows it at once.
 //
 // Configuration: the file named by SIMOPTIX_FAKE_OPENXR_SCENARIO (key=value lines). Its log (key `log`) has
 // the true head motion and every frame drawn, in fake_pvr's format, so the runner measures both fakes
@@ -25,6 +35,7 @@
 
 #include <windows.h>
 #include <d3d11.h>
+#include <d3d11_4.h>
 #include <dxgi.h>
 #include <timeapi.h>
 #include <wrl/client.h>
@@ -32,7 +43,9 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <condition_variable>
 #include <cstdio>
+#include <deque>
 #include <map>
 #include <mutex>
 #include <random>
@@ -42,8 +55,8 @@
 #include "common/rot.h"
 #include "fake_game_motion.h"
 #include "fake_game_picture.h"
+#include "fake_openxr_layer.h"
 #include "shared/unique_handle.h"
-#include "vr_mirror/frame_sources/openxr/openxr_publisher.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -77,7 +90,7 @@ namespace {
 
     constexpr int64_t kClockOffsetNs = 123456789000;  // XrTime minus the performance counter (ns)
 
-    bool Clock(void*, int64_t counter, int64_t* time) {
+    bool Clock(int64_t counter, int64_t* time) {
         *time = int64_t(std::llround(double(counter) * (1e9 / g_frequency))) + kClockOffsetNs;
         return true;
     }
@@ -99,6 +112,9 @@ namespace {
         double gameStartS = 0;
         double drawnFov = 1;
         bool cockpit = false;
+        bool renderThread = false;
+        double stallEveryS = 0;  // 0: no stalls
+        double stallMs = 64;
         int width = 5084, height = 4168;
 
         bool Load() {
@@ -145,6 +161,9 @@ namespace {
             gameStartS = num("game_start_s", 0);
             drawnFov = num("drawn_fov", 1);
             cockpit = num("cockpit", 0) != 0;
+            renderThread = num("render_thread", 0) != 0;
+            stallEveryS = num("stall_every_s", stallEveryS);
+            stallMs = num("stall_ms", stallMs);
             width = int(num("width", width));
             height = int(num("height", height));
             return true;
@@ -240,10 +259,17 @@ namespace {
             while (!Stopped() && Now() < start_ + config_.gameStartS) {
                 Sleep(10);
             }
-            if (!Stopped() && publisher_.Start(device_.Get(), Clock, nullptr)) {
-                publisher_.SetDisplayPeriod(int64_t(std::llround(period_ * 1e9)));
-                GameLoop();
-                publisher_.Stop();
+
+            const int64_t periodNs = int64_t(std::llround(period_ * 1e9));
+
+            if (!Stopped() && layer_.Start(device_.Get(), config_.width, config_.height, periodNs, Clock)) {
+                if (config_.renderThread) {
+                    ThreadedLoop();
+                } else {
+                    GameLoop();
+                }
+
+                layer_.Stop();
             }
 
             timeEndPeriod(1);
@@ -255,6 +281,14 @@ namespace {
         }
 
     private:
+        // A frame drawn and its image released, waiting to be ended (the render thread's).
+        struct Drawn {
+            long long index = 0;
+            double begin = 0, target = 0, end = 0;  // performance-counter seconds
+            Quat head;
+            int lag = 0;  // slots late for the slot it was drawn for
+        };
+
         bool Stopped() const { return stop_ && WaitForSingleObject(stop_.Get(), 0) == WAIT_OBJECT_0; }
 
         Quat TrueHead(double t) const { return motion_.At(std::max(0.0, t - start_)); }
@@ -306,22 +340,21 @@ namespace {
                 return false;
             }
 
-            // The swapchain image the game draws its left eye into (LMU's format and size).
-            D3D11_TEXTURE2D_DESC td = {};
-            td.Width = config_.width;
-            td.Height = config_.height;
-            td.MipLevels = td.ArraySize = 1;
-            td.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-            td.SampleDesc.Count = 1;
-            td.BindFlags = D3D11_BIND_RENDER_TARGET;
-            if (FAILED(device_->CreateTexture2D(&td, nullptr, &image_))) {
-                return false;
+            // Two threads use the one context: a game that does must protect it.
+            if (config_.renderThread) {
+                ComPtr<ID3D11Multithread> multithread;
+
+                if (FAILED(context_.As(&multithread))) {
+                    return false;
+                }
+
+                multithread->SetMultithreadProtected(TRUE);
             }
-            device_->CreateRenderTargetView(image_.Get(), nullptr, &target_);
-            return target_ && picture_.Init(device_.Get(), false);
+
+            return picture_.Init(device_.Get(), false);
         }
 
-        void Draw(const Quat& head, double sceneTime) {
+        void Draw(ID3D11RenderTargetView* target, const Quat& head, double sceneTime) {
             FakeGamePicture::Look look;
             look.leftTan = std::tan(-kLeftFov.left), look.rightTan = std::tan(kLeftFov.right);
             look.upTan = std::tan(kLeftFov.up), look.downTan = std::tan(-kLeftFov.down);
@@ -330,7 +363,7 @@ namespace {
             look.encodedTwice = false;  // as the game draws it: the layer copies it so
             picture_.Draw(
                 context_.Get(),
-                target_.Get(),
+                target,
                 config_.width,
                 config_.height,
                 Normalize(Mul(head, kEyeCant[0])),
@@ -344,6 +377,50 @@ namespace {
             const Quat q = Normalize(Mul(head, kEyeCant[eye]));
             const Vec3 p = Rotate(head, {eye == 0 ? -kHalfIpd : kHalfIpd, 0, 0});
             return {q.x, q.y, q.z, q.w, p.x, p.y, p.z};
+        }
+
+        FakeOpenXrLayer::FrameEnd FrameEndOf(const Quat& head, double target) const {
+            FakeOpenXrLayer::FrameEnd f;
+            f.displayTime = ToXrTime(target);
+            f.eye[0] = EyePose(head, 0), f.eye[1] = EyePose(head, 1);
+            f.fov[0] = kLeftFov, f.fov[1] = kRightFov;
+            return f;
+        }
+
+        void LogFrame(const Drawn& d, double ended) {
+            std::lock_guard<std::mutex> lock(logMutex_);
+
+            if (log_) {
+                fprintf(
+                    log_,
+                    "frame,%lld,%.6f,%.6f,%.6f,%.7f,%.7f,%.7f,%.7f,%d\n",
+                    d.index,
+                    d.begin,
+                    d.target,
+                    ended,
+                    d.head.x,
+                    d.head.y,
+                    d.head.z,
+                    d.head.w,
+                    d.lag
+                );
+            }
+        }
+
+        void LogStats() {
+            const OpenXrPublisherStats s = layer_.TakeStats();
+            std::lock_guard<std::mutex> lock(logMutex_);
+
+            if (log_) {
+                fprintf(
+                    log_,
+                    "# frame source: %u frames, %u copied, not copied: %u (reader), %u (copy pending)\n",
+                    s.frames,
+                    s.copied,
+                    s.readerBusy,
+                    s.copyPending
+                );
+            }
         }
 
         // One frame per display slot (fake_pvr's timing): begins one frame before its vsync, drawn with the
@@ -371,36 +448,11 @@ namespace {
                 const bool drop = uniform(rng) < config_.dropRate;
                 if (!drop) {
                     WaitUntil(end - 0.0015);
-                    Draw(head, target - start_);
-                    WaitUntil(end);
-
-                    // xrEndFrame went on to the runtime: the layer's part.
-                    OpenXrPublishedFrame f;
-                    f.displayTime = ToXrTime(target);
-                    f.endFrameCounter = Counter();
-                    f.eye[0] = EyePose(head, 0), f.eye[1] = EyePose(head, 1);
-                    f.fov[0] = kLeftFov, f.fov[1] = kRightFov;
-                    const D3D11_BOX box = {0, 0, 0, UINT(config_.width), UINT(config_.height), 1};
-                    publisher_.Publish(f, image_.Get(), 0, box, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
+                    Draw(layer_.Acquire(), head, target - start_);
+                    layer_.Release();
+                    layer_.EndFrame(FrameEndOf(head, target), [end] { WaitUntil(end); });
                     context_->Flush();  // as a game's frame goes to the GPU
-
-                    const double t = Now();
-                    std::lock_guard<std::mutex> lock(logMutex_);
-                    if (log_) {
-                        fprintf(
-                            log_,
-                            "frame,%lld,%.6f,%.6f,%.6f,%.7f,%.7f,%.7f,%.7f,%d\n",
-                            k,
-                            begin,
-                            target,
-                            t,
-                            head.x,
-                            head.y,
-                            head.z,
-                            head.w,
-                            lag
-                        );
-                    }
+                    LogFrame({k, begin, target, end, head, lag}, Now());
                 }
 
                 if (config_.queueLag > 0) {
@@ -413,23 +465,121 @@ namespace {
 
                 if (Now() - lastStats >= 10) {
                     lastStats = Now();
-                    const OpenXrPublisherStats s = publisher_.TakeStats();
-                    std::lock_guard<std::mutex> lock(logMutex_);
-                    if (log_) {
-                        fprintf(
-                            log_,
-                            "# frame source: %u frames, %u copied, not copied: %u (reader), %u (copy "
-                            "pending)\n",
-                            s.frames,
-                            s.copied,
-                            s.readerBusy,
-                            s.copyPending
-                        );
-                    }
+                    LogStats();
                 }
 
                 k++;
             }
+        }
+
+        // render_thread: this thread ends the frames the render thread drew, each held in the runtime until
+        // its vsync, while the render thread goes on with the next.
+        void ThreadedLoop() {
+            std::thread render([this] {
+                try {
+                    RenderLoop();
+                } catch (...) {
+                    fprintf(stderr, "fake OpenXR: the render thread stopped by an unexpected error\n");
+                }
+
+                std::lock_guard<std::mutex> lock(drawnMutex_);
+                renderDone_ = true;
+                drawnChanged_.notify_all();
+            });
+
+            double lastStats = Now();
+            Drawn d;
+
+            while (TakeDrawn(&d)) {
+                layer_.EndFrame(FrameEndOf(d.head, d.target), [&d] { WaitUntil(d.end); });
+                context_->Flush();  // the layer's copy goes to the GPU, as in GameLoop
+                LogFrame(d, Now());
+
+                if (Now() - lastStats >= 10) {
+                    lastStats = Now();
+                    LogStats();
+                }
+            }
+
+            render.join();
+        }
+
+        // The render thread: draws each frame when it begins and releases its image, at most one frame
+        // ahead of the frames ended.
+        void RenderLoop() {
+            std::mt19937 rng(12345);
+            std::normal_distribution<double> jitter(0, config_.arrivalJitterMs / 1000);
+
+            const double lead = config_.slotStepLeadMs / 1000;
+            long long k = static_cast<long long>(std::ceil((Now() - start_) / period_)) + 1;
+            double nextStall = config_.stallEveryS > 0 ? start_ + config_.stallEveryS : 0;
+
+            while (!Stopped()) {
+                const double vsync = start_ + k * period_;
+                const double begin = vsync - period_ - lead;
+                const double target = vsync + period_;
+                double end = vsync + config_.arrivalPhaseMs / 1000 + jitter(rng);
+                end = std::clamp(end, vsync - 0.95 * lead, vsync + 0.4 * period_);
+
+                WaitUntil(begin);
+                const Quat head = Predicted(begin, target);
+                const bool stall = nextStall > 0 && Now() >= nextStall;
+                ID3D11RenderTargetView* image = layer_.Acquire();
+
+                if (stall) {
+                    Sleep(DWORD(config_.stallMs));
+                    nextStall += config_.stallEveryS;
+                }
+
+                Draw(image, head, target - start_);
+                context_->Flush();  // as a game's frame goes to the GPU
+                layer_.Release();
+
+                Drawn d{k, begin, target, std::max(end, Now()), head, 0};
+                d.lag = static_cast<int>(std::floor((d.end - vsync) / period_ + 0.5));
+
+                if (!PutDrawn(d)) {
+                    return;
+                }
+
+                // After a stall the frames due meanwhile never come: the next is the one beginning now.
+                k = stall ? static_cast<long long>(std::floor((Now() - start_ + lead) / period_)) + 1 : k + 1;
+            }
+        }
+
+        // Hands a drawn frame to the thread ending them once fewer than two wait; false once stopped.
+        bool PutDrawn(const Drawn& d) {
+            std::unique_lock<std::mutex> lock(drawnMutex_);
+
+            while (drawn_.size() >= 2) {
+                if (Stopped()) {
+                    return false;
+                }
+
+                drawnChanged_.wait_for(lock, std::chrono::milliseconds(5));
+            }
+
+            drawn_.push_back(d);
+            drawnChanged_.notify_all();
+            return true;
+        }
+
+        // The oldest drawn frame not yet ended; false once the render thread has stopped and none wait.
+        bool TakeDrawn(Drawn* d) {
+            std::unique_lock<std::mutex> lock(drawnMutex_);
+
+            while (drawn_.empty()) {
+                if (renderDone_) {
+                    return false;
+                }
+
+                drawnChanged_.wait_for(lock, std::chrono::milliseconds(5));
+            }
+
+            *d = drawn_.front();
+            drawn_.pop_front();
+            drawnChanged_.notify_all();
+            return true;
         }
 
         // The true head at 1 kHz, for the runner's comparisons.
@@ -457,10 +607,14 @@ namespace {
         std::atomic<bool> running_{true};
         ComPtr<ID3D11Device> device_;
         ComPtr<ID3D11DeviceContext> context_;
-        ComPtr<ID3D11Texture2D> image_;
-        ComPtr<ID3D11RenderTargetView> target_;
         FakeGamePicture picture_;
-        OpenXrPublisher publisher_;
+        FakeOpenXrLayer layer_;
+
+        // Frames between the render thread and the thread ending them (render_thread).
+        std::mutex drawnMutex_;
+        std::condition_variable drawnChanged_;
+        std::deque<Drawn> drawn_;
+        bool renderDone_ = false;
     };
 
 }

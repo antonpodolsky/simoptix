@@ -7,9 +7,9 @@
 // runtime's time conversion is there (the reader can't place the frames otherwise).
 //
 // Called from openxr_layer_calls.cpp after each call went on to the runtime, with what the game passed and
-// the runtime returned. Nothing here locks or waits: the swapchain table is fixed in size, and OpenXR
-// asks the game itself to keep one swapchain's calls on one thread at a time.
-// It doesn't know about the loader, the log file, or which game this is.
+// the runtime returned; FramesEnding alone before xrEndFrame goes on. Nothing here locks or waits: the
+// swapchain table is fixed in size, and OpenXR asks the game itself to keep one swapchain's calls on one
+// thread at a time. It doesn't know about the loader, the log file, or which game this is.
 #pragma once
 
 #include <cstdint>
@@ -33,7 +33,18 @@ void FramesImageAcquired(XrSwapchain swapchain, uint32_t index);
 void FramesImageReleased(XrSwapchain swapchain);
 // From xrWaitFrame.
 void FramesDisplayPeriod(XrDuration period);
-// After xrEndFrame went on and succeeded; `endFrameCounter`: the performance counter then.
-void FramesEnded(const XrFrameEndInfo& info, int64_t endFrameCounter);
+
+// The image of the left eye's swapchain that a frame shows.
+struct FrameImage {
+    XrSwapchain swapchain = XR_NULL_HANDLE;
+    int32_t index = -1;  // -1: none known
+};
+
+// Before xrEndFrame goes on: the image the frame shows, the one the game released last as it ends the
+// frame (OpenXR's rule). A thread of the game may release the next while the call is in the runtime.
+FrameImage FramesEnding(const XrFrameEndInfo& info);
+// After xrEndFrame went on and succeeded, with what FramesEnding found; `endFrameCounter`: the performance
+// counter then.
+void FramesEnded(const XrFrameEndInfo& info, const FrameImage& image, int64_t endFrameCounter);
 // The publisher's numbers since the last call; false while it isn't running.
 bool FramesTakeStats(OpenXrPublisherStats* stats);
