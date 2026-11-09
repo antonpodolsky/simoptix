@@ -18,8 +18,8 @@
 #include <vector>
 
 #include "common/rot.h"
+#include "fake_game_image.h"
 #include "fake_game_motion.h"
-#include "fake_game_picture.h"
 #include "fake_pvr_replay.h"
 #include "shared/unique_handle.h"
 #include "vr_mirror/frame_sources/pimax/pvr_interface.h"
@@ -126,7 +126,7 @@ namespace fake_pvr {
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;
         Microsoft::WRL::ComPtr<ID3D11Texture2D> texture_;
         Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv_;
-        FakeGamePicture picture_;  // the game thread's
+        FakeGameImage image_;  // the game thread's
         Microsoft::WRL::ComPtr<ID3D11Query> done_;
         std::vector<uint8_t> thumbPixels_;  // a replay's real thumbnails, one 64x32 RGBA tile per frame
         int thumbTiles_ = 0;

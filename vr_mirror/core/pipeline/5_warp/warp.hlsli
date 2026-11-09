@@ -30,7 +30,7 @@ float3 WarpSrc(float2 uv) {
     return float3(lerp(rect.xy, rect.zw, st), 1);
 }
 
-// A picture sRGB-encoded twice (the Pimax game eye: EyeInfo::encodedTwice) has options.x set: undo one
+// An image sRGB-encoded twice (the Pimax game eye: EyeInfo::encodedTwice) has options.x set: undo one
 // encoding.
 float3 FixColor(float3 c) {
     if (options.x > 0.5) {

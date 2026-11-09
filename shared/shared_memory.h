@@ -15,7 +15,7 @@
 #include <windows.h>
 
 struct SharedMemory {
-    volatile LONG64 programDelayUs;  // program_delay.h: microseconds, 0 when nothing delays the picture
+    volatile LONG64 programDelayUs;  // program_delay.h: microseconds, 0 when nothing delays the view
     volatile LONG crashDumps;        // crash_dump.h: minidumps written in this process so far
 };
 

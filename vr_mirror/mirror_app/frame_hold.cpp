@@ -15,7 +15,7 @@ FrameHold::Add(ID3D11Device* device, ID3D11DeviceContext* context, FrameSource& 
         return nullptr;
     }
     Held& h = ring_[(head_ + count_) % ring_.size()];
-    if (!source.CopyPicture(device, context, f, &h.copy, false)) {
+    if (!source.CopyImage(device, context, f, &h.copy, false)) {
         return nullptr;
     }
     h.frame = f;

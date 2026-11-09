@@ -6,12 +6,12 @@
 
 // Times in source seconds; quaternions x, y, z, w. stamp: the number the frame-number stamp shows; tick:
 // the host's tick (OBS) or draw; slot: the display slot the frame arrived for; img: the pose its
-// picture was drawn with; raw: the pose the view followed; drawn_pose: how img was found; draw,
+// image was drawn with; raw: the pose the view followed; drawn_pose: how img was found; draw,
 // presented: when the pipeline ran and the frame was presented (0: the host doesn't present);
 // edge_clamps: so far, frames where the smoothing's last resort stopped the view at an edge of the
-// shown picture or the followed one; edge_planned: so far, frames whose smoothing steered its path;
+// shown image or the followed one; edge_planned: so far, frames whose smoothing steered its path;
 // view_time: the moment the view is for on a tick's own timeline (0: the frame's own);
-// followed_serial: the game frame the view followed (serial unless an older picture is shown again);
+// followed_serial: the game frame the view followed (serial unless an older image is shown again);
 // edge_shift: how far the last resort moved this frame's view (degrees); aspect: the output's width /
 // height; drawn_slot: the display slot the frame source says the frame was drawn for (0: it doesn't say);
 // pose_notes: the drawn pose stage's own name=value pairs (space-separated; no commas).
@@ -102,7 +102,7 @@ void StampTraceObserver::Flush() {
         r.edgeShiftDeg,
         r.aspect,
         r.drawnSlot,
-        r.pictureNotes
+        r.poseNotes
     );
 
     sink_->Line(row);

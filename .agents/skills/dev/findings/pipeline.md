@@ -284,7 +284,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 - **Not known:** whether LMU's OpenXR views carry the eye's turn. The fix doesn't depend on it, because
   the image's middle is the same either way.
 
-## Picture room
+## Image room
 
 ### Inside the image actually shown, on ticks too
 
@@ -384,7 +384,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 - **A service, not a protocol.** Before, the edges planned the look-ahead's path
   themselves, in about fifteen calls that the glue interleaved with the smoothing's. So a new smoothing
   had to implement the edges' planning protocol, and the reverse. Since, the planning is the
-  look-ahead's own (the same margin, weight and passes), and the picture room answers room questions.
+  look-ahead's own (the same margin, weight and passes), and the image room answers room questions.
   `stage_replay --golden` was byte for byte the same.
 
 ## Observer

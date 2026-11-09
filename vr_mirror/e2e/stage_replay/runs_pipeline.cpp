@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // RunHost: a pipeline over an input as one of the hosts drives it (the mirror app's window: each frame
 // at arrival, or held for the look-ahead delay; the OBS plugin's ticks: each tick's own moment with
-// an older frame standing in as the picture, picked by the newest due frame or by the frame
+// an older frame standing in as the image, picked by the newest due frame or by the frame
 // picker over a store of copies). RunPipeline: any mix of stages through it, with a summary per
 // input. Poses and predictions are fed in time order up to each draw (ReplayPoses); where the
 // configuration asks for the slot check (or the cockpit correction), frames get their true slot's
@@ -109,7 +109,7 @@ namespace stage_replay {
               settings_(run.settings) {
             BuildPipeline(run.config, &pipeline_);
 
-            // The slot check judges real pictures, which these runs don't have: each frame its true slot.
+            // The slot check judges real images, which these runs don't have: each frame its true slot.
             const DrawnPoseKind kind = run.config.drawnPose;
 
             if (kind == DrawnPoseKind::kSlotCheck || kind == DrawnPoseKind::kCockpit) {
@@ -296,7 +296,7 @@ namespace stage_replay {
             printf("  (ticks at %.2f Hz, frames picked by the frame picker)\n", tickHz);
         }
 
-        printf("  (lower is better in every measure; lag: the view's look direction behind the picture's)\n");
+        printf("  (lower is better in every measure; lag: the view's look direction behind the image's)\n");
 
         for (const Input* input : inputs) {
             HostRun run;

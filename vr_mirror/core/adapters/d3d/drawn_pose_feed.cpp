@@ -28,11 +28,11 @@ namespace {
 
 void DrawnPoseFeed::SetDrawnPose(std::shared_ptr<DrawnPose> drawnPose) {
     drawnPose_ = std::move(drawnPose);
-    needs_ = drawnPose_ ? drawnPose_->Needs() : PictureNeeds();
+    needs_ = drawnPose_ ? drawnPose_->Needs() : ImageNeeds();
     if (!device_) {
         return;  // before Init: Init sets it up
     }
-    InitPictures();
+    InitImages();
     Reset();
 }
 
@@ -40,13 +40,13 @@ bool DrawnPoseFeed::Init(ID3D11Device* device) {
     // Another device (the OBS plugin makes a new one each time its source is shown): the thumbnails
     // and patches are made afresh on it. The old device's shaders, targets, staging textures and
     // queries can't be used with the new one's context; kept, they left stage 2 without a frame's
-    // picture until 1-2 s after it arrived, for the rest of a session after a hide and show.
+    // image until 1-2 s after it arrived, for the rest of a session after a hide and show.
     if (device != device_.Get()) {
         Release();
     }
     device_ = device;
     Reset();
-    return InitPictures();
+    return InitImages();
 }
 
 void DrawnPoseFeed::Release() {
@@ -56,7 +56,7 @@ void DrawnPoseFeed::Release() {
     device_.Reset();
 }
 
-bool DrawnPoseFeed::InitPictures() {
+bool DrawnPoseFeed::InitImages() {
     if (needs_.thumbnail && !thumbs_.Ready()) {
         if (!thumbs_.Init(device_.Get(), true)) {
             CoreLog("drawn pose: no thumbnails, frames keep their arrival slot's pose");
@@ -108,7 +108,7 @@ void DrawnPoseFeed::ReportLookTime(const CallStats& time, StatsReport& r) {
     if (time.count == 0) {
         return;
     }
-    r.Line("looking at pictures with patches");
+    r.Line("looking at images with patches");
     r.Value("frames", double(time.count));
     r.Value("us avg", time.total / time.count * 1e6);
     r.Value("us max", time.longest * 1e6);

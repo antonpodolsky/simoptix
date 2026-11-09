@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // patch_shift: frame-to-frame image shift of a raw greyscale clip, measured on patches of the
-// picture (for a stabilized recording: cockpit patches, which are fixed in head-tracking space, so
+// image (for a stabilized recording: cockpit patches, which are fixed in head-tracking space, so
 // they move only with the view and with pose errors). Knows nothing about traces or poses:
 // window.py compares its output with the motion the poses predict.
 //

@@ -3,7 +3,7 @@
 // The plain data the frame pipeline's stages pass to each other, and the small shared helpers
 // every stage needs the same way: a frame's times settled once (FrameTimes: which of a frame's
 // times each stage uses), the output's geometry from the eye and the settings, the
-// rotation that takes an output ray into the eye camera a picture was drawn from, and the level
+// rotation that takes an output ray into the eye camera an image was drawn from, and the level
 // horizon. Plain data and inline maths only: no state, no I/O, and nothing about any one stage's
 // implementation (vr_mirror\core\pipeline\README.md has the stages and their order).
 #pragma once
@@ -44,7 +44,7 @@ enum class PickKind {
     kNext,    // the next frame in order (or the first one due)
     kRepeat,  // the same frame again: the next one is not due yet
     kJump,    // skipped ahead: two or more were overdue
-    kHeld,    // nothing due is ready: the last picture again
+    kHeld,    // nothing due is ready: the last image again
     kNone,    // nothing to show
 };
 
@@ -116,7 +116,7 @@ inline Quat ImageMiddle(const EyeInfo& eye) {
 // (left, right, up, down, positive), the eye's orientation in the head (its cant), the view's camera in
 // the eye's (aim: the image's middle), the output's half-FOV tangents around it (outW, outH: the image's
 // half-angle on each side divided by the zoom, at the output's aspect ratio, never taller than the
-// image), whether the view's camera is held level (stabilization on), and whether the picture is
+// image), whether the view's camera is held level (stabilization on), and whether the image is
 // sRGB-encoded twice (EyeInfo).
 struct ViewGeometry {
     float left = 1, right = 1, up = 1, down = 1;
@@ -151,10 +151,10 @@ inline ViewGeometry GeometryFor(const EyeInfo& eye, const MirrorSettings& s, flo
     return g;
 }
 
-// How wide (pixels) a picture of `eye` must be for an output `outputWidth` pixels wide (at `aspect`) to
-// show it 1:1 in its middle: the output spans 2 outW of view tangent, the picture left + right. (The
-// view's middle is a few degrees off the eye's axis, where the picture is denser by under 0.3%.)
-inline float NativePictureWidth(const EyeInfo& eye, const MirrorSettings& s, int outputWidth, float aspect) {
+// How wide (pixels) an image of `eye` must be for an output `outputWidth` pixels wide (at `aspect`) to
+// show it 1:1 in its middle: the output spans 2 outW of view tangent, the image left + right. (The
+// view's middle is a few degrees off the eye's axis, where the image is denser by under 0.3%.)
+inline float NativeImageWidth(const EyeInfo& eye, const MirrorSettings& s, int outputWidth, float aspect) {
     const ViewGeometry g = GeometryFor(eye, s, aspect);
     return float(outputWidth) * (g.left + g.right) / (2 * g.outW);
 }
@@ -165,15 +165,15 @@ inline Quat LevelHorizon(const Quat& v) {
     return LookRotation(Rotate(v, {0, 0, -1}));
 }
 
-// Output ray (the view's camera) -> the eye camera of a picture drawn at head pose `picture`, as a
+// Output ray (the view's camera) -> the eye camera of an image drawn at head pose `image`, as a
 // row-major 3x3 matrix. The view's camera is the head at `view`, turned by the eye's cant and then to
 // the image's middle. With the view held level, that camera is levelled itself: a camera turned sideways
 // from the head tilts whenever the head pitches, by about the turn times the sine of the pitch (2.0° at
 // 3.5° and 35°).
-inline void ViewToEye(const Quat& picture, const Quat& view, const ViewGeometry& g, float rm[3][3]) {
+inline void ViewToEye(const Quat& image, const Quat& view, const ViewGeometry& g, float rm[3][3]) {
     const Quat turned = Mul(Mul(view, g.hmdToEye), g.aim);
     const Quat camera = g.level ? LevelHorizon(turned) : turned;
-    ToMatrix(Mul(Conj(Mul(picture, g.hmdToEye)), camera), rm);
+    ToMatrix(Mul(Conj(Mul(image, g.hmdToEye)), camera), rm);
 }
 
 // The pipeline's previous output, which a smoothing with state follows on from: its drawn pose
@@ -181,5 +181,5 @@ inline void ViewToEye(const Quat& picture, const Quat& view, const ViewGeometry&
 // stabilization.
 struct PreviousView {
     bool has = false;
-    Quat picture, view;
+    Quat followed, view;
 };

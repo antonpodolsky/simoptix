@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "pipeline/picture_room/picture_room.h"
+#include "pipeline/image_room/image_room.h"
 
 #include <algorithm>
 #include <cmath>
@@ -32,9 +32,9 @@ namespace {
 
 }
 
-EdgeRoom RoomIn(const Quat& picture, const Quat& view, const ViewGeometry& g) {
+EdgeRoom RoomIn(const Quat& image, const Quat& view, const ViewGeometry& g) {
     EdgeRoom r;
-    Quat delta = Normalize(Mul(Conj(picture), view));  // picture -> view, in head coordinates
+    Quat delta = Normalize(Mul(Conj(image), view));  // image -> view, in head coordinates
     if (delta.w < 0) {
         delta = {-delta.x, -delta.y, -delta.z, -delta.w};
     }
@@ -49,7 +49,7 @@ EdgeRoom RoomIn(const Quat& picture, const Quat& view, const ViewGeometry& g) {
     r.axis = {delta.x / sinHalf, delta.y / sinHalf, delta.z / sinHalf};
     auto fits = [&](float angle) {
         float rm[3][3];
-        ViewToEye(picture, TrailingView(picture, r.axis, angle), g, rm);
+        ViewToEye(image, TrailingView(image, r.axis, angle), g, rm);
         return Fits(rm, g);
     };
 
@@ -73,8 +73,8 @@ EdgeRoom RoomIn(const Quat& picture, const Quat& view, const ViewGeometry& g) {
     return r;
 }
 
-bool Within(const Quat& picture, const Quat& view, float fraction, const ViewGeometry& g, EdgeRoom* room) {
-    Quat d = Normalize(Mul(Conj(picture), view));
+bool Within(const Quat& image, const Quat& view, float fraction, const ViewGeometry& g, EdgeRoom* room) {
+    Quat d = Normalize(Mul(Conj(image), view));
     if (d.w < 0) {
         d = {-d.x, -d.y, -d.z, -d.w};
     }
@@ -87,25 +87,25 @@ bool Within(const Quat& picture, const Quat& view, float fraction, const ViewGeo
     // Quick check first (one fit instead of a search): still inside if trailing by lag / fraction.
     const Vec3 axis = {d.x / sinHalf, d.y / sinHalf, d.z / sinHalf};
     float rm[3][3];
-    ViewToEye(picture, TrailingView(picture, axis, lag / fraction), g, rm);
+    ViewToEye(image, TrailingView(image, axis, lag / fraction), g, rm);
     if (Fits(rm, g)) {
         return true;
     }
-    *room = RoomIn(picture, view, g);
+    *room = RoomIn(image, view, g);
     return room->lag <= fraction * room->room;
 }
 
-EdgeStop StopAtEdge(const Quat& picture, const Quat& view, const ViewGeometry& g) {
+EdgeStop StopAtEdge(const Quat& image, const Quat& view, const ViewGeometry& g) {
     EdgeStop s;
     s.view = view;
-    const EdgeRoom r = RoomIn(picture, view, g);
+    const EdgeRoom r = RoomIn(image, view, g);
     if (!(r.lag > kStopShare * r.room)) {
         return s;
     }
     const float allowed = kStopShare * r.room;
     s.stopped = true;
     s.keep = r.lag > 0 ? allowed / r.lag : 0;
-    s.view = TrailingView(picture, r.axis, allowed);
+    s.view = TrailingView(image, r.axis, allowed);
 
     // How far the stop moved the view (2 atan2(|v|, |w|): exact for small angles, unlike acos of the
     // dot product).

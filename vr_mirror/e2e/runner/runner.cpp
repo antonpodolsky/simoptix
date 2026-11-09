@@ -388,8 +388,8 @@ namespace {
             "deg"
         );
 
-        // Drift: a drawn pose that corrects poses from the picture (the cockpit correction) follows
-        // the picture from frame to frame and the head poses in the long run, so over the whole run
+        // Drift: a drawn pose that corrects poses from the image (the cockpit correction) follows
+        // the image from frame to frame and the head poses in the long run, so over the whole run
         // its error averages out; one that drifts doesn't (offline, with no pull back: 3.4 deg). Was the
         // correction's own mean (0.08-0.10 deg), which no longer leaves the drawn pose;
         // the pose error's mean read 0.29-0.31 deg there, 0.19 with the slot check alone. Over a second
@@ -493,7 +493,7 @@ namespace {
 
     // Black borders: any of the scenario's edge and corner patches showing no direction code, in
     // every capture that could be read (also those whose view direction couldn't).
-    // None in replays, whose real picture covers nearly all of the window.
+    // None in replays, whose real image covers nearly all of the window.
     void CheckBorders(const Scenario& sc, const Measured& d, Result& r) {
         int decodedCaps = 0, blackCaps = 0;
         for (const auto& c : d.caps) {

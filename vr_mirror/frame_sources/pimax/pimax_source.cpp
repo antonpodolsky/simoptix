@@ -493,7 +493,7 @@ bool PimaxSource::NextFrame(uint64_t after, GameFrame* f) {
     return true;
 }
 
-bool PimaxSource::CopyPicture(
+bool PimaxSource::CopyImage(
     ID3D11Device* device,
     ID3D11DeviceContext* context,
     const GameFrame& f,

@@ -15,7 +15,7 @@ Smoothed LookaheadSmoothing::Smooth(const SmoothingInput& in) {
     solver_.View(in.heads, behind, ahead, in.period, params_);
 
     bool steered = false;
-    if (in.pathPictures) {
+    if (in.pathImages) {
         if (int(targets_.size()) < n) {
             targets_.resize(n), weights_.resize(n);
         }
@@ -33,7 +33,7 @@ Smoothed LookaheadSmoothing::Smooth(const SmoothingInput& in) {
 
     const Quat v = solver_.PathView(behind);
 
-    // The last resort, for what the plan missed (a turn faster than the margin allows, or a picture it
+    // The last resort, for what the plan missed (a turn faster than the margin allows, or an image it
     // didn't plan against): stop at the edge. Nothing hidden to pull along: no state between frames.
     const EdgeStop stop = StopAtEdge(in.shown, LevelHorizon(v), in.geometry);
     return {stop.view, steered, stop.stopped, stop.movedDeg};
@@ -43,12 +43,12 @@ bool LookaheadSmoothing::Plan(const SmoothingInput& in, int n) {
     bool added = false;
     for (int i = 0; i < n; i++) {
         const Quat v = LevelHorizon(solver_.PathView(i));
-        const Quat& picture = in.pathPictures[i];  // the same for every frame whose window holds it
+        const Quat& image = in.pathImages[i];  // the same for every frame whose window holds it
         EdgeRoom r;
-        if (Within(picture, v, kPlanRoom, in.geometry, &r)) {
+        if (Within(image, v, kPlanRoom, in.geometry, &r)) {
             continue;
         }
-        targets_[i] = TrailingView(picture, r.axis, kPlanRoom * r.room);
+        targets_[i] = TrailingView(image, r.axis, kPlanRoom * r.room);
         if (weights_[i] == 1) {
             added = true;
         }

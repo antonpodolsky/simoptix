@@ -4,10 +4,10 @@ rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds SimOptix: VR Mirror, simoptix_vr_mirror.dll: the OBS source SimOptix: Pimax
 rem Mirror (plugin.cpp; drawn by mirror_view.cpp with the effect in warp_effect.cpp, its frames
 rem copied by frame_ring.cpp, its frame source started and stopped by session_worker.cpp, the audio kept
-rem in step with its picture by audio_sync.cpp), and its race
+rem in step with its view by audio_sync.cpp), and its race
 rem auto-record (race_auto_record\race_recorder.cpp decides when, race_auto_record\auto_record.cpp tells
 rem OBS), plus the Pimax frame source (..\frame_sources\pimax, listed in its pimax.rsp), the VR
-rem Mirror's core (..\core, its sources listed in ..\core\build\*.rsp) and ..\..\shared (the picture's
+rem Mirror's core (..\core, its sources listed in ..\core\build\*.rsp) and ..\..\shared (the view's
 rem delay the plugins share, the crash dump, the files kept in %%LOCALAPPDATA%%\simoptix, and the game's
 rem telemetry listed by
 rem ..\..\shared\telemetry\sources.bat, which also finds LMU's headers: LMU_SDK; without them the plugin

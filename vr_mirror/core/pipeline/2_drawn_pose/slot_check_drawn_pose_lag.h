@@ -10,7 +10,7 @@
 // re-projected from a pose 11-22 ms too new (measured in a real race: 4-6 px jumps at 1080p).
 // Timing can't tell reliably (tried: .agents\skills\dev\findings\e2e.md, "Findings so far"). The images
 // can: the rotation between
-// two consecutive frames' render poses shows in how the picture moved. For each pair of
+// two consecutive frames' render poses shows in how the image moved. For each pair of
 // candidate lags (previous frame, this frame) the previous thumbnail is re-projected by the
 // rotation between those two poses and compared with this one. A forward filter turns those
 // costs into one lag per frame: the cheapest path so far, with a penalty for changing the lag,
@@ -47,15 +47,15 @@ float ReprojectionError(
     const ThumbView& view
 );
 
-// How much ReprojectionError grows per square degree of pose error for this picture (the mean of
-// small yaw and pitch offsets). Near 0 for a featureless picture.
+// How much ReprojectionError grows per square degree of pose error for this image (the mean of
+// small yaw and pitch offsets). Near 0 for a featureless image.
 float RotationSensitivity(const std::vector<float>& thumb, const Quat& pose, const ThumbView& view);
 
 // Whether the game's frame timing shows a queue, so that frames may be late: arrivals shifted
 // against the display grid for several frames (the slot lead, taken modulo a display period,
 // more than 3 ms off its usual value over the last 5 frames; it stayed 3-7 ms off through the
 // late stretch of a race, from before the first late frame). Only while it is open may frames
-// get a lag: otherwise the right lag is 0, and the slot check, on real pictures, picked
+// get a lag: otherwise the right lag is 0, and the slot check, on real images, picked
 // wrong lags when it ran then. Measured on three sessions:
 // - a single frame's lead often reads a whole period high (hence modulo a period),
 // - dropped frames alone are no sign: lone drops are common, and a short hiccup (three late
@@ -119,14 +119,14 @@ public:
     }
 
 private:
-    // Penalty per lag change: (0.17 deg)^2. Tuned on real pictures (thumbnails rebuilt from four
-    // recordings): 0.004, tuned on e2e's clean fake pictures, let noise switch the lag; 0.03
+    // Penalty per lag change: (0.17 deg)^2. Tuned on real images (thumbnails rebuilt from four
+    // recordings): 0.004, tuned on e2e's clean fake images, let noise switch the lag; 0.03
     // re-timed no on-time frame in any of the false cases and cut the error in the real queue
     // from 0.130 to 0.077 deg rms (0.015: 0.064 there, but false re-timing elsewhere).
     static constexpr float kChange = 0.03f;
     // Penalty for going back to lag 0 (the game caught up): (0.06 deg)^2. Lower, as a queue
     // ends at once; with kChange the filter held the last lag for several on-time frames after
-    // the real queue (27 re-timed on real pictures; 12 with this), and no false case got worse.
+    // the real queue (27 re-timed on real images; 12 with this), and no false case got worse.
     static constexpr float kReturn = 0.004f;
     float cost_[kLags] = {};
     int lag_ = 0;

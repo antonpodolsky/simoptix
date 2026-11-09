@@ -70,7 +70,7 @@ def Run(cad, video_name):
         )
 
     if has_view:
-        # Picture age at the view's moment: the view is for view_time, the picture for its slot.
+        # Image age at the view's moment: the view is for view_time, the image for its slot.
         age = (view_time - slot)[ok] * 1e3
         print(
             f"  view time - shown frame's slot (ms): p1 {np.percentile(age, 1):.1f} p50 "

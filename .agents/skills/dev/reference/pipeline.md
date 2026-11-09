@@ -33,13 +33,13 @@ Every row also adds one line to `vr_mirror\core\build\pipeline.rsp`.
 | 1 arrival timing | Yes | One `case` | One value, and its name | `PimaxSource` holds it as `ArrivalTiming` |
 | 2 drawn pose | Yes | One `case` | One value | Hosts feed it through `DrawnPoseFeed`, and it asks for its images itself (`Needs`, `Arrived`). The glue asks `PoseOf`, `PosesAt` and `MomentOf`. Its numbers go out through `Report`, and the plugin logs its name from `NameOf` |
 | 3 frame picker | Yes | One `case` | One value | Hosts ask `Tick`, `OutDelay` and `SlotsInUse`. Its numbers go out through `Report` |
-| 4 smoothing | Yes | One `case` | One value | The glue calls `Window` and `Smooth`, and it keeps its view inside with the picture room's functions. A smoothing with a delay of its own also needs its line in `SmoothingDelayS`, because hosts size their hold by it before a pipeline exists |
+| 4 smoothing | Yes | One `case` | One value | The glue calls `Window` and `Smooth`, and it keeps its view inside with the image room's functions. A smoothing with a delay of its own also needs its line in `SmoothingDelayS`, because hosts size their hold by it before a pipeline exists |
 | 5 warp | Yes | One `case` | One value | The glue asks `Params`. The GPU half (`warp.hlsli`) is shared by both hosts' shaders, so a warp that changes the shader also changes `warp.hlsli` |
 | observer | Yes | One `case` | One value | The glue hands it records and report lines. Hosts give it a sink and draw `Stamp` |
 
 ## What keeps stages separable
 
-- No stage includes another. The smoothing calls the picture room, which is stateless geometry beside
+- No stage includes another. The smoothing calls the image room, which is stateless geometry beside
   the stages.
 - A stage gets its inputs as plain data and returns plain data.
 - Nothing specific to one method crosses an interface.

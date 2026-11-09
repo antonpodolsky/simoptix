@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "openxr_pictures.h"
+#include "openxr_images.h"
 
 #include <d3dcompiler.h>
 
@@ -15,12 +15,12 @@ using Microsoft::WRL::ComPtr;
 namespace {
 
     // A triangle over the whole target, and each stored pixel the average of an n x n grid of bilinear
-    // taps over its area of the picture, in linear light, encoded to sRGB for the UNORM target.
+    // taps over its area of the image, in linear light, encoded to sRGB for the UNORM target.
     constexpr const char* kShader = R"(
-Texture2D picture : register(t0);
+Texture2D image : register(t0);
 SamplerState linearClamp : register(s0);
 cbuffer Params : register(b0) {
-    float4 rect;  // the picture's area in the texture (u0, v0, u1, v1)
+    float4 rect;  // the image's area in the texture (u0, v0, u1, v1)
     float4 tap;   // x, y: one stored pixel's size in the texture's uv; z: taps per side
 };
 struct V { float4 pos : SV_Position; float2 uv : TEXCOORD0; };
@@ -41,7 +41,7 @@ float4 Ps(V i) : SV_Target {
     float3 sum = 0;
     for (int y = 0; y < n; y++)
         for (int x = 0; x < n; x++)
-            sum += picture.SampleLevel(linearClamp, uv + ((float2(x, y) + 0.5) / n - 0.5) * tap.xy, 0).rgb;
+            sum += image.SampleLevel(linearClamp, uv + ((float2(x, y) + 0.5) / n - 0.5) * tap.xy, 0).rgb;
     return float4(Encode(sum / (n * n)), 1);
 }
 )";
@@ -79,7 +79,7 @@ float4 Ps(V i) : SV_Target {
                || f == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     }
 
-    // Up to this shrink (picture pixels per needed pixel) the picture is stored at its own size, and the
+    // Up to this shrink (image pixels per needed pixel) the image is stored at its own size, and the
     // host's view does the one resample. Shrinking it here too would resample it twice. Measured
     // (findings\openxr.md, "The stored image's size"):
     // - at 1.05 (a 4K canvas at zoom 1.25), LMU's eye images kept 14x the finest detail's energy, and
@@ -88,7 +88,7 @@ float4 Ps(V i) : SV_Target {
     //   is 0.0023 against the shrunk copy's 0.0003, at 1.58 (a 1440p canvas) 0.0101 against 0.0013.
     constexpr float kFullSizeMaxShrink = 1.2f;
 
-    // The stored width of a `width` x `height` picture: its own when the host needs nearly that (above),
+    // The stored width of a `width` x `height` image: its own when the host needs nearly that (above),
     // else `needWidth` (0: its own), at most what `maxBytes` (0: no limit) holds at 4 bytes a pixel.
     float StoredWidth(int width, int height, float needWidth, double maxBytes) {
         float stored = static_cast<float>(width);
@@ -107,7 +107,7 @@ float4 Ps(V i) : SV_Target {
 
 }
 
-bool OpenXrPictures::MakeShaders(ID3D11Device* device) {
+bool OpenXrImages::MakeShaders(ID3D11Device* device) {
     if (vs_ && ps_) {
         return true;
     }
@@ -115,7 +115,7 @@ bool OpenXrPictures::MakeShaders(ID3D11Device* device) {
     if (FAILED(D3DCompile(
             kShader,
             strlen(kShader),
-            "openxr_pictures",
+            "openxr_images",
             nullptr,
             nullptr,
             "Vs",
@@ -128,7 +128,7 @@ bool OpenXrPictures::MakeShaders(ID3D11Device* device) {
         || FAILED(D3DCompile(
             kShader,
             strlen(kShader),
-            "openxr_pictures",
+            "openxr_images",
             nullptr,
             nullptr,
             "Ps",
@@ -139,7 +139,7 @@ bool OpenXrPictures::MakeShaders(ID3D11Device* device) {
             &errors
         ))) {
         CoreLog(
-            "OpenXR pictures: shader not compiled: %s",
+            "OpenXR images: shader not compiled: %s",
             errors ? static_cast<const char*>(errors->GetBufferPointer()) : "?"
         );
 
@@ -164,7 +164,7 @@ bool OpenXrPictures::MakeShaders(ID3D11Device* device) {
     return vs_ && ps_ && constants_ && sampler_;
 }
 
-void OpenXrPictures::CloseTextures() {
+void OpenXrImages::CloseTextures() {
     for (int k = 0; k < openxr_share::kTextures; k++) {
         if (reading_[k] && header_) {
             openxr_share::ReleaseTexture(*header_, k);
@@ -178,7 +178,7 @@ void OpenXrPictures::CloseTextures() {
     width_ = height_ = 0;
 }
 
-void OpenXrPictures::Release() {
+void OpenXrImages::Release() {
     CloseTextures();
     for (auto& q : read_) {
         q.Reset();
@@ -189,7 +189,7 @@ void OpenXrPictures::Release() {
     mapping_.Reset();
 }
 
-void OpenXrPictures::Open(ID3D11Device* device) {
+void OpenXrImages::Open(ID3D11Device* device) {
     if (device != device_) {
         Release();
         device_ = device;
@@ -231,7 +231,7 @@ void OpenXrPictures::Open(ID3D11Device* device) {
     for (int k = 0; k < openxr_share::kTextures; k++) {
         HANDLE h = reinterpret_cast<HANDLE>(header_->textureHandle[k]);
         if (FAILED(device->OpenSharedResource(h, IID_PPV_ARGS(&textures_[k])))) {
-            CoreLog("OpenXR pictures: the layer's texture %d not opened (another graphics adapter?)", k);
+            CoreLog("OpenXR images: the layer's texture %d not opened (another graphics adapter?)", k);
             CloseTextures();
             return;
         }
@@ -251,7 +251,7 @@ void OpenXrPictures::Open(ID3D11Device* device) {
     width_ = header_->textureWidth, height_ = header_->textureHeight;
     sameFamily_ = R8G8B8A8(format);
     CoreLog(
-        "OpenXR pictures: the layer's textures opened, %ux%u, format %u (the game's %u)",
+        "OpenXR images: the layer's textures opened, %ux%u, format %u (the game's %u)",
         width_,
         height_,
         unsigned(format),
@@ -259,7 +259,7 @@ void OpenXrPictures::Open(ID3D11Device* device) {
     );
 }
 
-bool OpenXrPictures::Copy(
+bool OpenXrImages::Copy(
     ID3D11Device* device,
     ID3D11DeviceContext* context,
     int texture,
@@ -338,7 +338,7 @@ bool OpenXrPictures::Copy(
     return true;
 }
 
-void OpenXrPictures::Poll(ID3D11DeviceContext* context) {
+void OpenXrImages::Poll(ID3D11DeviceContext* context) {
     for (int k = 0; k < openxr_share::kTextures; k++) {
         if (!reading_[k]
             || context->GetData(read_[k].Get(), nullptr, 0, D3D11_ASYNC_GETDATA_DONOTFLUSH) != S_OK) {

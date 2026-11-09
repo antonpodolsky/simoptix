@@ -30,7 +30,7 @@ struct TelemetryArea {
     std::atomic<uint32_t> size;     // sizeof(TelemetryArea) once set up
     std::atomic<int32_t> users;     // things in the process that need telemetry now, in either plugin
     std::atomic<int64_t> reader;    // which plugin's reader runs (its token, telemetry_reader.cpp); 0: none
-    // The moment the picture showed at the last read, in either plugin (performance-counter seconds,
+    // The moment the view showed at the last read, in either plugin (performance-counter seconds,
     // shown_moment.h; 0: none yet): kept here so it never goes back, whichever plugin reads.
     std::atomic<double> shown;
     SessionCount sessions;  // the reader's thread, whichever plugin it runs in

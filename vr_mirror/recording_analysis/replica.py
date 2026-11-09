@@ -1,6 +1,6 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
-r"""The plugin's slot check (vr_mirror\core\pipeline\2_drawn_pose\slot_check_drawn_pose_lag) replayed offline on a recording's real pictures:
+r"""The plugin's slot check (vr_mirror\core\pipeline\2_drawn_pose\slot_check_drawn_pose_lag) replayed offline on a recording's real images:
 each game frame's 64x32 thumbnail is rebuilt from the recorded frame (the plugin's warp inverted:
 thumbnail texel -> eye ray -> output pixel, with the pose the frame was drawn with), then the
 matcher's logic runs on them (both thumbnails re-projected halfway between candidate poses, the
@@ -12,7 +12,7 @@ vr_mirror\core\pipeline\2_drawn_pose\slot_check_drawn_pose_lag.cpp: keep the two
 
 usage: python -I replica.py <OBS log> <recording .mp4> <start mm:ss> <secs> [options]
   --show A-B      print the evidence frame by frame for video seconds A to B into the window
-  --maps SERIAL   save pictures of that game frame's thumbnails and per-texel errors (8x, PPM) to
+  --maps SERIAL   save images of that game frame's thumbnails and per-texel errors (8x, PPM) to
                   the cache folder: the previous and this thumbnail re-projected for lag 0 and for
                   the lag pair the matcher chose, and the error of each
   --change, --return  the filter's penalties (deg^2; default 0.03 and 0.004 as in core)

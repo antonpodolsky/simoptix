@@ -10,7 +10,7 @@
 #include "fake_log.h"
 
 // The tool's own frames (from SIMOPTIX_VR_MIRROR_TRACE), one per output frame drawn (one per game frame):
-// the game frame shown, when it was presented, the head pose its picture was re-projected from (raw)
+// the game frame shown, when it was presented, the head pose its image was re-projected from (raw)
 // and the view it meant to show.
 struct ToolTrace {
     std::vector<uint64_t> serial;   // the game frame shown (a repeated frame shows again)
@@ -25,7 +25,7 @@ struct ToolTrace {
 
     // Columns by their header name, so builds that write other columns read the same (older builds
     // wrote lags and the cockpit correction between them; the counters are cumulative). The pose the
-    // picture was warped from: `img` (the observer's trace), else `raw` (older builds). Lines that
+    // image was warped from: `img` (the observer's trace), else `raw` (older builds). Lines that
     // aren't frames ("#stats,...") are skipped.
     bool Load(const fs::path& path) {
         std::ifstream f(path);
@@ -154,7 +154,7 @@ void ToolPresentStats(const ToolTrace& tt, double* fps, double* maxGapMs);
 double PresentJitterMs(const ToolTrace& tt);
 // How long after its arrival the tool presented each game frame, skipping the first second: the
 // median (ms) and its spread (99th minus 1st percentile, ms). With Look-ahead it is the
-// picture's delay, which audio sync shifts the sound by, so it should hold steady.
+// view's delay, which audio sync shifts the sound by, so it should hold steady.
 void PresentDelayStats(const ToolTrace& tt, double* medianMs, double* spreadMs);
 // Game frames (after the first second) that the tool never presented.
 int MissedGameFrames(const FakeLog& log, const ToolTrace& tt, int* considered);
@@ -172,8 +172,8 @@ std::vector<double> PoseErrorsDeg(const FakeLog& log, const ToolTrace& tt);
 // ...as rotations (from the pose the game rendered with to the one the tool used), in order.
 std::vector<Quat> PoseErrors(const FakeLog& log, const ToolTrace& tt);
 // Visible jumps: degrees the pose error changed from each game frame shown to the next (the
-// rotation between their errors). A steady error moves the whole picture with the head and isn't
-// seen; a change shows as the picture jumping for a frame.
+// rotation between their errors). A steady error moves the whole image with the head and isn't
+// seen; a change shows as the image jumping for a frame.
 std::vector<double> PoseJumpsDeg(const FakeLog& log, const ToolTrace& tt);
 // A jump that shows: 0.1 deg is 1.8 px of a 1920x1080 recording at zoom 1.3 (17.9 px per degree in
 // the middle), where the shake study counted jumps over 2 px.

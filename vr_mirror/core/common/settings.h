@@ -16,7 +16,7 @@ struct MirrorSettings {
     int smoothing = kSmoothingLookahead;
     float zoom = 1.5f;  // crop factor; the spare image around the view is how far it may trail the head
     // The drawn pose stage's method (vr_mirror\core\pipeline\2_drawn_pose\): 0 off, every frame keeps
-    // the slot its arrival timing gives it; 1 the slot check: judge from small pictures whether each game
+    // the slot its arrival timing gives it; 1 the slot check: judge from small images whether each game
     // frame was rendered for an earlier slot than its arrival says (the game had frames queued); 2 the
     // slot check plus the cockpit correction: while frames arrive irregularly, each frame's pose is also
     // corrected by how far its fixed cockpit moved against the frame before.

@@ -142,8 +142,7 @@ assumes.
    - **view**: what VR Mirror shows
    - **video**, **recording**, **stream**: what OBS outputs
 
-   The code's own `picture_*` names (the picture room, `FakeGamePicture`) stay where they name that
-   code. Log lines are quoted as the code writes them.
+   The code uses the same words (dev skill, "Words"). Log lines are quoted as the code writes them.
 9. **Facts first.**
    - Check a claim against the code or a measurement before writing it. Say what was not
      verified.

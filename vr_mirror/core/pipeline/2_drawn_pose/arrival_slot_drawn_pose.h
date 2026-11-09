@@ -3,7 +3,7 @@
 // ArrivalSlotDrawnPose: Pimax's prediction for the slot each frame arrived for. A frame's drawn
 // pose is the pose the runtime predicted for the display slot its arrival timing assigned it, which
 // the game rendered it with while it keeps up (setting drawn_pose 0); the measured head at its
-// pose time where no prediction is recorded. Looks at no pictures (the feed makes none). Stateless.
+// pose time where no prediction is recorded. Looks at no images (the feed makes none). Stateless.
 // Knows nothing about smoothing, edges or PVR (poses come from a PoseSource).
 //
 // PredictedPose is also how the slot check's implementations turn the slot they judged into a pose.

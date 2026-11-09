@@ -7,11 +7,11 @@
 // tau, so a steady turn, or a steadily changing one, is followed with no lag at all, while tremor
 // and tracking noise are averaged away. tau varies with the head's speed (long while nearly still,
 // short in turns), each moment with its own inside one solve, so consecutive frames share nearly the
-// same path. The path is kept inside the pictures: each moment is checked against its drawn pose
-// (picture_room), and where it would pass kPlanRoom of its room, the moment gets the margin point as
+// same path. The path is kept inside the images: each moment is checked against its drawn pose
+// (image_room), and where it would pass kPlanRoom of its room, the moment gets the margin point as
 // its target with a large weight, and the path is solved again (up to kPlanPasses times), so the jerk
 // penalty eases it there and back ahead of time. Its last resort, for what the plan misses: the view
-// stopped at the edge of the frame's pictures (StopAtEdge). Measured offline on 4.3 h of real head
+// stopped at the edge of the frame's images (StopAtEdge). Measured offline on 4.3 h of real head
 // poses: .agents\skills\dev\findings\mirror_app.md, "Findings: other smoothing methods".
 //
 // Logic only: poses come in sampled at a fixed spacing; no runtime calls, no locking, and no
@@ -25,7 +25,7 @@
 
 #include "common/rot.h"
 #include "pipeline/4_smoothing/smoothing.h"
-#include "pipeline/picture_room/picture_room.h"
+#include "pipeline/image_room/image_room.h"
 
 // The tuning of the Look-ahead setting.
 struct LookaheadParams {
@@ -211,7 +211,7 @@ public:
     Smoothed Smooth(const SmoothingInput& in) override;
 
 private:
-    // Planning the path inside the pictures: a moment that would pass kPlanRoom of its room (inside
+    // Planning the path inside the images: a moment that would pass kPlanRoom of its room (inside
     // the last resort's kStopShare) gets the margin point as its target, weighted kPlanWeight against
     // the head's 1 (the jerk penalty's (tau / dt)^6 is ~8,000 in a fast turn); up to kPlanPasses
     // solves, as pulling one moment in can push its neighbours out.

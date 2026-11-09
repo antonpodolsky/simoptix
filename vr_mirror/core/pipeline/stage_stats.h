@@ -13,7 +13,7 @@ class StatsReport {
 public:
     // Starts a line about `topic` (e.g. "game behind").
     virtual void Line(const char* topic) = 0;
-    // A number on the current line, then what it is (e.g. 12, "frames judged by picture"), with
+    // A number on the current line, then what it is (e.g. 12, "frames judged by image"), with
     // `decimals` digits after the point; the unit, if any, leads `name` ("ms copy ready p95").
     virtual void Value(const char* name, double value, int decimals = 0) = 0;
 

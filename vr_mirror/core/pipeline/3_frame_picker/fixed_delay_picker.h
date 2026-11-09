@@ -5,7 +5,7 @@
 // times plus 2 ms, 4-45 ms; 40 ms until then) and then kept (every change would show a frame twice or
 // skip one), plus the smoothing's delay. One frame per tick, in order: the next one unless it is
 // clearly not due yet (4 ms of slack: the clocks slipped, show the current one again), catching up
-// only when two are clearly overdue; when nothing due is ready, the last picture again. Logic only;
+// only when two are clearly overdue; when nothing due is ready, the last image again. Logic only;
 // its warm-up buffer is reserved at Restart. Knows nothing about textures or OBS.
 #pragma once
 

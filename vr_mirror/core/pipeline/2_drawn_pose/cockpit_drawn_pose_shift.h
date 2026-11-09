@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// CockpitDrawnPose's helpers: where its patches of the eye sit, how far one patch's picture moved
+// CockpitDrawnPose's helpers: where its patches of the eye sit, how far one patch's image moved
 // between two game frames (to a small fraction of a texel), and the one small rotation that most
 // patches' moves agree on. Pure logic: patches, poses and the eye's geometry come in as
 // parameters; it knows nothing about D3D, PVR, threads or which frames are compared.
@@ -25,7 +25,7 @@ constexpr int kCockpitColumns = 5, kCockpitRows = 4, kCockpitPatches = kCockpitC
 constexpr int kCockpitPatchSize = 32;
 extern const float kCockpitAreas[kCockpitPatches][4];  // u0, v0, u1, v1 (fractions of the eye)
 
-// One patch's move between the previous frame's picture and this frame's.
+// One patch's move between the previous frame's image and this frame's.
 struct PatchShift {
     bool ok = false;
     // Texels (x right, y down): the content at texel (i, j) of this frame's patch is at (i + dx, j + dy)

@@ -8,7 +8,7 @@
 //
 // The runtime's side is faked: images are handed out in turn, and what happens while xrEndFrame is in
 // the runtime is the caller's (a runtime that holds the call, a game thread that goes on meanwhile).
-// Knows nothing about the fake game's timing, motion or picture.
+// Knows nothing about the fake game's timing, motion or image.
 #pragma once
 
 #include <d3d11.h>

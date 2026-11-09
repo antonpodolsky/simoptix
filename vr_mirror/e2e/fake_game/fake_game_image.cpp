@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "fake_game_picture.h"
+#include "fake_game_image.h"
 
 #include <d3dcompiler.h>
 
@@ -61,9 +61,9 @@ float3 Cockpit(float3 w) {
 float3 Code(VSOut i) {
     // frame.x on: the game frame's real thumbnail (a replay's), as flat 64x32 blocks over the area
     // the tool makes its thumbnails of (kThumbArea, u 0.2-0.8, v 0.25-0.85), so the
-    // tool's slot check sees the real pictures (each block averages to exactly its colour;
+    // tool's slot check sees the real images (each block averages to exactly its colour;
     // the tool's samples sit 1.5 px and more inside each block). The colours are as displayed,
-    // like the direction codes elsewhere. The rest of the picture keeps its codes.
+    // like the direction codes elsewhere. The rest of the image keeps its codes.
     if (frame.x > 0.5) {
         float2 a = (i.uv - float2(0.2, 0.25)) / 0.6;
         if (all(a >= 0) && all(a < 1)) return thumbTex.Load(int3(int(a.x * 64), int(a.y * 32), 0)).rgb;
@@ -87,7 +87,7 @@ float4 PS(VSOut i) : SV_Target {
     float2 t = float2(lerp(-tan.x, tan.y, i.uv.x), lerp(tan.z, -tan.w, i.uv.y));  // right and up positive
     if (t.x < -frame.y * tan.x || t.x > frame.y * tan.y || t.y > frame.y * tan.z || t.y < -frame.y * tan.w)
         return float4(0, 0, 0, 1);
-    // Stored as the faked source stores it (scene.z): Pimax's mirror sRGB-encodes the picture twice, so
+    // Stored as the faked source stores it (scene.z): Pimax's mirror sRGB-encodes the image twice, so
     // its bytes are the code's encoding; the OpenXR layer's are the code itself.
     float3 c = Code(i);
     float3 s = scene.z > 0.5 ? ToSrgb(c) : c;
@@ -97,7 +97,7 @@ float4 PS(VSOut i) : SV_Target {
 
 }
 
-bool FakeGamePicture::Init(ID3D11Device* device, bool thumbnails) {
+bool FakeGameImage::Init(ID3D11Device* device, bool thumbnails) {
     ComPtr<ID3DBlob> vs, ps, err;
     if (FAILED(D3DCompile(
             kShader,
@@ -156,7 +156,7 @@ bool FakeGamePicture::Init(ID3D11Device* device, bool thumbnails) {
     return vs_ && ps_ && cbuffer_;
 }
 
-void FakeGamePicture::Draw(
+void FakeGameImage::Draw(
     ID3D11DeviceContext* context,
     ID3D11RenderTargetView* target,
     int width,

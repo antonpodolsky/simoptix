@@ -24,7 +24,7 @@
 
 class SlotCheckDrawnPose : public DrawnPose {
 public:
-    PictureNeeds Needs() const override;
+    ImageNeeds Needs() const override;
     void Reset() override;
     int Arrived(
         const GameFrame& f,
@@ -53,7 +53,7 @@ public:
         arrival_.PosesBetween(times, heads, n, poses, out);
     }
 
-    // "game behind": the frames judged by picture, and those found rendered for an earlier slot.
+    // "game behind": the frames judged by image, and those found rendered for an earlier slot.
     void Report(StatsReport& r) override;
     // The slots before its arrival slot that the frame's pose is for, whether that is its own judgement
     // (else the last frame's), and its own judgement before hindsight.

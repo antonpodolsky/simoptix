@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Meter image: a picture embedded in the plugin (a PNG resource, gmeter.rc), scaled once to the size
+// Meter image: an image embedded in the plugin (a PNG resource, gmeter.rc), scaled once to the size
 // it is drawn at with GDI+'s high-quality bicubic filter and kept as a texture, so it is drawn 1:1
 // each frame (no filtering by OBS, no work per frame). Rebuilt only when the size changes.
 //
@@ -13,7 +13,7 @@
 class MeterImage {
 public:
     explicit MeterImage(const wchar_t* resource) : resource_(resource) {}
-    // Scales the picture to size x size pixels if it isn't already (outside drawing; enters graphics).
+    // Scales the image to size x size pixels if it isn't already (outside drawing; enters graphics).
     void Build(int size);
     // Draws it with its top left at (0, 0), premultiplied over what is there (blending is the caller's).
     void Draw() const;

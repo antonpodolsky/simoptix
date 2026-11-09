@@ -14,14 +14,14 @@
 struct EyeInfo {
     float leftTan = 1, rightTan = 1, upTan = 1, downTan = 1;  // FOV half-angle tangents
     Quat hmdToEye;                                            // eye orientation relative to head (canting)
-    // The picture's bytes are sRGB-encoded twice (Pimax's client mirror: an _SRGB texture holding
+    // The image's bytes are sRGB-encoded twice (Pimax's client mirror: an _SRGB texture holding
     // already-encoded values), so one encoding is undone before it is shown or looked at; false: once,
     // as the game drew it.
     bool encodedTwice = false;
 };
 
 struct GameFrame {
-    int buffer = -1;        // which of the source's pictures holds it (Pimax: 0, its one mirror; the OpenXR
+    int buffer = -1;        // which of the source's images holds it (Pimax: 0, its one mirror; the OpenXR
                             // layer: its texture); -1: none yet
     uint64_t serial = 0;    // increments on every new frame
     double time = 0;        // source time the frame arrived

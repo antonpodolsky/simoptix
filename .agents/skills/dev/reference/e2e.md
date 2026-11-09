@@ -47,7 +47,7 @@ For each scenario, `out\<scenario>\` keeps:
 
 The mirror app logs every stage's numbers every 10 s while it runs, like the OBS plugin, in
 `out\<scenario>\tool.log`. An example is the slot check's "game behind: X frames rendered for an
-earlier slot ..., Y frames judged by picture".
+earlier slot ..., Y frames judged by image".
 
 ## The local files test
 

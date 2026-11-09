@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// AudioSync: keeps every audio source in step with the VR Mirror source's picture, which runs ProgramDelay
+// AudioSync: keeps every audio source in step with the VR Mirror source's view, which runs ProgramDelay
 // behind the game (look-ahead smoothing): each audio source's sync offset becomes its own offset plus
-// that delay. LMU's sound keeps its own offset (-120 ms: it trails the picture), so it ends up that
+// that delay. LMU's sound keeps its own offset (-120 ms: it trails the view), so it ends up that
 // much earlier than the rest, without this knowing which source it is.
 //
 // The shift each source got is kept in its private settings, which OBS saves with the scene, so a

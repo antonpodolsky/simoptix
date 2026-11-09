@@ -6,7 +6,7 @@
 // name and extensions, a D3D11 session, one swapchain per eye in the game's format and usage, and five
 // seconds of frames, the left eye cleared to a colour that encodes the frame's number, the right one to
 // grey. Meanwhile it reads what the layer publishes, as VR Mirror does, on a device of its own
-// (openxr_check_copies.h): every frame's record must hold what was submitted, nearly every frame's picture
+// (openxr_check_copies.h): every frame's record must hold what was submitted, nearly every frame's image
 // must be copied, and every copy read back must show its own frame; the layer's clock reading must match the
 // runtime's conversion. The layer only wakes up in a program called "Le Mans Ultimate.exe", which is why
 // build.bat gives this program that name. It is not the game and touches no game file. Then read the

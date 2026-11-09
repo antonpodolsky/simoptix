@@ -1,6 +1,6 @@
-# Picture room (beside the stages)
+# Image room (beside the stages)
 
-The picture room answers a question for the smoothings: how much room does a view have inside a
+The image room answers a question for the smoothings: how much room does a view have inside a
 game frame's eye image before the output would look past the image's edge and show black? It also
 stops a view at that edge. It is stateless geometry beside the stages, not a stage of its own. Each
 smoothing calls it to keep its view inside the images.
@@ -13,7 +13,7 @@ smoothing calls it to keep its view inside the images.
 | look-ahead | The method behind the Look-ahead smoothing. The view runs half a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
 | tick | One time OBS draws a frame of its output |
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
-| picture room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
+| image room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
 
 ## What it does
 
@@ -42,7 +42,7 @@ smoothing calls it to keep its view inside the images.
 
 | File | What |
 |---|---|
-| `picture_room.h/.cpp` | `RoomIn`, `Within`, `StopAtEdge`, `TrailingView`, `EdgeRoom`, `EdgeStop`, `kStopShare` |
+| `image_room.h/.cpp` | `RoomIn`, `Within`, `StopAtEdge`, `TrailingView`, `EdgeRoom`, `EdgeStop`, `kStopShare` |
 
 ## How stops are counted
 
@@ -53,7 +53,7 @@ The glue counts the frames where a smoothing's stop acted (`Smoothed::stopped`,
 - e2e's "edge limit acted"
 - stage_replay's "edge limit"
 
-**Thread:** the output thread. The picture room holds no state.
+**Thread:** the output thread. The image room holds no state.
 
 **Uses:** plain geometry: poses, views and the output's shape.
 

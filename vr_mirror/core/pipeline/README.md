@@ -11,7 +11,7 @@ alone (`vr_mirror\e2e\stage_replay`) or mixed through the builder. The folder nu
 | frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`) or the OpenXR source (`vr_mirror\frame_sources\openxr\`) |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
-| picture room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
+| image room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
 | observer | The debugging code beside the pipeline. It numbers the stamp and writes the frame trace |
 | stamp | The frame number that VR Mirror draws as 15 small squares in the top-left corner of the view, when its Debug setting is on |
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
@@ -36,9 +36,9 @@ Each stage's README says what it does, its input and output, when to use each im
 what it must not know.
 
 Two parts sit beside the stages and are not stages:
-- The **picture room** (`picture_room\`) is stateless geometry. Each smoothing uses it to keep its
+- The **image room** (`image_room\`) is stateless geometry. Each smoothing uses it to keep its
   view inside the game's eye images. It computes the room a view has, and the stop at the edge that is
-  each smoothing's last resort (`picture_room\README.md`).
+  each smoothing's last resort (`image_room\README.md`).
 - The **observer** (`observer\`, `Observer`, config field `observer` with the values `kNone` and
   `kStampTrace`) is for debugging. The glue hands it one record per output frame and the stages'
   report lines. It numbers the frame-number stamp and writes the frame trace (`observer\README.md`).
@@ -97,7 +97,7 @@ Two parts sit beside the stages and are not stages:
        after the moments as the shown frames run ahead of them (`PosesBetween`). The glue takes that
        lead from the frames' timing: the median over the last 9 ticks of the shown frame's moment
        minus the tick's (`MomentOf`), eased over 0.1 s (`Pipeline::ShownLead`).
-   - The smoothing gives the view, inside the shown frame's image, by its own means (the picture
+   - The smoothing gives the view, inside the shown frame's image, by its own means (the image
      room). Instant catches up, or the look-ahead plans, and then its own stop at the edge acts as a
      last resort. The glue counts the frames where the stop acted (`Smoothed::stopped`).
 4. **Warp:** the shader's parameters for the shown frame's pose and the view, as the smoothing gave it.
@@ -108,7 +108,7 @@ heads, the window's predictions.
 
 ## Keeping stages separable
 
-No stage includes another. The smoothing calls the picture room, which is stateless geometry beside
+No stage includes another. The smoothing calls the image room, which is stateless geometry beside
 the stages. A stage gets its inputs as plain data and returns plain data, and nothing specific to one
 method crosses an interface. A new implementation of a stage touches only its own files, plus one value
 in `pipeline_config.h` and one `case` in `pipeline_builder.cpp`. `stage_replay` (`vr_mirror\e2e\`) runs

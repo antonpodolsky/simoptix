@@ -100,18 +100,18 @@ Pipeline::Update(const MirrorSettings& s, PoseSource& poses, const EyeInfo& eye,
     const float dt = Step(f, r);
 
     const ViewGeometry g = GeometryFor(eye, s, r.aspect);
-    const Quat picture = drawnPose.PoseOf(f, poses);
+    const Quat followed = drawnPose.PoseOf(f, poses);
 
-    // The pose the shown picture was drawn with: `picture` unless an older one stands in.
+    // The pose the shown image was drawn with: `followed` unless an older one stands in.
     const bool standIn = r.image && r.image->serial != f.serial;
-    const Quat shown = standIn ? drawnPose.PoseOf(*r.image, poses) : picture;
-    Quat view = picture;
+    const Quat shown = standIn ? drawnPose.PoseOf(*r.image, poses) : followed;
+    Quat view = followed;
 
     // how far the smoothing's last resort moved the view this frame (for the observer)
     float edgeShiftDeg = 0;
     if (Stabilizes(s)) {
         SmoothingInput in;
-        in.picture = picture;
+        in.followed = followed;
         in.dt = dt;
         in.previous = {hasView_, lastRaw_, lastView_};
         in.shown = shown;
@@ -119,7 +119,7 @@ Pipeline::Update(const MirrorSettings& s, PoseSource& poses, const EyeInfo& eye,
 
         FillPath(&in, poses, f, r, standIn, dt);
 
-        // The view, inside the pictures: nothing after the smoothing changes it.
+        // The view, inside the images: nothing after the smoothing changes it.
         const Smoothed out = smoothing.Smooth(in);
         planned_ += out.steered;
         stops_ += out.stopped;
@@ -128,14 +128,14 @@ Pipeline::Update(const MirrorSettings& s, PoseSource& poses, const EyeInfo& eye,
     }
 
     hasView_ = true;
-    lastRaw_ = picture;
+    lastRaw_ = followed;
     lastView_ = view;
     lastImage_ = shown;
     zoom_ = s.zoom;
 
     // The observer's record of this frame (debugging; the default observer drops it).
     if (Observer* observer = stages_.observer.get()) {
-        Record(*observer, s, f, r, {shown, picture, view}, edgeShiftDeg);
+        Record(*observer, s, f, r, {shown, followed, view}, edgeShiftDeg);
     }
 
     return stages_.warp->Params(shown, view, g);
@@ -160,9 +160,9 @@ void Pipeline::FillPath(
     float dt
 ) {
     // The head's path around the frame (the look-ahead): sampled a display period apart around
-    // the moment the frame stands for, with the pose of the picture shown at each moment: on the
-    // moment's own slot while each frame shows its own picture; with an older picture standing in,
-    // as far after the moment as the shown pictures run ahead (ShownLead), between slots.
+    // the moment the frame stands for, with the pose of the image shown at each moment: on the
+    // moment's own slot while each frame shows its own image; with an older image standing in,
+    // as far after the moment as the shown images run ahead (ShownLead), between slots.
     DrawnPose& drawnPose = *stages_.drawnPose;
     const double moment = drawnPose.MomentOf(f);
     const double period = poses.Period();
@@ -174,7 +174,7 @@ void Pipeline::FillPath(
 
     const int n = behind + ahead + 1;
     if (int(times_.size()) < n) {
-        times_.resize(n), heads_.resize(n), pictures_.resize(n), pictureTimes_.resize(n);
+        times_.resize(n), heads_.resize(n), images_.resize(n), imageTimes_.resize(n);
     }
 
     for (int i = 0; i < n; i++) {
@@ -183,16 +183,16 @@ void Pipeline::FillPath(
     poses.HeadsAt(times_.data(), n, heads_.data());
     const double lead = standIn ? ShownLead(drawnPose.MomentOf(*r.image) - moment, dt) : 0;
     if (lead == 0) {
-        drawnPose.PosesAt(times_.data(), heads_.data(), n, poses, pictures_.data());
+        drawnPose.PosesAt(times_.data(), heads_.data(), n, poses, images_.data());
     } else {
         for (int i = 0; i < n; i++) {
-            pictureTimes_[i] = times_[i] + lead;
+            imageTimes_[i] = times_[i] + lead;
         }
-        drawnPose.PosesBetween(pictureTimes_.data(), heads_.data(), n, poses, pictures_.data());
+        drawnPose.PosesBetween(imageTimes_.data(), heads_.data(), n, poses, images_.data());
     }
 
     in->heads = heads_.data();
-    in->pathPictures = pictures_.data();
+    in->pathImages = images_.data();
     in->period = period;
 }
 
@@ -223,7 +223,7 @@ void Pipeline::Record(
     rec.aspect = r.aspect;
 
     if (observer.WantsNotes()) {
-        NotesReport notes(rec.pictureNotes, sizeof(rec.pictureNotes));
+        NotesReport notes(rec.poseNotes, sizeof(rec.poseNotes));
         stages_.drawnPose->Describe(sf, notes);
     }
 
@@ -233,7 +233,7 @@ void Pipeline::Record(
 double Pipeline::ShownLead(double lead, float dt) {
     // The median of the last kLeadKept ticks' leads: a repeated or skipped frame moves one tick's lead
     // by a period and doesn't count, and a lasting change (the frame picker fixing its delay) is in it
-    // within half of them. Eased over ~0.1 s once that many are known, so the path's pictures don't
+    // within half of them. Eased over ~0.1 s once that many are known, so the path's images don't
     // jump; until then the median itself (e2e: the first tick's frame a period off, eased from there,
     // stopped the view on the next 7 ticks, by up to 2.4 deg).
     leads_[leadCount_++ % kLeadKept] = lead;

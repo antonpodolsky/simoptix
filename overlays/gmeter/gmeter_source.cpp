@@ -12,7 +12,7 @@
 // Its properties hold only the meter type (Chrono, the one look) and the demo lap's button; the rest is
 // fixed here (the constants below). The dot moves the way the driver is pushed (braking: forward, a
 // left turn: right), as those in-car meters do. Drawn on OBS's frame clock from the telemetry of the
-// moment the picture shows, lightly smoothed (raw acceleration is noisy over kerbs). Only holds
+// moment the view shows, lightly smoothed (raw acceleration is noisy over kerbs). Only holds
 // telemetry while the source is shown. Labels are set in Bahnschrift (Windows' DIN typeface) with
 // DirectWrite and placed by their ink, so gaps are exact.
 //
@@ -22,7 +22,7 @@
 // Properties window is sized so the preview shows it at that size too (properties_preview.h).
 //
 // This file is the source: settings and values. The look is drawn in meter_chrono.*, from the values
-// in meter_view.h; shapes and batching are in meter_draw.*, labels in meter_text.*, pictures in
+// in meter_view.h; shapes and batching are in meter_draw.*, labels in meter_text.*, images in
 // meter_image.*.
 
 #include <graphics/matrix4.h>
@@ -53,7 +53,7 @@ namespace {
 
     // The meter's layout size in OBS (its width and height before the scene item's scale), pixels.
     constexpr uint32_t kLayoutSize = 300;
-    // How long the shown size must stay the same before the meter is rebuilt for it (its pictures take
+    // How long the shown size must stay the same before the meter is rebuilt for it (its images take
     // ~20 ms on the graphics thread): while a meter is being resized, the last build is stretched. Seconds.
     constexpr double kResizeSettle = 0.3;
 
@@ -86,7 +86,7 @@ namespace {
         PreviewFit fit;  // UI thread
 
         double lastSample = 0,
-               lastRender = 0;     // performance-counter seconds, on the picture's clock (Update)
+               lastRender = 0;     // performance-counter seconds, on the view's clock (Update)
         bool connected = false;    // a game was connected at lastRender
         bool demoRunning = false;  // the demo as this thread last saw it
         double demoStart = 0;      // performance-counter seconds: the demo lap's time 0
@@ -106,8 +106,8 @@ namespace {
     // ---- Values.
 
     void Update(GMeter* m) {
-        // The moment the picture shows (the telemetry follows the Pimax view, which may run behind the game).
-        // The demo lap has no picture to follow.
+        // The moment the view shows (the telemetry follows the Pimax view, which may run behind the game).
+        // The demo lap has no view to follow.
         const bool demo = m->demo;
         const double now = demo ? QpcNow() : Telemetry::Shown();
         m->lastRender = now;
@@ -441,7 +441,7 @@ namespace {
     // Notes the canvas scale the meter is drawn at (the scene item's scale: OBS draws the scene in canvas
     // pixels), for FollowShownSize, and pushes a matrix that maps the meter's build size onto its layout
     // size. Shown at the size it was built, that is exactly 1:1 in canvas pixels, from a whole pixel, so
-    // pictures and labels land unfiltered. False (nothing pushed) until the first build. Graphics thread.
+    // images and labels land unfiltered. False (nothing pushed) until the first build. Graphics thread.
     bool Fit(GMeter* m) {
         matrix4 world;
         gs_matrix_get(&world);

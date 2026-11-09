@@ -176,7 +176,7 @@ for the agents that read those files. Change the rules here, never in those file
       `Smoothing`, `PipelineConfig::smoothing`, `SmoothingKind`, and `lookahead_smoothing.h`,
       `LookaheadSmoothing`.
     - No stage includes another stage or an implementation. Stateless helpers beside the stages are
-      fine (the smoothings call `picture_room\picture_room.h`). Only the glue (`pipeline.*`) and the
+      fine (the smoothings call `image_room\image_room.h`). Only the glue (`pipeline.*`) and the
       builder (`pipeline_builder.*`) see several stages, and the builder alone sees the
       implementations.
     - `.cpp` basenames stay unique across core, the frame sources and each host, because every build
@@ -397,8 +397,11 @@ One convention, everywhere. Check every new name against it, and rename what bre
   Pimax Mirror", `simoptix_openxr_mirror` is "SimOptix: OpenXR Mirror", and `simoptix_gmeter_overlay`
   is "SimOptix: G-Meter Overlay".
 - **Words:**
-  - "frame" is a game frame and its record. "Image" is the image in it. The code's remaining
-    `picture_*` names (`picture_room`, `FakeGamePicture`) stay as they are.
+  - "Frame" is a game frame and its record. "Image" is the image in it, in the docs and the code alike
+    (`image_room\`, `ImageNeeds`, `FrameSource::CopyImage`, `FakeGameImage`). "View" is what VR
+    Mirror shows, and "video" is what OBS outputs. Nothing says "picture". Older builds did
+    (`picture_room`, `FakeGamePicture`, the log's "frames judged by picture"), and findings, traces
+    and logs from before keep the old word.
   - "Drawn pose" is the head pose a frame was drawn with: the stage (`2_drawn_pose\`, `DrawnPose`),
     the setting `drawn_pose`, and the trace's `drawn_pose` column. It was called the picture pose,
     and the setting `picture_matching`, in older builds.
@@ -412,8 +415,11 @@ One convention, everywhere. Check every new name against it, and rename what bre
     (`PvrMirror`). A sentence that means the plugin says "VR Mirror".
   - "Source time" is the frame source's clock that the pipeline runs on.
 - **Exceptions, fixed from outside:** the OpenXR layer's name (`XR_APILAYER_SIMOPTIX_frame_source`:
-  OpenXR asks for the `XR_APILAYER_<VENDOR>_` form), OBS's own names (`obs-studio`, `obs64.exe`), and
-  the skills' folders and names (`code-style`: the Agent Skills format asks for lower case and hyphens).
+  OpenXR asks for the `XR_APILAYER_<VENDOR>_` form), OBS's own names (`obs-studio`, `obs64.exe`), the
+  skills' folders and names (`code-style`: the Agent Skills format asks for lower case and hyphens),
+  and the names the layer and VR Mirror open in common (`openxr_share.h`). An installed layer and a
+  newer VR Mirror must still find each other, so the new-image event keeps its name
+  (`SimOptix.OpenXR.FrameSource.NewPicture`).
 
 ## 2. Edit
 

@@ -4,10 +4,10 @@
 # every frame on time (lag 0, confirmed by the recording's cockpit motion). The timing gate opened on it,
 # and the matcher re-timed 23 on-time frames in bursts of lags -1, -2, -3 that snapped back to 0
 # (visible jitter at 18:31.7-18:32.7, steps up to ~1 deg).
-# The picture's detail there was in the scenery and cars through the windscreen (moving on their own),
+# The image's detail there was in the scenery and cars through the windscreen (moving on their own),
 # the dark cockpit almost featureless, so the matching's evidence was mostly noise. The fake can't draw
 # that (its cockpit always lines up cleanly): this replay passes on every build and guards against
-# regressions with the real timing; the fix was checked on the real pictures (vr_mirror\recording_analysis\replica.py).
+# regressions with the real timing; the fix was checked on the real images (vr_mirror\recording_analysis\replica.py).
 # Times in seconds from the start of this file.
 # P,time,qx,qy,qz,qw: head pose (1 kHz)
 # S,time,slot,qx,qy,qz,qw: the runtime's predicted pose for display slot `slot`, asked at `time`

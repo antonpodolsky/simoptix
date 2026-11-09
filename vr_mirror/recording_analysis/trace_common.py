@@ -196,10 +196,10 @@ def DrawnSlotColumn(prefix):
 
 
 def DrawnLag(img, slot, S, lags=4):
-    """The slot a picture was warped from, by comparing poses: of the display slots `slot` - k periods
+    """The slot an image was warped from, by comparing poses: of the display slots `slot` - k periods
     (k = 0 .. lags - 1), the one whose predicted pose (S rows) is nearest to the pose the plugin warped
     it from (`img`), the nearer slot of equals (a still head), as a lag: 0, -1, -2, ... (0 where none
-    is recorded). A drawn pose with a correction from the picture matches no slot exactly: the
+    is recorded). A drawn pose with a correction from the image matches no slot exactly: the
     nearest."""
 
     poses, ok = Predicted(S, slot - np.arange(lags) * P)
@@ -211,7 +211,7 @@ def DrawnLag(img, slot, S, lags=4):
 
 
 def FrameLag(row, slot, S, drawn_slot):
-    """The lag a tick row's picture was drawn with: from the trace's drawn slot (`drawn_slot`,
+    """The lag a tick row's image was drawn with: from the trace's drawn slot (`drawn_slot`,
     DrawnSlotColumn) or by comparing poses; `slot` the slot the frame arrived for."""
 
     if drawn_slot:

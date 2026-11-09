@@ -37,7 +37,7 @@ OpenXrSource::OpenXrSource() {
 OpenXrSource::~OpenXrSource() {
     Stop();
     StopTrace();
-    pictures_.Release();
+    images_.Release();
 }
 
 bool OpenXrSource::StartTrace(const wchar_t* prefix) {
@@ -125,7 +125,7 @@ bool OpenXrSource::OpenShare() {
         return false;
     }
 
-    layerEvent_.Reset(OpenEventW(SYNCHRONIZE, FALSE, openxr_share::kNewPictureEvent));
+    layerEvent_.Reset(OpenEventW(SYNCHRONIZE, FALSE, openxr_share::kNewImageEvent));
     header_->readerSigned.store(Counter());  // signed before the layer looks: it makes its textures now
     if (UniqueHandle reader(OpenEventW(EVENT_MODIFY_STATE, FALSE, openxr_share::kReaderEvent)); reader) {
         SetEvent(reader.Get());
@@ -207,7 +207,7 @@ void OpenXrSource::ReadFrames(double now) {
         eye.leftTan = std::tan(-r.fov[0].left), eye.rightTan = std::tan(r.fov[0].right);
         eye.upTan = std::tan(r.fov[0].up), eye.downTan = std::tan(-r.fov[0].down);
         eye.hmdToEye = Normalize(Mul(Conj(head), left));
-        eye.encodedTwice = false;  // the game's picture as it drew it
+        eye.encodedTwice = false;  // the game's image as it drew it
 
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -272,7 +272,7 @@ void OpenXrSource::FinishCopies() {
         const Waiting w = waiting_[i];
         const uint64_t held = h.textureFrame[w.texture].load();
 
-        bool later = false;  // a later frame went into the same texture: this one's picture is gone
+        bool later = false;  // a later frame went into the same texture: this one's image is gone
         for (int j = i + 1; j < waitingCount_; j++) {
             later = later || waiting_[j].texture == w.texture;
         }
@@ -383,7 +383,7 @@ void OpenXrSource::Run() {
             LogProtection(h.contextProtection);
             std::lock_guard<std::mutex> lock(mutex_);
             poses_.Clear();
-            finishedCount_ = 0;  // the last session's pictures are gone with it
+            finishedCount_ = 0;  // the last session's images are gone with it
         }
 
         ReadClock();
@@ -479,11 +479,11 @@ void OpenXrSource::PredictedHeadsBetween(const double* t, int n, Quat* out) {
     poses_.PredictionsBetween(t, n, 1.5 * period_.load(), out);
 }
 
-void OpenXrSource::OpenPictures(ID3D11Device* device) {
-    pictures_.Open(device);
+void OpenXrSource::OpenImages(ID3D11Device* device) {
+    images_.Open(device);
 }
 
-bool OpenXrSource::CopyPicture(
+bool OpenXrSource::CopyImage(
     ID3D11Device* device,
     ID3D11DeviceContext* context,
     const GameFrame& f,
@@ -494,11 +494,11 @@ bool OpenXrSource::CopyPicture(
     if (!FindFinished(f.serial, &e)) {
         return false;
     }
-    return pictures_.Copy(device, context, f.buffer, e.layerFrame, e.width, e.height, into, shared);
+    return images_.Copy(device, context, f.buffer, e.layerFrame, e.width, e.height, into, shared);
 }
 
-void OpenXrSource::PollPictures(ID3D11DeviceContext* context) {
-    pictures_.Poll(context);
+void OpenXrSource::PollImages(ID3D11DeviceContext* context) {
+    images_.Poll(context);
 }
 
 uint64_t OpenXrSource::ThreadCycles() {
@@ -506,7 +506,7 @@ uint64_t OpenXrSource::ThreadCycles() {
 }
 
 uint64_t OpenXrSource::TakeStats(double seconds, void (*line)(const char*)) {
-    const uint64_t wakeups = wakeups_.exchange(0), lost = lost_.exchange(0), gone = pictures_.TakeGone();
+    const uint64_t wakeups = wakeups_.exchange(0), lost = lost_.exchange(0), gone = images_.TakeGone();
     const uint64_t arrived = framesArrived_.load(), frames = arrived - statArrived_;
     statArrived_ = arrived;
     if (!line) {
@@ -516,7 +516,7 @@ uint64_t OpenXrSource::TakeStats(double seconds, void (*line)(const char*)) {
     snprintf(
         text,
         sizeof(text),
-        "OpenXR frames: %llu in %.0f s with their picture; pictures gone before they were copied: %llu "
+        "OpenXR frames: %llu in %.0f s with their image; images gone before they were copied: %llu "
         "(the "
         "layer's), %llu (a host's)",
         static_cast<unsigned long long>(frames),

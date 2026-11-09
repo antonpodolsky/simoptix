@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// FrameRing: each new game frame's picture, copied from the frame source (FrameSource: the Pimax
+// FrameRing: each new game frame's image, copied from the frame source (FrameSource: the Pimax
 // game-eye mirror, or the OpenXR layer's copy) into a ring of shared textures on our own D3D11 device,
 // for the VR Mirror sources (MirrorView, mirror_view.h).
 //
 // A copy thread copies each new frame as soon as it can (the mirror is a single buffer the game
 // overwrites about a frame later; the OpenXR layer reuses its textures two frames later), marks a slot
 // ready once the GPU has finished the copy (an event query read with DONOTFLUSH: it never waits on the
-// GPU), and feeds each frame's pictures to the pipeline's drawn pose (DrawnPoseFeed), which the
+// GPU), and feeds each frame's images to the pipeline's drawn pose (DrawnPoseFeed), which the
 // graphics thread then asks for the pose each frame was drawn with. OBS's graphics thread reads the
 // slots with Snapshot and opens their shared textures on OBS's device.
 //
@@ -36,7 +36,7 @@ public:
     // Slots in use: as many as the output delay needs (SetSlotCount: set before Start, and again
     // once the delay is measured), up to kMaxSlots: Look-ahead holds about half a second of frames. Each
     // slot is a copy of the game eye: 21 MB at Render Quality 1.0, 33 MB at 1.25 from the Pimax mirror;
-    // from the OpenXR layer as large as the output needs (FrameSource::SetPictureNeed).
+    // from the OpenXR layer as large as the output needs (FrameSource::SetImageNeed).
     static constexpr int kMaxSlots = 128;
     struct SlotInfo {
         GameFrame frame;   // the game frame as it arrived (the drawn pose gives its head pose)
