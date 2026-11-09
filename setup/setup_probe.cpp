@@ -80,7 +80,6 @@ namespace {
         const ObsInstall obs = FindObs();
 
         system.obsFound = obs.found;
-        system.obsVersion = obs.version;
         system.obsLayout = LayoutOfObs(obs.major);
         system.obsRunning = IsProcessRunning(L"obs64.exe");
         system.lmuRunning = IsProcessRunning(L"Le Mans Ultimate.exe");

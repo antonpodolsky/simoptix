@@ -6,9 +6,9 @@ beside it.
 
 ## What it shows
 
-Under its title, the window says which OBS Studio it found, and what to close before a part can be
-changed: OBS for the plugins, LMU for the layer. Then it has a row for each part, with what the part adds
-and the buttons that fit what is installed.
+The window has a row for each part, with what the part adds and the buttons that fit what is installed.
+Under its title, it says what to close before a part can be changed (OBS for the plugins, LMU for the
+layer), or that OBS Studio wasn't found.
 
 | Buttons | What is installed |
 |---|---|

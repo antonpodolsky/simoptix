@@ -32,7 +32,7 @@ namespace {
             status.installBlockedBy = L"Close OBS Studio to change the plugins.";
             status.removeBlockedBy = status.installBlockedBy;
         } else if (!system.obsFound) {
-            status.installBlockedBy = L"Install OBS Studio to install the plugins.";
+            status.installBlockedBy = L"OBS Studio was not found. Install it to install the plugins.";
         }
 
         return status;
@@ -84,14 +84,6 @@ const wchar_t* ActionLabel(PartAction action) {
             break;
     }
     return L"";
-}
-
-std::wstring DescribeObs(const SystemFacts& system) {
-    if (!system.obsFound) {
-        return L"OBS Studio was not found.";
-    }
-
-    return L"OBS Studio " + system.obsVersion;
 }
 
 std::wstring UnsignedLayerWarning(const SystemFacts& system) {

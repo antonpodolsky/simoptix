@@ -33,7 +33,6 @@ struct PartFacts {
 
 struct SystemFacts {
     bool obsFound = false;
-    std::wstring obsVersion;  // "32.2.2"
     PluginLayout obsLayout = PluginLayout::kBin64bit;
     bool obsRunning = false;
     bool lmuRunning = false;

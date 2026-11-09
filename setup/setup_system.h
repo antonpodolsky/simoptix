@@ -17,11 +17,10 @@ std::wstring OwnExePath();
 
 struct ObsInstall {
     bool found = false;
-    std::wstring version;  // "32.2.2"
-    int major = 0;
+    int major = 0;  // 32 for OBS 32.2.2
 };
 
-// OBS Studio as its installer registered it (HKLM\SOFTWARE\OBS Studio), with the version of its
+// OBS Studio as its installer registered it (HKLM\SOFTWARE\OBS Studio), with the major version of its
 // bin\64bit\obs64.exe.
 ObsInstall FindObs();
 

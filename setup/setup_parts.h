@@ -24,16 +24,16 @@ inline constexpr const wchar_t* kLayerManifestResource = L"OPENXR_LAYER_JSON";
 inline constexpr std::array<Part, 3> kParts = {
     Part{
         PartId::kVrMirror,
-        L"VR Mirror",
-        L"OBS plugin: the Pimax Mirror and OpenXR Mirror sources, and race auto-record.",
+        L"VR Mirror OBS plugin",
+        L"The Pimax Mirror and OpenXR Mirror sources, and race auto-record.",
         L"simoptix_vr_mirror",
         L"simoptix_vr_mirror.dll",
         L"VR_MIRROR_DLL",
     },
     Part{
         PartId::kOverlays,
-        L"Overlays",
-        L"OBS plugin: the G-Meter Overlay source.",
+        L"Overlays OBS plugin",
+        L"The G-Meter Overlay source.",
         L"simoptix_overlays",
         L"simoptix_overlays.dll",
         L"OVERLAYS_DLL",

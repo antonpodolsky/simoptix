@@ -301,7 +301,6 @@ namespace {
 
     void SetupWindow::Refresh() {
         facts_ = ReadFacts(setupLayerSignature_);
-        texts_.obsLine = DescribeObs(facts_.system);
         texts_.blockedBy.clear();
 
         for (size_t i = 0; i < kParts.size(); ++i) {

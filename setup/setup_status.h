@@ -31,9 +31,6 @@ PartStatus DescribePart(PartId id, const PartFacts& part, const SystemFacts& sys
 // The main button's label, empty for kNone.
 const wchar_t* ActionLabel(PartAction action);
 
-// The line under the title: "OBS Studio 32.2.2", or that it wasn't found.
-std::wstring DescribeObs(const SystemFacts& system);
-
 // The question asked before an unsigned or untrusted layer is installed, empty when the layer inside
 // setup is signed and trusted.
 std::wstring UnsignedLayerWarning(const SystemFacts& system);

@@ -137,8 +137,6 @@ ObsInstall FindObs() {
     // obs64.exe 32.2.2 carries its version only as the file version. Its product version is 0.0.0.
     obs.found = true;
     obs.major = HIWORD(version.dwFileVersionMS);
-    obs.version = std::to_wstring(obs.major) + L"." + std::to_wstring(LOWORD(version.dwFileVersionMS)) + L"."
-                  + std::to_wstring(HIWORD(version.dwFileVersionLS));
     return obs;
 }
 

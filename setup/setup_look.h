@@ -45,7 +45,6 @@ struct WindowLayout {
 WindowLayout LayOut(UINT dpi);
 
 struct WindowTexts {
-    std::wstring obsLine;
     std::wstring blockedBy;  // what to close before a part can be changed, empty when nothing
 };
 

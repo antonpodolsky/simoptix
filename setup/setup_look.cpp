@@ -9,10 +9,9 @@ namespace {
     // The layout, in pixels at 96 DPI.
     constexpr int kWidth = 620;
     constexpr int kMargin = 24;
-    constexpr int kHeaderHeight = 100;
+    constexpr int kHeaderHeight = 84;
     constexpr int kTitleTop = 18;
-    constexpr int kSubtitleTop = 54;
-    constexpr int kBlockedTop = 74;
+    constexpr int kBlockedTop = 54;
     constexpr int kRowHeight = 84;
     constexpr int kRowPadding = 16;
     constexpr int kDescriptionTop = 38;  // below the row's top
@@ -138,9 +137,7 @@ void PaintWindow(HDC dc, const WindowLayout& layout, const LookFonts& fonts, con
     paint.Fill({0, 0, layout.client.cx, layout.client.cy}, kBackground);
 
     const RECT title = {margin, paint.Scale(kTitleTop), right, layout.headerBottom};
-    const RECT subtitle = {margin, paint.Scale(kSubtitleTop), right, layout.headerBottom};
     paint.Text(L"SimOptix Setup", title, fonts.title.get(), kText);
-    paint.Text(texts.obsLine, subtitle, fonts.body.get(), kSecondaryText);
 
     const RECT blocked = {margin, paint.Scale(kBlockedTop), right, layout.headerBottom};
     paint.Text(texts.blockedBy, blocked, fonts.body.get(), kAttention);
