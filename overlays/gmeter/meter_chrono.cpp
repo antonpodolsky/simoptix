@@ -8,7 +8,6 @@
 
 namespace {
 
-    constexpr float kPi = 3.14159265f;
     constexpr float kBoard = 480;  // the design's board, design pixels; the meter's centre is at (240, 240)
     constexpr float kMaxG = 3;
     constexpr float kRing3G = 112;  // the 3G ring's radius, design pixels (in the base picture)
@@ -24,20 +23,14 @@ namespace {
     constexpr float kBrakeAbs[3] = {0.784f, 0.157f, 0.118f};    // #c8281e, while ABS intervenes
     constexpr float kThrottle[3] = {0.239f, 0.863f, 0.518f};    // #3ddc84
     constexpr float kThrottleTc[3] = {0.122f, 0.604f, 0.322f};  // #1f9a52, while TC intervenes
-    constexpr uint32_t kAccentRgb = 0xFF5A1F, kAbsLit = 0xFF5A4E, kTcLit = 0x3DDC84;
-    constexpr int kLabelOpacity = 60;  // white at 60 %: the idle labels and the highest values
+    constexpr uint32_t kAccentRgb = 0xFF5A1F;
+    constexpr int kLabelOpacity = 60;  // white at 60 %: the ring labels and the highest values
 
-    // The pedal grooves (in the base picture) and the bars filling them from their lower ends: degrees
-    // clockwise from up. Brake 215 -> 325 on the left, throttle 145 -> 35 on the right.
-    constexpr float kGrooveR = 193, kBarWidth = 6.5f, kBarSpan = 110;
+    // The pedal tracks just inside the 3G ring (in the base picture) and the bars filling them from their
+    // lower ends, with flat ends as the tracks: degrees clockwise from up. Brake 215 -> 325 on the left,
+    // throttle 145 -> 35 on the right.
+    constexpr float kBarR = 103, kBarWidth = 5, kBarSpan = 110;
     constexpr float kBrakeStart = 215, kThrottleStart = 145;
-    constexpr float
-        kGrooveCap = 5;  // the grooves' round ends reach this far past their angles (half of 10 wide)
-    // ABS and TC: their near ink edge this far past the groove's round end, along the circle, design px. TC's
-    // is its gap in the design, measured on the plugin's render at 1:1. ABS at that gap looked further away
-    // (the A's diagonal leans away from the bar, so only its foot is that close); it sits halfway between it
-    // and its gap in the design (14.5).
-    constexpr float kAidGap[2] = {16.9f, 19.3f};  // ABS, TC
 
     // The live G's centre, design pixels: the window's visible centre (see Draw). Horizontally 0.8 right of
     // the window's: centred by measurement (gaps of 5.6 and 5.2 px at size 300) it still looked 1 px left,
@@ -92,7 +85,7 @@ namespace {
             v.clear();
             const float fill = std::min(1.0f, std::max(0.0f, b.pedal)) * kBarSpan;
             if (fill > 0.5f) {
-                AddArc(v, d.cx, d.cy, kGrooveR * d.k, kBarWidth * d.k, b.start, b.start + b.dir * fill);
+                AddArc(v, d.cx, d.cy, kBarR * d.k, kBarWidth * d.k, b.start, b.start + b.dir * fill);
             }
 
             batch.Add(v, b.rgb[0], b.rgb[1], b.rgb[2], 1);
@@ -173,7 +166,6 @@ void ChronoMeter::Draw(const MeterView& m, MeterBatch& batch, std::vector<float>
     batch.Submit();
 
     DrawValues(m, k);
-    DrawAidWords(m, k, dial.cx, dial.cy);
     glass_.Draw();
 }
 
@@ -237,34 +229,6 @@ void ChronoMeter::DrawValues(const MeterView& m, float k) {
         kAccentRgb,
         true
     );
-}
-
-void ChronoMeter::DrawAidWords(const MeterView& m, float k, float cx, float cy) {
-    // ABS and TC past the grooves' upper ends, on the grooves' circle, turned to it, each with its near
-    // edge kAidGap past its groove's round end (the design centred both 9 degrees past, which left the
-    // wider ABS 14.5 design px from its groove and TC 19.4: ABS looked closer); both states kept built
-    // and placed, so switching shows at once.
-    const int aidSize = int(std::round(11 * k));
-    const wchar_t* small = FaceFor(aidSize);
-    WantLabel(labels_[kAbs], "ABS", aidSize, small, kLabelOpacity, 0xFFFFFF, 0.1f);
-    WantLabel(labels_[kAbs + 1], "ABS", aidSize, small, 100, kAbsLit, 0.1f);
-    WantLabel(labels_[kTc], "TC", aidSize, small, kLabelOpacity, 0xFFFFFF, 0.1f);
-    WantLabel(labels_[kTc + 1], "TC", aidSize, small, 100, kTcLit, 0.1f);
-
-    const float r = kGrooveR * k;
-    for (int i = 0; i < 2; i++) {
-        const bool lit = i ? m.pedals.tcActive : m.pedals.absActive;
-        const int shown = (i ? kTc : kAbs) + (lit ? 1 : 0), other = (i ? kTc : kAbs) + (lit ? 0 : 1);
-
-        // The word's upright ink width, design px (until it's built, about 0.65 em a letter).
-        const MeterLabel& built = labels_[shown].tex ? labels_[shown] : labels_[other];
-        const float width = built.tex ? InkWidth(built) / k : (i ? 2 : 3) * 11 * 0.65f;
-        const float end = i ? kThrottleStart - kBarSpan : kBrakeStart + kBarSpan;  // 35 and 325 degrees
-        const float away = i ? -1.0f : 1.0f;  // along the circle, past the groove's end
-        const float a = end * kPi / 180 + away * (kGrooveCap + kAidGap[i] + width * 0.5f) / kGrooveR;
-        PlaceLabel(labels_[other], cx + r * std::sin(a), cy - r * std::cos(a), a);
-        DrawLabelRotated(labels_[shown], cx + r * std::sin(a), cy - r * std::cos(a), a);
-    }
 }
 
 void ChronoMeter::Destroy() {

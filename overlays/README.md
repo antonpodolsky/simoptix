@@ -49,8 +49,9 @@ still fit. The OBS log says how many they deleted. The OBS log marks this plugin
 
 The G-meter is a friction circle (G-G meter) drawn from LMU's telemetry, like the in-car G-meters of
 Porsche's Sport Chrono or the Nissan GT-R. It has one look, **Chrono**:
-- a black bezel with the brake and throttle bars in grooves
+- a black bezel
 - a dark face with 1G, 2G and 3G rings under domed glass
+- brake and throttle bars just inside the 3G ring
 - a window under the centre that shows the live G
 
 ### What it shows
@@ -65,22 +66,21 @@ Porsche's Sport Chrono or the Nissan GT-R. It has one look, **Chrono**:
 - **The highest G** reached in each direction (braking, acceleration, left, right) stands outside the
   outer ring. It resets when a new driving session starts (the game's session or track changes, or the
   session restarts), and when the demo starts or stops.
-- **Brake and throttle** fill the two grooves in the bezel: brake on the left in red, throttle on the
-  right in green. While ABS or TC intervenes, its bar turns a darker red or green, and its label (ABS
-  or TC, past the groove's upper end) lights up in the bright pedal colour.
+- **Brake and throttle** fill two faint tracks just inside the 3G ring: brake on the left in red,
+  throttle on the right in green. While ABS or TC intervenes, its bar turns a darker red or green.
 
 The scale is fixed at 3 G, as the rings are in the image.
 
 ### How it is drawn
 
-The bezel, face, rings, notches and glass are the design's image layers (`gmeter\design\`, embedded in
+The bezel, face, rings, notches, pedal tracks and glass are the design's image layers (`gmeter\design\`, embedded in
 the plugin by `gmeter.rc`). The glass is a crescent-shaped reflection whose lower edge fades out. The
 plugin scales each layer once to the source's size with a high-quality filter and draws it 1:1. Scaling
 takes about 20 ms on OBS's graphics thread, once, when the source is created or its size changes. The
 layers are 960 px, so the meter is sharpest up to that size.
 
 The dot (with a glow), its tail, the bars and all the text are drawn live between the layers. The text
-is the numbers, ABS and TC, and the 1G, 2G and 3G ring labels.
+is the numbers and the 1G, 2G and 3G ring labels.
 - The tail is a slightly warmer orange than the dot, so the dot stands apart from it.
 - The live G and the highest values use the font's tabular digits, placed by their digit cells, so the
   digits don't shift as the values change.
@@ -91,7 +91,6 @@ is the numbers, ABS and TC, and the 1G, 2G and 3G ring labels.
 - grayscale anti-aliasing, because ClearType's colour fringes don't survive a video encode
 - outlines grid-fitted vertically, so horizontal strokes land on whole pixels
 - a slight contrast boost, so light strokes on the dark face don't read thin
-- rotated text (ABS, TC) rasterised already turned
 - one weight heavier below 9 px
 
 Rebuilding the four highest values and the live G at once takes 0.3–0.6 ms on the graphics thread.

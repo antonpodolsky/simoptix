@@ -11,8 +11,9 @@ The two sources show the same view. They differ in where the game's image comes 
   Play.
 - **SimOptix: OpenXR Mirror** stabilizes the game's own left eye at full size, with the exact head pose
   each frame was drawn with, from the API layer in the game (`vr_mirror\frame_sources\openxr\`). It
-  needs the layer installed and LMU started without Easy Anti-Cheat, which means offline (the layer's
-  README says why). It uses no Pimax software.
+  needs the layer installed. Unsigned, the layer needs LMU started without Easy Anti-Cheat, which
+  means offline. Signed with a code signing certificate Windows trusts, it loads in LMU started the
+  usual way (the layer's README says more). It uses no Pimax software.
 
 ## Terms
 
