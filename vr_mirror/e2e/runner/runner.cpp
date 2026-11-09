@@ -224,7 +224,7 @@ namespace {
             d->log.arrivals = d->log.targets;
         }
 
-        const double delay = LookaheadOutputDelayS(sc.smoothing);
+        const double delay = sc.smoothing > 0 ? LookaheadOutputDelayS() : 0;
         d->m = MatchCaptures(d->caps, d->log, d->tools, delay, &validPct);
         IntendedSeries(d->tools, d->log, delay, &d->intended, &d->eye);
         r.lines.push_back("  frames");
@@ -646,14 +646,14 @@ namespace {
         return -1;
     }
 
-    // Prints Smooth and Smoothest against Instant, for every scenario that ran at all three, and the totals.
+    // Prints Look-ahead against Instant, for every scenario that ran at both, and the totals.
     // Returns the exit code.
     int
     Summarize(const std::vector<Scenario>& runs, const std::vector<Result>& results, int ran, int failed) {
         const std::vector<Result> compared = CompareSmoothings(runs, results);
         int comparedFailed = 0;
         if (!compared.empty()) {
-            printf("\nSmooth and Smoothest compared with Instant\n");
+            printf("\nLook-ahead compared with Instant\n");
         }
         for (const auto& c : compared) {
             printf("\n%s\n", c.name.c_str());

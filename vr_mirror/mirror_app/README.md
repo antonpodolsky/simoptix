@@ -16,6 +16,7 @@ OBS captures a window.
 | display slot | One of the regular moments, 90 per second, at which the headset shows a new image. The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
 | game behind | The game's GPU has fallen behind and queues up to two frames. Each arrives one or two display slots after the slot it was drawn for |
 | slot check | A way to find the drawn pose: it judges from thumbnails which display slot a frame was really drawn for |
+| look-ahead | The method behind the Look-ahead smoothing. The view runs half a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
 | cockpit correction | A refinement of the drawn pose. It measures how the fixed cockpit moved between two frames and corrects the pose by what the head poses don't explain |
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
 | fake runtime | The stand-in for Pimax's client library (`vr_mirror\e2e\fake_pvr\`) that the e2e tests use in place of a headset and a game |
@@ -28,10 +29,9 @@ OBS captures a window.
   kept as large as the window shows it (`frame_source`, below, and `vr_mirror\frame_sources\README.md`).
 - **Drawing:** once per game frame.
   - With Instant (smoothing 1), each frame is copied and drawn as soon as it arrives.
-  - With Smooth and Smoothest (2 and 3), each frame is copied as it arrives, held, and drawn half a
-    second or a second later, when the head's movement after it is known (`frame_hold.*`). The hold
-    keeps a copy of every frame in that time: about 1.1 GB of video memory for half a second at Render
-    Quality 1.0, and 2 GB for a second.
+  - With Look-ahead (smoothing 2), each frame is copied as it arrives, held, and drawn half a
+    second later, when the head's movement after it is known (`frame_hold.*`). The hold
+    keeps a copy of every frame in that time: about 1.1 GB of video memory at Render Quality 1.0.
 - **Paced presents:** each frame is presented 4 ms after its de-jittered arrival time, so presents are
   evenly spaced. In the e2e tests the spacing is about 0.13 ms rms, against about 1 ms when presenting
   right away. A window capture grabs the newest present on its own clock. Presents that wobble
@@ -55,7 +55,7 @@ file.
 | Key | What |
 |---|---|
 | `frame_source` | Where the frames come from: `pimax` (the default, Pimax's client mirror) or `openxr` (the OpenXR layer in the game, `vr_mirror\frame_sources\openxr\`) |
-| `smoothing` | 0 Off, 1 Instant, 2 Smooth, 3 Smoothest (the default), as in the OBS plugin |
+| `smoothing` | 0 Off, 1 Instant, 2 Look-ahead (the default), as in the OBS plugin |
 | `zoom` | The crop factor (default 1.5). The spare image around the view is how far the view may trail the head |
 | `drawn_pose` | How the head pose a frame was drawn with is found: 0 off, 1 the slot check (the default), 2 the slot check plus the cockpit correction (the OBS plugin's choice) |
 | `output_width`, `output_height` | The window's client size at start (default 2560×1440) |
@@ -73,7 +73,7 @@ Two environment variables:
 | `main.cpp` | The loop: the Pimax source, the pipeline, when to draw and present |
 | `window_output.*` | The device, the swap chain and the warp shader |
 | `mirror_app_settings.*` | `simoptix_vr_mirror.ini` |
-| `frame_hold.*` | The held frames for Smooth and Smoothest |
+| `frame_hold.*` | The held frames for Look-ahead |
 | `precise_wait.*` | The timer waits |
 | `build.bat` | Builds `simoptix_vr_mirror.exe` with the frame source, the core and `shared\` |
 

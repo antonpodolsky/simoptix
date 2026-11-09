@@ -11,6 +11,15 @@ This file holds what was measured on the plugin, and what was tried.
 
 ## Smoothing and zoom
 
+- **Smoothest dropped, Smooth renamed Look-ahead (2026-11-09).** Smoothest ran a second behind the
+  game, and the OpenXR source keeps a copy of every frame in that time. At the layer's full
+  5084x4168 that is about 97 images and 8.2 GB of video memory, too much beside the game. Under the
+  4 GB cap each image shrinks to about 3580 px wide, so a 3840x2160 canvas gets 74% of native at zoom
+  1.25. Look-ahead, half a second, keeps about 52 images up to about 4840 px wide, native for 4K up to
+  zoom 1.26. It gives up a little calm: its view trails the head by 0.95° at most 99% of the time,
+  against Smoothest's 0.75° (`findings\mirror_app.md`, "Core's pipeline on the same poses"). Its
+  outputs are unchanged, `stage_replay --golden` byte for byte against the build before for every
+  Instant and Look-ahead run. Saved scenes with Smoothing 3 open on Look-ahead.
 - **Smoothest against Instant**, on 4.3 h of real head poses (`findings\mirror_app.md`, "Findings:
   other smoothing methods"):
   - Smoothest's view trails the head by 0.75° at most 99% of the time. Instant's: 4.6°.

@@ -20,7 +20,7 @@ alone (`vr_mirror\e2e\stage_replay`) or mixed through the builder. The folder nu
 | slot check | A way to find the drawn pose: it judges from thumbnails which display slot a frame was really drawn for |
 | cockpit correction | A refinement of the drawn pose. It measures how the fixed cockpit moved between two frames and corrects the pose by what the head poses don't explain |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
-| look-ahead | The method behind Smooth and Smoothest. The view runs half a second or a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
+| look-ahead | The method behind the Look-ahead smoothing. The view runs half a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
 
 ## The stages
 
@@ -28,8 +28,8 @@ alone (`vr_mirror\e2e\stage_replay`) or mixed through the builder. The folder nu
 |---|---|---|---|---|---|---|
 | 1 | Arrival timing | `1_arrival_timing` | `ArrivalTiming` | grid_arrival_timing → `GridArrivalTiming` → `kGrid`, reported_arrival_timing → `ReportedArrivalTiming` → `kReported` | `arrivalTiming` | The frame source's own thread |
 | 2 | Drawn pose | `2_drawn_pose` | `DrawnPose` | slot_check_drawn_pose → `SlotCheckDrawnPose` → `kSlotCheck`, arrival_slot_drawn_pose → `ArrivalSlotDrawnPose` → `kArrivalSlot`, cockpit_drawn_pose → `CockpitDrawnPose` → `kCockpit`, reported_drawn_pose → `ReportedDrawnPose` → `kReported` | `drawnPose` | Fed on the copy device's thread (`DrawnPoseFeed`), asked on the output thread |
-| 3 | Frame picker | `3_frame_picker` | `FramePicker` | fixed_delay_picker → `FixedDelayPicker` → `kFixedDelay` (the OBS plugin), newest_frame_picker → `NewestFramePicker` → `kNewestFrame` (the mirror app, Instant), held_frame_picker → `HeldFramePicker` → `kHeldFrame` (the mirror app, Smooth and Smoothest) | `framePicker` | Output thread |
-| 4 | Smoothing | `4_smoothing` | `Smoothing` | instant_smoothing → `InstantSmoothing` → `kInstant`, lookahead_smoothing → `LookaheadSmoothing` → `kSmooth`, `kSmoothest` | `smoothing` | Output thread |
+| 3 | Frame picker | `3_frame_picker` | `FramePicker` | fixed_delay_picker → `FixedDelayPicker` → `kFixedDelay` (the OBS plugin), newest_frame_picker → `NewestFramePicker` → `kNewestFrame` (the mirror app, Instant), held_frame_picker → `HeldFramePicker` → `kHeldFrame` (the mirror app, Look-ahead) | `framePicker` | Output thread |
+| 4 | Smoothing | `4_smoothing` | `Smoothing` | instant_smoothing → `InstantSmoothing` → `kInstant`, lookahead_smoothing → `LookaheadSmoothing` → `kLookahead` | `smoothing` | Output thread |
 | 5 | Warp | `5_warp` | `Warp` | rotation_warp → `RotationWarp` → `kRotation` (plus `warp.hlsli` on the GPU) | `warp` | Output thread |
 
 Each stage's README says what it does, its input and output, when to use each implementation, and
@@ -52,8 +52,8 @@ Two parts sit beside the stages and are not stages:
   - `MomentTimes` does the same for an OBS tick's own moment.
 - `pipeline_config.h` holds `PipelineConfig`, one enum per stage. `ConfigFor(settings)` maps the
   settings onto it:
-  - `smoothing` 0 or 1 gives Instant (0 then shows the headset's view as it is), 2 gives Smooth and 3
-    gives Smoothest.
+  - `smoothing` 0 or 1 gives Instant (0 then shows the headset's view as it is), and 2 gives
+    Look-ahead.
   - `drawn_pose` 1 gives the slot check, 2 the cockpit correction and 0 the arrival slot.
   - A frame source whose frames report their slot and pose (`FrameReport::kSlotAndPose`, the
     OpenXR source) gets stage 1's and stage 2's reported methods, whatever `drawn_pose`

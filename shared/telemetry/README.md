@@ -8,7 +8,7 @@ race auto-record read it. Both plugins compile this folder in.
 
 | Term | Meaning |
 |---|---|
-| output delay | How far VR Mirror's view runs behind the game: about 1 s with Smoothest, about 0.5 s with Smooth, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
+| output delay | How far VR Mirror's view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
 | telemetry model | The one description of the car and the session that every game is turned into (`telemetry_model.h`) |
 
 ## One reader for the whole of OBS

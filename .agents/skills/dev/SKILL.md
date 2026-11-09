@@ -237,7 +237,7 @@ for the agents that read those files. Change the rules here, never in those file
   fake PVR runtime (`vr_mirror\e2e\fake_pvr`), with its window captured like OBS. The suite covers the
   `vr_mirror\core\` pipeline: frames, smoothing, lag, horizon, black borders.
   - Run it once at the end of a change to `vr_mirror\core\` or `vr_mirror\mirror_app\`.
-  - Its 57 runs take about 14 minutes (837 s on 2026-11-09). LMU and
+  - Its 38 runs take about 9 minutes (558 s on 2026-11-09). LMU and
     the mirror app must be closed, and nobody should use the PC meanwhile, so ask the user before
     running it.
   - Only one test of the OpenXR layer may run on the PC at a time, from any session or worktree. Two
@@ -401,6 +401,11 @@ One convention, everywhere. Check every new name against it, and rename what bre
   - "Drawn pose" is the head pose a frame was drawn with: the stage (`2_drawn_pose\`, `DrawnPose`),
     the setting `drawn_pose`, and the trace's `drawn_pose` column. It was called the picture pose,
     and the setting `picture_matching`, until 2026-11-08.
+  - "Look-ahead" is the smoothing that runs half a second behind the game: the Smoothing setting's
+    choice (2), `SmoothingKind::kLookahead`, `LookaheadSmoothing`, and the e2e runs `<name>_lookahead`.
+    It was called Smooth (`_smooth`) until 2026-11-09, beside Smoothest (a second behind, 3,
+    `_smoothest`), which was dropped then (`findings\obs_plugin.md`, "Smoothing and zoom"). Findings
+    and e2e results from before keep the old names.
   - "Mirror" in a name ("VR Mirror", "Pimax Mirror", `MirrorView`, `vr_mirror\`) is our plugin and its
     sources. "The mirror" or "client mirror" in a sentence means only Pimax's client mirror
     (`PvrMirror`). A sentence that means the plugin says "VR Mirror".
@@ -541,8 +546,8 @@ the size, place and colour of every live part.
 
 - **Behaviour in `vr_mirror\core\` or `vr_mirror\mirror_app\`:** run `vr_mirror\e2e\bin\e2e_runner.exe`
   once, at the end.
-  - LMU and the mirror app must be closed, and the PC must not be used meanwhile. The 57 runs take
-    about 14 minutes. Close Pimax Play too for runs that are compared, because its compositor disturbs
+  - LMU and the mirror app must be closed, and the PC must not be used meanwhile. The 38 runs take
+    about 9 minutes. Close Pimax Play too for runs that are compared, because its compositor disturbs
     the timing (`reference\e2e_results.md`).
   - How to run it, its options and `stage_replay` are in `reference\e2e.md`.
   - Compare the numbers with the ones in `reference\e2e_results.md`, and update them there when they

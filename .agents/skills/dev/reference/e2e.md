@@ -24,7 +24,7 @@ It runs every scenario. Name some to run only those (`e2e_runner.exe stabilizati
 list them with `--list`.
 
 - Each scenario opens a small window (320×180) on top of everything, for about 15 s.
-- With every scenario at all three smoothings, that is 57 runs. They took 837 s (about 14 minutes) on
+- With every scenario at both smoothings, that is 38 runs. They took 558 s (about 9 minutes) on
   2026-11-09.
 - Don't use the PC meanwhile. For consistent timing, close LMU, the mirror app, Pimax Play and other
   heavy apps first.
@@ -93,7 +93,7 @@ stage is the slot check (`vr_mirror\core\pipeline\2_drawn_pose`), or another one
 - The score is given for each way a host asks for poses:
   - the mirror app at Instant (the previous frame's decision)
   - the OBS plugin at Instant (the frame's own decision)
-  - in hindsight, half a second and a second later (Smooth and Smoothest). `--delays` names other
+  - in hindsight, half a second later (Look-ahead) and a second later. `--delays` names other
     delays.
 - `--show` prints the evidence per frame. `--dump` writes it all, for trying decision rules offline.
 - It takes about a second. Use it to find out why a replay fails, and to try changes to the slot check.
@@ -106,10 +106,10 @@ Until 2026-10-30 this was a program of its own, `lag_sim`, then `--stage frame_m
 ### The whole pipeline: `--pipeline`
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --pipeline [--smoothing smooth --drawn_pose cockpit ...] [--zoom 1.2] [--ticks 60] [--input NAME ...]
+vr_mirror\e2e\bin\stage_replay.exe --pipeline [--smoothing instant --drawn_pose cockpit ...] [--zoom 1.2] [--ticks 60] [--input NAME ...]
 ```
 
-It runs the whole pipeline with any mix of stages. The settings' configuration (Smoothest, the slot
+It runs the whole pipeline with any mix of stages. The settings' configuration (Look-ahead, the slot
 check) applies, with any stage replaced by its flag, named after the config's field and value:
 
 | Flag | Values |
@@ -117,7 +117,7 @@ check) applies, with any stage replaced by its flag, named after the config's fi
 | `--arrival_timing` | `grid`, `reported` |
 | `--drawn_pose` | `slot_check`, `arrival_slot`, `cockpit`, `reported` |
 | `--frame_picker` | `fixed_delay`, `newest_frame`, `held_frame` |
-| `--smoothing` | `instant`, `smooth`, `smoothest` |
+| `--smoothing` | `instant`, `lookahead` |
 | `--warp` | `rotation` |
 | `--observer` | `none`, `stamp_trace` |
 
@@ -150,13 +150,13 @@ vr_mirror\e2e\bin\stage_replay.exe --golden out\stage_replay\golden_new.txt
 
 It writes every output of the pipeline, each float exactly in hex: the 28 numbers of the warp, the head
 pose, the view and image pose, and the edge counters. It runs over a fixed matrix:
-- the six inputs, at Instant, Smooth and Smoothest, and at zoom 1.2 and 1.5
+- the six inputs, at Instant and Look-ahead, and at zoom 1.2 and 1.5
 - drawn as the mirror app's window (at arrival, or held for the look-ahead delay), and as the OBS
   plugin's 60 Hz ticks (each tick's own moment, with an older frame standing in as the image, which e2e
   never sees)
 - then single runs with stabilization switched off and on
 
-That is 78 runs and about 40 MB.
+That is 52 runs and about 26 MB.
 
 **Refactor guard.** A change that must not change behaviour (moving code, splitting the pipeline into
 stages) must reproduce the build before it byte for byte. Write `golden_main.txt` with that build, then

@@ -12,8 +12,8 @@
 // For each frame it scores the pose as each host asks for it:
 //   prev  the mirror app with Instant: drawn at once, before its own thumbnail is read
 //   own   the OBS plugin with Instant: drawn a few ms later, after its own thumbnail
-//   h45   45 frames later (Smooth: shown half a second after arrival)
-//   h92   92 frames later (Smoothest: a second)
+//   h45   45 frames later (Look-ahead: shown half a second after arrival)
+//   h92   92 frames later (a second of hindsight)
 // A pose more than 0.01 deg off the true one is wrong. --show also prints, per frame, which slot's
 // prediction each pose matches (by comparing poses: the slots before its arrival slot, ? for none)
 // and the slot check's evidence for the pair of frames.

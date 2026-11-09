@@ -25,8 +25,9 @@
 #include "pipeline/2_drawn_pose/drawn_pose.h"
 #include "pipeline/pipeline_config.h"
 
-// The most memory one host's stored pictures may take (bytes): Smoothest holds about a second of
-// frames, which at the OpenXR layer's full 5084x4168 would be 8 GB beside the game's own.
+// The most memory one host's stored pictures may take (bytes): Look-ahead holds about half a second
+// of frames (52 at 90 fps), which at the OpenXR layer's full 5084x4168 would be 4.4 GB beside the
+// game's own.
 constexpr double kPictureMemory = 4e9;
 
 class FrameSource : public PoseSource {

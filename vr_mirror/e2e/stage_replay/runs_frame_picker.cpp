@@ -35,7 +35,7 @@ namespace stage_replay {
             std::string name;
             std::vector<TraceFrame> frames;
             std::vector<double> ticks;
-            std::vector<std::pair<size_t, int>> smoothingAt;  // (tick index, settings smoothing) from then on
+            std::vector<std::pair<size_t, int>> smoothingAt;  // (tick index, SmoothingKind) from then on
         };
 
         bool LoadTrace(const std::string& ticksPath, const std::string& pimaxPath, TraceInput* in) {
@@ -102,7 +102,7 @@ namespace stage_replay {
                 in.ticks.push_back(100 + i / hz + (next() - 0.5) * 0.0005);
             }
 
-            in.smoothingAt = {{0, 2}, {in.ticks.size() / 3, 0}, {2 * in.ticks.size() / 3, 1}};
+            in.smoothingAt = {{0, 1}, {in.ticks.size() / 3, 0}, {2 * in.ticks.size() / 3, 1}};
             return in;
         }
 
@@ -217,13 +217,13 @@ namespace stage_replay {
                 return -1;
             }
 
-            for (int smoothing = 0; smoothing <= 2; smoothing++) {
+            for (int smoothing = 0; smoothing <= 1; smoothing++) {
                 Run(in, smoothing, kind);
             }
         }
 
         for (double hz : {50.0, 59.94, 60.0, 144.0}) {
-            Run(Synthetic(hz, 30.0), 2, kind);
+            Run(Synthetic(hz, 30.0), 1, kind);
         }
         return 0;
     }

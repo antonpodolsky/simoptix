@@ -35,7 +35,7 @@ it is committed or posted. An edit doesn't take anything out.
 - images, because a screenshot or a frame shows the track and the car. Ask the maintainer before
   committing or posting one, and before cropping or blurring it.
 
-Describe the setup only as far as the point needs it: "one recording, OpenXR Mirror on Smooth, 4K
+Describe the setup only as far as the point needs it: "one recording, OpenXR Mirror on Look-ahead, 4K
 canvas". Name a recording or a driving session by what it shows ("the dust replay", "a race with late
 frames") or by a letter ("race A"), never by its date or its file name.
 
@@ -95,7 +95,7 @@ argument that holds double quotes, so `--body "..."` and `-m "..."` break on suc
 
 | Bad | Why | Good |
 |---|---|---|
-| Seen in `<date> <time>.mp4` at 21:14, in the Porsche at Spa | A recording's name, a clock time, a car and a track | Seen in one recording, OpenXR Mirror on Smooth |
+| Seen in `<date> <time>.mp4` at 21:14, in the Porsche at Spa | A recording's name, a clock time, a car and a track | Seen in one recording, OpenXR Mirror on Look-ahead |
 | `- 2026-03-14, a race at Sebring, 52 min` (in a findings file) | A session's date, its track and its length | `- race A, the longest of four sessions` |
 | The second start, at 21:05 | A clock time of the maintainer's session | The second start, with the load note |
 | The flicker came 41312 frames into the session | The count gives the session's length | The flicker is one output frame, after a 64 ms stall |

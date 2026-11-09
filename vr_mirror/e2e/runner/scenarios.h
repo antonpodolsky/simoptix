@@ -46,10 +46,13 @@ struct Limits {
     int maxStartMissed = -1;         // game_start_s: the game's first frames the tool didn't show
 };
 
+// The smoothings each scenario runs at: 0 Instant, 1 Look-ahead.
+constexpr int kSmoothings = 2;
+
 struct Scenario {
     std::string name, description, motion;
     // The scenario it is a smoothing variant of (its Instant name), and the smoothing it runs at
-    // (0 Instant, 1 Smooth, 2 Smoothest; the tool's setting `smoothing` is one more).
+    // (0 Instant, 1 Look-ahead; the tool's setting `smoothing` is one more).
     std::string base;
     int smoothing = 0;
     double seconds = 12;
@@ -69,14 +72,14 @@ struct Scenario {
     // (frames from the wrong pose, visible pose jumps) are exact: replays, and the synthetic
     // scenarios whose game falls behind (queue_lag), since the fake predicts each slot once.
     bool posesExact = false;
-    // Compare the view and smoothing measures of its Smooth and Smoothest runs with Instant
+    // Compare the view and smoothing measures of its Look-ahead run with Instant
     // (compare.h); off where the view isn't what the scenario is about (only its frame measures).
     bool compareView = true;
     std::string error;  // why it can't run (e.g. a replay's thumbnails missing): reported as a fail
 };
 
 // The built-in synthetic scenarios, each at every smoothing (Instant keeps the name; then
-// <name>_smooth and <name>_smoothest).
+// <name>_lookahead).
 std::vector<Scenario> BuiltInScenarios();
 // Every vr_mirror/e2e/replay/*.csv (a real session from the OBS plugin's frame trace) becomes a scenario.
 void AddReplayScenarios(const fs::path& replayDir, std::vector<Scenario>* out);

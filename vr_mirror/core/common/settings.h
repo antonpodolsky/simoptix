@@ -5,10 +5,15 @@
 #pragma once
 
 struct MirrorSettings {
-    // How the view follows the head (vr_mirror\core\pipeline\4_smoothing\): 0 off (the headset's
-    // view as it is), 1 Instant (a filter, no delay), 2 Smooth (the picture runs half a second behind
-    // the game, and the smoothing sees that far ahead), 3 Smoothest (a second).
-    int smoothing = 3;
+    // The values of `smoothing`. Scenes saved with the dropped 3, a second behind, read as Look-ahead.
+    static constexpr int kSmoothingOff = 0;
+    static constexpr int kSmoothingInstant = 1;
+    static constexpr int kSmoothingLookahead = 2;
+
+    // How the view follows the head (vr_mirror\core\pipeline\4_smoothing\): off (the headset's view as
+    // it is), Instant (a filter, no delay) or Look-ahead (the view runs half a second behind the game,
+    // and the smoothing sees that far ahead).
+    int smoothing = kSmoothingLookahead;
     float zoom = 1.5f;  // crop factor; the spare image around the view is how far it may trail the head
     // The drawn pose stage's method (vr_mirror\core\pipeline\2_drawn_pose\): 0 off, every frame keeps
     // the slot its arrival timing gives it; 1 the slot check: judge from small pictures whether each game
@@ -18,9 +23,9 @@ struct MirrorSettings {
     int drawnPose = 1;
 };
 
-// The view is stabilized at all (smoothing 1 to 3).
+// The view is stabilized at all (Instant or Look-ahead).
 inline bool Stabilizes(const MirrorSettings& s) {
-    return s.smoothing > 0;
+    return s.smoothing > MirrorSettings::kSmoothingOff;
 }
 
 // Calls f(key, value&) for every setting; value is an int& or float&.

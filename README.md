@@ -14,10 +14,9 @@ view, and Overlays adds a G-meter source. Both work with Le Mans Ultimate (LMU) 
   - **SimOptix: OpenXR Mirror** takes the game's own left eye at full size, 5084×4168 in LMU, with
     the exact head pose each frame was drawn with. It needs an API layer in the game, which is
     experimental and works offline only (below).
-- **Smoothing** trades delay for calm. Smoothest runs about a second behind the game, sees where the
-  head goes next, and is meant for recording. Smooth runs half a second behind. Instant adds no delay,
-  for live streams. OBS's audio, the G-meter and race auto-record follow the delay, so they stay in
-  sync with the view.
+- **Smoothing** trades delay for calm. Look-ahead runs half a second behind the game, sees where the
+  head goes next, and is meant for recording. Instant adds no delay, for live streams. OBS's audio,
+  the G-meter and race auto-record follow the delay, so they stay in sync with the view.
 - **Race auto-record** makes OBS record each LMU race by itself, from the start lights to 5 s after
   the car stops past the finish.
 - **SimOptix: Overlays** adds the **SimOptix: G-Meter Overlay** source. It also works over a normal

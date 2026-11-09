@@ -153,7 +153,7 @@ void ToolPresentStats(const ToolTrace& tt, double* fps, double* maxGapMs);
 // of 90 Hz frames), skipping the first second.
 double PresentJitterMs(const ToolTrace& tt);
 // How long after its arrival the tool presented each game frame, skipping the first second: the
-// median (ms) and its spread (99th minus 1st percentile, ms). With Smooth and Smoothest it is the
+// median (ms) and its spread (99th minus 1st percentile, ms). With Look-ahead it is the
 // picture's delay, which audio sync shifts the sound by, so it should hold steady.
 void PresentDelayStats(const ToolTrace& tt, double* medianMs, double* spreadMs);
 // Game frames (after the first second) that the tool never presented.

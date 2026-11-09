@@ -115,12 +115,12 @@ namespace {
     // window, never the title.)
     void UpdateTitle(App& app, const GameFrame& f) {
         const MirrorSettings& s = app.settings.core;
-        const wchar_t* const kSmoothing[] = {L"off", L"instant", L"smooth", L"smoothest"};
+        const wchar_t* const kSmoothing[] = {L"off", L"instant", L"look-ahead"};
         wchar_t title[256];
         swprintf_s(
             title,
             L"SimOptix: VR Mirror  |  smoothing %s, zoom %.2f  |  %.0f fps%s",
-            kSmoothing[std::clamp(s.smoothing, 0, 3)],
+            kSmoothing[std::clamp(s.smoothing, 0, 2)],
             s.zoom,
             app.source->SourceFps(),
             f.buffer < 0         ? L"  |  waiting for headset"
@@ -561,7 +561,7 @@ int wmain() {
     loop.lastLateReport = loop.lastReopen;
 
     // The pipeline for a window drawn once per game frame: its frame picker is NewestFramePicker
-    // (Instant) or HeldFramePicker (Smooth, Smoothest). Frames are due the smoothing's delay plus the
+    // (Instant) or HeldFramePicker (Look-ahead). Frames are due the smoothing's delay plus the
     // present delay after their de-jittered arrival.
     BuildPipeline(config, &app.pipeline);
     app.feed.SetDrawnPose(app.pipeline.SharedDrawnPose());

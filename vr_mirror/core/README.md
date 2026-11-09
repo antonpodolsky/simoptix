@@ -18,6 +18,7 @@ counters are in `shared\`, because the Overlays plugin uses them too.
 | stamp | The frame number that VR Mirror draws as 15 small squares in the top-left corner of the view, when its Debug setting is on |
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
+| look-ahead | The method behind the Look-ahead smoothing. The view runs half a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
 
 ## Structure
 
@@ -52,7 +53,7 @@ The rules for includes, file names and the build lists are in the dev skill
 | `pipeline\1_arrival_timing\` | Stage 1: `arrival_timing.h` (interface), `grid_arrival_timing.*` (`GridArrivalTiming`), `reported_arrival_timing.*` (`ReportedArrivalTiming`) |
 | `pipeline\2_drawn_pose\` | Stage 2: `drawn_pose.h` (interface, `PoseLookup`, `kThumbArea`, `PictureNeeds`), `slot_check_drawn_pose.*` (`SlotCheckDrawnPose`) with its helpers `slot_check_drawn_pose_lag.*`, `arrival_slot_drawn_pose.*` (`ArrivalSlotDrawnPose`, `PredictedPose`), `cockpit_drawn_pose.*` (`CockpitDrawnPose`: the slot check plus the pose correction from the cockpit) with its helpers `cockpit_drawn_pose_shift.*`, and `reported_drawn_pose.*` (`ReportedDrawnPose`: the pose of the slot a frame source says the frame was drawn for) |
 | `pipeline\3_frame_picker\` | Stage 3: `frame_picker.h` (interface), `fixed_delay_picker.*` (`FixedDelayPicker`, `WarmupSlots`), `newest_frame_picker.*`, `held_frame_picker.*` |
-| `pipeline\4_smoothing\` | Stage 4: `smoothing.h` (interface), `instant_smoothing.*` (with `OrientationFilter`), `lookahead_smoothing.*` (Smooth and Smoothest, with the path solver `LookaheadSmoother`) |
+| `pipeline\4_smoothing\` | Stage 4: `smoothing.h` (interface), `instant_smoothing.*` (with `OrientationFilter`), `lookahead_smoothing.*` (Look-ahead, with the path solver `LookaheadSmoother`) |
 | `pipeline\picture_room\` | Beside the stages: `picture_room.*`, the stateless geometry each smoothing uses to keep its view inside the game's eye images (the room a view has, the stop at the edge) |
 | `pipeline\observer\` | Beside the stages: `observer.h` (interface, `FrameRecord`, `TraceSink`), `no_observer.h` (`NoObserver`), `stamp_trace_observer.*` (`StampTraceObserver`: the frame-number stamp and the frame trace) |
 | `pipeline\5_warp\` | Stage 5: `warp.h` (`WarpParams`, interface), `rotation_warp.*` (`RotationWarp`), `warp.hlsli` (the per-pixel warp that a host wraps in its own shader or effect) |

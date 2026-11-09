@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // LookaheadSmoothing: the view for a frame from the head poses around it, up to a fixed delay after
-// it, for a recording that may run that far behind the game (setting smoothing 1 Smooth, half a
-// second; 2 Smoothest, a second). A jerk-penalised path over the window a live output can see: the
+// it, for a recording that may run that far behind the game (setting smoothing 2, Look-ahead: half a
+// second). A jerk-penalised path over the window a live output can see: the
 // path stays close to the head and its jerk (third difference) is penalised with a time constant
 // tau, so a steady turn, or a steadily changing one, is followed with no lag at all, while tremor
 // and tracking noise are averaged away. tau varies with the head's speed (long while nearly still,
@@ -16,7 +16,7 @@
 //
 // Logic only: poses come in sampled at a fixed spacing; no runtime calls, no locking, and no
 // allocation once its buffers have grown to the window (call from one thread per instance).
-// LookaheadFor and LookaheadOutputDelayS stay inline here for e2e's runner, which links no core.
+// LookaheadParams and LookaheadOutputDelayS stay inline here for e2e's runner, which links no core.
 #pragma once
 
 #include <algorithm>
@@ -27,33 +27,20 @@
 #include "pipeline/4_smoothing/smoothing.h"
 #include "pipeline/picture_room/picture_room.h"
 
-// The presets behind settings.h `smoothing` (MirrorSettings::kSmoothing*).
+// The tuning of the Look-ahead setting.
 struct LookaheadParams {
-    double delayS = 0;     // how far the recording runs behind: the poses seen after the frame (s)
-    double tauStillS = 0;  // time constant while the head is nearly still (s)
-    double tauMoveS = 0;   // ...and while it turns (s)
-    double stillDeg = 5;   // below this turning speed the head counts as still (deg/s)
-    double moveDeg = 100;  // from this speed on, the turning time constant (geometric in between)
+    double delayS = 0.5;     // how far the recording runs behind: the poses seen after the frame (s)
+    double tauStillS = 0.3;  // time constant while the head is nearly still (s)
+    double tauMoveS = 0.05;  // ...and while it turns (s)
+    double stillDeg = 5;     // below this turning speed the head counts as still (deg/s)
+    double moveDeg = 100;    // from this speed on, the turning time constant (geometric in between)
 };
-
-// smoothing: 1 = Smooth (half a second), 2 = Smoothest (a second); 0 (Instant) has no look-ahead.
-inline LookaheadParams LookaheadFor(int smoothing) {
-    LookaheadParams p;
-    if (smoothing == 1) {
-        p.delayS = 0.5, p.tauStillS = 0.3, p.tauMoveS = 0.05;
-    }
-    if (smoothing >= 2) {
-        p.delayS = 1.0, p.tauStillS = 0.2, p.tauMoveS = 0.05;
-    }
-    return p;
-}
 
 // How long after a frame's arrival its view can be computed: the look-ahead delay, plus the ~10-20
 // ms from arrival to the display slot the frame was rendered for, which the window is centred on.
-// Hosts show each frame at least this late. `smoothing`: SmoothingKind (0 Instant: 0 s, 1 Smooth, 2
-// Smoothest).
-inline double LookaheadOutputDelayS(int smoothing) {
-    return smoothing > 0 ? LookaheadFor(smoothing).delayS + 0.03 : 0;
+// Hosts show each frame at least this late.
+inline double LookaheadOutputDelayS() {
+    return LookaheadParams().delayS + 0.03;
 }
 
 class LookaheadSmoother {
@@ -217,11 +204,9 @@ private:
 
 class LookaheadSmoothing : public Smoothing {
 public:
-    // preset: 1 Smooth, 2 Smoothest (SmoothingKind). The output is always level (its path is checked
-    // after levelling).
-    explicit LookaheadSmoothing(int preset) : preset_(preset), params_(LookaheadFor(preset)) {}
+    // The output is always level (its path is checked after levelling).
     void Reset() override {}  // no state between frames
-    double DelayS() const override { return LookaheadOutputDelayS(preset_); }
+    double DelayS() const override { return LookaheadOutputDelayS(); }
     void Window(double period, int* behind, int* ahead) const override;
     Smoothed Smooth(const SmoothingInput& in) override;
 
@@ -238,7 +223,6 @@ private:
     // a moment got a target for the first time this frame (the path should be solved again).
     bool Plan(const SmoothingInput& in, int n);
 
-    int preset_;
     LookaheadParams params_;
     LookaheadSmoother solver_;
     std::vector<Quat> targets_;    // per path moment: what the path is pulled towards (grown once)

@@ -110,7 +110,7 @@ the branch changes against `main`, why, what was verified and what wasn't. These
 | `build.bat install` failed with "Access is denied", because the plugin folders belong to Administrators now | The state of the maintainer's PC | **`build.bat install` into OBS's plugin folder:** not run. The plugins were checked in the local files test's private copy of OBS instead |
 | **Next step:** once the installer is on `main`, it should show the version | A plan, and work on another branch | (delete, and tell the maintainer in chat) |
 | I've left a note in the shared notes folder | The agent's notes | (delete) |
-| Tested on a recording from last night at Spa | A session's date, a track | Tested on one recording, OpenXR Mirror on Smooth |
+| Tested on a recording from last night at Spa | A session's date, a track | Tested on one recording, OpenXR Mirror on Look-ahead |
 | `Fix stuff` | No area, says nothing | `Telemetry: the reader keeps LMU while the game is in its menus` |
 
 ## Checklist before posting
