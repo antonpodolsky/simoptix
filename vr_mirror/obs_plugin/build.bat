@@ -8,7 +8,8 @@ rem in step with its picture by audio_sync.cpp), and its race
 rem auto-record (race_auto_record\race_recorder.cpp decides when, race_auto_record\auto_record.cpp tells
 rem OBS), plus the Pimax frame source (..\frame_sources\pimax, listed in its pimax.rsp), the VR
 rem Mirror's core (..\core, its sources listed in ..\core\build\*.rsp) and ..\..\shared (the picture's
-rem delay the plugins share, the crash dump, and the game's telemetry listed by
+rem delay the plugins share, the crash dump, the files kept in %%LOCALAPPDATA%%\simoptix, and the game's
+rem telemetry listed by
 rem ..\..\shared\telemetry\sources.bat, which also finds LMU's headers: LMU_SDK; without them the plugin
 rem builds without LMU, and race auto-record reads no game).
 rem Optional argument "install": copies it to OBS's per-machine plugin folder
@@ -30,6 +31,7 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_S
    plugin.cpp mirror_view.cpp warp_effect.cpp frame_ring.cpp session_worker.cpp audio_sync.cpp ^
    race_auto_record\race_recorder.cpp race_auto_record\auto_record.cpp ^
    ..\..\shared\shared_memory.cpp ..\..\shared\program_delay.cpp ..\..\shared\crash_dump.cpp ^
+   ..\..\shared\local_files.cpp ^
    %TELEMETRY_FILES% ^
    @..\core\build\common.rsp @..\core\build\pipeline.rsp @..\core\build\adapters.rsp ^
    @..\frame_sources\pimax\pimax.rsp @..\frame_sources\openxr\openxr.rsp ^

@@ -230,14 +230,21 @@ for the agents that read those files. Change the rules here, never in those file
     timing.
   - Compare the results with the numbers in `reference\e2e_results.md`, and update them there when
     they change for a reason.
+- **The local files test (`vr_mirror\e2e\bin\local_files_e2e.exe`):** the real, built OBS plugins run
+  in a private copy of OBS, and the real OpenXR layer in a fake game. It checks the files they write
+  under `%LOCALAPPDATA%\simoptix`: when each is made, its name, and that only the newest of each kind
+  are kept (`vr_mirror\e2e\README.md`, "The local files test").
+  - Run it at the end of a change to `shared\local_files.*`, the crash dump, the frame trace's files or
+    the layer's log, and give such a change a case there.
+  - It takes about a minute. OBS and LMU must be closed. Its first run copies OBS (466 MB).
 - **What gets a scenario:**
   - New behaviour in the pipeline gets a scenario, or a new measure in an existing one.
   - A pipeline bug gets a scenario that reproduces it before the fix, when the fake runtime can produce
     the conditions. If it can't, extend the fake: fake the boundary, and add no test hooks to the
     mirror app.
-- **What e2e doesn't cover:** the OBS plugins themselves (their sources, the G-meter, LMU telemetry)
-  and real hardware timing. Check those by building, installing, reading the logs and measuring. Then
-  hand over to the user with exactly what to look at.
+- **What e2e doesn't cover:** the OBS plugins themselves (their sources, the G-meter, LMU telemetry),
+  apart from the files they write, and real hardware timing. Check those by building, installing,
+  reading the logs and measuring. Then hand over to the user with exactly what to look at.
 - **Visual output** (overlays, labels, layout):
   - Check positions and gaps by measuring a screenshot with a script.
   - Allow for OBS's preview scaling: judge sharpness only at 1:1.
@@ -252,8 +259,10 @@ for the agents that read those files. Change the rules here, never in those file
   - Build every target that includes the changed files. `vr_mirror\core\` and
     `vr_mirror\frame_sources\pimax\` are used by `vr_mirror\obs_plugin`, `vr_mirror\mirror_app` and
     `vr_mirror\e2e`. `shared\` is used by those, by `overlays\obs_plugin`, by the fake LMU and (its
-    logging) by the OpenXR layer.
+    logging and `local_files.*`) by the OpenXR layer and its check program.
   - The e2e suite passes, if `vr_mirror\core\` or `vr_mirror\mirror_app\` changed.
+  - The local files test passes, if what a plugin or the layer writes under `%LOCALAPPDATA%\simoptix`
+    changed.
   - Say what wasn't run or checked.
 
 ## Correct, never easiest
@@ -365,7 +374,8 @@ One convention, everywhere. Check every new name against it, and rename what bre
   DLLs (`simoptix_vr_mirror.dll`), folders, the exe, log tags (`[simoptix_vr_mirror]`), shared memory
   and event names. Environment variables are the same in capitals (`SIMOPTIX_VR_MIRROR_TRACE`).
   Everything a plugin or the layer writes goes under `%LOCALAPPDATA%\simoptix\` (traces in its
-  `traces\`).
+  `traces\`). `shared\local_files.*` names each such file `<kind>_<date>_<time>...` and keeps the newest
+  10 of each kind. A new kind of file is added there.
 - **What OBS shows is "SimOptix: <what>", matching the id.** `simoptix_pimax_mirror` is "SimOptix:
   Pimax Mirror", `simoptix_openxr_mirror` is "SimOptix: OpenXR Mirror", and `simoptix_gmeter_overlay`
   is "SimOptix: G-Meter Overlay".
@@ -417,12 +427,12 @@ The plugin builds make OBS's import library from `shared\obs_lib\obs.def`.
 | Changed | Build | e2e at the end |
 |---|---|---|
 | `vr_mirror\core\`, `vr_mirror\frame_sources\pimax\` | Both plugins (step 4), `vr_mirror\mirror_app\build.bat`, `vr_mirror\e2e\build.bat` | Yes |
-| `shared\` | The same, and `shared\telemetry\games\lmu\fake\build.bat` for a telemetry change | If the mirror app or e2e use the file |
-| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins (step 4) | No. Verify as in step 5 |
+| `shared\` | The same, and `shared\telemetry\games\lmu\fake\build.bat` for a telemetry change, and `vr_mirror\frame_sources\openxr\build.bat` for `shared\local_files.*` | If the mirror app or e2e use the file. The local files test for `shared\local_files.*` and the crash dump |
+| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins (step 4) | The local files test for the frame trace's files. Otherwise no. Verify as in step 5 |
 | `vr_mirror\mirror_app\` | `vr_mirror\mirror_app\build.bat` (if `simoptix_vr_mirror.exe` is running, build `simoptix_vr_mirror_dev.exe` instead) | Yes, for behaviour changes |
 | `vr_mirror\e2e\` | `vr_mirror\e2e\build.bat` | The scenarios that changed |
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`: the layout check, on a PC with Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`. `PVR_SDK` names another `Include` folder. Without the SDK it says so and skips | Yes |
-| `vr_mirror\frame_sources\openxr\` | `vr_mirror\frame_sources\openxr\build.bat`, then its check program, then signed if it goes into the game (`reference\openxr.md`) | No |
+| `vr_mirror\frame_sources\openxr\` | `vr_mirror\frame_sources\openxr\build.bat`, then its check program, then signed if it goes into the game (`reference\openxr.md`) | The local files test for the layer's log. Otherwise no |
 | `vr_mirror\recording_analysis\` | `build.bat` there, for `patch_shift.exe` and `grid_shift.exe` | No |
 
 - Run the build scripts through `cmd /c "<full path>\build.bat"` from PowerShell. A bare `build.bat`
@@ -446,7 +456,8 @@ it holds the DLLs. Install both from one build, because the telemetry both read 
    with that folder as the working directory. Then read its new log for the plugins' lines with an
    error, a failure, a crash or an exception.
 
-Crash dumps go to `%LOCALAPPDATA%\simoptix`. OBS logs are in `%APPDATA%\obs-studio\logs`.
+Crash dumps go to `%LOCALAPPDATA%\simoptix`, and the newest 10 are kept. OBS logs are in
+`%APPDATA%\obs-studio\logs`.
 
 ## 4a. Take a design into the plugin
 

@@ -7,10 +7,13 @@
 
 #include <cwchar>
 
+#include "shared/local_files.h"
 #include "shared/shared_memory.h"
 #include "shared/unique_handle.h"
 
 namespace {
+
+    constexpr LONG kDumpsPerSession = 2;
 
     const wchar_t* g_plugin = L"plugin";  // set once by InstallCrashDump, before the handler is added
 
@@ -24,31 +27,21 @@ namespace {
 
         // With both plugins installed, both handlers see the crash: the first one writes the dump.
         static LONG seen = 0;
-        if (InterlockedIncrement(&seen) > 2) {
+        if (InterlockedIncrement(&seen) > kDumpsPerSession) {
             return EXCEPTION_CONTINUE_SEARCH;
         }
-        if (InterlockedIncrement(&TheSharedMemory()->crashDumps) > 2) {
+        if (InterlockedIncrement(&TheSharedMemory()->crashDumps) > kDumpsPerSession) {
             return EXCEPTION_CONTINUE_SEARCH;
         }
-        wchar_t dir[MAX_PATH], path[MAX_PATH];
-        ExpandEnvironmentStringsW(L"%LOCALAPPDATA%\\simoptix", dir, MAX_PATH);
-        CreateDirectoryW(dir, nullptr);
-        SYSTEMTIME t;
-        GetLocalTime(&t);
-        swprintf(
-            path,
-            MAX_PATH,
-            L"%s\\obs_%04d%02d%02d_%02d%02d%02d_%08lx_%s.dmp",
-            dir,
-            t.wYear,
-            t.wMonth,
-            t.wDay,
-            t.wHour,
-            t.wMinute,
-            t.wSecond,
-            code,
-            g_plugin
-        );
+
+        wchar_t path[MAX_PATH];
+
+        if (!NewLocalFilePath(LocalFileKind::kCrashDump, path, MAX_PATH)) {
+            return EXCEPTION_CONTINUE_SEARCH;
+        }
+
+        const size_t used = wcslen(path);
+        swprintf(path + used, MAX_PATH - used, L"_%08lx_%s.dmp", code, g_plugin);
 
         UniqueHandle f(CreateFileW(path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr));
         if (f) {
@@ -72,7 +65,8 @@ namespace {
 
 }
 
-void InstallCrashDump(const wchar_t* plugin) {
+int InstallCrashDump(const wchar_t* plugin) {
     g_plugin = plugin;
     AddVectoredExceptionHandler(0, Handler);
+    return PruneLocalFiles(LocalFileKind::kCrashDump, kDumpsPerSession);
 }

@@ -6,6 +6,10 @@ headset and game, or against a simulated game with the OpenXR layer in it. They 
 way OBS does and check what a viewer would see. The tests use no headset, LMU or OBS, and they test the
 core and the mirror app, not the OBS plugins.
 
+The local files test (`local_files\`) is separate. It runs the real OBS plugins in a private copy of
+OBS, and the real OpenXR layer in a fake game. It checks the files they write under
+`%LOCALAPPDATA%\simoptix` ("The local files test", below).
+
 ## Terms
 
 | Term | Meaning |
@@ -250,13 +254,38 @@ three things:
   inputs and settings. A change that must not change behaviour can be checked byte for byte against
   the build before it.
 
+## The local files test
+
+`bin\local_files_e2e.exe` checks the frame traces, crash dumps and OpenXR layer logs that SimOptix
+keeps in `%LOCALAPPDATA%\simoptix`. It runs the plugins and the layer as built, with
+`%LOCALAPPDATA%` pointed at a test folder that already holds older files of each kind.
+- **The plugins** run in OBS 32.2.2, in a copy of the installed OBS in `out\obs_portable\`, made on the
+  first run. The copy runs in OBS's portable mode, with settings of its own made fresh for each run.
+  It loads the plugins from this build and no installed plugin, so the user's own OBS stays as it was.
+  The Pimax source reads the fake runtime, which sits beside the copy's `obs64.exe`.
+- **The layer** runs in `bin\fake_layer_game\Le Mans Ultimate.exe`. The fake game loads the layer's DLL
+  and makes the OpenXR loader's first call to it, without a runtime or a headset.
+
+| Case | What runs | Checks |
+|---|---|---|
+| `no_game` | OBS with both sources and Debug on. The fake runtime runs with no game | No frame trace. Of 12 older crash dumps, the newest 8 are left once the plugins have loaded |
+| `pimax_game` | The Pimax source with the fake runtime's game | One new trace, both its files with rows. Of it and 12 older traces, the newest 10 are left, each older one gone with all its files |
+| `openxr_game` | The OpenXR source with `fake_openxr.exe` | One new trace, both its files with rows. Of it and 10 older traces, the newest 10 are left |
+| `layer` | The fake game three times: with the first OpenXR call, without it, and with it again | Each start has its own log, which starts with the load line. Of 12 older logs and the new ones, the newest 10 are left after each start with the call. The layer's logs of older names stay |
+
+Each case also checks that files of other names stay. OBS and LMU must be closed. A run takes about a
+minute, and the first run takes longer while it copies OBS. Each case's files, OBS's log among them, are
+in `out\local_files\<case>\`.
+
 ## Files
 
 | Folder or file | What |
 |---|---|
-| `build.bat` | Builds the fake runtime, the fake OpenXR game, the runner and `stage_replay` into `bin\` |
+| `build.bat` | Builds the fake runtime, the fake OpenXR game, the runner, the local files test with its fake game, and `stage_replay` into `bin\` |
 | `fake_game\` | What both fakes share: the head motion (`fake_game_motion.h`) and the game's image (`fake_game_picture.*`: the direction codes or the cockpit, stored as the faked source stores it) |
+| `fake_layer_game\` | `Le Mans Ultimate.exe`, for the local files test: the fake game that loads the real OpenXR layer's DLL |
 | `fake_openxr\` | `fake_openxr.exe`: the fake game with the OpenXR layer's frames, through the layer's own frame code (`fake_openxr_layer.*` makes the game's calls into it) |
+| `local_files\` | `local_files_e2e.exe`: the local files test. Its cases (`local_files_e2e.cpp`), its copy of OBS (`local_files_obs.*`), and the older files it makes and the files it reads (`local_files_folder.*`) |
 | `fake_pvr\` | The fake PVR runtime and game (`libPVRClient64.dll`): replays of real sessions (`fake_pvr_replay.h`) and their real thumbnails (`fake_pvr_thumbs.h`) |
 | `runner\` | `e2e_runner.exe`: the scenarios (`scenarios.*`), running the mirror app (`tool_process.*`), capturing its window (`capture.h`, `patches.h`), the measures (`analysis.*`), and the comparison with Instant (`compare.*`) |
 | `stage_replay\` | `stage_replay.exe`: one run per stage (`runs_*.cpp`), the whole pipeline (`runs_pipeline.cpp`), its scores (`scores.*`), and the golden file (`golden.*`) |

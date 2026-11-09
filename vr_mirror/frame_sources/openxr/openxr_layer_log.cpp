@@ -9,8 +9,8 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
-#include <string>
 
+#include "shared/local_files.h"
 #include "shared/log.h"
 #include "shared/unique_handle.h"
 
@@ -31,9 +31,27 @@ namespace {
     std::atomic<uint32_t> g_skipped{0};  // lines dropped because the writer was busy or the memory full
     HANDLE g_wake = nullptr;             // set when a line is added; the writer sleeps on it
 
+    // This start's log, set once by NoteDllLoaded or StartLayerLog.
+    wchar_t g_path[MAX_PATH] = {};
+
     // The writer thread's own.
     FILE* g_file = nullptr;
     Lines g_writing;
+
+    // This start's log's path in g_path, made once.
+    bool MakePath() {
+        if (g_path[0]) {
+            return true;
+        }
+
+        if (!NewLocalFilePath(LocalFileKind::kLayerLog, g_path, MAX_PATH)
+            || wcscat_s(g_path, MAX_PATH, L".log") != 0) {
+            g_path[0] = L'\0';
+            return false;
+        }
+
+        return true;
+    }
 
     void AddLine(const char* message) {
         SYSTEMTIME t;
@@ -63,6 +81,12 @@ namespace {
 
     DWORD WINAPI WriterThread(void*) {
         try {
+            const int deleted = PruneLocalFiles(LocalFileKind::kLayerLog, 0);
+
+            if (deleted > 0) {
+                fprintf(g_file, "(%d older log(s) deleted)\n", deleted);
+            }
+
             uint32_t skippedReported = 0;
             for (;;) {
                 WaitForSingleObject(g_wake, INFINITE);
@@ -94,16 +118,12 @@ namespace {
 }
 
 void NoteDllLoaded() {
-    wchar_t path[MAX_PATH];
-    DWORD n = GetEnvironmentVariableW(L"LOCALAPPDATA", path, MAX_PATH);
-    if (n == 0 || n + 64 >= MAX_PATH) {
+    if (!MakePath()) {
         return;
     }
-    wcscat_s(path, L"\\simoptix");
-    CreateDirectoryW(path, nullptr);  // fails harmlessly if it exists
-    wcscat_s(path, L"\\openxr_frame_source_loads.log");
+
     UniqueHandle f(CreateFileW(
-        path,
+        g_path,
         FILE_APPEND_DATA,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
         nullptr,
@@ -148,16 +168,12 @@ bool StartLayerLog() {
         return true;
     }
     SetCoreLog(Discard);  // never stdout: the game owns it
-    wchar_t base[MAX_PATH];
-    DWORD n = GetEnvironmentVariableW(L"LOCALAPPDATA", base, MAX_PATH);
-    if (n == 0 || n >= MAX_PATH) {
+
+    if (!MakePath()) {
         return false;
     }
-    std::wstring dir = std::wstring(base) + L"\\simoptix";
-    CreateDirectoryW(dir.c_str(), nullptr);  // fails harmlessly if it exists
-    std::wstring path = dir + L"\\openxr_frame_source.log";
-    MoveFileExW(path.c_str(), (dir + L"\\openxr_frame_source.prev.log").c_str(), MOVEFILE_REPLACE_EXISTING);
-    g_file = _wfsopen(path.c_str(), L"w", _SH_DENYWR);
+
+    g_file = _wfsopen(g_path, L"a", _SH_DENYWR);  // after NoteDllLoaded's line
     if (!g_file) {
         return false;
     }
