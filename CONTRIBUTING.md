@@ -161,7 +161,7 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 ## Commits and pull requests
 
 - Make one small commit per change. The subject is `Area: what changed` (for example `Overlays: the
-  G-meter's ABS label moved up 1 px`), and the body says why.
+  G-meter's live G moved up 1 px`), and the body says why.
 - Docs move with the code. When behaviour, settings or files change, update the matching README in the
   same commit. READMEs describe what the project is and does. How to work on it, and the rules, go here
   and in `.agents\skills\dev\`. Write docs by `.agents\skills\docs\SKILL.md`, and run its check script

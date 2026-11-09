@@ -50,13 +50,28 @@ Why some of the specs are as they are:
 - **1G and 2G rings:** white at 8 % at first. They faded out in compressed video, so they are 16 %.
 - **Comet tail colour:** in the accent it merged with the dot. In amber `#ffb020` it stood out too
   much, and `#ff7c1f` still a bit. `#ff6b1f` is the one kept.
-- **ABS and TC placement:** centred on their design angles, the wider ABS came 14.5 design px from its
-  groove, and looked closer than TC. At TC's 19.3 it looked further away, because the A's diagonal
-  leans away from the bar. So it sits halfway, at 16.9.
+- **The look is the canvas's "Chrono Inner" board** since 2026-11-09, with its ABS and TC labels
+  removed: the bars sit just inside the 3G ring, and the bezel is r 190. The maintainer chose it over
+  the "Chrono" board below. Its glass is the same feathered crescent, so `gmeter_glass.png` stayed
+  identical, pixel for pixel.
+- **The pedal bars' edges:** the bars are drawn with their soft edges centred on their outline, so a
+  5 px bar covers as much as the design's 5 px stroke. The round-ended bars of the earlier look had
+  their soft edges outside the outline, 1 px wider than the design.
 - **Live G:** centred by measurement it looked 1 px left at size 300, and 1.6 design px right looked
   shifted right, so it is 0.8 right. Vertically, the window's inner shadow (offset 1 px down) makes it
   look about 0.5 px higher than its box. On the box, the gap under the digits measured 1 px smaller
   than the one above.
+
+### Replaced: the "Chrono" board, with the bars in the bezel
+
+The plugin drew the canvas's "Chrono" board until 2026-11-09. Its bezel was r 210, with the pedal bars
+in grooves (centre r 193, 10 wide, round ends) and the bars 6.5 wide in them. ABS and TC labels
+(11 px, letter spacing 0.1 em) sat past the grooves' upper ends, turned along the circle, and lit up in
+the pedal colours. The maintainer replaced it with "Chrono Inner" (above).
+
+- **ABS and TC placement:** centred on their design angles, the wider ABS came 14.5 design px from its
+  groove, and looked closer than TC. At TC's 19.3 it looked further away, because the A's diagonal
+  leans away from the bar. So it sat halfway, at 16.9.
 
 ### Tried and dropped: glass reflections other than a crescent
 
