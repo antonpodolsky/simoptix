@@ -13,7 +13,7 @@ which each host wraps in its own shader (the mirror app) or effect (the OBS plug
 | Term | Meaning |
 |---|---|
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
-| game eye | The eye image a frame source delivers. The Pimax source's is a half-size copy of the left eye (2508×2084 in LMU at Render Quality 1.0). The OpenXR source's is the left eye at full size (5084×4168) |
+| game eye | The eye image a frame source delivers. The Pimax source's is a half-size copy of the left eye (2508×2084 in LMU at Render Quality 1.0). The OpenXR source's is the left eye at full size (5084×4168 in LMU) |
 | frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`) or the OpenXR source (`vr_mirror\frame_sources\openxr\`) |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
@@ -23,9 +23,9 @@ which each host wraps in its own shader (the mirror app) or effect (the OBS plug
 **In:** the head pose the shown frame was drawn with (its drawn pose), the view to show (both
 quaternions) and the output's geometry (`ViewGeometry`, `pipeline_types.h`).
 
-The frame source says how the game eye is encoded. If it is sRGB-encoded twice (the Pimax game eye,
-`EyeInfo::encodedTwice`), the warp decodes one encoding. If it is encoded once (the OpenXR layer's),
-the warp shows it as it is.
+The frame source says how the game eye is encoded. If it is sRGB-encoded twice (the Pimax source's,
+`EyeInfo::encodedTwice`), the warp decodes one encoding. If it is sRGB-encoded once (the OpenXR
+source's), the warp shows it as it is.
 
 **Out:** `WarpParams`, seven float4s laid out as `warp.hlsli` expects.
 

@@ -20,8 +20,8 @@ with the noise removed.
 ## What it does
 
 The stage gives the arrival slot in one of two ways:
-- It finds the slot from the arrival time while the game keeps up (the Pimax client mirror).
-- It takes the slot the frame source reports (the OpenXR layer).
+- It finds the slot from the arrival time while the game keeps up (the Pimax source).
+- It takes the slot the frame source reports (the OpenXR source).
 
 ## Input and output
 
@@ -43,16 +43,16 @@ source also writes them into its frame trace (F rows).
 
 | File | Class | Config value | When to use |
 |---|---|---|---|
-| `grid_arrival_timing.h/.cpp` | `GridArrivalTiming` | `ArrivalTimingKind::kGrid` | The Pimax client mirror, whose frames carry only their arrival. It takes a running median of the offset over half a second of arrivals, which resists odd readings. It adds the offset to the arrival and snaps the sum to the nearest slot on the grid (or to the slot before it for a single late frame, see below). Then it takes the offset off again |
-| `reported_arrival_timing.h/.cpp` | `ReportedArrivalTiming` | `ArrivalTimingKind::kReported` | A frame source that reports the slot each frame was drawn for (the OpenXR layer). It finds the arrivals' phase on the grid with a running circular median over half a second. Each arrival keeps its whole periods. The slot a frame is shown in is the slot it was drawn for when it came on time, and a later one when it came late. The largest gap from arrival to drawn-for slot over two seconds counts as the on-time one. A frame never gets the previous frame's slot. The drawn-for slot itself is in the frame's record (`GameFrame::drawnSlot`) |
+| `grid_arrival_timing.h/.cpp` | `GridArrivalTiming` | `ArrivalTimingKind::kGrid` | A frame source whose frames carry only their arrival (the Pimax source). It takes a running median of the offset over half a second of arrivals, which resists odd readings. It adds the offset to the arrival and snaps the sum to the nearest slot on the grid (or to the slot before it for a single late frame, see below). Then it takes the offset off again |
+| `reported_arrival_timing.h/.cpp` | `ReportedArrivalTiming` | `ArrivalTimingKind::kReported` | A frame source whose frames report the slot they were drawn for (the OpenXR source). It finds the arrivals' phase on the grid with a running circular median over half a second. Each arrival keeps its whole periods. The slot a frame is shown in is the slot it was drawn for when it came on time, and a later one when it came late. The largest gap from arrival to drawn-for slot over two seconds counts as the on-time one. A frame never gets the previous frame's slot. The drawn-for slot itself is in the frame's record (`GameFrame::drawnSlot`) |
 
 `ConfigFor` picks the implementation from what the frame source reports (`FrameReport`). The host
 makes it with `MakeArrivalTiming(config.arrivalTiming)` and hands it to the frame source before the
 source starts (`PimaxSource::SetArrivalTiming`, `OpenXrSource::SetArrivalTiming`).
 
-**Thread:** the frame source's own (the Pimax source's poll thread, the OpenXR reader's thread), as
-each frame arrives. The stage resets when the source goes idle, so the next game finds its own
-offset, and when the session is re-created.
+**Thread:** the frame source's own (the Pimax source's poll thread, the OpenXR source's reader
+thread), as each frame arrives. The stage resets when the source goes idle, so the next game finds
+its own offset, and when the session is re-created.
 
 **Uses:** plain data: arrival times, slots and the display period.
 

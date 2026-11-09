@@ -22,8 +22,9 @@ LMU with Easy Anti-Cheat, and online play stayed enabled. `uninstall.bat` remove
 ## The two halves
 
 - **The layer** is an OpenXR API layer that the OpenXR loader puts into LMU when the game starts. It
-  gives VR Mirror the game's full-size frames, 5084×4168 per eye instead of the Pimax mirror's
-  2508×2084, together with the exact pose each frame was drawn with and the moment it was drawn for.
+  gives VR Mirror the game's full-size frames, 5084×4168 per eye instead of the Pimax source's
+  2508×2084 at Render Quality 1.0, together with the exact pose each frame was drawn with and the
+  moment it was drawn for.
 - **The reader** (`OpenXrSource`) runs in VR Mirror, outside the game. It opens what the layer shares
   and hands the frames to the OBS plugin and the mirror app, like the Pimax source does.
 
@@ -121,7 +122,8 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
     and lets go as soon as the read is done.
 - **Log lines** start with "OpenXR:". They report the layer found, the clock read, frames coming, and
   going idle after 2 s without a frame, and the game's session ending. Every 10 s they report the
-  frames read and the images that were gone before they were copied.
+  frames read and the images that were gone before they were copied, and every 12 s the timing noise
+  that stage 1 removed.
 
 ## Files
 

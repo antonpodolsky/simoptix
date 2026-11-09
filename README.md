@@ -105,7 +105,7 @@ To remove a plugin, close OBS and delete the plugin's folder in `C:\ProgramData\
 |---|---|
 | `vr_mirror\` | SimOptix: VR Mirror |
 | `vr_mirror\obs_plugin\` | The OBS sources Pimax Mirror and OpenXR Mirror, and race auto-record (`race_auto_record\`) |
-| `vr_mirror\frame_sources\` | Where the game's frames and head poses come from: `pimax\` through Pimax Play, and `openxr\` through the API layer, with its reader and its check program |
+| `vr_mirror\frame_sources\` | Where the game's frames and head poses come from: `pimax\` through Pimax Play, and `openxr\` through the API layer and its reader. Each has a check program |
 | `vr_mirror\core\` | The stabilization itself, the same in OBS and in the desktop window |
 | `vr_mirror\mirror_app\` | VR Mirror in a desktop window, which the end-to-end tests run |
 | `vr_mirror\e2e\` | End-to-end tests: the desktop window against a simulated Pimax headset and game, or a simulated game with the API layer |
@@ -118,7 +118,8 @@ To remove a plugin, close OBS and delete the plugin's folder in `C:\ProgramData\
 Each part's README describes what it does, its settings and its files:
 - `vr_mirror\obs_plugin\README.md`
 - `vr_mirror\core\README.md`, and a README for each stage of the pipeline in `vr_mirror\core\pipeline\`
-- `vr_mirror\frame_sources\README.md` and `vr_mirror\frame_sources\openxr\README.md`
+- `vr_mirror\frame_sources\README.md`, `vr_mirror\frame_sources\pimax\README.md` and
+  `vr_mirror\frame_sources\openxr\README.md`
 - `vr_mirror\mirror_app\README.md`
 - `vr_mirror\e2e\README.md`
 - `vr_mirror\recording_analysis\README.md`

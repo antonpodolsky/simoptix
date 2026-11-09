@@ -73,7 +73,7 @@ x, y, z, w.
 | `followed_serial` | The game frame the view followed. It is `serial` itself unless the game sent no new frame in time and the last one is shown again |
 | `edge_shift` | How far the smoothing's last resort moved this frame's view, in degrees (0 when it didn't act) |
 | `aspect` | The output's width divided by its height |
-| `drawn_slot` | The display slot the frame source says the frame was drawn for. It is the OpenXR layer's, and 0 for the Pimax mirror, whose frames don't say |
+| `drawn_slot` | The display slot the frame source says the frame was drawn for. It is the OpenXR source's, and 0 for the Pimax source, whose frames don't say |
 | `pose_notes` | The drawn pose stage's own account of how it found this frame's pose (`DrawnPose::Describe`): space-separated `name=value` pairs in its own terms. Examples are the slot check's `slots_before_arrival=2 judged=1 own_judgement=1` and the cockpit correction's `looked_at=1 corrected=1 correction_deg=0.312` |
 
 The stages' report lines follow as `#stats,<line>`.
@@ -84,8 +84,8 @@ position. The mirror app's trace has the same columns, and the e2e runner reads 
 **In:** `FrameRecord` per output frame, the report lines, and the host's sink and present times.
 **Out:** `Stamp` and the trace's lines.
 
-**Thread:** the output thread (OBS's graphics thread, the mirror app's main thread). Rows are formatted
-on the stack and nothing is allocated per frame. The OBS plugin's sink is its `TraceWriter`, which
+**Thread:** the host's output thread (OBS's graphics thread, the mirror app's main thread). Rows are
+formatted on the stack and nothing is allocated per frame. The OBS plugin's sink is its `TraceWriter`, which
 writes to disk on its own thread. The mirror app's sink is a file.
 
 **Uses:** the frame records and report lines it is handed, and a sink to write to.
