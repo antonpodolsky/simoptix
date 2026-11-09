@@ -36,12 +36,11 @@ play disabled. There, the version that only watched the game loaded and worked. 
 In LMU started the usual way, Easy Anti-Cheat decides by the DLL's signature:
 - Unsigned, the DLL is refused as an "untrusted system file".
 - Signed with a certificate Windows doesn't trust, the DLL still isn't loaded.
-- Signed with a code signing certificate Windows trusts (Certum's open-source one was tried), the
-  layer loads and hands VR Mirror 90 frames a second, and online play stays enabled. It hasn't been
+- Signed with a code signing certificate Windows trusts, the layer loads and hands VR Mirror 90 frames a second, and online play stays enabled. It hasn't been
   tried in an online session. In these starts the layer wrote no log of its own.
 
-`build.bat` signs the layer when the environment variable `SIMOPTIX_SIGN_THUMBPRINT` holds a code
-signing certificate's thumbprint. Otherwise the layer is unsigned.
+`build.bat` builds the layer unsigned. A signed layer is the DLL in `bin\` signed with your own
+certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 
 ## What the layer does
 
@@ -136,7 +135,7 @@ signing certificate's thumbprint. Otherwise the layer is unsigned.
 | `openxr_layer_log.*` | The log file |
 | `XR_APILAYER_SIMOPTIX_frame_source.json` | The manifest: how OpenXR finds the DLL |
 | `frame_source.def` | The DLL's one exported function |
-| `build.bat` | Builds the DLL and the check program into `bin\`, and signs the DLL when `SIMOPTIX_SIGN_THUMBPRINT` names a certificate |
+| `build.bat` | Builds the DLL, unsigned, and the check program into `bin\` |
 | `install.bat`, `uninstall.bat` | Double-click to install or remove the layer. They ask for administrator rights and run the scripts below |
 | `install.ps1`, `uninstall.ps1` | Install or remove the layer for every user (as administrator). `install.ps1` shows the installed DLL's signature |
 | `openxr_source.*` | `OpenXrSource`: the reader, a frame source for the hosts (`vr_mirror\core\adapters\d3d\frame_source.h`) |

@@ -61,7 +61,7 @@ project settings set `context.fileName` to `AGENTS.md`.
 | Reading LMU's telemetry | LMU installed through Steam, or `LMU_SDK` set to the game's `Support\SharedMemoryInterface` folder. The build finds that folder in any Steam library. Without it, both plugins build, the build says so, and they read no game |
 | Trying the plugins | OBS Studio 32.2.2. For VR Mirror's Pimax source, a Pimax headset with Pimax Play running |
 | The layout check of `pvr_interface.h` | Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`, or `PVR_SDK` naming its `Include` folder. Nothing else needs it |
-| Signing the OpenXR layer | A code signing certificate Windows trusts, in your certificate store, and `SIMOPTIX_SIGN_THUMBPRINT` set to its SHA-1 thumbprint. `signtool` comes with the Visual Studio C++ workload. Without the variable, the layer builds unsigned |
+| Signing the OpenXR layer | A code signing certificate of your own that Windows trusts, and `signtool`, which comes with the Visual Studio C++ workload. The repo builds the layer unsigned. Sign `bin\XR_APILAYER_SIMOPTIX_frame_source.dll` with SHA-256 and a timestamp, then install it with `install.ps1` |
 | The e2e tests | A Windows SDK with the C++/WinRT headers (the Visual Studio C++ workload has one), Windows 10 1903 or later, and a D3D11 graphics card |
 | The recording analysis | Python 3 with numpy. ffmpeg and ffprobe, on PATH or named by `FFMPEG` (the full path of `ffmpeg.exe`) |
 | Formatting the code | Python 3, then `python -m pip install --user clang-format ruff`. pip installs both for your user only, and adds nothing to the repo. Versions 23.1.5 and 0.17.4 were tried |
@@ -80,7 +80,7 @@ and is ignored by git. Builds must finish with no new warnings at `/W3`.
 | `vr_mirror\mirror_app\` | `vr_mirror\mirror_app\build.bat` | Yes, for a change in behaviour |
 | `vr_mirror\e2e\` | `vr_mirror\e2e\build.bat` | The scenarios that changed |
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`, which checks the declarations against Pimax's headers. Without the SDK it says so and skips | Yes |
-| `vr_mirror\frame_sources\openxr\` | Its `build.bat`, signed when the layer goes into the game, then its check program | No |
+| `vr_mirror\frame_sources\openxr\` | Its `build.bat`, then its check program, then signed if the layer goes into the game | No |
 | `vr_mirror\recording_analysis\` | Its `build.bat` (`patch_shift.exe`, `grid_shift.exe`) | No |
 
 The two plugins are `vr_mirror\obs_plugin\build.bat` and `overlays\obs_plugin\build.bat`. With the

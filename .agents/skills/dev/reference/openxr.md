@@ -47,48 +47,33 @@ doesn't trust. Signed with a code signing certificate Windows trusts, the layer 
 Easy Anti-Cheat (`findings\openxr.md`). So every build that goes into the game is signed, and a
 rebuilt DLL needs signing again.
 
-`build.bat` signs the DLL when `SIMOPTIX_SIGN_THUMBPRINT` holds the SHA-1 thumbprint of a code
-signing certificate in the user's certificate store. The maintainer's certificate is Certum's
-open-source one, with its key in Certum's cloud (SimplySign).
+The repo builds the layer unsigned and holds no signing tools or certificate details. Each
+maintainer signs with a certificate of their own, by a skill of their own outside the repo: a user
+skill whose description says it signs the OpenXR layer.
 
-1. Log in to SimplySign Desktop with the code from the SimplySign phone app. The certificate is in the
-   user's store only while SimplySign Desktop is logged in, and the login lasts a limited time.
-2. Find the certificate's thumbprint:
+1. **Look for such a user skill** among the skills your agent offers. If there is one, follow it. It
+   says how to reach the certificate, how to sign and how to install.
+2. **If there is none,** tell the user that the layer is unsigned and that Easy Anti-Cheat will keep
+   it out of LMU. Install it only for LMU started without Easy Anti-Cheat ("Starting LMU without Easy
+   Anti-Cheat", below), or ask the user how they sign.
 
-   ```
-   Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Format-List Subject, Thumbprint, NotAfter
-   ```
+A signature that gets past Easy Anti-Cheat, whatever skill makes it:
+- covers `bin\XR_APILAYER_SIMOPTIX_frame_source.dll`, after `build.bat` and before `install.ps1`
+- is a code signing certificate's, with a chain that ends at a root Windows trusts
+- uses SHA-256 and a timestamp (RFC 3161). The timestamp keeps the signature valid after the
+  certificate expires. OpenXR Toolkit's DLL, signed without one, is reported as not valid since its
+  certificate expired.
+- passes `signtool verify /pa /v <dll>`
 
-3. Set the variable for the user, so that `install.bat`, which starts from Explorer, sees it too.
-   Windows hands it only to programs started afterwards.
-
-   ```
-   setx SIMOPTIX_SIGN_THUMBPRINT <thumbprint>
-   ```
-
-4. Build. After the check program, `build.bat` signs the DLL with SHA-256 and Certum's timestamp
-   server, then checks the signature against the roots Windows trusts. It ends with "The layer is
-   signed."
-
-The build fails in these cases, so `install.bat` installs nothing:
-- the certificate isn't in the store, for example with SimplySign Desktop logged out ("No
-  certificates were found that met all the given criteria")
-- the chain ends at a root Windows doesn't trust, as a self-signed certificate's does
-- `signtool` isn't on the path that Visual Studio's environment sets up
-
-Without the variable, the build says the layer is unsigned and succeeds.
-
-- The timestamp keeps the signature valid after the certificate expires. OpenXR Toolkit's DLL, signed
-  without one, is reported as not valid since its certificate expired.
-- `install.ps1` shows the installed DLL's signature status. It reads "Valid" for a signed layer.
-- To check a DLL by hand, run `signtool verify /pa /v <dll>` in a Visual Studio developer prompt.
-- The check program is unsigned. It never goes into the game.
+Install a signed DLL with `install.ps1`, never with `install.bat`, because `install.bat` builds first
+and so installs an unsigned DLL. `install.ps1` shows the installed DLL's signature status, which reads
+"Valid" for a signed layer. The check program stays unsigned. It never goes into the game.
 
 ## Install for the game
 
 Close LMU and double-click `vr_mirror\frame_sources\openxr\install.bat`.
-1. It builds the layer first, so it never installs an old build. The build signs it when
-   `SIMOPTIX_SIGN_THUMBPRINT` is set ("Signing", above), and stops if signing fails.
+1. It builds the layer first, so it never installs an old build. That build is unsigned. To install
+   a signed layer, sign it and run `install.ps1` instead ("Signing", above).
 2. It asks Windows for administrator rights.
 3. It runs `install.ps1` in a window that stays open, so the result can be read.
 

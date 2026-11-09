@@ -66,10 +66,14 @@ for the agents that read those files. Change the rules here, never in those file
     Mirror reads it. It never makes the game wait, and the footprint rules below apply to it twice
     over.
   - Nothing else goes into the game process. Every build of the layer that goes into the game is
-    signed with a code signing certificate Windows trusts (`reference\openxr.md`, "Signing").
-    Easy Anti-Cheat keeps an unsigned layer out, and online play is disabled while it is installed.
-    Unsigned, the layer runs only in LMU started without Easy Anti-Cheat. The signed layer is tested
-    offline before online (`reference\openxr.md`, "The Easy Anti-Cheat test").
+    signed with a code signing certificate Windows trusts. Easy Anti-Cheat keeps an unsigned layer
+    out, and online play is disabled while it is installed. Unsigned, the layer runs only in LMU
+    started without Easy Anti-Cheat.
+  - The repo holds no signing tools or certificate details. The user signs with a skill of their
+    own outside the repo, whose description says it signs the OpenXR layer. Use it when there is
+    one. Without it, say that the layer is unsigned (`reference\openxr.md`, "Signing").
+  - The signed layer is tested offline before online (`reference\openxr.md`, "The Easy Anti-Cheat
+    test").
 - **Other games.** Before support for another game ships, check that game's terms for outside tools.
 - **Licences.** The repo is GPL-2.0-or-later (`LICENSE`, `THIRD_PARTY_NOTICES.md`), and everything
   added must be compatible with it.
@@ -416,7 +420,7 @@ The plugin builds make OBS's import library from `shared\obs_lib\obs.def`.
 | `vr_mirror\mirror_app\` | `vr_mirror\mirror_app\build.bat` (if `simoptix_vr_mirror.exe` is running, build `simoptix_vr_mirror_dev.exe` instead) | Yes, for behaviour changes |
 | `vr_mirror\e2e\` | `vr_mirror\e2e\build.bat` | The scenarios that changed |
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`: the layout check, on a PC with Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`. `PVR_SDK` names another `Include` folder. Without the SDK it says so and skips | Yes |
-| `vr_mirror\frame_sources\openxr\` | `vr_mirror\frame_sources\openxr\build.bat`, signed when it goes into the game, then its check program (`reference\openxr.md`) | No |
+| `vr_mirror\frame_sources\openxr\` | `vr_mirror\frame_sources\openxr\build.bat`, then its check program, then signed if it goes into the game (`reference\openxr.md`) | No |
 | `vr_mirror\recording_analysis\` | `build.bat` there, for `patch_shift.exe` and `grid_shift.exe` | No |
 
 - Run the build scripts through `cmd /c "<full path>\build.bat"` from PowerShell. A bare `build.bat`
@@ -627,8 +631,9 @@ its support ships (Rules, "Other games").
 
 Build it, run its check program, sign it, install it and test it with Easy Anti-Cheat as
 `reference\openxr.md` says. Every change to the layer is signed again before it goes into the game,
-because a rebuilt DLL is unsigned (Rules, "Never touch the game"). Ask the user to log in to
-SimplySign Desktop first. Record what each start of the game showed in `findings\openxr.md`.
+because a rebuilt DLL is unsigned (Rules, "Never touch the game"). Sign it with the user's own
+signing skill, and install it with `install.ps1`, because `install.bat` builds an unsigned one first.
+Record what each start of the game showed in `findings\openxr.md`.
 
 ## 6. Commit
 

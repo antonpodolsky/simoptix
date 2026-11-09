@@ -77,8 +77,7 @@ To build:
 - For reading LMU: LMU's telemetry headers. The build finds them in the game's folder, in any Steam
   library, and `LMU_SDK` can name their folder instead. Without them, the build says so, and both
   plugins build and read no game. The G-meter's demo lap still plays.
-- For a signed API layer: a code signing certificate that Windows trusts, in your certificate store.
-  A certificate kept in the cloud, such as Certum's, shows there while its desktop app is logged in.
+- For a signed API layer: a code signing certificate of your own that Windows trusts.
 
 ## Install
 
@@ -89,9 +88,11 @@ To build:
    they share the game's data and check that they match.
 3. For OpenXR Mirror, also install the API layer. Read the warning above first, close LMU, and run
    `vr_mirror\frame_sources\openxr\install.bat`. It builds the layer and installs it with
-   administrator rights, which Windows asks for. To sign the layer, set the environment variable
-   `SIMOPTIX_SIGN_THUMBPRINT` to your code signing certificate's thumbprint. The build then signs
-   the layer, or stops if it can't.
+   administrator rights, which Windows asks for. That layer is unsigned. For a signed layer, run
+   `vr_mirror\frame_sources\openxr\build.bat`, sign
+   `vr_mirror\frame_sources\openxr\bin\XR_APILAYER_SIMOPTIX_frame_source.dll` with your certificate,
+   and run `vr_mirror\frame_sources\openxr\install.ps1` as administrator. `install.bat` would build
+   it again, unsigned.
 4. Start OBS and add a **SimOptix: Pimax Mirror**, **SimOptix: OpenXR Mirror** or **SimOptix: G-Meter
    Overlay** source. Each plugin's README describes its settings: `vr_mirror\obs_plugin\README.md`
    and `overlays\README.md`.
