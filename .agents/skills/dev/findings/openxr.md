@@ -115,6 +115,22 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
   - Measured in e2e `openxr_stall` (a render thread, the runtime holding xrEndFrame until vsync, a
     64 ms stall every 3 s): with the old order 0.73–0.75° rms image/pose mismatch on screen, 2.8–4.5°
     in the worst frame. With the fix 0.053° rms, at most 0.153°, as `openxr_stabilization` (0.05°).
+- **To tell the game from the layer at the next flicker** (2026-11-09), each frame's record now says
+  which swapchain image it showed, how many images the game held, how many it released while the
+  frame was in xrEndFrame, and the threads that released the image and ended the frame. The OpenXR
+  source writes them to `trace_<time>_openxr.csv` with Debug on, and logs once a session whether the
+  game's device context is protected, and when the release and the frame end first come on different
+  threads or overlap. The layer's own log can't carry this: it stayed empty in LMU on 2026-11-09
+  (above), and in the two game starts of 2026-11-08 evening where VR Mirror's log shows the layer
+  running. Neither of the layer's log files changed after the check program's start at 13:13 that day.
+  - In e2e `openxr_stall` the log shows the render thread and the protected context, and an image
+    released during xrEndFrame. In `openxr_stabilization` (one thread): the context unprotected and
+    nothing else.
+  - What to read at a flicker: the half-drawn frame's `game_image` against its neighbours', and whether
+    `end_thread` and `release_thread` differ while the context is unprotected. A copy that races the
+    game's drawing would need both.
+  - Also catch the flicker with Pimax Mirror and OpenXR Mirror in one scene. Pimax Mirror shows what
+    Pimax's compositor got from the game.
 
 ## LMU started without Easy Anti-Cheat
 

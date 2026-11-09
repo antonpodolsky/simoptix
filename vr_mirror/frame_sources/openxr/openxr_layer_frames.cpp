@@ -21,8 +21,11 @@ namespace {
         ID3D11Texture2D* images[kMaxImages] = {};
         UINT mipLevels[kMaxImages] = {};
         uint32_t acquired[kMaxImages] = {};  // acquired and not yet released, oldest first
-        uint32_t acquiredHead = 0, acquiredCount = 0;
-        std::atomic<int32_t> released{-1};  // the image of the last release (the one a frame uses)
+        uint32_t acquiredHead = 0;
+        std::atomic<uint32_t> acquiredCount{0};  // read by the thread that ends the frame, too
+        std::atomic<int32_t> released{-1};       // the image of the last release (the one a frame uses)
+        std::atomic<uint32_t> releaseThread{0};  // the thread of the last release
+        std::atomic<uint32_t> releases{0};       // releases so far
     };
 
     Chain g_chains[kMaxChains];
@@ -122,8 +125,11 @@ void FramesSwapchainCreated(XrSwapchain swapchain, const XrSwapchainCreateInfo& 
         }
         c.format = static_cast<uint32_t>(info.format);
         c.imageCount = 0;
-        c.acquiredHead = c.acquiredCount = 0;
+        c.acquiredHead = 0;
+        c.acquiredCount = 0;
         c.released = -1;
+        c.releaseThread = 0;
+        c.releases = 0;
         c.handle.store(reinterpret_cast<uint64_t>(swapchain), std::memory_order_release);
         return;
     }
@@ -176,9 +182,11 @@ void FramesImageReleased(XrSwapchain swapchain) {
     if (!c || c->acquiredCount == 0) {
         return;
     }
+    c->releaseThread.store(GetCurrentThreadId());
     c->released.store(static_cast<int32_t>(c->acquired[c->acquiredHead]));  // the oldest acquired goes
     c->acquiredHead = (c->acquiredHead + 1) % kMaxImages;
     c->acquiredCount--;
+    c->releases++;
 }
 
 void FramesDisplayPeriod(XrDuration period) {
@@ -196,7 +204,10 @@ FrameImage FramesEnding(const XrFrameEndInfo& info) {
     image.swapchain = projection->views[0].subImage.swapchain;
 
     if (const Chain* c = Find(image.swapchain)) {
+        image.releases = c->releases.load();
+        image.releaseThread = c->releaseThread.load();
         image.index = c->released.load();
+        image.held = c->acquiredCount.load();
     }
 
     return image;
@@ -216,12 +227,20 @@ void FramesEnded(const XrFrameEndInfo& info, const FrameImage& image, int64_t en
     f.endFrameCounter = endFrameCounter;
     f.eye[0] = PoseOf(left.pose), f.eye[1] = PoseOf(right.pose);
     f.fov[0] = FovOf(left.fov), f.fov[1] = FovOf(right.fov);
+    f.gameImage = image.index;
+    f.imagesHeld = image.held;
+    f.endThread = GetCurrentThreadId();
+    f.releaseThread = image.releaseThread;
 
     ID3D11Texture2D* src = nullptr;
     UINT subresource = 0;
     uint32_t format = 0;
     const Chain* c = image.swapchain == left.subImage.swapchain ? Find(image.swapchain) : nullptr;
     const int32_t i = image.index;
+
+    if (c) {
+        f.releasedDuringEnd = c->releases.load() - image.releases;
+    }
 
     if (c && i >= 0 && static_cast<uint32_t>(i) < c->imageCount.load(std::memory_order_acquire)) {
         src = c->images[i];

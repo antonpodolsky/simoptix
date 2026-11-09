@@ -36,7 +36,22 @@ OpenXrSource::OpenXrSource() {
 
 OpenXrSource::~OpenXrSource() {
     Stop();
+    StopTrace();
     pictures_.Release();
+}
+
+bool OpenXrSource::StartTrace(const wchar_t* prefix) {
+    return trace_.Open(
+        (std::wstring(prefix) + L"_openxr.csv").c_str(),
+        "# times in source seconds; threads are Windows thread ids of the game\n"
+        "# F,layer_frame,ended,drawn_slot,texture,game_image,images_held,released_during_end,end_thread,"
+        "release_thread: a frame the layer published\n"
+        "# A,layer_frame,serial,arrival: its copy seen finished, handed to the hosts as game frame `serial`\n"
+    );
+}
+
+void OpenXrSource::StopTrace() {
+    trace_.Close();
 }
 
 bool OpenXrSource::Start(std::string* error) {
@@ -167,6 +182,22 @@ void OpenXrSource::ReadFrames(double now) {
         }
         const double slot = SourceSeconds(r.displayTime);
 
+        NoteHandover(r);
+        if (trace_.IsOpen()) {
+            trace_.Printf(
+                "F,%llu,%.6f,%.6f,%d,%d,%u,%u,%u,%u\n",
+                static_cast<unsigned long long>(r.frame),
+                double(r.endFrameCounter) / frequency_,
+                slot,
+                r.texture,
+                r.gameImage,
+                r.imagesHeld,
+                r.releasedDuringEnd,
+                r.endThread,
+                r.releaseThread
+            );
+        }
+
         // OpenXR's head (its view space) is halfway between the eyes; the left eye's turn from it is its
         // cant.
         const Quat left = QuatOf(r.eye[0]), right = QuatOf(r.eye[1]);
@@ -198,6 +229,38 @@ void OpenXrSource::ReadFrames(double now) {
     }
 
     (void)now;
+}
+
+void OpenXrSource::LogProtection(uint32_t protection) const {
+    if (protection == openxr_share::kProtected) {
+        CoreLog("OpenXR: the game's device context is protected for use from several threads");
+    } else if (protection == openxr_share::kUnprotected) {
+        CoreLog(
+            "OpenXR: the game's device context is not protected for use from several threads (the layer "
+            "copies on it from the thread that ends the frame)"
+        );
+    }
+}
+
+// How the game hands its images over: logged once a session, when first seen (the trace has every frame).
+void OpenXrSource::NoteHandover(const openxr_share::Record& r) {
+    if (!loggedOtherThread_ && r.releaseThread && r.endThread && r.releaseThread != r.endThread) {
+        loggedOtherThread_ = true;
+        CoreLog(
+            "OpenXR: the game releases its images on another thread (%u) than it ends its frames on (%u)",
+            r.releaseThread,
+            r.endThread
+        );
+    }
+
+    if (!loggedReleaseDuringEnd_ && r.releasedDuringEnd) {
+        loggedReleaseDuringEnd_ = true;
+        CoreLog(
+            "OpenXR: the game released %u image(s) while frame %llu was in xrEndFrame",
+            r.releasedDuringEnd,
+            static_cast<unsigned long long>(r.frame)
+        );
+    }
 }
 
 void OpenXrSource::FinishCopies() {
@@ -249,6 +312,15 @@ void OpenXrSource::FinishCopies() {
             } else {
                 finishedHead_ = (finishedHead_ + 1) % kFinished;
             }
+        }
+
+        if (trace_.IsOpen()) {
+            trace_.Printf(
+                "A,%llu,%llu,%.6f\n",
+                static_cast<unsigned long long>(w.layerFrame),
+                static_cast<unsigned long long>(f.frame.serial),
+                arrival
+            );
         }
 
         framesArrived_++;
@@ -307,6 +379,8 @@ void OpenXrSource::Run() {
             waitingCount_ = 0;
             arrival_->Reset();
             stats_.Reset();
+            loggedOtherThread_ = loggedReleaseDuringEnd_ = false;
+            LogProtection(h.contextProtection);
             std::lock_guard<std::mutex> lock(mutex_);
             poses_.Clear();
             finishedCount_ = 0;  // the last session's pictures are gone with it

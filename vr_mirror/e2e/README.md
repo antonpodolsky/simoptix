@@ -23,7 +23,7 @@ core and the mirror app, not the OBS plugins.
 | patch | A small square (32×32 texels) cut from an eye image. The cockpit correction measures how patches move, and the e2e runner reads them from the captured window |
 | slot lead | The runtime's next display slot minus the moment a frame arrived. It shifts when the game queues frames |
 | observer | The debugging code beside the pipeline. It numbers the stamp and writes the frame trace |
-| frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals |
+| frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
 | output delay | How far VR Mirror's view runs behind the game: about 1 s with Smoothest, about 0.5 s with Smooth, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
 | fake runtime | The stand-in for Pimax's client library (`vr_mirror\e2e\fake_pvr\`) that the e2e tests use in place of a headset and a game |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |

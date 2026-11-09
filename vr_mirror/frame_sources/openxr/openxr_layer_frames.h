@@ -37,7 +37,10 @@ void FramesDisplayPeriod(XrDuration period);
 // The image of the left eye's swapchain that a frame shows.
 struct FrameImage {
     XrSwapchain swapchain = XR_NULL_HANDLE;
-    int32_t index = -1;  // -1: none known
+    int32_t index = -1;          // -1: none known
+    uint32_t held = 0;           // the swapchain's images the game held acquired then
+    uint32_t releaseThread = 0;  // the game's thread that released the image (Windows thread id)
+    uint32_t releases = 0;       // the swapchain's releases so far
 };
 
 // Before xrEndFrame goes on: the image the frame shows, the one the game released last as it ends the

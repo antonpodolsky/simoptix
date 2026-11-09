@@ -380,8 +380,12 @@ For checking a recording frame by frame, the **Debug** setting does two things:
     with the predictions.
   - `trace_<time>_pimax.csv`, from the Pimax source only: head poses at 1 kHz, the pose Pimax predicted
     for each display slot, and every game frame's arrival.
+  - `trace_<time>_openxr.csv`, from the OpenXR source only: every frame the OpenXR layer published,
+    with which of the game's swapchain images it showed and on which of the game's threads it was
+    handed over, and when its copy arrived (`vr_mirror\frame_sources\openxr\README.md`, "The reader").
 
 Turn Debug on and record, and the recording can be matched to the poses frame by frame. Leave it off
-otherwise. The trace takes about 300 MB per hour. It is written to disk on its own thread, so a slow
+otherwise. The trace takes about 300 MB per hour with the Pimax source. With the OpenXR source it takes
+about 100 MB per hour, and its own file adds about 30 MB (estimated from its rows' size, not measured). It is written to disk on its own thread, so a slow
 disk never holds up OBS or the frame signal. If the disk falls a minute behind, rows are dropped, and
 the OBS log says how many.
