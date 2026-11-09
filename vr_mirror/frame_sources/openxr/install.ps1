@@ -32,6 +32,9 @@ if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
 New-ItemProperty -Path $key -Name $manifest -PropertyType DWord -Value 0 -Force | Out-Null
 
 Write-Host "Installed to $target"
+# Easy Anti-Cheat keeps the layer out of LMU unless Windows reports this as Valid.
+$signature = Get-AuthenticodeSignature (Join-Path $target "$name.dll")
+Write-Host "Signature: $($signature.Status) ($($signature.SignerCertificate.Subject))"
 Write-Host "Registered in $key (0 = on)"
 Write-Host "The layer's log, once LMU has started: $env:LOCALAPPDATA\simoptix\openxr_frame_source.log"
 Write-Host 'Layers registered now:'

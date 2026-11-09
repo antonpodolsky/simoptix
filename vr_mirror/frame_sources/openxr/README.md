@@ -4,10 +4,11 @@ This frame source gives VR Mirror the game's full-size left eye, with the exact 
 was drawn with. It has two halves: an OpenXR API layer in LMU, and the reader in VR Mirror that opens
 what the layer shares.
 
-**Experimental. Don't install it on a PC used for online racing.** Easy Anti-Cheat, which LMU runs
-online, refuses the unsigned layer that this repo builds. With the layer installed, LMU started the
-usual way showed an "Untrusted system file" warning, and online play was disabled. `uninstall.bat`
-removes the layer.
+**Experimental. Don't install it on a PC used for online racing.** Racing online with the layer
+installed hasn't been tried. Easy Anti-Cheat, which LMU runs, refuses the layer unsigned. With the
+unsigned layer installed, LMU started the usual way showed an "Untrusted system file" warning, and
+online play was disabled. Signed with a code signing certificate Windows trusts, the layer loaded in
+LMU with Easy Anti-Cheat, and online play stayed enabled. `uninstall.bat` removes the layer.
 
 ## Terms
 
@@ -28,14 +29,18 @@ removes the layer.
 
 ## Where it stands
 
-The layer is built for LMU started without Easy Anti-Cheat, which means offline and with online play
-disabled. There, the version that only watched the game loaded and worked. It saw the game's two
+Unsigned, the layer works in LMU started without Easy Anti-Cheat, which means offline and with online
+play disabled. There, the version that only watched the game loaded and worked. It saw the game's two
 5084×4168 image buffers and its 90 frames a second, and the game kept 90 fps.
 
-In LMU started the usual way, Easy Anti-Cheat keeps the layer out:
+In LMU started the usual way, Easy Anti-Cheat decides by the DLL's signature:
 - Unsigned, the DLL is refused as an "untrusted system file".
 - Signed with a certificate Windows doesn't trust, the DLL still isn't loaded.
-- Whether a trusted code-signing certificate gets it in is not known.
+- Signed with a code signing certificate Windows trusts, the layer loads and hands VR Mirror 90 frames a second, and online play stays enabled. It hasn't been
+  tried in an online session. In these starts the layer wrote no log of its own.
+
+`build.bat` builds the layer unsigned. A signed layer is the DLL in `bin\` signed with your own
+certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 
 ## What the layer does
 
@@ -64,8 +69,10 @@ In LMU started the usual way, Easy Anti-Cheat keeps the layer out:
   254 MB of the graphics card's memory. The layer makes them when VR Mirror starts reading and lets
   them go 10 s after it stopped. With nobody reading, the layer only writes each frame's record.
 - **It logs when Windows loads it into LMU.** Before any OpenXR step, it adds a line to
-  `%LOCALAPPDATA%\simoptix\openxr_frame_source_loads.log`. The file is never cleared. A game start with
-  no new line there means the DLL was never loaded, for example because anti-cheat blocked it.
+  `%LOCALAPPDATA%\simoptix\openxr_frame_source_loads.log`. The file is never cleared. In LMU started
+  without Easy Anti-Cheat, a game start with no new line there means the DLL was never loaded. With
+  Easy Anti-Cheat, the signed layer loaded and worked but wrote neither this file nor its log below.
+  Why is not known. There, VR Mirror's OBS log shows that the layer runs in the game.
 - **In LMU, it logs** to `%LOCALAPPDATA%\simoptix\openxr_frame_source.log`. The previous game start's
   log is kept as `openxr_frame_source.prev.log`. The log holds:
   - what the game's OpenXR loader offered in the first handshake, and why the layer refused it if it did
@@ -128,9 +135,9 @@ In LMU started the usual way, Easy Anti-Cheat keeps the layer out:
 | `openxr_layer_log.*` | The log file |
 | `XR_APILAYER_SIMOPTIX_frame_source.json` | The manifest: how OpenXR finds the DLL |
 | `frame_source.def` | The DLL's one exported function |
-| `build.bat` | Builds the DLL and the check program into `bin\` |
+| `build.bat` | Builds the DLL, unsigned, and the check program into `bin\` |
 | `install.bat`, `uninstall.bat` | Double-click to install or remove the layer. They ask for administrator rights and run the scripts below |
-| `install.ps1`, `uninstall.ps1` | Install or remove the layer for every user (as administrator) |
+| `install.ps1`, `uninstall.ps1` | Install or remove the layer for every user (as administrator). `install.ps1` shows the installed DLL's signature |
 | `openxr_source.*` | `OpenXrSource`: the reader, a frame source for the hosts (`vr_mirror\core\adapters\d3d\frame_source.h`) |
 | `openxr_pictures.*` | `OpenXrPictures`: the layer's textures opened on a host's device, and the copy of an eye image into the host's store at the size it needs |
 | `openxr.rsp` | The reader's `.cpp` files, as a `cl` response file that the hosts' build scripts list |
