@@ -77,7 +77,22 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
   - Unlike with the unsigned DLL, there was no "Untrusted system file" popup, also not when the game
     closed (the driver unloaded at 21:28:33).
   - So a signature alone, without a certificate Windows trusts, does not get the layer into the game.
-  - Untested: whether a trusted certificate (Certum's open-source one, for example) does.
+  - Whether a trusted certificate does was tested on 2026-11-09 (next finding).
+- **2026-11-09, signed with Certum's open-source code signing certificate.** Windows trusts it.
+  - The key is RSA 3072 and stays in Certum's cloud (SimplySign). The DLL was signed with SHA-256 and
+    a Certum timestamp. Windows reports the signature as valid, with the chain up to Certum Trusted
+    Network CA.
+  - It was installed with `install.ps1` directly, because `install.bat` builds first and would
+    install an unsigned DLL.
+  - LMU started twice through Steam with Easy Anti-Cheat. Its launcher logged "Easy Anti-Cheat
+    successfully loaded in-game", and Windows logged no "Untrusted system file" popup.
+  - **The layer loaded and worked in the game both times.** VR Mirror's OBS log showed "the layer
+    runs in the game", the layer's textures at 5084×4168, and 899–901 frames per 10 s with their
+    image.
+  - Online play stayed enabled.
+  - The layer wrote no log in either start: neither `openxr_frame_source.log` nor
+    `openxr_frame_source_loads.log` in `%LOCALAPPDATA%\simoptix\` changed. Why not is not known.
+  - Not tested: an online session (step 2 of the test in `reference\openxr.md`).
 
 ## LMU started without Easy Anti-Cheat
 
