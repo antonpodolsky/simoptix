@@ -13,6 +13,8 @@ inside the game's eye images by itself, so no black edge shows. The view it give
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | picture room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
 | look-ahead | The method behind Smooth and Smoothest. The view runs half a second or a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
+| host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
+| mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
 
 ## Input and output
 
@@ -49,15 +51,16 @@ inside the game's eye images by itself, so no black edge shows. The view it give
 
 | File | Class | Config value | When to use |
 |---|---|---|---|
-| `instant_smoothing.h/.cpp` | `InstantSmoothing` (with `OrientationFilter`) | `SmoothingKind::kInstant` (setting `smoothing` 1) | Live streaming, because it adds no delay. It is a causal two-stage One-Euro style filter with a dead zone and a soft lag limit (`kMinCutoffHz`, `kBeta`, `kDeadzoneDeg`, `kMaxAngleDeg`). It catches up faster as the view runs out of room, scaled to the head's speed (`kCatchUpHz`, `kCatchUpStart`) |
-| `lookahead_smoothing.h/.cpp` | `LookaheadSmoothing` (with the path solver `LookaheadSmoother`) | `SmoothingKind::kSmooth` (2), `SmoothingKind::kSmoothest` (3, the default) | Recording. The view runs half a second (Smooth) or a second (Smoothest) behind the game. It comes from a jerk-penalised path over the head's poses around the frame, and the path's time constant adapts to the head's speed |
+| `instant_smoothing.h/.cpp` | `InstantSmoothing` (with `OrientationFilter`) | `SmoothingKind::kInstant` (`smoothing` 1) | Live streaming, because it adds no delay. It is a causal two-stage One-Euro style filter with a dead zone and a soft lag limit (`kMinCutoffHz`, `kBeta`, `kDeadzoneDeg`, `kMaxAngleDeg`). It catches up faster as the view runs out of room, scaled to the head's speed (`kCatchUpHz`, `kCatchUpStart`) |
+| `lookahead_smoothing.h/.cpp` | `LookaheadSmoothing` (with the path solver `LookaheadSmoother`) | `SmoothingKind::kSmooth` (`smoothing` 2), `SmoothingKind::kSmoothest` (`smoothing` 3, the default) | Recording. The view runs half a second (Smooth) or a second (Smoothest) behind the game. It comes from a jerk-penalised path over the head's poses around the frame, and the path's time constant adapts to the head's speed |
 
 `ConfigFor(settings)` maps `smoothing` onto the implementation: 0 and 1 give Instant, 2 gives Smooth
 and 3 gives Smoothest. At 0 the pipeline shows the headset's view as it is. Instant's tuning is its
 own constants (`instant_smoothing.h`). `LookaheadFor` and `LookaheadOutputDelayS` stay inline in
 `lookahead_smoothing.h` for e2e's runner, which links no core.
 
-**Thread:** the output thread. Per-frame allocation stops once the look-ahead's buffers have grown.
+**Thread:** the host's output thread (OBS's graphics thread, the mirror app's main thread). Per-frame
+allocation stops once the look-ahead's buffers have grown.
 
 **Uses:** plain data and the picture room's geometry. It asks the picture room how much room
 a view has.
