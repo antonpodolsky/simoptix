@@ -11,6 +11,9 @@ OVERLAYS_MANIFEST RCDATA "..\\overlays\\obs_plugin\\bin\\manifest.json"
 OPENXR_LAYER_DLL RCDATA "..\\vr_mirror\\frame_sources\\openxr\\bin\\XR_APILAYER_SIMOPTIX_frame_source.dll"
 OPENXR_LAYER_MANIFEST RCDATA "..\\vr_mirror\\frame_sources\\openxr\\bin\\XR_APILAYER_SIMOPTIX_frame_source.json"
 
+// The icon, which make_icon.ps1 writes into obj\ for each build (kSetupIconId in setup_theme.h).
+1 ICON "obj\\setup.ico"
+
 #define SIMOPTIX_FILE_NAME "simoptix_setup.exe"
 #define SIMOPTIX_FILE_DESCRIPTION "SimOptix Setup"
 #define SIMOPTIX_FILE_TYPE VFT_APP

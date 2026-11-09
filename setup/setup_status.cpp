@@ -86,19 +86,20 @@ const wchar_t* ActionLabel(PartAction action) {
     return L"";
 }
 
-std::wstring UnsignedLayerWarning(const SystemFacts& system) {
-    if (system.setupLayerSignature == SignatureKind::kTrusted) {
-        return L"";
+std::wstring UnsignedLayerProblem(const SystemFacts& system) {
+    switch (system.setupLayerSignature) {
+        case SignatureKind::kTrusted:
+            return L"";
+        case SignatureKind::kUntrusted:
+            return L"The OpenXR layer in this setup is signed with a certificate Windows doesn't trust.";
+        case SignatureKind::kNone:
+            break;
     }
+    return L"The OpenXR layer in this setup is not signed.";
+}
 
-    const std::wstring what = system.setupLayerSignature == SignatureKind::kNone
-                                  ? L"The OpenXR layer in this setup is not signed."
-                                  : L"The OpenXR layer in this setup is signed with a certificate Windows "
-                                    L"doesn't trust.";
-
-    return what
-           + L"\n\nEasy Anti-Cheat refuses such a layer. While it is installed, LMU started the usual way "
-             L"shows Easy Anti-Cheat's \"Untrusted system file\" warning, and online play is disabled. The "
-             L"layer works in LMU started without Easy Anti-Cheat, which means offline."
-             L"\n\nInstall it anyway?";
+const wchar_t* UnsignedLayerConsequence() {
+    return L"Easy Anti-Cheat refuses such a layer. While it is installed, LMU started the usual way shows "
+           L"Easy Anti-Cheat's \"Untrusted system file\" warning, and online play is disabled. The layer "
+           L"works in LMU started without Easy Anti-Cheat, which means offline.";
 }

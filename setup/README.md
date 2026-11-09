@@ -6,11 +6,17 @@ beside it.
 
 ## What it shows
 
-The window has a row for each part, with what the part adds and the buttons that fit what is installed.
-After each part's name is the version installed, as its DLL's Properties show it, such as
-`0.1.0+14.g31637d5`. After the window's title is setup's own version, which is also the version of the
-parts it carries. Under the title, setup says what to close before a part can be changed (OBS for the
-plugins, LMU for the layer), or that OBS Studio wasn't found.
+The window has a dark band at the top, a row for each part, and a footer.
+
+- **The band** holds SimOptix's name and setup's own version, which is also the version of the parts it
+  carries. On the right is **Install all**, **Update all** once anything is installed, or "Up to date"
+  when there is nothing to do. When something must be closed before a part can be changed (OBS for
+  the plugins, LMU for the layer), or OBS Studio wasn't found, the band says so in amber under the
+  name.
+- **Each row** holds the part's icon, teal when it is installed and grey when it isn't, its name, the
+  version installed as its DLL's Properties show it (such as `0.1.0+14.g31637d5`), what the part adds,
+  and the buttons that fit what is installed.
+- **The footer** holds **Uninstall all**, in red, and **Close**.
 
 | Buttons | What is installed |
 |---|---|
@@ -35,8 +41,13 @@ window and the buttons follow.
 - Before it installs a layer that isn't signed with a certificate Windows trusts, setup asks first.
   Easy Anti-Cheat refuses such a layer: while it is installed, LMU started the usual way shows Easy
   Anti-Cheat's "Untrusted system file" warning, and online play is disabled. The layer then works only
-  in LMU started without Easy Anti-Cheat.
-- The buttons show the result. A message comes up only when something failed, with the reason.
+  in LMU started without Easy Anti-Cheat. Its default answer is **Don't install**.
+- **While a change runs,** the band names the part being changed and fills a bar, one step per part.
+  Each row in the change says "Waiting", then turns a spinner with "Installing…" (or "Updating…",
+  "Repairing…", "Uninstalling…"), then shows a tick with "Installed" (and so on), or "Failed". Every
+  button waits until it ends, Close and the window's close box too, because a change can't stop
+  halfway. The results stay 3 s, then the buttons come back.
+- A message comes up only when something failed, with the reason.
 
 ## Where the parts go
 
@@ -59,8 +70,7 @@ window and the buttons follow.
 ## Windows' list of installed apps
 
 While any part is installed, SimOptix is listed in Windows' Settings, under Apps, Installed apps, with
-setup's version. Its
-**Uninstall** removes all three parts and the listing. It runs setup's own copy in
+setup's version. Its **Uninstall** removes all three parts and the listing. It runs setup's own copy in
 `C:\Program Files\simoptix`, which copies itself to the temporary folder to do the work, because a
 running program can't delete its own file. Windows deletes that temporary copy at the next restart.
 
@@ -69,8 +79,13 @@ running program can't delete its own file. Windows deletes that temporary copy a
 | File | What |
 |---|---|
 | `setup_main.cpp` | Starts setup: the window, or the removal with `/uninstall` |
-| `setup_window.cpp` | The window and what its buttons do |
-| `setup_look.cpp` | The window's layout, colours and fonts, and its drawing |
+| `setup_window.cpp` | The window, what its buttons do, and a change's progress |
+| `setup_run.cpp` | Runs a change on a thread of its own, so the window keeps drawing its progress |
+| `setup_look.cpp` | Where everything in the window goes, and its drawing, but the buttons |
+| `setup_buttons.cpp` | The buttons' look: real Windows buttons, drawn by setup in each state |
+| `setup_dialog.cpp` | Setup's questions, in its own look: the unsigned layer, and Uninstall all |
+| `setup_theme.cpp` | The design in numbers: colours, sizes, fonts, and the title bar's colour |
+| `setup_draw.cpp` | Smooth shapes and icons, with GDI+: the parts' glyphs, ticks, marks, the spinner |
 | `setup_status.cpp` | Which buttons each row shows, and whether a part can be changed now |
 | `setup_probe.cpp` | Reads what is installed, the layer's registrations, OBS and LMU |
 | `setup_install.cpp` | Installs and removes each part, and keeps the entry in Windows' installed apps |
@@ -82,6 +97,7 @@ running program can't delete its own file. Windows deletes that temporary copy a
 | `setup_payload.cpp` | The files inside the exe: finding, comparing and writing them |
 | `setup_signature.cpp` | A file's code signature, by Windows' own check |
 | `setup_registry.cpp`, `setup_system.cpp` | The registry, folders, processes, and the versions of OBS and of installed files |
-| `setup.rc` | Puts the two plugins and the layer, with their manifests, into the exe, and gives the exe its version resource |
+| `setup.rc` | Puts the two plugins and the layer, with their manifests, into the exe, and gives the exe its icon and version resource |
+| `make_icon.ps1` | Writes setup's icon, a placeholder logo, for each build |
 | `setup.manifest` | Administrator rights, sharp text at any display scale, and Windows' current controls |
 | `build.bat` | Builds both plugins and setup |

@@ -6,7 +6,7 @@
 
 #include <string>
 
-// "Access is denied. (5)": Windows' text for GetLastError().
+// "The system cannot find the file specified. (2)": Windows' text for GetLastError().
 std::wstring DescribeLastError();
 
 std::wstring ProgramFilesFolder();  // C:\Program Files

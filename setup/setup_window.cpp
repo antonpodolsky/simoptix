@@ -2,50 +2,35 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "setup_window.h"
 
+#include <commctrl.h>
+
 #include <array>
 #include <string>
 #include <vector>
 
+#include "setup_controls.h"
+#include "setup_draw.h"
 #include "setup_install.h"
 #include "setup_look.h"
 #include "setup_payload.h"
 #include "setup_probe.h"
+#include "setup_progress.h"
+#include "setup_questions.h"
+#include "setup_run.h"
 #include "setup_signature.h"
 #include "setup_status.h"
-#include "setup_system.h"
 #include "setup_version.h"
+
+using namespace theme;
 
 namespace {
 
-    constexpr int kMainId = 100;       // + the part's index
-    constexpr int kUninstallId = 110;  // + the part's index
-    constexpr int kInstallAllId = 200;
-    constexpr int kUninstallAllId = 201;
-    constexpr int kCloseId = 202;
+    constexpr UINT_PTR kFrameTimer = 1;    // while the spinner turns or the bar moves
+    constexpr UINT_PTR kResultsTimer = 2;  // the results of a run, shown for a moment
 
     const wchar_t* const kClassName = L"simoptix_setup";
     const wchar_t* const kTitle = L"SimOptix Setup";
-
     const DWORD kStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN;
-
-    enum class Change { kInstall, kUninstall };
-
-    // Adds `sentence` to `text`, after a space, unless it is empty or already there.
-    void AddSentenceOnce(std::wstring* text, const std::wstring& sentence) {
-        if (sentence.empty() || text->find(sentence) != std::wstring::npos) {
-            return;
-        }
-
-        if (!text->empty()) {
-            *text += L" ";
-        }
-
-        *text += sentence;
-    }
-
-    void PlaceButton(HWND button, const RECT& at) {
-        MoveWindow(button, at.left, at.top, at.right - at.left, at.bottom - at.top, TRUE);
-    }
 
     class SetupWindow {
     public:
@@ -57,37 +42,42 @@ namespace {
         static LRESULT CALLBACK Procedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
         LRESULT Handle(UINT message, WPARAM wParam, LPARAM lParam);
 
-        HWND MakeButton(const wchar_t* text, int id);
         void ApplyDpi(UINT dpi);
-        void Paint(HDC dc) const;
+        void FitWindow();
         void PaintBuffered();
 
         void Refresh();
-        void UpdateButtons();
-
-        void OnCommand(int id);
-        bool ConfirmLayer(const std::vector<PartId>& parts);
-        void Run(Change change, const std::vector<PartId>& parts);
+        void UpdateView();
+        void PlaceButtons();
         std::vector<PartId> PartsToInstall() const;
         std::vector<PartId> PartsToUninstall() const;
         bool AnythingInstalled() const;
 
+        void OnCommand(int id);
+        bool ConfirmLayer(const std::vector<PartId>& parts);
+        void StartRun(Change change, const std::vector<PartId>& parts);
+        void OnPartStarted(size_t index);
+        void OnPartDone(size_t index, const std::wstring& error);
+        void OnRunFinished();
+        void OnResultsShown();
+        void OnFrame();
+
         HINSTANCE instance_;
         HWND hwnd_ = nullptr;
-        LookFonts fonts_;
+        ThemeFonts fonts_;
         WindowLayout layout_;
-        UniqueBrush footerBrush_;
 
-        std::array<HWND, 3> mainButtons_ = {};
-        std::array<HWND, 3> uninstallButtons_ = {};
-        HWND installAll_ = nullptr;
-        HWND uninstallAll_ = nullptr;
-        HWND close_ = nullptr;
+        WindowButtons buttons_;
 
         SignatureKind setupLayerSignature_ = SignatureKind::kNone;
         Facts facts_;
-        WindowTexts texts_;
         std::array<PartStatus, 3> statuses_;  // in the order of kParts
+        WindowView view_;
+
+        // A run of changes, from its start until its results have been shown.
+        ChangeRun run_;
+        RunProgress progress_;
+        bool busy_ = false;
     };
 
     bool SetupWindow::Create() {
@@ -98,14 +88,12 @@ namespace {
             setupLayerSignature_ = CheckEmbeddedSignature(layer, PartOf(PartId::kOpenXrLayer).dllName);
         }
 
-        footerBrush_.reset(CreateSolidBrush(FooterColour()));
-
         WNDCLASSEXW windowClass = {};
         windowClass.cbSize = sizeof(windowClass);
         windowClass.lpfnWndProc = Procedure;
         windowClass.hInstance = instance_;
         windowClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-        windowClass.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+        windowClass.hIcon = LoadIconW(instance_, MAKEINTRESOURCEW(kSetupIconId));
         windowClass.lpszClassName = kClassName;
 
         if (!RegisterClassExW(&windowClass)) {
@@ -131,30 +119,11 @@ namespace {
             return false;
         }
 
-        for (size_t i = 0; i < kParts.size(); ++i) {
-            mainButtons_[i] = MakeButton(L"Install", kMainId + static_cast<int>(i));
-            uninstallButtons_[i] = MakeButton(L"Uninstall", kUninstallId + static_cast<int>(i));
-        }
-
-        installAll_ = MakeButton(L"Install all", kInstallAllId);
-        uninstallAll_ = MakeButton(L"Uninstall all", kUninstallAllId);
-        close_ = MakeButton(L"Close", kCloseId);
-
+        ApplyBandCaption(hwnd_);
+        buttons_.Create(hwnd_, instance_);
+        fonts_ = MakeThemeFonts(GetDpiForWindow(hwnd_));
         Refresh();
         ApplyDpi(GetDpiForWindow(hwnd_));
-
-        RECT frame = {0, 0, layout_.client.cx, layout_.client.cy};
-        AdjustWindowRectExForDpi(&frame, kStyle, FALSE, 0, layout_.dpi);
-        SetWindowPos(
-            hwnd_,
-            nullptr,
-            0,
-            0,
-            frame.right - frame.left,
-            frame.bottom - frame.top,
-            SWP_NOMOVE | SWP_NOZORDER
-        );
-
         ShowWindow(hwnd_, SW_SHOWNORMAL);
         return true;
     }
@@ -182,17 +151,46 @@ namespace {
     LRESULT SetupWindow::Handle(UINT message, WPARAM wParam, LPARAM lParam) {
         switch (message) {
             case WM_ACTIVATE:
-                if (LOWORD(wParam) != WA_INACTIVE) {
+                if (LOWORD(wParam) != WA_INACTIVE && !busy_) {
                     Refresh();
                 }
                 break;
 
             case WM_COMMAND:
-                if (HIWORD(wParam) == BN_CLICKED) {
+                if (HIWORD(wParam) == BN_CLICKED && !busy_) {
                     OnCommand(LOWORD(wParam));
                     return 0;
                 }
                 break;
+
+            case WM_NOTIFY: {
+                auto* draw = reinterpret_cast<NMCUSTOMDRAW*>(lParam);
+
+                if (draw->hdr.code == NM_CUSTOMDRAW && buttons_.Owns(draw->hdr.hwndFrom)) {
+                    return buttons_.Paint(*draw, fonts_, layout_.dpi);
+                }
+                break;
+            }
+
+            case kRunPartStarted:
+                OnPartStarted(wParam);
+                return 0;
+
+            case kRunPartDone:
+                OnPartDone(wParam, TakeRunError(lParam));
+                return 0;
+
+            case kRunFinished:
+                OnRunFinished();
+                return 0;
+
+            case WM_TIMER:
+                if (wParam == kFrameTimer) {
+                    OnFrame();
+                } else if (wParam == kResultsTimer) {
+                    OnResultsShown();
+                }
+                return 0;
 
             case WM_ERASEBKGND:
                 return 1;  // WM_PAINT covers the whole window
@@ -201,22 +199,8 @@ namespace {
                 PaintBuffered();
                 return 0;
 
-            // Themed buttons ask their parent to draw what is behind their rounded corners.
-            case WM_PRINTCLIENT:
-                Paint(reinterpret_cast<HDC>(wParam));
-                return 0;
-
-            case WM_CTLCOLORBTN: {
-                const HWND button = reinterpret_cast<HWND>(lParam);
-                const bool inFooter = button == installAll_ || button == uninstallAll_ || button == close_;
-                const HBRUSH brush = inFooter ? footerBrush_.get()
-                                              : static_cast<HBRUSH>(GetStockObject(WHITE_BRUSH));
-                return reinterpret_cast<LRESULT>(brush);
-            }
-
             case WM_DPICHANGED: {
                 const auto* suggested = reinterpret_cast<const RECT*>(lParam);
-                ApplyDpi(HIWORD(wParam));
                 SetWindowPos(
                     hwnd_,
                     nullptr,
@@ -226,8 +210,15 @@ namespace {
                     suggested->bottom - suggested->top,
                     SWP_NOZORDER | SWP_NOACTIVATE
                 );
+                ApplyDpi(HIWORD(wParam));
                 return 0;
             }
+
+            case WM_CLOSE:
+                if (busy_) {
+                    return 0;  // a run can't be stopped halfway, so the window waits for it
+                }
+                break;
 
             case WM_DESTROY:
                 PostQuitMessage(0);
@@ -237,40 +228,26 @@ namespace {
         return DefWindowProcW(hwnd_, message, wParam, lParam);
     }
 
-    HWND SetupWindow::MakeButton(const wchar_t* text, int id) {
-        return CreateWindowExW(
-            0,
-            L"BUTTON",
-            text,
-            WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
-            0,
-            0,
-            0,
-            0,
-            hwnd_,
-            reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),
-            instance_,
-            nullptr
-        );
-    }
-
     void SetupWindow::ApplyDpi(UINT dpi) {
-        fonts_ = MakeFonts(dpi);
-        layout_ = LayOut(dpi);
-
-        for (HWND child = GetWindow(hwnd_, GW_CHILD); child; child = GetWindow(child, GW_HWNDNEXT)) {
-            SendMessageW(child, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body.get()), FALSE);
-        }
-
-        PlaceButton(installAll_, layout_.installAll);
-        PlaceButton(uninstallAll_, layout_.uninstallAll);
-        PlaceButton(close_, layout_.close);
-        UpdateButtons();
-        InvalidateRect(hwnd_, nullptr, TRUE);
+        fonts_ = MakeThemeFonts(dpi);
+        layout_ = LayOut(dpi, view_.reasons.size());
+        FitWindow();
+        PlaceButtons();
+        InvalidateRect(hwnd_, nullptr, FALSE);
     }
 
-    void SetupWindow::Paint(HDC dc) const {
-        PaintWindow(dc, layout_, fonts_, texts_);
+    void SetupWindow::FitWindow() {
+        RECT frame = {0, 0, layout_.client.cx, layout_.client.cy};
+        AdjustWindowRectExForDpi(&frame, kStyle, FALSE, 0, layout_.dpi);
+        SetWindowPos(
+            hwnd_,
+            nullptr,
+            0,
+            0,
+            frame.right - frame.left,
+            frame.bottom - frame.top,
+            SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE
+        );
     }
 
     // Drawn into a bitmap first and copied in one go, so the window doesn't flicker while it redraws.
@@ -282,11 +259,11 @@ namespace {
 
         if (buffer && bitmap) {
             const HGDIOBJ old = SelectObject(buffer, bitmap);
-            Paint(buffer);
+            PaintWindow(buffer, layout_, fonts_, view_);
             BitBlt(dc, 0, 0, layout_.client.cx, layout_.client.cy, buffer, 0, 0, SRCCOPY);
             SelectObject(buffer, old);
         } else {
-            Paint(dc);
+            PaintWindow(dc, layout_, fonts_, view_);
         }
 
         if (bitmap) {
@@ -301,42 +278,61 @@ namespace {
     }
 
     void SetupWindow::Refresh() {
+        const size_t reasonsBefore = view_.reasons.size();
         facts_ = ReadFacts(setupLayerSignature_);
-        texts_.setupVersion = SetupVersion();
-        texts_.blockedBy.clear();
 
         for (size_t i = 0; i < kParts.size(); ++i) {
-            texts_.installedVersions[i] = facts_.parts[i].installedVersion;
             statuses_[i] = DescribePart(kParts[i].id, facts_.parts[i], facts_.system);
-            AddSentenceOnce(&texts_.blockedBy, statuses_[i].installBlockedBy);
         }
 
-        UpdateButtons();
+        UpdateView();
+
+        // A second reason to close makes the band, and the window, taller.
+        if ((reasonsBefore > 1) != (view_.reasons.size() > 1) && layout_.client.cx > 0) {
+            layout_ = LayOut(layout_.dpi, view_.reasons.size());
+            FitWindow();
+        }
+
+        PlaceButtons();
         InvalidateRect(hwnd_, nullptr, FALSE);
     }
 
-    // Each row shows its main button only when there is something to do, and Uninstall only when there is
-    // something to remove. The main button takes the right slot when Uninstall isn't shown.
-    void SetupWindow::UpdateButtons() {
+    // The rows' run states stay as they are: a run changes them, and its end clears them.
+    void SetupWindow::UpdateView() {
+        view_.setupVersion = SetupVersion();
+        view_.reasons.clear();
+        view_.upToDate = true;
+
+        for (size_t i = 0; i < kParts.size(); ++i) {
+            const PartStatus& status = statuses_[i];
+            view_.rows[i].installed = facts_.parts[i].copy != InstalledCopy::kNone;
+            view_.rows[i].version = facts_.parts[i].installedVersion;
+            view_.upToDate = view_.upToDate && status.action == PartAction::kNone;
+
+            const std::wstring& reason = status.installBlockedBy;
+            bool known = reason.empty();
+
+            for (const std::wstring& shown : view_.reasons) {
+                known = known || shown == reason;
+            }
+
+            if (!known) {
+                view_.reasons.push_back(reason);
+            }
+        }
+    }
+
+    void SetupWindow::PlaceButtons() {
         if (layout_.client.cx == 0) {
             return;
         }
 
-        for (size_t i = 0; i < kParts.size(); ++i) {
-            const PartStatus& status = statuses_[i];
-
-            SetWindowTextW(mainButtons_[i], ActionLabel(status.action));
-            PlaceButton(mainButtons_[i], status.hasSomething ? layout_.mainSlots[i] : layout_.sideSlots[i]);
-            PlaceButton(uninstallButtons_[i], layout_.sideSlots[i]);
-            ShowWindow(mainButtons_[i], status.action != PartAction::kNone ? SW_SHOW : SW_HIDE);
-            ShowWindow(uninstallButtons_[i], status.hasSomething ? SW_SHOW : SW_HIDE);
-            EnableWindow(mainButtons_[i], status.installBlockedBy.empty());
-            EnableWindow(uninstallButtons_[i], status.removeBlockedBy.empty());
-        }
-
-        SetWindowTextW(installAll_, AnythingInstalled() ? L"Update all" : L"Install all");
-        EnableWindow(installAll_, !PartsToInstall().empty());
-        EnableWindow(uninstallAll_, !PartsToUninstall().empty());
+        ButtonPermissions allowed;
+        allowed.busy = busy_;
+        allowed.canInstallAll = !PartsToInstall().empty();
+        allowed.canUninstallAll = !PartsToUninstall().empty();
+        allowed.anythingInstalled = AnythingInstalled();
+        buttons_.Place(layout_, fonts_, view_, statuses_, allowed);
     }
 
     // The parts with something to do, when none of them is blocked. Empty otherwise, so "all" means all.
@@ -344,13 +340,11 @@ namespace {
         std::vector<PartId> parts;
 
         for (size_t i = 0; i < kParts.size(); ++i) {
-            const PartStatus& status = statuses_[i];
-
-            if (status.action == PartAction::kNone) {
+            if (statuses_[i].action == PartAction::kNone) {
                 continue;
             }
 
-            if (!status.installBlockedBy.empty()) {
+            if (!statuses_[i].installBlockedBy.empty()) {
                 return {};
             }
 
@@ -364,13 +358,11 @@ namespace {
         std::vector<PartId> parts;
 
         for (size_t i = 0; i < kParts.size(); ++i) {
-            const PartStatus& status = statuses_[i];
-
-            if (!status.hasSomething) {
+            if (!statuses_[i].hasSomething) {
                 continue;
             }
 
-            if (!status.removeBlockedBy.empty()) {
+            if (!statuses_[i].removeBlockedBy.empty()) {
                 return {};
             }
 
@@ -401,78 +393,72 @@ namespace {
 
         const int partCount = static_cast<int>(kParts.size());
 
-        if (id >= kMainId && id < kMainId + partCount) {
-            const size_t index = static_cast<size_t>(id - kMainId);
-            const std::vector<PartId> parts = {kParts[index].id};
-
-            if (statuses_[index].installBlockedBy.empty() && ConfirmLayer(parts)) {
-                Run(Change::kInstall, parts);
-            }
-        } else if (id >= kUninstallId && id < kUninstallId + partCount) {
-            const size_t index = static_cast<size_t>(id - kUninstallId);
-
-            if (statuses_[index].removeBlockedBy.empty()) {
-                Run(Change::kUninstall, {kParts[index].id});
-            }
-        } else if (id == kInstallAllId) {
+        if (id == kMainActionId) {
             const std::vector<PartId> parts = PartsToInstall();
 
             if (!parts.empty() && ConfirmLayer(parts)) {
-                Run(Change::kInstall, parts);
+                StartRun(Change::kInstall, parts);
+            }
+        } else if (id >= kRowMainId && id < kRowMainId + partCount) {
+            const size_t index = static_cast<size_t>(id - kRowMainId);
+            const std::vector<PartId> parts = {kParts[index].id};
+
+            if (statuses_[index].installBlockedBy.empty() && ConfirmLayer(parts)) {
+                StartRun(Change::kInstall, parts);
+            }
+        } else if (id >= kRowUninstallId && id < kRowUninstallId + partCount) {
+            const size_t index = static_cast<size_t>(id - kRowUninstallId);
+
+            if (statuses_[index].removeBlockedBy.empty()) {
+                StartRun(Change::kUninstall, {kParts[index].id});
             }
         } else if (id == kUninstallAllId) {
             const std::vector<PartId> parts = PartsToUninstall();
 
-            if (parts.empty()) {
-                return;
-            }
-
-            const int answer = MessageBoxW(
-                hwnd_,
-                L"Uninstall everything of SimOptix that is installed?",
-                kTitle,
-                MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2
-            );
-
-            if (answer == IDYES) {
-                Run(Change::kUninstall, parts);
+            if (!parts.empty() && AskUninstallAll(hwnd_, parts)) {
+                StartRun(Change::kUninstall, parts);
             }
         }
     }
 
     // Asks before a layer goes in that Easy Anti-Cheat would refuse. True to go on.
     bool SetupWindow::ConfirmLayer(const std::vector<PartId>& parts) {
-        const std::wstring warning = UnsignedLayerWarning(facts_.system);
+        const std::wstring problem = UnsignedLayerProblem(facts_.system);
         bool hasLayer = false;
 
         for (const PartId part : parts) {
             hasLayer = hasLayer || part == PartId::kOpenXrLayer;
         }
 
-        if (!hasLayer || warning.empty()) {
-            return true;
-        }
-
-        return MessageBoxW(hwnd_, warning.c_str(), kTitle, MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2)
-               == IDYES;
+        return !hasLayer || problem.empty() || AskInstallRefusedLayer(hwnd_, problem);
     }
 
-    // Makes the change and brings the entry in Windows' installed apps up to what is now installed. The
-    // buttons show the result, so a message comes up only when something failed.
-    void SetupWindow::Run(Change change, const std::vector<PartId>& parts) {
-        const HCURSOR previous = SetCursor(LoadCursorW(nullptr, IDC_WAIT));
-        std::wstring errors;
+    void SetupWindow::StartRun(Change change, const std::vector<PartId>& parts) {
+        busy_ = true;
+        progress_.Start(change, parts, statuses_, GetTickCount64(), &view_);
+        PlaceButtons();
+        InvalidateRect(hwnd_, nullptr, FALSE);
 
-        for (const PartId part : parts) {
-            std::wstring error;
-            const bool done = change == Change::kInstall ? InstallPart(part, facts_.system, &error)
-                                                         : RemovePart(part, &error);
+        run_.Start(hwnd_, change, parts, facts_.system);
+        SetTimer(hwnd_, kFrameTimer, kFrameMs, nullptr);
+    }
 
-            if (!done) {
-                errors += std::wstring(L"\n") + PartOf(part).shownName + L": " + error;
-            }
-        }
+    void SetupWindow::OnPartStarted(size_t index) {
+        progress_.PartStarted(index, &view_);
+        InvalidateRect(hwnd_, nullptr, FALSE);
+    }
 
+    void SetupWindow::OnPartDone(size_t index, const std::wstring& error) {
+        progress_.PartDone(index, error, GetTickCount64(), &view_);
+        SetTimer(hwnd_, kFrameTimer, kFrameMs, nullptr);
+        InvalidateRect(hwnd_, nullptr, FALSE);
+    }
+
+    // Updates the entry in Windows' installed apps, shows what failed, and keeps the results a moment.
+    void SetupWindow::OnRunFinished() {
+        run_.Join();
+
+        std::wstring errors = progress_.Finish(&view_);
         Refresh();
 
         std::wstring entryError;
@@ -481,17 +467,44 @@ namespace {
             errors += L"\nWindows' list of installed apps: " + entryError;
         }
 
-        SetCursor(previous);
-
         if (!errors.empty()) {
             const std::wstring message = L"Not everything could be done." + errors;
             MessageBoxW(hwnd_, message.c_str(), kTitle, MB_OK | MB_ICONERROR);
+        }
+
+        SetTimer(hwnd_, kResultsTimer, kTicksShownMs, nullptr);
+    }
+
+    void SetupWindow::OnResultsShown() {
+        KillTimer(hwnd_, kResultsTimer);
+        KillTimer(hwnd_, kFrameTimer);
+        progress_.Clear(&view_);
+        busy_ = false;
+        Refresh();
+    }
+
+    // Redraws only what moves, and stops the timer when nothing does.
+    void SetupWindow::OnFrame() {
+        const bool moving = progress_.Animate(GetTickCount64(), &view_);
+        const RECT bar = RunBarRect(layout_);
+        InvalidateRect(hwnd_, &bar, FALSE);
+
+        for (size_t i = 0; i < view_.rows.size(); ++i) {
+            if (view_.rows[i].run == RunState::kBusy) {
+                const RECT state = RunStateRect(layout_, i);
+                InvalidateRect(hwnd_, &state, FALSE);
+            }
+        }
+
+        if (!moving) {
+            KillTimer(hwnd_, kFrameTimer);
         }
     }
 
 }
 
 int RunSetupWindow(HINSTANCE instance) {
+    const GdiplusSession gdiplus;
     SetupWindow window(instance);
 
     if (!window.Create()) {

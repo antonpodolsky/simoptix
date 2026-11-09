@@ -31,6 +31,9 @@ PartStatus DescribePart(PartId id, const PartFacts& part, const SystemFacts& sys
 // The main button's label, empty for kNone.
 const wchar_t* ActionLabel(PartAction action);
 
-// The question asked before an unsigned or untrusted layer is installed, empty when the layer inside
-// setup is signed and trusted.
-std::wstring UnsignedLayerWarning(const SystemFacts& system);
+// What is wrong with the layer inside setup, for the question asked before it is installed: "The OpenXR
+// layer in this setup is not signed." Empty when it is signed with a certificate Windows trusts.
+std::wstring UnsignedLayerProblem(const SystemFacts& system);
+
+// What Easy Anti-Cheat then does, for the same question.
+const wchar_t* UnsignedLayerConsequence();

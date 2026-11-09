@@ -13,6 +13,7 @@ enum class PartId { kVrMirror, kOverlays, kOpenXrLayer };
 struct Part {
     PartId id;
     const wchar_t* shownName;         // as the window and the messages show it
+    const wchar_t* shortName;         // in the run's progress: "Installing Overlays"
     const wchar_t* description;       // what it adds, under the name in the window
     const wchar_t* folderName;        // the plugin's folder in OBS's plugins folder, empty for the layer
     const wchar_t* dllName;           // the file name it is installed under
@@ -25,6 +26,7 @@ inline constexpr std::array<Part, 3> kParts = {
     Part{
         PartId::kVrMirror,
         L"VR Mirror OBS plugin",
+        L"VR Mirror",
         L"The Pimax Mirror and OpenXR Mirror sources, and race auto-record.",
         L"simoptix_vr_mirror",
         L"simoptix_vr_mirror.dll",
@@ -35,6 +37,7 @@ inline constexpr std::array<Part, 3> kParts = {
     Part{
         PartId::kOverlays,
         L"Overlays OBS plugin",
+        L"Overlays",
         L"The G-Meter Overlay source.",
         L"simoptix_overlays",
         L"simoptix_overlays.dll",
@@ -44,6 +47,7 @@ inline constexpr std::array<Part, 3> kParts = {
     },
     Part{
         PartId::kOpenXrLayer,
+        L"OpenXR layer",
         L"OpenXR layer",
         L"Gives OpenXR Mirror the game's own left eye. Loaded into LMU when the game starts.",
         L"",
