@@ -37,6 +37,7 @@ it is here, with the details in files beside this one. Paths below are relative 
 | `reference\mirror_app.md` | The mirror app's build and its use in the tests |
 | `reference\openxr.md` | The OpenXR layer: build, check, sign, install, the Easy Anti-Cheat test |
 | `reference\release.md` | The version and what carries it, when to bump it, the changelog from each pull request, and making a release |
+| `reference\github_text.md` | What stays out of issues, pull requests, comments and commit messages, and the check before posting (`check_github_text.py`) |
 | `findings\<part>.md` | What was measured, fixed, and tried and dropped, per part: `obs_plugin`, `frame_sources`, `openxr`, `overlays`, `telemetry`, `mirror_app`, `pipeline`, `e2e`, `recording_analysis` |
 
 The rules for writing docs are in `.agents\skills\docs\SKILL.md`. Read that skill whenever you write or
@@ -46,8 +47,12 @@ The rules for writing code are in `.agents\skills\code-style\SKILL.md` (how it l
 `.agents\skills\code-practices\SKILL.md` (how it is built). Read both whenever you write, change or
 review code (C++, HLSL, scripts, Python).
 
-These four skills in `.agents\skills\` are the instructions for every coding agent. `AGENTS.md`,
-`CLAUDE.md`, `.github\copilot-instructions.md` and the skills in `.agents\skills\` only point at them,
+The rules for writing for GitHub are in `.agents\skills\pull-requests\SKILL.md` (pull requests and
+commit messages) and `.agents\skills\issues\SKILL.md` (issues and comments). Read the matching one
+whenever you write a commit message, a pull request, an issue or a comment.
+
+These six skills in `.agents\skills\` are the instructions for every coding agent. `AGENTS.md`,
+`CLAUDE.md`, `.github\copilot-instructions.md` and the skills in `.claude\skills\` only point at them,
 for the agents that read those files. Change the rules here, never in those files.
 
 ## Rules
@@ -108,6 +113,10 @@ for the agents that read those files. Change the rules here, never in those file
   - Never commit build output, captures or local `.ini` files, or binaries the build can make (OBS's
     import library is made from `shared\obs_lib\obs.def`).
   - Once the repo has its GitHub remote, every change reaches `main` through a pull request (step 7).
+- **Nothing personal goes to GitHub.** Issues, pull requests, comments and commit messages are public
+  and keep their history. They hold no recording names, session dates or times, tracks, cars, local
+  paths or details of the maintainer's PC, and nothing of how the work went. Check each text before
+  posting it (`reference\github_text.md`).
 - **Docs move with the code, each in its place.**
   - READMEs describe the project: what each part is and does, how it behaves, its settings as a user
     sees them, how to use it, and its files. They hold no build, test or working steps, no findings,
@@ -674,7 +683,8 @@ Record what each start of the game showed in `findings\openxr.md`.
 
 - Commit each finished change on its own, without being asked.
 - The subject is `Area: what changed`. The body says why. An agent ends the message with the
-  attribution line its own instructions give, if any.
+  attribution line its own instructions give, if any. Write the message by the pull-requests skill
+  ("Commit messages"), and check a branch's messages before pushing it.
 - Commit with `git commit -s`, the maintainer and every agent alike. It adds a `Signed-off-by:` line
   with the name and email of the git config. That line certifies the Developer Certificate of Origin
   (`CONTRIBUTING.md`, "Sign-off"). An amend or a rebase keeps the line. To add it to the last commit,
@@ -694,32 +704,12 @@ Record what each start of the game showed in `findings\openxr.md`.
 ## 7. Bring `main` up
 
 - **Every change goes through a pull request on GitHub,** once the repo has its GitHub remote. Push the
-  worktree's branch, open a pull request against `main` that says what changed, why and what was
-  verified, and merge it on GitHub after its checks. Nothing is pushed to `main` directly.
-- **A pull request's description covers its own change and nothing else.** It says what the branch
-  changes against `main`, why, what was verified and what wasn't. These stay out, and so do they from
-  commit messages:
-  - How the work went: who asked for what, a plan or an earlier request the change differs from,
-    what was "found along the way". Example: "At the maintainer's request this uses the PR
-    description, not fragment files."
-  - The maintainer's PC: its folders, their owners and permissions, what is installed, errors met
-    there. A check that wasn't run is named as not run, with a reason about the change ("not run,
-    because nothing in `vr_mirror\core\` changed"), never about the PC.
-  - The agent's notes, memory and other sessions.
-  - Plans, next steps, follow-ups, and work that isn't on `main` or in this branch.
-
-  An agent tells the user about these in chat instead. Before opening the pull request, and after
-  every edit of its description, read each sentence as a reviewer who sees only the diff. Delete each
-  one that reviewer doesn't need.
-- **The pull request feeds the changelog.** Fill in its template (`.github\pull_request_template.md`),
-  and give it exactly one type label (`reference\release.md`, "The changelog, from each pull
-  request"):
-  - A change users notice gets `added`, `changed`, `fixed`, `removed` or `security`, and one to three
-    lines in the description's Changelog section. They are written for a VR sim racer, by the docs
-    skill ("The changelog").
-  - Any other change gets `internal` and an empty Changelog section.
-  - With `gh`: `gh pr create --label <label> --body-file <file>`. The release script refuses a release
-    while a pull request since the last one has no type label.
+  worktree's branch, open a pull request against `main`, and merge it on GitHub after its checks.
+  Nothing is pushed to `main` directly.
+- **Write the pull request by the pull-requests skill** (`.agents\skills\pull-requests\SKILL.md`): its
+  title, its description from the template, which covers this change only, and its one type label,
+  which feeds the changelog. The release script refuses a release while a pull request since the last
+  one has no type label.
 - Until the remote exists, there are two cases:
   - If `main` isn't checked out anywhere, run `git push . <branch>:main` (fast-forward only).
   - If `main` is checked out in the main folder and that folder's tracked files are clean, run

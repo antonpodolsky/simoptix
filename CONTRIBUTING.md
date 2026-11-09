@@ -6,8 +6,10 @@ AI coding agents and people alike. Beside it are longer procedures (`reference\`
 measured and tried so far (`findings\`). They are plain Markdown and worth reading before a larger
 change. `.agents\skills\docs\SKILL.md` has the rules for writing docs, and
 `.agents\skills\code-style\SKILL.md` and `.agents\skills\code-practices\SKILL.md` the rules for writing code.
+`.agents\skills\pull-requests\SKILL.md` and `.agents\skills\issues\SKILL.md` have the rules for writing
+pull requests, commit messages, issues and comments.
 
-`AGENTS.md` points coding agents at these four skills. Codex, Cursor, Windsurf, Zed and Cline read it
+`AGENTS.md` points coding agents at these six skills. Codex, Cursor, Windsurf, Zed and Cline read it
 on their own. Claude Code reads it through `CLAUDE.md`, and finds the skills through the short ones in
 `.claude\skills\`. GitHub Copilot reads `AGENTS.md` or `.github\copilot-instructions.md`, which points
 at the same skills. Aider reads it when started with `--read AGENTS.md`. Gemini CLI reads it when its
@@ -190,6 +192,10 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
     changelog").
   - If only contributors notice it (tests, refactors, contributors' docs, the skills, the build),
     label it `internal`, and leave the Changelog section empty.
+- Keep personal information out of commit messages, pull requests, issues and comments: recording
+  names, the dates and times of your sessions, tracks, cars and local paths. They are public, and
+  GitHub keeps every edit. `.agents\skills\dev\reference\github_text.md` lists what stays out, and
+  `python -I .agents\skills\dev\check_github_text.py <file>` lists lines to review before you post.
 
 ## Releases
 
