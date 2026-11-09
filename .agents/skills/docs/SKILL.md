@@ -86,6 +86,10 @@ assumes.
    - Never define what the reader of that level knows: VR, headset, OpenXR, OBS, LMU, Easy Anti-Cheat
      and Render Quality for everyone, and C++, shaders and quaternions for contributors. A table of
      basics reads as if the reader had never heard of VR.
+   - A coined term that is also a name OBS shows, such as Look-ahead (a choice of VR Mirror's
+     Smoothing), needs no table where the text uses it as that name. The root README and
+     `CHANGELOG.md` describe it as a setting, in the sentence that names it. A table there would be
+     too low level for their reader. `check_docs.py` lists these names in `ON_SCREEN_NAMES`.
    - The table is `| Term | Meaning |`, after the opening paragraph and before the first use. It
      holds only the terms that document uses. Every README defines the coined terms it uses, even if
      a parent README defines them too. Dev skill files link to `reference\terms.md` in their first
@@ -124,7 +128,7 @@ assumes.
    - If a sentence needs reading twice, rewrite it.
    - Say what happens, in the reader's terms, and give an example when a rule is abstract.
    - Shortening keeps the facts that make a statement true: its numbers and units, its conditions
-     ("at Render Quality 1.0", "with Smoothest"), its reasons ("because ..."), and its exceptions.
+     ("at Render Quality 1.0", "with Look-ahead"), its reasons ("because ..."), and its exceptions.
      Remove words, never these.
 7. **No code names in text for non-programmers.** A code name is the name of a class, function,
    file or setting key, such as `PimaxSource` or `kDrawnPose`. In the root README and the
@@ -230,7 +234,7 @@ The dev skill's files are read by people and agents in the middle of work. They 
 | Depends on: plain data | Replaced the stage's "Must not know" rule, which the dev skill asks for | **Must not know:** PVR calls, threads, the frame's image, or anything later in the pipeline |
 | Two sources, the same but for where their picture comes from | Confusing | Two sources show the same view. They differ in where the game's image comes from |
 | Both read the game's telemetry through one reader for the whole of OBS | Internal design in the root README | The G-meter and race auto-record read the same game data |
-| `The delay costs memory; Smoothest needs 2 GB.` | Semicolon | The delay costs video memory. Smoothest needs 2 GB. |
+| `The delay costs memory; Look-ahead needs 1.1 GB.` | Semicolon | The delay costs video memory. Look-ahead needs 1.1 GB. |
 | The slot check re-times a frame to its arrival slot | Coined terms undefined | Define "slot check" and "arrival slot" in the terms table first, then use them |
 | It never makes the game wait. | Describes the code by what it doesn't do | It copies each frame after the game has sent it to the headset. |
 | For now the layer works only offline | A plan word, and a limit | The layer works in LMU started without Easy Anti-Cheat, which means offline |

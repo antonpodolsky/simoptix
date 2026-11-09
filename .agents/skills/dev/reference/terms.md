@@ -32,10 +32,10 @@ A new term goes here, and into the table of every README that uses it.
 | timing gate | The part of the slot check that lets a slot be judged only while the frames' timing shows a queue |
 | re-time | What the slot check does when it assigns a frame a display slot other than its arrival slot |
 | cockpit correction | A refinement of the drawn pose. It measures how the fixed cockpit moved between two frames and corrects the pose by what the head poses don't explain |
-| look-ahead | The method behind Smooth and Smoothest. The view runs half a second or a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
+| look-ahead | The method behind the Look-ahead smoothing. The view runs half a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
 | picture room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
 | edge stop | The smoothing's last resort. It holds the view at 95% of its picture room when the smoothing's own planning wasn't enough |
-| output delay | How far VR Mirror's view runs behind the game: about 1 s with Smoothest, about 0.5 s with Smooth, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
+| output delay | How far VR Mirror's view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
 | observer | The debugging code beside the pipeline. It numbers the stamp and writes the frame trace |
 | stamp | The frame number that VR Mirror draws as 15 small squares in the top-left corner of the view, when its Debug setting is on |
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
@@ -72,7 +72,7 @@ A new term goes here, and into the table of every README that uses it.
 | pipeline, stage | The five stages in `vr_mirror\core\pipeline\` that turn a game frame into the stabilized view: arrival timing, drawn pose, frame picker, smoothing and warp. Each stage answers one question through a small interface, and its implementations can be swapped |
 | arrival timing | Stage 1. It removes the timing noise from a frame's arrival and gives its arrival slot |
 | frame picker | Stage 3. It picks which stored frame the host shows next, and when |
-| smoothing | Stage 4, and the setting that picks how the view follows the head: Off, Instant, Smooth or Smoothest |
+| smoothing | Stage 4, and the setting that picks how the view follows the head: Off, Instant or Look-ahead |
 | warp | Stage 5. It re-projects the eye image to the view, on the GPU |
 | e2e, scenario | The end-to-end tests in `vr_mirror\e2e\`. A scenario is one of them: a motion or a replay, with the limits it is graded on |
 | telemetry | The readings a game publishes about the car (G-forces, speed, pedals, ABS, TC) and the session (practice or race, the start lights, the finish) |

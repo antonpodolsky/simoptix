@@ -7,7 +7,7 @@ Hard checks (the exit code is 1 if one fails):
   - every relative link and every repo path in backticks resolves
   - every term in the "Terms coined in this repo" table of .agents\skills\dev\reference\terms.md
     has a row in a terms table at or before its first use (dev skill files may link to terms.md in
-    their first lines instead)
+    their first lines instead, and ON_SCREEN_NAMES lists the names OBS shows that need none)
   - CHANGELOG.md has the release script's form: each section "## [x.y.z] - YYYY-MM-DD", newest first,
     with its link line, only the release script's groups (### Added and the like), and bullets in them
 Review list (printed, never fails): lines with negative statements or plan words, and outside terms
@@ -32,6 +32,13 @@ EXEMPT_NAMES = {"LICENSE", "THIRD_PARTY_NOTICES.md"}
 
 # Files that talk about terms and rules themselves, or that are legal text.
 NO_TERM_CHECK = {".agents/skills/docs/SKILL.md"}
+
+# Coined terms that a document uses only as a name OBS shows (Look-ahead, a choice of VR Mirror's
+# Smoothing). Its reader sees them on screen, so they need no table row there.
+ON_SCREEN_NAMES = {
+    "README.md": {"look-ahead"},
+    "CHANGELOG.md": {"look-ahead"},
+}
 
 NEGATIVE = re.compile(
     r"\b(doesn't|does not|don't|do not|never|no longer|isn't|aren't|cannot|can't|"
@@ -234,7 +241,11 @@ def CheckTerms(doc, lines, terms):
             break
 
     bad = []
+    on_screen = ON_SCREEN_NAMES.get(doc, set())
     for term in terms:
+        if term.lower() in on_screen:
+            continue
+
         rx = re.compile(r"\b" + re.escape(term.lower()) + r"s?\b")
         first = None
         for n, text in prose:

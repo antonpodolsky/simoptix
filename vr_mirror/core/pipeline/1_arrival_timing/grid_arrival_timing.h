@@ -33,7 +33,7 @@ private:
     // (a one-frame jolt, 3.5 px at 7:39 of race F). Early arrivals fade out by 0.2 periods
     // (0.1-0.2 early: 15,500 frames; 0.2-0.3: 1,000). Without kOnTime the rule also moved frames inside
     // queues, where the drawn pose stage's lag (counted from this slot) then came out a slot off:
-    // e2e replay_queued_late_frames_smooth 7.0-7.3% from the wrong pose against 4.0-5.7%.
+    // e2e replay_queued_late_frames_lookahead 7.0-7.3% from the wrong pose against 4.0-5.7%.
     static constexpr double kLateBefore = 0.2;
     static constexpr double kOnTime = 0.15;
     double offsets_[kOffsets] = {};

@@ -23,7 +23,7 @@ enum class OutputClock { kTicks, kFrames };
 enum class FrameReport { kArrival, kSlotAndPose };
 // Settings drawn_pose 1, 0, 2.
 enum class DrawnPoseKind { kSlotCheck, kArrivalSlot, kCockpit, kReported };
-enum class SmoothingKind { kInstant = 0, kSmooth = 1, kSmoothest = 2 };  // settings smoothing 0 and 1, 2, 3
+enum class SmoothingKind { kInstant = 0, kLookahead = 1 };  // settings smoothing 0 and 1, 2 and above
 enum class WarpKind { kRotation };
 // Debugging beside the pipeline (vr_mirror\core\pipeline\observer): none, or the frame-number stamp and the
 // frame trace (a host's debug setting).
@@ -33,7 +33,7 @@ struct PipelineConfig {
     ArrivalTimingKind arrivalTiming = ArrivalTimingKind::kGrid;
     FramePickerKind framePicker = FramePickerKind::kFixedDelay;
     DrawnPoseKind drawnPose = DrawnPoseKind::kSlotCheck;
-    SmoothingKind smoothing = SmoothingKind::kSmoothest;
+    SmoothingKind smoothing = SmoothingKind::kLookahead;
     WarpKind warp = WarpKind::kRotation;
     ObserverKind observer = ObserverKind::kNone;
 };
@@ -66,9 +66,8 @@ inline PipelineConfig ConfigFor(
         c.drawnPose = DrawnPoseKind::kReported;
     }
 
-    c.smoothing = s.smoothing <= 1   ? SmoothingKind::kInstant
-                  : s.smoothing == 2 ? SmoothingKind::kSmooth
-                                     : SmoothingKind::kSmoothest;
+    c.smoothing = s.smoothing <= MirrorSettings::kSmoothingInstant ? SmoothingKind::kInstant
+                                                                   : SmoothingKind::kLookahead;
 
     c.framePicker = clock == OutputClock::kTicks             ? FramePickerKind::kFixedDelay
                     : c.smoothing == SmoothingKind::kInstant ? FramePickerKind::kNewestFrame
@@ -132,11 +131,11 @@ inline bool Parse(const char* name, DrawnPoseKind* k) {
 }
 
 inline const char* NameOf(SmoothingKind k) {
-    return k == SmoothingKind::kInstant ? "instant" : k == SmoothingKind::kSmooth ? "smooth" : "smoothest";
+    return k == SmoothingKind::kInstant ? "instant" : k == SmoothingKind::kLookahead ? "lookahead" : "?";
 }
 
 inline bool Parse(const char* name, SmoothingKind* k) {
-    for (SmoothingKind v : {SmoothingKind::kInstant, SmoothingKind::kSmooth, SmoothingKind::kSmoothest}) {
+    for (SmoothingKind v : {SmoothingKind::kInstant, SmoothingKind::kLookahead}) {
         if (std::strcmp(name, NameOf(v)) == 0) {
             return *k = v, true;
         }

@@ -19,7 +19,7 @@ OBS, and the real OpenXR layer in a fake game. It checks the files they write un
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
 | replay | A real session played back through the fake runtime: its head poses, the runtime's predictions, and every game frame at its real arrival time and with the slot it was really drawn for |
 | thumbnail | A 64×32 colour image of the middle of an eye image. The slot check compares them |
-| look-ahead | The method behind Smooth and Smoothest. The view runs half a second or a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
+| look-ahead | The method behind the Look-ahead smoothing. The view runs half a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
 | lag | How many display slots earlier than its arrival slot the game drew a frame. 0 is on time. A lag appears while the game is behind |
 | PVR | Pimax's own name for its client interface: the client library `libPVRClient64.dll` that Pimax Play installs, and the table of functions it hands out. The project's code that wraps it is named after it |
 | display slot | One of the regular moments, 90 per second, at which the headset shows a new image. The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
@@ -28,7 +28,7 @@ OBS, and the real OpenXR layer in a fake game. It checks the files they write un
 | slot lead | The runtime's next display slot minus the moment a frame arrived. It shifts when the game queues frames |
 | observer | The debugging code beside the pipeline. It numbers the stamp and writes the frame trace |
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
-| output delay | How far VR Mirror's view runs behind the game: about 1 s with Smoothest, about 0.5 s with Smooth, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
+| output delay | How far VR Mirror's view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
 | fake runtime | The stand-in for Pimax's client library (`vr_mirror\e2e\fake_pvr\`) that the e2e tests use in place of a headset and a game |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | edge stop | The smoothing's last resort. It holds the view at 95% of its picture room when the smoothing's own planning wasn't enough |
@@ -54,10 +54,9 @@ footage** (five of them). A replay holds the real head poses and frame timing of
 game's real thumbnails as the slot check saw them. Each test has been shown to fail when what it checks
 is broken, except the stall measure.
 
-**Every test runs at all three smoothings.** The Instant run keeps the test's own name. The others are
-`<name>_smooth` and `<name>_smoothest`. Each run is graded on its own limits. Then the runner sets
-Smooth and Smoothest beside Instant and fails what the look-ahead made worse ("Smoothing compared with
-Instant").
+**Every test runs at both smoothings.** The Instant run keeps the test's own name. The Look-ahead run
+is `<name>_lookahead`. Each run is graded on its own limits. Then the runner sets Look-ahead beside
+Instant and fails what the look-ahead made worse ("Smoothing compared with Instant").
 
 **Two replays have limits above their target:**
 - `replay_queued_late_frames` at every smoothing (target 4%)
@@ -65,7 +64,7 @@ Instant").
 
 The 64×32 thumbnails that the slot check judges by can't tell the lags apart there. Each limit sits just
 above its worst measured run, so a regression still fails. The dust replay's worst frame is still
-0.69–0.74° at Instant (about 16 px in a 1080p recording) and 0.38° with Smooth and Smoothest.
+0.69–0.74° at Instant (about 16 px in a 1080p recording) and 0.38° with Look-ahead.
 
 ## How it works
 
@@ -157,7 +156,7 @@ Bold means graded in at least one scenario.
 |---|---|---|
 | frames | mirror app frames/s, **game frames the mirror app missed** | The mirror app shows every game frame |
 | | mirror app frames repeating one, skipping one | The share of the mirror app's frames that show the game frame before again, and that move past a game frame without showing it. Both are 0 except for the missed frames, because the mirror app draws once per game frame (info) |
-| | arrival to present, its spread | How long after its arrival each game frame is shown (median), and the spread of that (1st to 99th percentile). With Smooth and Smoothest it is the output delay, which the OBS plugin's audio sync adds to the sound, so it should hold steady (info) |
+| | arrival to present, its spread | How long after its arrival each game frame is shown (median), and the spread of that (1st to 99th percentile). With Look-ahead it is the output delay, which the OBS plugin's audio sync adds to the sound, so it should hold steady (info) |
 | | captured frames/s, 60 fps OBS repeats | What window capture delivers (info) |
 | smoothing | **smoothed view jitter**, **jitter ratio smoothed/head** | Jitter is what's left after fitting a smooth curve (local quadratic, ±50 ms). Deliberate turns count as zero, and tremor, vibration and shake (above about 5 Hz) count fully. There is an absolute limit where the head itself barely jitters |
 | | **stalls mid-turn** | The view slows to a near stop, then catches up the same way. Slowing to turn around with the head doesn't count |
@@ -168,13 +167,13 @@ Bold means graded in at least one scenario.
 | poses (replays, `queued_cockpit`) | **frames from the wrong pose**, pose error (rms), worst frame's pose | For every game frame, the head pose the mirror app warped it from against the pose it was really rendered with. This is exact, because the fake predicts each slot once. It is measured in replays and in the synthetic scenarios whose game falls behind (`Scenario::posesExact`) |
 | | **pose drift**, slow pose error | The pose error's mean over the run, in degrees. A drawn pose that corrects poses from the image (the cockpit correction) follows the image from frame to frame and the head poses in the long run, so its error averages out unless it drifts. Slow pose error is the largest 1 s mean of the pose error (info) |
 | on screen (synthetic) | **view width**, off its zoom | The angle between the two patches a quarter of the window either side of the centre, which is the view's width (median), against the width the zoom asks for. The zoom shows 1/zoom of the image's half-angle on each side of the image's middle. The runner works that out from the image's edges (`runner\fake_log.h`), apart from the mirror app's own maths. Limit 0.2°, and the capture reads about 0.08° narrow |
-| | image/pose mismatch | On screen against intended, where the view's middle looks at the middle of the image (rms, with a loose 1.5° limit against gross breakage). Each capture is paired with the closest of the last five frames' views. On Smoothest's smooth path this hides part of the image-pose error (0.06° against Instant's 0.55° with the same pose error). A capture is never paired with a frame twice, so held-over frames don't show here, and recorded view jitter covers them |
+| | image/pose mismatch | On screen against intended, where the view's middle looks at the middle of the image (rms, with a loose 1.5° limit against gross breakage). Each capture is paired with the closest of the last five frames' views. On the look-ahead's smooth path this hides part of the image-pose error (0.06° with the dropped one-second look-ahead against Instant's 0.55°, with the same pose error). A capture is never paired with a frame twice, so held-over frames don't show here, and recorded view jitter covers them |
 | | view jitter (on screen), jitter ratio view/head | What a viewer finally sees (info) |
 | | **max horizon tilt**, **looking up or down** | The view's worst tilt, and its worst tilt on the frames that look more than 15° up or down. The screen looks along the head turned by the eye's cant and towards the image's middle, and such a camera tilts as the head pitches unless it is levelled itself. Graded in `head_still`, and while pitched in `black_borders` and `openxr_black_borders` (limit 0.5°) |
 | | **frames with black borders** | An edge or corner of the window shows no game image. The count must be 0. It is not measured in replays: their real image covers nearly all of the window (u 0.2–0.8, v 0.25–0.85 of the eye, against about u 0.17–0.83, v 0.28–0.72 shown), and its dark pixels hold no direction code (the corners read 85–100% "black" on a good image) |
 | | edge limit acted, zoom | How often the smoothing's last resort stopped the view at the edge of the shown image (graded in `black_borders_low_zoom`), and whether the zoom kept its setting (info) |
 | | edge correction planned | The frames whose look-ahead path was pulled in from an edge coming in its window (info) |
-| compared with Instant | **the measures above, Smooth and Smoothest beside Instant** | See "Smoothing compared with Instant" |
+| compared with Instant | **the measures above, Look-ahead beside Instant** | See "Smoothing compared with Instant" |
 
 The look-ahead runs compare each frame's view with the head at the frame's own moment. The mirror app
 presents the frame its look-ahead delay later (`vr_mirror\core\pipeline\4_smoothing\lookahead_smoothing.h`,
@@ -183,24 +182,24 @@ time minus that delay (0 for Instant).
 
 ## Scenarios
 
-Each scenario runs at all three smoothings with the same limits unless the table says otherwise.
-Replays at Smooth and Smoothest also check that each held frame still gets the slot check's decision,
-though the frame is shown up to a second after the slot check's short memory moved on.
+Each scenario runs at both smoothings with the same limits unless the table says otherwise. Replays
+at Look-ahead also check that each held frame still gets the slot check's decision, though the frame
+is shown about half a second after the slot check's short memory moved on.
 
 | Name | What | Checks |
 |---|---|---|
-| `stabilization` | Racing glances (±25° sway, 35° glances) with a fast shake (23 and 31 Hz) | No stall. Shake at most 50% of the head's (Smooth, Smoothest: 10%) |
-| `dropped_frames` | `stabilization`'s motion with the game missing 5% of its frames at random (`drop_rate=0.05`: one now and then, sometimes two in a row) | No stall. Shake at most 70% of the head's (Instant gets shakier with drops: 0.49–0.59, and Smooth and Smoothest: 10%). Mirror app at least 80 fps. Compared with Instant: recorded view jitter |
+| `stabilization` | Racing glances (±25° sway, 35° glances) with a fast shake (23 and 31 Hz) | No stall. Shake at most 50% of the head's (Look-ahead: 10%) |
+| `dropped_frames` | `stabilization`'s motion with the game missing 5% of its frames at random (`drop_rate=0.05`: one now and then, sometimes two in a row) | No stall. Shake at most 70% of the head's (Instant gets shakier with drops: 0.49–0.59, and Look-ahead: 10%). Mirror app at least 80 fps. Compared with Instant: recorded view jitter |
 | `head_still` | Headset worn and head held still: pulse, breathing, head tremor (6–12 Hz) with a fine shake (13–19 Hz), slow sway, and a slow ±0.6° lean towards a shoulder. The jitter measure sees 0.012° of it, within the 0.007–0.017° of the real heads in the replays | Smoothed jitter at most 0.005°, horizon level (at most 0.2°), no stall |
-| `black_borders` | One 12 s cycle of everything that pushes the view to an edge: 70° turns at about 315°/s, 35° flicks up and down, diagonal flicks, a 25° tilt, a fast shake, and a held turn with tilt | No black at any edge or corner, no stall (Smooth, Smoothest: jitter at most the head's) |
-| `black_borders_low_zoom` | `black_borders`' motion at zoom 1.2, where the view meets the edge | No black, no stall. Smooth and Smoothest: the edge stop acts on at most 0.5% of frames (the path is pulled in ahead of time instead), and jitter at most 1.2 and 0.7 of the head's |
+| `black_borders` | One 12 s cycle of everything that pushes the view to an edge: 70° turns at about 315°/s, 35° flicks up and down, diagonal flicks, a 25° tilt, a fast shake, and a held turn with tilt | No black at any edge or corner, no stall (Look-ahead: jitter at most the head's) |
+| `black_borders_low_zoom` | `black_borders`' motion at zoom 1.2, where the view meets the edge | No black, no stall. Look-ahead: the edge stop acts on at most 0.5% of frames (the path is pulled in ahead of time instead), and jitter at most 1.2 of the head's |
 | `game_starts_late` | The mirror is on 5 s before the game's first frame (`game_start_s=5`). The texture and frame signal exist and the signal stays low, as on Pimax with no game | Runtime calls at most 50/s while no game runs (full rate is about 2,800/s), at most 1 of the game's first frames missed, no game frame missed after. Compared with Instant: its frame measures only |
 | `queued_cockpit` | The game behind, as at 82 fps in a real race (`queue_lag=2`, `drop_rate=0.09`). It misses 9% of its slots and draws frames for up to two slots before the one they arrive for, and the lag changes at drops and catch-ups. The image is a detailed cockpit (`cockpit=1`). The head glances about as in racing without road vibration (`glances+head_tremor+heartbeat`). The cockpit correction is on (`drawn_pose=2`). Judged by poses | Visible pose jumps at most 2%, pose drift at most 0.5°, no stall, mirror app at least 75 fps |
 | `queued_cockpit_slot_check` | The same with the slot check alone (the default), for comparison | Not graded |
-| `replay_queued_late_frames` | The game falls behind and queues frames: a real race, into a dust cloud, with LMU two frames behind for a second | Frames from the wrong pose at most 12%, 7% and 10% (Instant, Smooth, Smoothest. Target 4%) |
+| `replay_queued_late_frames` | The game falls behind and queues frames: a real race, into a dust cloud, with LMU two frames behind for a second | Frames from the wrong pose at most 12% at Instant and 7% at Look-ahead (target 4%) |
 | `replay_false_retiming_head_turns` | On-time frames re-timed while the head turns, misled by moving content: a real race, cornering at a steady 90 fps, every frame on time | Frames from the wrong pose at most 1% |
 | `replay_false_retiming_short_hiccup` | A short timing hiccup opens the timing gate and on-time frames are re-timed: a real session, three arrivals about 7 ms late at 1:57, no queue | Frames from the wrong pose at most 1% |
-| `replay_false_retiming_featureless_cockpit` | A featureless cockpit leaves the slot check only noise: a real race (at 18:31 of its recording), a slow corner with one late arrival, every frame on time | Frames from the wrong pose at most 2.5% at Instant (target 1%), and 1% with Smooth and Smoothest |
+| `replay_false_retiming_featureless_cockpit` | A featureless cockpit leaves the slot check only noise: a real race (at 18:31 of its recording), a slow corner with one late arrival, every frame on time | Frames from the wrong pose at most 2.5% at Instant (target 1%), and 1% with Look-ahead |
 | `replay_late_frame_same_slot` | One frame 7.4 ms late that the arrival timing rounded onto the next frame's slot. Two frames shared a slot and the first was lined up from the next slot's head pose, a one-frame jolt of 3.5 px. A real race (at 7:39 of its recording) | No frame from the wrong pose |
 | `openxr_stabilization` | `stabilization`'s motion from the OpenXR layer's frames | As `stabilization`, and no frame from the wrong pose |
 | `openxr_dropped_frames` | `dropped_frames`' game, from the layer | As `dropped_frames`, and no frame from the wrong pose |
@@ -211,7 +210,7 @@ though the frame is shown up to a second after the slot check's short memory mov
 
 ## Smoothing compared with Instant
 
-After the runs, each scenario's Smooth and Smoothest results are set beside its Instant result. A
+After the runs, each scenario's Look-ahead result is set beside its Instant result. A
 measure the look-ahead made worse fails, beyond the spread of repeated runs of one build:
 
 | Measure | May exceed Instant's by |

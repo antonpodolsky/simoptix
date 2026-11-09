@@ -68,9 +68,8 @@ std::unique_ptr<Smoothing> MakeSmoothing(SmoothingKind kind) {
     switch (kind) {
         case SmoothingKind::kInstant:
             return std::make_unique<InstantSmoothing>();
-        case SmoothingKind::kSmooth:
-        case SmoothingKind::kSmoothest:
-            return std::make_unique<LookaheadSmoothing>(int(kind));
+        case SmoothingKind::kLookahead:
+            return std::make_unique<LookaheadSmoothing>();
     }
 
     return nullptr;
@@ -97,7 +96,7 @@ std::unique_ptr<Observer> MakeObserver(ObserverKind kind) {
 }
 
 double SmoothingDelayS(SmoothingKind kind) {
-    return kind == SmoothingKind::kInstant ? 0 : LookaheadOutputDelayS(int(kind));
+    return kind == SmoothingKind::kInstant ? 0 : LookaheadOutputDelayS();
 }
 
 void BuildPipeline(const PipelineConfig& c, Pipeline* p) {

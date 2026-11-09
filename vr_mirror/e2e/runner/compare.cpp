@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "compare.h"
 
+#include <algorithm>
+
 namespace {
 
     // A measure the look-ahead may not make worse. A variant fails it when it is worse than Instant by
@@ -58,12 +60,12 @@ namespace {
         "runtime calls/s while no game ran",
     };
 
-    const char* const kColumn[] = {"Instant", "Smooth", "Smoothest"};
+    const char* const kColumn[kSmoothings] = {"Instant", "Look-ahead"};
 
-    std::string Row(const char* measure, const Result* at[3], const char* verdict) {
+    std::string Row(const char* measure, const Result* const at[kSmoothings], const char* verdict) {
         char buf[256];
         int n = snprintf(buf, sizeof(buf), "  %-34s", measure);
-        for (int k = 0; k < 3; k++) {
+        for (int k = 0; k < kSmoothings; k++) {
             auto it = at[k]->values.find(measure);
             if (it == at[k]->values.end()) {
                 n += snprintf(buf + n, sizeof(buf) - n, " %10s", "-");
@@ -79,9 +81,9 @@ namespace {
 }
 
 std::vector<Result> CompareSmoothings(const std::vector<Scenario>& runs, const std::vector<Result>& results) {
-    // The bases that ran at all three smoothings, in the order they ran.
+    // The bases that ran at every smoothing, in the order they ran.
     std::vector<std::string> bases;
-    std::map<std::string, const Result* [3]> found;
+    std::map<std::string, const Result* [kSmoothings]> found;
     std::map<std::string, const Scenario*> instant;
     for (size_t i = 0; i < runs.size(); i++) {
         const Scenario& sc = runs[i];
@@ -104,14 +106,20 @@ std::vector<Result> CompareSmoothings(const std::vector<Scenario>& runs, const s
     std::vector<Result> out;
     for (const auto& base : bases) {
         const Result** at = found[base];
-        if (!at[0] || !at[1] || !at[2]) {
+
+        if (std::count(at, at + kSmoothings, nullptr) > 0) {
             continue;
         }
 
         Result c;
         c.name = base;
         char head[256];
-        snprintf(head, sizeof(head), "  %-34s %10s %10s %10s", "", kColumn[0], kColumn[1], kColumn[2]);
+        int n = snprintf(head, sizeof(head), "  %-34s", "");
+
+        for (const char* column : kColumn) {
+            n += snprintf(head + n, sizeof(head) - n, " %10s", column);
+        }
+
         c.lines.push_back(head);
         const Scenario& sc = *instant[base];
 
@@ -127,7 +135,7 @@ std::vector<Result> CompareSmoothings(const std::vector<Scenario>& runs, const s
                                                      : inst->second * (1 - rule.rel) - rule.abs;
 
             std::string worse;
-            for (int k = 1; k < 3; k++) {
+            for (int k = 1; k < kSmoothings; k++) {
                 auto v = at[k]->values.find(rule.measure);
                 if (v == at[k]->values.end()) {
                     continue;

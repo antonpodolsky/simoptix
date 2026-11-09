@@ -4,10 +4,31 @@ Terms: `reference\terms.md`. How to run the suite: `reference\e2e.md`. What each
 `vr_mirror\e2e\README.md`.
 
 Compare every e2e run with these numbers. When they change for a reason, update them here in the same
-commit. Each section says its date and its conditions. Instant / Smooth / Smoothest is the order of
-three numbers, unless a row says otherwise.
+commit. Each section says its date and its conditions. From run 8 on, Instant / Look-ahead is the
+order of two numbers. Before it, Instant / Smooth / Smoothest is the order of three, and Smooth is
+today's Look-ahead. A row may say otherwise.
 
-## The latest runs (2026-11-08)
+## The latest runs (2026-11-08 and 09)
+
+**Run 8 (2026-11-09): Smoothest dropped, Smooth renamed Look-ahead.** LMU, OBS and Pimax Play were
+closed. The 38 runs took 558 s. 36 of 38 passed, and all 19 comparisons with Instant.
+- Two Instant runs failed, whose code and pipeline output the change leaves as they were
+  (`stage_replay --golden` byte for byte):
+  - `black_borders_low_zoom` had one stall mid-turn, as in runs 5 and 7.
+  - `openxr_game_starts_late` missed 3.3% of the game's frames (limit 1%).
+- A rerun of both, at both smoothings, passed with their comparisons: no stall, and no game frame
+  missed after the first.
+- `stabilization` 0.42 / 0.013 of the head's shake, `dropped_frames` 0.53 / 0.026,
+  `replay_queued_late_frames` 8.3 / 5.5% from the wrong pose, the featureless replay 1.60 / 0.32%,
+  and `game_starts_late` 4.8 runtime calls/s idle.
+- Recorded view jitter: `stabilization` 0.130 / 0.116°, `dropped_frames` 0.179 / 0.159°.
+- Worst horizon tilt: `openxr_stabilization` 0.214 / 0.140°, `openxr_dropped_frames` 0.240 / 0.140°,
+  `openxr_game_behind` 0.153 / 0.158°, `openxr_black_borders` 0.186 / 0.170°, `stabilization` 0.130 /
+  0.103°.
+- `openxr_stall`: image/pose mismatch 0.054 / 0.053° rms, worst frame 0.145 / 0.151°.
+- The view's width is 0.07–0.13° off what its zoom asks for in all 20 runs that read it (limit
+  0.2°).
+- Look-ahead shows each frame 534 ms after its arrival (median), Instant 4.3 ms.
 
 Six runs of the whole suite. LMU, OBS and Pimax Play were closed for runs 1 to 4.
 

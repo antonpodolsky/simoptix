@@ -4,20 +4,20 @@
 
 namespace {
 
-    const char* const kSmoothingSuffix[] = {"", "_smooth", "_smoothest"};
-    const char* const kSmoothingName[] = {"Instant", "Smooth", "Smoothest"};
+    const char* const kSmoothingSuffix[kSmoothings] = {"", "_lookahead"};
+    const char* const kSmoothingName[kSmoothings] = {"Instant", "Look-ahead"};
 
-    // The scenario at every smoothing (0 Instant, 1 Smooth, 2 Smoothest; the tool's setting is one more):
-    // Instant keeps the name, the others get _smooth and _smoothest. `tune` adjusts a variant's limits (the
-    // look-ahead ones smooth far more than Instant, so some limits are tighter there).
+    // The scenario at every smoothing (0 Instant, 1 Look-ahead; the tool's setting is one more): Instant
+    // keeps the name, Look-ahead gets _lookahead. `tune` adjusts a variant's limits (the look-ahead
+    // smooths far more than Instant, so some limits are tighter there).
     template <typename Tune>
     void AddEverySmoothing(const Scenario& instant, std::vector<Scenario>* out, Tune tune) {
-        for (int smoothing = 0; smoothing <= 2; smoothing++) {
+        for (int smoothing = 0; smoothing < kSmoothings; smoothing++) {
             Scenario v = instant;
             v.base = instant.name;
             v.smoothing = smoothing;
 
-            // settings.h: 1 Instant, 2 Smooth, 3 Smoothest
+            // settings.h: 1 Instant, 2 Look-ahead
             v.settings["smoothing"] = std::to_string(smoothing + 1);
             if (smoothing) {
                 v.name += kSmoothingSuffix[smoothing];
@@ -116,8 +116,8 @@ namespace {
         }
 
         {
-            // The same at zoom 1.2, where the view meets the edge: with Smooth and Smoothest the window
-            // shows each edge coming and the path is pulled in ahead of time, so the last-resort
+            // The same at zoom 1.2, where the view meets the edge: with Look-ahead the window shows each
+            // edge coming and the path is pulled in ahead of time, so the last-resort
             // limit, a jerk, mustn't act. Before: 1.6% of frames clamped, jitter 1.06 of the head's.
             Scenario c{
                 "black_borders_low_zoom",
@@ -133,9 +133,9 @@ namespace {
                 if (!v.smoothing) {
                     return;  // Instant's catch-up clamps 1.6-1.7% here (jitter 3.1-3.5), as before
                 }
-                // Smooth sees half a second ahead, too little to ease in much: 0.85-1.05 (before: 1.02-1.05
-                // with 1.6% clamped), so its check is the clamps. Smoothest: 0.40-0.48 (before: 1.06).
-                v.limits.maxSmoothedRatio = v.smoothing == 1 ? 1.2 : 0.7;
+                // Look-ahead sees half a second ahead, too little to ease in much: 0.85-1.05 (before:
+                // 1.02-1.05 with 1.6% clamped), so its check is the clamps.
+                v.limits.maxSmoothedRatio = 1.2;
                 v.limits.maxEdgeClampPct = 0.5;  // 0% measured
             });
         }
@@ -348,22 +348,22 @@ namespace {
 
     // The share of frames from the wrong pose that a replay may have at each smoothing (percent).
     struct WrongPoseLimits {
-        double instant = 1.0, smooth = 1.0, smoothest = 1.0;
+        double instant = 1.0, lookahead = 1.0;
     };
 
     WrongPoseLimits ReplayLimits(const std::string& stem) {
         // Limits above the target where the 64x32 thumbnails can't tell the lags apart (2026-10-27,
         // .agents\skills\dev\findings\e2e.md, "Why the dust replay fails"), each just above its worst
         // measured run. Instant
-        // decides from the frames before each one only; Smooth and Smoothest in hindsight.
+        // decides from the frames before each one only; Look-ahead in hindsight.
         WrongPoseLimits l;
 
         if (stem == "queued_late_frames") {
             // Target 4%. Lag 1 and lag 2 look alike in the thumbnails while the head barely moves,
             // and at two of the queue's three changes they fit "no change" better (stage_replay
-            // --stage frame_matching: 4.3% even with a second of hindsight). Measured 6.9-9.7% / 4.4-5.5% /
-            // 4.6-8.5%.
-            l.instant = 12.0, l.smooth = 7.0, l.smoothest = 10.0;
+            // --stage frame_matching: 4.3% even with a second of hindsight). Measured 6.9-9.7% (Instant)
+            // and 4.4-5.5% (Look-ahead).
+            l.instant = 12.0, l.lookahead = 7.0;
         } else if (stem == "false_retiming_featureless_cockpit") {
             // Target 1%, met with hindsight (0.1-0.2%); from the frames before each, the dark
             // cockpit's noise re-times 1.3-1.9% (stage_replay --stage frame_matching: 1.6%).
@@ -371,7 +371,7 @@ namespace {
         } else if (stem == "late_frame_same_slot") {
             // One late frame that the arrival timing rounded onto the next frame's slot: the bug is a
             // single frame (0.1% of the run, 0.17 degree), so no frame may come out from the wrong pose.
-            l.instant = l.smooth = l.smoothest = 0.0;
+            l.instant = l.lookahead = 0.0;
         }
 
         return l;
@@ -382,7 +382,7 @@ namespace {
 std::vector<Scenario> BuiltInScenarios() {
     // Only what synthetic motion tests best; every other edge case (queued frames, timing hiccups,
     // pictures that mislead the frame matching) is a replay of real footage. Each runs at every
-    // smoothing; the runner then compares Smooth and Smoothest with Instant (compare.h).
+    // smoothing; the runner then compares Look-ahead with Instant (compare.h).
     std::vector<Scenario> s;
     AddMotionScenarios(&s);
     AddEdgeScenarios(&s);
@@ -437,13 +437,11 @@ void AddReplayScenarios(const fs::path& replayDir, std::vector<Scenario>* out) {
 
         const WrongPoseLimits limits = ReplayLimits(e.path().stem().string());
 
-        // With Smooth and Smoothest each held frame must still get the matcher's decision, though it
-        // is shown up to a second after the matcher's short memory moved on
+        // With Look-ahead each held frame must still get the matcher's decision, though it is shown
+        // about half a second after the matcher's short memory moved on
         // (vr_mirror\mirror_app\frame_hold.h).
         AddEverySmoothing(c, out, [&](Scenario& v) {
-            v.limits.maxWrongPosePct = v.smoothing == 0   ? limits.instant
-                                       : v.smoothing == 1 ? limits.smooth
-                                                          : limits.smoothest;
+            v.limits.maxWrongPosePct = v.smoothing == 0 ? limits.instant : limits.lookahead;
         });
     }
 }

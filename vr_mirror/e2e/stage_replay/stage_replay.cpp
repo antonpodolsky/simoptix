@@ -7,13 +7,13 @@
 //
 //   --golden FILE [--replays DIR]: the golden dump (golden.h) over a fixed matrix: the replays in
 //     kReplays (frames drawn with their true slots' poses) and edge_test+heartbeat and racing+heartbeat, at
-//     smoothing 1/2/3 and zoom 1.2 and 1.5, as the window and as OBS ticks; then single runs with
+//     smoothing 1/2 and zoom 1.2 and 1.5, as the window and as OBS ticks; then single runs with
 //     stabilization switched off and on. A refactor that must not change behaviour reproduces the
 //     file byte for byte.
 //   --pipeline [stage flags] [--zoom Z] [--ticks HZ] [--input NAME ...]: the pipeline with the
-//     settings' configuration (Smoothest, the slot check), each stage overridden by its flag:
+//     settings' configuration (Look-ahead, the slot check), each stage overridden by its flag:
 //     --arrival_timing grid, --drawn_pose slot_check|arrival_slot|cockpit,
-//     --frame_picker fixed_delay|newest_frame|held_frame, --smoothing instant|smooth|smoothest,
+//     --frame_picker fixed_delay|newest_frame|held_frame, --smoothing instant|lookahead,
 //     --warp rotation (PipelineConfig's fields and values). As the mirror app's window, or as OBS ticks
 //     at HZ picked by the frame picker. Inputs: four of the five replays (kReplays) and the two motions.
 //   --stage drawn_pose <replay .csv> [--show FIRST-LAST] [--dump FILE] [--delays A,B,...]
@@ -107,7 +107,7 @@ namespace {
         std::vector<GoldenRun> runs;
 
         for (const auto& input : inputs) {
-            for (int smoothing = 1; smoothing <= 3; smoothing++) {
+            for (int smoothing = 1; smoothing <= 2; smoothing++) {
                 for (float zoom : {1.2f, 1.5f}) {
                     for (bool ticks : {false, true}) {
                         GoldenRun run;
@@ -123,7 +123,7 @@ namespace {
         }
 
         // Stabilization switched off and on, at every smoothing and both host styles.
-        for (int smoothing = 1; smoothing <= 3; smoothing++) {
+        for (int smoothing = 1; smoothing <= 2; smoothing++) {
             for (bool ticks : {false, true}) {
                 GoldenRun run;
                 run.input = inputs[4].get();

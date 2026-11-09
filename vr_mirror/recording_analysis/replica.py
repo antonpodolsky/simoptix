@@ -7,7 +7,7 @@ matcher's logic runs on them (both thumbnails re-projected halfway between candi
 30% of the texels with the least detail left out, error trimmed to the better half of the rest,
 normalized by rotation sensitivity, forward filter with the change penalties). Shows what the matcher would decide on every frame (without the timing gate, or
 with it: --gate), and why, from the frames up to each and in hindsight (on the cheapest path through
-the frames after it too, as held frames get it with Smooth and Smoothest). Python mirror of
+the frames after it too, as held frames get it with Look-ahead). Python mirror of
 vr_mirror\core\pipeline\2_drawn_pose\slot_check_drawn_pose_lag.cpp: keep the two in step.
 
 usage: python -I replica.py <OBS log> <recording .mp4> <start mm:ss> <secs> [options]

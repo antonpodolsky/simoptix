@@ -8,7 +8,7 @@ capture of a flat-screen game.
 
 | Term | Meaning |
 |---|---|
-| output delay | How far VR Mirror's view runs behind the game: about 1 s with Smoothest, about 0.5 s with Smooth, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
+| output delay | How far VR Mirror's view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
 
 The stabilized headset view comes from a separate plugin, VR Mirror (`vr_mirror\obs_plugin\README.md`).
 When both are installed, they share two things through memory that each opens on its own:

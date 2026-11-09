@@ -34,7 +34,7 @@
 class FrameRing {
 public:
     // Slots in use: as many as the output delay needs (SetSlotCount: set before Start, and again
-    // once the delay is measured), up to kMaxSlots: Smoothest holds about a second of frames. Each
+    // once the delay is measured), up to kMaxSlots: Look-ahead holds about half a second of frames. Each
     // slot is a copy of the game eye: 21 MB at Render Quality 1.0, 33 MB at 1.25 from the Pimax mirror;
     // from the OpenXR layer as large as the output needs (FrameSource::SetPictureNeed).
     static constexpr int kMaxSlots = 128;

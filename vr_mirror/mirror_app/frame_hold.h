@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// FrameHold: the mirror app's held game frames for look-ahead smoothing (settings smoothing 2 and 3): a
+// FrameHold: the mirror app's held game frames for Look-ahead smoothing (setting smoothing 2): a
 // FIFO of copies. Each new frame is copied as it arrives (the game reuses its buffer about a frame
 // later); the frame picker (vr_mirror\core\pipeline\3_frame_picker: HeldFramePicker) says when the
 // oldest is shown. Knows nothing about windows, swap chains, timing or the pipeline.

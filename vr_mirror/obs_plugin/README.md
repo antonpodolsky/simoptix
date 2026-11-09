@@ -21,12 +21,12 @@ The two sources show the same view. They differ in where the game's image comes 
 |---|---|
 | client mirror | A feature of the Pimax runtime. It gives other programs a half-size copy of the left eye image the game draws, and a signal for each new frame |
 | game eye | The eye image a source works from. The Pimax source's is the client mirror's half-size copy of the left eye. The OpenXR source's is the left eye at full size |
-| output delay | How far the view runs behind the game: about 1 s with Smoothest, about 0.5 s with Smooth, none with Instant, and 0 while the source is hidden |
+| output delay | How far the view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden |
 | display slot | One of the regular moments, 90 per second, at which the headset shows a new image. The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
 | game behind | The game's GPU has fallen behind and queues up to two frames. Each arrives one or two display slots after the slot it was drawn for |
 | slot check | How the Pimax source finds the slot a late frame was really drawn for: it compares small thumbnails of consecutive frames |
 | cockpit correction | A refinement of the slot check. It measures how the fixed cockpit moved between two frames, and corrects the pose by what the head poses don't explain |
-| look-ahead | The method behind Smooth and Smoothest. The view runs behind the game, and the smoothing plans a calm path from the head's movement in that time |
+| look-ahead | The method behind the Look-ahead smoothing. The view runs half a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
 | drawn pose | The head pose a game frame was drawn with. The pipeline's second stage finds it, and the frame trace records it |
 | tick | One frame of OBS's output. The OBS log counts them as "output ticks" |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window, for testing (`vr_mirror\mirror_app\README.md`) |
@@ -97,7 +97,7 @@ Both sources have the same four settings:
 
 | Setting | What it does |
 |---|---|
-| **Smoothing** | A slider from 0 to 3 that sets how the camera follows the head (below). 3, Smoothest, is the default |
+| **Smoothing** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). Look-ahead is the default |
 | **Zoom** | A slider from 1 to 3, 1.25 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
 | **Record races automatically** | OBS records each race by itself, from the start lights to 5 s after the car stops past the finish ("Recording races automatically", below). Off by default |
 | **Debug** | Stamps frame numbers on the view and writes a frame trace, for checking a recording frame by frame ("Debug: stamp and frame trace", below) |
@@ -116,29 +116,24 @@ core's own):
 
 ### Smoothing
 
-- **3, Smoothest** (the default): the view runs about a second behind the game. The source uses that
-  second to see where the head goes next, so it follows each look closely. It removes tremor and the
-  headset's tracking noise completely, without the floaty lag of a filter that can't see ahead. For
-  recording.
-- **2, Smooth:** the same, with about half a second.
-- **1, Instant:** no delay. A filter that has to trail the head to stay smooth. For live streaming,
+- **Look-ahead** (the default): the view runs about half a second behind the game. The source uses
+  that half second to see where the head goes next, so it follows each look closely. It removes tremor
+  and the headset's tracking noise completely, without the floaty lag of a filter that can't see ahead.
+  For recording.
+- **Instant:** no delay. A filter that has to trail the head to stay smooth. For live streaming,
   where every bit of delay counts.
-- **0, Off:** no stabilization. The view is the headset's view as it is, with no delay. Switching
+- **Off:** no stabilization. The view is the headset's view as it is, with no delay. Switching
   Smoothing on or off starts the smoothing afresh.
 
-On 4.3 h of real head poses, Smoothest's view trails the head by 0.75° at most 99% of the time
+On 4.3 h of real head poses, Look-ahead's view trails the head by 0.95° at most 99% of the time
 (Instant: 4.6°), and what tremor and tracking noise leave is under a tenth of a pixel. This was not
 checked in a recording.
 
-**The delay costs video memory,** because the source keeps a copy of every game frame within it:
-
-| Smoothing | Render Quality 1.0 | Render Quality 1.25 |
-|---|---|---|
-| Smoothest | about 2 GB | about 3 GB |
-| Smooth | about 1.1 GB | about 1.7 GB |
+**The delay costs video memory,** because the source keeps a copy of every game frame within it. With
+the Pimax source that is about 1.1 GB at Render Quality 1.0, and about 1.7 GB at 1.25.
 
 About 2 s after the first game frame, the OBS log says the delay the source settled on: "output delay
-... ms (look-ahead 1030 ms)", then "copy delay fixed: ... ms, ... ms copy ready p95".
+... ms (look-ahead 530 ms)", then "copy delay fixed: ... ms, ... ms copy ready p95".
 
 **What follows the output delay by itself:**
 - The **G-Meter Overlay** shows what the car was doing at the moment of the game that the view shows.
@@ -148,9 +143,9 @@ About 2 s after the first game frame, the OBS log says the delay the source sett
 - **The sound.** While the source is shown, the plugin adds the delay to every audio source's own Sync
   Offset (Edit → Advanced Audio Properties), and takes it off again when the source is hidden.
   - Keep each audio source's own offset as it is. LMU's sound needs about −120 ms of its own, because
-    it trails the image by that much. With Smoothest, LMU's sound then shows about +915 ms and the
-    microphone about +1035 ms.
-  - The OBS log says so: "audio sync: 2 audio sources now +1035 ms on top of their own offsets".
+    it trails the image by that much. With Look-ahead, LMU's sound then shows about +415 ms and the
+    microphone about +535 ms.
+  - The OBS log says so: "audio sync: 2 audio sources now +535 ms on top of their own offsets".
   - Each audio source remembers the shift it got, saved with the scene. So its own offset comes back
     exactly, also after OBS was closed with the source shown.
   - Changing an offset while it is shifted changes the source's own offset by as much.
@@ -164,13 +159,13 @@ each side. At zoom 1.25 it is about 87° wide, with about 6.4° of room each way
 view looks 2.3° (Pimax) to 2.5° (OpenXR) outward of straight ahead, because LMU's left eye image
 reaches further outward than inward.
 
-- With Smooth and Smoothest, a lower zoom costs less calm. The source sees each edge coming in the time
+- With Look-ahead, a lower zoom costs less calm. The source sees each edge coming in the time
   it runs behind, and eases the view towards the head ahead of time instead of stopping it at the
   edge.
 - With Instant, the view catches up faster near the edge, and stops at it as a last resort.
 - On real head motion, the edge is never reached at zoom 1.29, and touched on about one frame in a
   thousand at 1.2. At 1.1 the view gets shakier than with Instant. So don't go below about 1.2 with
-  Smooth or Smoothest. These were measured with the Pimax source, with 0.5° more room on the view's
+  Look-ahead. These were measured with the Pimax source, with 0.5° more room on the view's
   outer side than it has now, and not measured again.
 - The source draws on OBS's clock, so each OBS frame shows a game frame drawn for a slightly later
   moment, or the previous one again. The smoothing keeps the view inside that frame's image and plans
@@ -201,7 +196,7 @@ by itself. It is off by default.
   starts again only at the next race.
 - **It follows the output delay.** The view runs behind the game, so every timing above is counted on
   the moment of the game that the view shows, worked out from the delay this source publishes. With
-  Smoothest the recording starts about 1 s after the game's start lights, so the recorded video begins
+  Look-ahead the recording starts about half a second after the game's start lights, so the recorded video begins
   at the lights. Auto-record checks four times a second, and OBS takes a moment to start recording, so
   the first 0.1–0.35 s of the lights are not in the recording. With the source hidden, the delay is 0.
 - **It works whenever a VR Mirror source of either kind is in the scene collection,** shown or not.
@@ -232,15 +227,8 @@ game's own size. So it is native at the canvas's size whenever the game's image 
 - LMU's left eye has about 2115 source pixels per unit of view tangent. That is enough for 1440p at any
   zoom up to 1.98, and for 4K up to 1.32.
 - All stored images together may take at most 4 GB of video memory, which caps each stored image's
-  width:
-
-  | Smoothing | Stored images | Widest image | Native canvas at zoom 1.25 | 4K native up to zoom |
-  |---|---|---|---|---|
-  | Smooth | about 52 | about 4840 px | about 3860 px wide | 1.26 |
-  | Smoothest | about 95 | about 3580 px | about 2850 px wide | none (74% of native at 1.25) |
-
-  So with Smooth, a 3840x2160 canvas is native at zoom 1.25. With Smoothest, 2560x1440 is native up to
-  zoom 1.39.
+  width. Look-ahead stores about 52 images, so each is at most about 4840 px wide. A canvas is then
+  native up to about 3860 px wide at zoom 1.25, so a 3840x2160 canvas is native up to zoom 1.26.
 - These sizes are worked out, not measured in a recording.
 
 **The Pimax game eye** (LMU) has about 1059 source pixels per unit of view tangent. A 16:9 recording is
@@ -353,12 +341,12 @@ slot ("game behind: X frames rendered for an earlier slot ..., Y frames judged b
 stage of the pipeline reports its own numbers this way, so a new method's numbers show up without
 changes here.
 
-With Smooth and Smoothest a frame is shown up to a second after it arrives, so its slot is decided with
+With Look-ahead a frame is shown about half a second after it arrives, so its slot is decided with
 the frames after it too. With Instant each frame is decided from the frames before it only.
 
 The method is fixed in the code (`kDrawnPose`, the setting `drawn_pose` of
 `vr_mirror\core\common\settings.h`). With Smoothing on, it is the slot check plus the cockpit
-correction (2). With Smoothing at 0, it is off (0). The mirror app reads the setting from its ini file,
+correction (2). With Smoothing off, it is off (0). The mirror app reads the setting from its ini file,
 where 1, the slot check alone, is the default.
 
 - **1, slot check:** as above.

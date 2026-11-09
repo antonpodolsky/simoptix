@@ -83,7 +83,7 @@ doesn't take personal information out.
 | Bad | Why | Good |
 |---|---|---|
 | `Flicker bug` | No area, and doesn't say what is seen | `OpenXR Mirror: one frame after a game stall shows the game's image half drawn` |
-| Seen in `<date> <time>.mp4` at 21:14 | A recording's name and a clock time | One recording, OpenXR Mirror on Smooth, 4K canvas, with the frame trace on |
+| Seen in `<date> <time>.mp4` at 21:14 | A recording's name and a clock time | One recording, OpenXR Mirror on Look-ahead, 4K canvas, with the frame trace on |
 | It happens sometimes | No numbers | The game frame before it came after a 64 ms stall, the longest in the recording |
 | Fix the flicker | Can't be checked | An e2e scenario with a stall followed by two frames at once shows no half-drawn frame |
 | I found this while working on the installer in another session | How the work went, and another session | (delete) |

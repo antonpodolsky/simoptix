@@ -77,7 +77,7 @@ every 32768 ticks (6 minutes), so a recording fits every 6 minutes of a long tra
 | Recording | Single repeats on a dip | Chance at the chosen place | At the next best place |
 |---|---|---|---|
 | A session on Instant, 217 repeats | 174 of 174 | 1 in 10^251 | 1 in 10^6.0 |
-| A clean race on Smooth, 18 repeats | 6 of 8 | 1 in 10^7.4 | 1 in 10^1.3 |
+| A clean race on Look-ahead, 18 repeats | 6 of 8 | 1 in 10^7.4 | 1 in 10^1.3 |
 
 When the trace has too few single repeats to tell, the script takes the log's guess, and `lineup.txt`
 then says **NOT SURE**. `lineup.txt` also checks the result: shifted by a frame or two, the repeats
@@ -95,7 +95,7 @@ should miss.
 - **The video-only repeat detector (`shake_causes.py`) raises false alarms in a clean race.** It calls
   a frame repeated when 90% of the patches follow the cockpit within 0.6 px.
   - Real repeats read 0.12 to 0.31 px, but new game frames under a slow view can read 0.48 to 0.60.
-  - In the clean race on Smooth (above) it flagged 381 frames (128 of them during the race), and the trace
+  - In the clean race on Look-ahead (above) it flagged 381 frames (128 of them during the race), and the trace
     confirms 10 of them. The trace has 18 repeats in all.
   - So its count is not a count of freezes. The trace's serials are (`events.py`, and the "repeated
     game frames" line of `summary.txt`). The summary says how many of the detector's finds the trace

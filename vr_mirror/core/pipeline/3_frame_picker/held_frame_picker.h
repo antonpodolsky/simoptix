@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// HeldFramePicker: the mirror app's picking with look-ahead smoothing (Smooth, Smoothest): each held
+// HeldFramePicker: the mirror app's picking with Look-ahead smoothing: each held
 // frame is shown once its view can be computed, a fixed delay after its de-jittered arrival (the
 // smoothing's delay plus the window's present delay), picked 4 ms ahead so the host can wait and
 // present at that moment. The store is the held frames in arrival order, then the newest frame; when

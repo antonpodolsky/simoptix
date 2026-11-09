@@ -126,7 +126,7 @@ drawn_pose`.
 |---|---|
 | `--show <from>-<to>` | Prints the evidence per frame |
 | `--maps <serial>` | Saves images of one frame's thumbnails and per-texel errors |
-| `--truth` | Scores against known lags: the forward decisions, and on a second line the hindsight ones that held frames get with Smooth and Smoothest |
+| `--truth` | Scores against known lags: the forward decisions, and on a second line the hindsight ones that held frames get with Look-ahead |
 | `--clip-of "<recording>.mp4" --clip-start mm:ss` | Runs on a clip in place of the recording. The start is then a time in the clip |
 | `--thumbs ..\e2e\replay\<issue>.csv` | Runs on that replay's exported thumbnails, which the e2e fake shows, instead of rebuilding them |
 | `--fill` | Also counts the texels the recording didn't cover, as the mirror app in e2e does |

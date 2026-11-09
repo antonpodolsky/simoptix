@@ -69,11 +69,22 @@ namespace {
         }
     }
 
-    // "smoothing": 0 off (no stabilization), 1 Instant, 2 Smooth, 3 Smoothest. "zoom": the crop factor
-    // (1 to 3). "debug": the frame-number stamp and the frame trace together.
+    // A scene saved with the dropped Smoothest (3) shows Look-ahead in the list, not an empty choice.
+    void UpgradeSavedSmoothing(obs_data_t* s) {
+        if (obs_data_get_int(s, "smoothing") > MirrorSettings::kSmoothingLookahead) {
+            obs_data_set_int(s, "smoothing", MirrorSettings::kSmoothingLookahead);
+        }
+    }
+
+    // "smoothing": MirrorSettings::kSmoothing*. "zoom": the crop factor (1 to 3). "debug": the
+    // frame-number stamp and the frame trace together.
     MirrorSettings MirrorSettingsOf(obs_data_t* s, bool* debug) {
         MirrorSettings st;
-        st.smoothing = std::clamp(int(obs_data_get_int(s, "smoothing")), 0, 3);
+        st.smoothing = std::clamp(
+            static_cast<int>(obs_data_get_int(s, "smoothing")),
+            MirrorSettings::kSmoothingOff,
+            MirrorSettings::kSmoothingLookahead
+        );
         st.zoom = std::clamp(float(obs_data_get_double(s, "zoom")), 1.0f, 3.0f);
         st.drawnPose = Stabilizes(st) ? kDrawnPose : 0;  // off: no slot check, no thumbnails
         *debug = obs_data_get_bool(s, "debug");
@@ -89,7 +100,7 @@ namespace {
 
     void GetDefaults(obs_data_t* s) {
         Guarded("defaults", [&] {
-            obs_data_set_default_int(s, "smoothing", 3);
+            obs_data_set_default_int(s, "smoothing", MirrorSettings::kSmoothingLookahead);
             obs_data_set_default_double(s, "zoom", kDefaultZoom);
             obs_data_set_default_bool(s, "auto_record", false);
             obs_data_set_default_bool(s, "debug", false);
@@ -99,11 +110,31 @@ namespace {
     obs_properties_t* MakeProperties() {
         obs_properties_t* p = obs_properties_create();
 
-        // Smooth and Smoothest are the look-ahead smoothing (vr_mirror\core\pipeline\4_smoothing\): the
-        // picture runs half a second or a second behind the game, and the smoothing uses the head's movement
-        // in that time. The G-meter and the sound follow the same delay. 0 off, 1 Instant, 2 Smooth, 3
-        // Smoothest
-        obs_properties_add_int_slider(p, "smoothing", "Smoothing", 0, 3, 1);
+        // Look-ahead (vr_mirror\core\pipeline\4_smoothing\): the view runs half a second behind the game,
+        // and the smoothing uses the head's movement in that time.
+        obs_property_t* smoothing = obs_properties_add_list(
+            p,
+            "smoothing",
+            "Smoothing",
+            OBS_COMBO_TYPE_LIST,
+            OBS_COMBO_FORMAT_INT
+        );
+
+        obs_property_list_add_int(smoothing, "Off", MirrorSettings::kSmoothingOff);
+        obs_property_list_add_int(smoothing, "Instant (no delay)", MirrorSettings::kSmoothingInstant);
+        obs_property_list_add_int(
+            smoothing,
+            "Look-ahead (0.5 s behind)",
+            MirrorSettings::kSmoothingLookahead
+        );
+
+        obs_property_set_long_description(
+            smoothing,
+            "Instant: no delay, for live streaming.\n"
+            "Look-ahead: half a second behind the game, for recording.\n"
+            "The G-meter and the sound follow the same delay."
+        );
+
         obs_properties_add_float_slider(p, "zoom", "Zoom", 1.0, 3.0, 0.01);
         obs_property_t* record = obs_properties_add_bool(p, "auto_record", "Record races automatically");
 
@@ -129,6 +160,7 @@ namespace {
         return Guarded("create", [&]() -> void* {
             SetCoreLog(LogToObs);
             auto s = std::make_unique<Source>();
+            UpgradeSavedSmoothing(settings);
             bool debug = false;
             const MirrorSettings st = MirrorSettingsOf(settings, &debug);
             s->view = std::make_unique<MirrorView>(std::make_unique<Frames>(), st, debug);

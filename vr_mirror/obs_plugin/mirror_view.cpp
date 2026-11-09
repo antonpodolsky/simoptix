@@ -320,9 +320,7 @@ void MirrorView::ApplySettingChanges(const PipelineConfig& config) {
         blog(
             LOG_INFO,
             "[simoptix_vr_mirror] smoothing: %s",
-            config.smoothing == SmoothingKind::kSmoothest ? "Smoothest"
-            : config.smoothing == SmoothingKind::kSmooth  ? "Smooth"
-                                                          : "Instant"
+            config.smoothing == SmoothingKind::kLookahead ? "Look-ahead" : "Instant"
         );
     }
 

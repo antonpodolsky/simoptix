@@ -237,7 +237,7 @@ int FrameRing::Copy(const GameFrame& f) {
 }
 
 // Hands the finished pictures to the drawn pose. With Instant a frame is drawn ~4 ms after arrival
-// (its own thumbnail and patches are ready ~1 ms after its copy), with Smooth and Smoothest up to a
+// (its own thumbnail and patches are ready ~1 ms after its copy), with Look-ahead about half a
 // second later, by when the frames after it have been looked at too. Copy thread.
 void FrameRing::Look() {
     feed_.Poll(context_.Get(), source_->RecordedPredictions(), source_->Eye(), source_->Period());
