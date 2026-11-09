@@ -14,6 +14,7 @@
 #include "shared/guarded.h"
 #include "shared/log.h"
 #include "shared/telemetry/telemetry.h"
+#include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
 
 OBS_DECLARE_MODULE()
 
@@ -43,7 +44,7 @@ bool obs_module_load(void) {
         }
 
         RegisterGMeterSource();
-        blog(LOG_INFO, "[simoptix_overlays] loaded");
+        blog(LOG_INFO, "[simoptix_overlays] loaded, version %s", SIMOPTIX_VERSION);
         return true;
     });
 }

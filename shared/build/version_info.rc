@@ -1,0 +1,40 @@
+// Copyright (C) 2026 Anton Podolsky
+// SPDX-License-Identifier: GPL-2.0-or-later
+// The Windows version resource (VERSIONINFO) of a shipped SimOptix DLL, which Windows shows in the
+// file's Properties, under Details. The DLL's own .rc defines SIMOPTIX_FILE_NAME and
+// SIMOPTIX_FILE_DESCRIPTION, then includes this. The numbers come from simoptix_version.h, which
+// version.bat writes into the build's obj\ folder.
+
+#include <winver.h>
+
+#include "simoptix_version.h"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION SIMOPTIX_FILE_VERSION_PARTS
+PRODUCTVERSION SIMOPTIX_FILE_VERSION_PARTS
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_DLL
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        // US English, Unicode: the pair in VarFileInfo below.
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "Anton Podolsky"
+            VALUE "FileDescription", SIMOPTIX_FILE_DESCRIPTION
+            VALUE "FileVersion", SIMOPTIX_FILE_VERSION
+            VALUE "InternalName", SIMOPTIX_FILE_NAME
+            VALUE "LegalCopyright", "Copyright (C) 2026 Anton Podolsky. GPL-2.0-or-later"
+            VALUE "OriginalFilename", SIMOPTIX_FILE_NAME
+            VALUE "ProductName", "SimOptix"
+            VALUE "ProductVersion", SIMOPTIX_VERSION
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

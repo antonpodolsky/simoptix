@@ -20,8 +20,8 @@ The rules apply to the whole repo:
 
 `CONTRIBUTING.md` at the repo's root is the same way of working for human contributors, in short. It
 has the prerequisites, the build table (step 3), the e2e steps (step 5), the code rules, the sign-off
-(step 6) and the pull-request rule (step 7). When one of those changes here, change it there in the
-same commit.
+(step 6), the pull-request rule with its label (step 7) and the release steps (`reference\release.md`).
+When one of those changes here, change it there in the same commit.
 
 The READMEs describe the project: what each part is and does, its settings, its files. How to work on
 it is here, with the details in files beside this one. Paths below are relative to this skill's folder,
@@ -36,6 +36,7 @@ it is here, with the details in files beside this one. Paths below are relative 
 | `reference\pipeline.md` | Adding an implementation of a pipeline stage |
 | `reference\mirror_app.md` | The mirror app's build and its use in the tests |
 | `reference\openxr.md` | The OpenXR layer: build, check, sign, install, the Easy Anti-Cheat test |
+| `reference\release.md` | The version and what carries it, when to bump it, the changelog from each pull request, and making a release |
 | `findings\<part>.md` | What was measured, fixed, and tried and dropped, per part: `obs_plugin`, `frame_sources`, `openxr`, `overlays`, `telemetry`, `mirror_app`, `pipeline`, `e2e`, `recording_analysis` |
 
 The rules for writing docs are in `.agents\skills\docs\SKILL.md`. Read that skill whenever you write or
@@ -113,6 +114,9 @@ for the agents that read those files. Change the rules here, never in those file
     and no history (the commit messages have that). When behaviour, settings or layout change, update
     the matching README in the same commit: the root folder table, `vr_mirror\obs_plugin\README.md`,
     `overlays\README.md`, `vr_mirror\e2e\README.md` and the part's own.
+  - `CHANGELOG.md` is the one document with history, written for users. A change users notice brings
+    its lines in its own pull request's description, the way a README moves with the code (step 7).
+    The release script writes them into `CHANGELOG.md` at a release (`reference\release.md`).
   - How to work on the repo, and these rules, go in this skill (`SKILL.md` and its `reference\` files)
     and, in short for human contributors, in `CONTRIBUTING.md`. Change them in the same commit as the
     way of working they describe.
@@ -424,6 +428,22 @@ The automated tests are the e2e suite (step 5).
 
 The plugin builds make OBS's import library from `shared\obs_lib\obs.def`.
 
+**The version.** `VERSION` at the repo's root holds SimOptix's version, one number for every part
+(`0.1.0`). `shared\build\version.bat` reads it and adds the commits since the release tag and the
+commit, the way `git describe --tags` gives them (`0.1.0+12.gabc1234`). A build exactly on the release
+tag gets the plain number. Every `build.bat` that makes a shipped file calls it: both plugins and the
+OpenXR layer. It writes the version into `simoptix_version.h` in the build's `obj\`, which is never
+committed.
+- Each of the three DLLs carries it in its version resource (VERSIONINFO), which Windows shows in the
+  file's Properties. `shared\build\version_info.rc` is that resource, and each DLL's own `.rc` names
+  the file and includes it. The file version is `major.minor.patch.<commits since the tag>`, and the
+  product version is the full string.
+- The version names a build for people. It decides nothing at run time.
+- The checks that parts fit together stay separate from it, and change only with what they check:
+  the layout version of the memory the layer shares with VR Mirror (`openxr_share::kVersion`) and of
+  the telemetry area both plugins share (`TelemetryArea::kVersion`).
+- What carries the version, when to bump it and how a release is made: `reference\release.md`.
+
 | Changed | Build | e2e at the end |
 |---|---|---|
 | `vr_mirror\core\`, `vr_mirror\frame_sources\pimax\` | Both plugins (step 4), `vr_mirror\mirror_app\build.bat`, `vr_mirror\e2e\build.bat` | Yes |
@@ -444,8 +464,10 @@ The plugin builds make OBS's import library from `shared\obs_lib\obs.def`.
 ## 4. Install the OBS plugins
 
 `build.bat install` in `vr_mirror\obs_plugin\` and in `overlays\obs_plugin\` builds each plugin and
-copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`. OBS must be closed, because
-it holds the DLLs. Install both from one build, because the telemetry both read checks that they match.
+copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`. It also copies the
+`manifest.json` that the build wrote into its own `bin` folder, with the version filled in, to the
+plugin's `data` folder beside `bin`, where OBS 32 and later read it. OBS must be closed, because it
+holds the DLLs. Install both from one build, because the telemetry both read checks that they match.
 
 1. Build both first. If a build fails, leave OBS alone.
 2. If OBS runs, close it the way its close button does, never by force: in PowerShell,
@@ -663,6 +685,9 @@ Record what each start of the game showed in `findings\openxr.md`.
   - the matching README, when behaviour, settings or layout changed
   - the matching file of this skill, when a way of working changed
   - the part's findings file, when something was measured or an approach dropped
+- Commit subjects are written for developers. A change users notice gets its words for users in its
+  pull request's Changelog section instead (step 7), never in `CHANGELOG.md`, which changes only at a
+  release.
 - Before committing docs, run `python -I .agents\skills\docs\check_docs.py` (the docs skill has the
   checklist).
 
@@ -686,6 +711,15 @@ Record what each start of the game showed in `findings\openxr.md`.
   An agent tells the user about these in chat instead. Before opening the pull request, and after
   every edit of its description, read each sentence as a reviewer who sees only the diff. Delete each
   one that reviewer doesn't need.
+- **The pull request feeds the changelog.** Fill in its template (`.github\pull_request_template.md`),
+  and give it exactly one type label (`reference\release.md`, "The changelog, from each pull
+  request"):
+  - A change users notice gets `added`, `changed`, `fixed`, `removed` or `security`, and one to three
+    lines in the description's Changelog section. They are written for a VR sim racer, by the docs
+    skill ("The changelog").
+  - Any other change gets `internal` and an empty Changelog section.
+  - With `gh`: `gh pr create --label <label> --body-file <file>`. The release script refuses a release
+    while a pull request since the last one has no type label.
 - Until the remote exists, there are two cases:
   - If `main` isn't checked out anywhere, run `git push . <branch>:main` (fast-forward only).
   - If `main` is checked out in the main folder and that folder's tracked files are clean, run

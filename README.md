@@ -84,8 +84,9 @@ To build:
 1. Close OBS.
 2. Run `vr_mirror\obs_plugin\build.bat install` and `overlays\obs_plugin\build.bat install`. Each
    builds its plugin and copies it to OBS's plugin folder
-   (`C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`). Install both from one build, because
-   they share the game's data and check that they match.
+   (`C:\ProgramData\obs-studio\plugins\<its name>`): the DLL to `bin\64bit`, and `manifest.json` with
+   the plugin's name and version to `data`. Install both from one build, because they share the game's
+   data and check that they match.
 3. For OpenXR Mirror, also install the API layer. Read the warning above first, close LMU, and run
    `vr_mirror\frame_sources\openxr\install.bat`. It builds the layer and installs it with
    administrator rights, which Windows asks for. That layer is unsigned. For a signed layer, run
@@ -111,7 +112,7 @@ To remove a plugin, close OBS and delete the plugin's folder in `C:\ProgramData\
 | `vr_mirror\e2e\` | End-to-end tests: the desktop window against a simulated Pimax headset and game, or a simulated game with the API layer |
 | `vr_mirror\recording_analysis\` | Scripts that check a recording frame by frame, and turn a moment of it into a test |
 | `overlays\` | SimOptix: Overlays: the G-meter (`gmeter\`, its image layers in `gmeter\design\`) and what any overlay can reuse (`common\`) |
-| `shared\` | Code compiled into both plugins: logging, CPU counters, crash dumps, the files kept in `%LOCALAPPDATA%\simoptix` (the newest 10 of each kind), the view's delay, and the list of OBS functions they call (`obs_lib\`). `build\` finds Visual Studio for every build |
+| `shared\` | Code compiled into both plugins: logging, CPU counters, crash dumps, the files kept in `%LOCALAPPDATA%\simoptix` (the newest 10 of each kind), the view's delay, and the list of OBS functions they call (`obs_lib\`). `build\` finds Visual Studio and gives every build SimOptix's version |
 | `shared\telemetry\` | One reader of the game's telemetry for all of OBS, and the G-meter's demo lap. `games\lmu\fake\` makes up LMU telemetry, to test without the game |
 | `third_party\` | libobs 32.2.2 and the OpenXR headers, as published |
 

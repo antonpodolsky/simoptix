@@ -84,7 +84,8 @@ and is ignored by git. Builds must finish with no new warnings at `/W3`.
 | `vr_mirror\recording_analysis\` | Its `build.bat` (`patch_shift.exe`, `grid_shift.exe`) | No |
 
 The two plugins are `vr_mirror\obs_plugin\build.bat` and `overlays\obs_plugin\build.bat`. With the
-argument `install`, each also copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`.
+argument `install`, each also copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`,
+and its `manifest.json`, which OBS 32 reads for the plugin's name and version, to `data` beside it.
 OBS must be closed, because it holds the DLLs. Install both from the same build, because the telemetry
 they share checks that they match.
 
@@ -182,6 +183,30 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   builds, the e2e results if `vr_mirror\core\` or the mirror app changed, and what you checked by hand.
   The description covers that change only. How the work went and details of your own PC stay out.
   Plans, next steps and work on other branches go in an issue.
+- Give the pull request one label, which decides whether it goes into `CHANGELOG.md`:
+  - If users notice the change, label it `added`, `changed`, `fixed`, `removed` or `security`. Then
+    write one to three lines in the Changelog section of its description. Write them for a VR sim
+    racer, in plain words with no code names, as `.agents\skills\docs\SKILL.md` says ("The
+    changelog").
+  - If only contributors notice it (tests, refactors, contributors' docs, the skills, the build),
+    label it `internal`, and leave the Changelog section empty.
+
+## Releases
+
+SimOptix has one version for all its parts, in `VERSION` at the repo's root, such as 0.1.0. Every
+build carries it, and a build that isn't a release adds the commits since the last one
+(`0.1.0+12.gabc1234`). The maintainer makes the releases.
+
+1. In a "Release: v<version>" pull request, bump `VERSION` and run
+   `python -I .agents\skills\dev\release.py`. It writes the release's section of `CHANGELOG.md` from
+   the labels and Changelog sections of the pull requests since the last release.
+2. After it merges, tag the merge commit on `main` as `v<version>`, annotated.
+3. Build from the tag. Sign the OpenXR layer, because the version in it makes every build a new DLL.
+4. Create the GitHub Release with that section of `CHANGELOG.md` as its notes, and the built files.
+
+While the version starts with 0, a patch release (0.1.1) holds only fixes. A minor one (0.2.0) adds or
+changes things, and also anything that breaks. `.agents\skills\dev\reference\release.md` has the
+details.
 
 ## Sign-off
 

@@ -1,12 +1,12 @@
 ---
 name: docs
-description: Writing SimOptix's documentation. Use whenever a README, CONTRIBUTING.md, AGENTS.md or a file of the skills in .agents\skills\ is written or changed.
+description: Writing SimOptix's documentation. Use whenever a README, CONTRIBUTING.md, AGENTS.md, a file of the skills in .agents\skills\, or a pull request's Changelog lines are written or changed.
 ---
 
 # Writing SimOptix's documentation
 
-Use this whenever a README, `CONTRIBUTING.md`, `AGENTS.md`, or a file of the skills (`.agents\skills\`)
-is written or changed. The maintainer's priorities: plain English at the reader's level, short, precise,
+Use this whenever a README, `CONTRIBUTING.md`, `AGENTS.md`, a file of the skills (`.agents\skills\`),
+or the Changelog lines of a pull request are written or changed. The maintainer's priorities: plain English at the reader's level, short, precise,
 and only what exists.
 
 Legal text is exempt from every rule here: `LICENSE`, `THIRD_PARTY_NOTICES.md`, the notice under
@@ -61,6 +61,7 @@ assumes.
 | Level | Reader | What it may assume, without explaining |
 |---|---|---|
 | Root `README.md` | A VR sim racer who found the repo | VR, headsets, Pimax Play and its Render Quality, OpenXR and API layers, OBS and its sources, Le Mans Ultimate (LMU), Easy Anti-Cheat, frame rates, stabilization. No code names and no design talk |
+| `CHANGELOG.md`, and the Changelog section of each pull request | The same reader, deciding whether to update | The same as the root README ("The changelog", below) |
 | Plugin READMEs (`vr_mirror\obs_plugin\`, `overlays\`) | That reader, setting the plugin up and using it | The same, plus OBS's own settings and log. Settings by their on-screen names. Their diagnostics sections may be technical |
 | Part READMEs (`vr_mirror\core\`, `vr_mirror\frame_sources\`, `shared\telemetry\`, `vr_mirror\e2e\`, ...) | A contributor who reads the code | C++, Windows, Direct3D 11, shaders, quaternions, swapchains, shared memory, threads. Defines the terms coined here |
 | Stage and detail READMEs (`vr_mirror\core\pipeline\<stage>\`, `overlays\gmeter\design\`) | A contributor changing that part | The parent README too |
@@ -109,8 +110,8 @@ assumes.
    - If the reader needs to know what the software works with, say it as a plain fact: "Works with
      Pimax headsets and Le Mans Ultimate". Don't say it as a limit: "Only Pimax is supported".
    - No history in READMEs: no dates of changes, no "was replaced", "used to". History lives in
-     commit messages. Findings files keep dated measurements and dead ends, because those are
-     measured facts.
+     commit messages, and for users in `CHANGELOG.md` ("The changelog", below). Findings files keep
+     dated measurements and dead ends, because those are measured facts.
    - No plans, roadmap codes, "for now", "yet" or "being obtained".
 4. **Cut what gives the reader nothing.** Count words ("two plugins", "in one repo"), "simply",
    "just", "note that", "as you can see", a sentence that restates its heading, and any statement
@@ -171,6 +172,31 @@ assumes.
 - Order inside a README: description, status or limits, terms, what it does or how to use it,
   settings, files.
 
+## The changelog
+
+`CHANGELOG.md` is the one document that holds history. It is written for users: the root README's
+reader. It has one section per release, newest first, in the Keep a Changelog format.
+
+- **Its lines are written in the pull request,** in the Changelog section of its description, with
+  one label for their heading: `added`, `changed`, `fixed`, `removed` or `security`. The release
+  script copies them into `CHANGELOG.md` at a release. Don't edit `CHANGELOG.md` in any other pull
+  request.
+- **Every change users notice gets lines, in the same pull request,** the way a README moves with the
+  code. Users notice what they see, set, install or run, and how well it works. A pull request whose
+  change only contributors notice is labelled `internal` and has none: tests, refactors,
+  contributors' docs, the skills, the build, findings.
+- **One to three lines per pull request,** each a bullet (`- `) with one change. Say what changed for
+  the user, with its numbers and conditions, in the words of the root README. Use the names the user
+  sees: the sources, the settings, the files they run or open.
+- **The rules above apply,** with three changes. A line says what is new or different, because that
+  is its job. It never says how the code did it. It gives no pull request numbers or commit names.
+
+| Bad | Why | Good |
+|---|---|---|
+| Build: each DLL carries the version in its version resource | A commit subject, for developers | Windows shows SimOptix's version in each plugin's Properties, under Details |
+| Fixed the install | Doesn't say what was wrong, or for whom | `build.bat install` makes the plugin's folders on a PC that has none |
+| Refactored the frame ring into its own file | Users notice nothing. Label it `internal`, with no lines | (no line) |
+
 ## Findings and reference files
 
 The dev skill's files are read by people and agents in the middle of work. They need the facts fast.
@@ -212,8 +238,8 @@ Run the check script from the repo's root:
 python -I .agents\skills\docs\check_docs.py
 ```
 
-It checks the first three items and lists lines to review for the next two. A clean run is not the
-end. Read the rest yourself.
+It checks the items marked "(script)" and lists the lines to review for those marked "(script lists
+them)". A clean run is not the end. Read the rest yourself.
 
 - [ ] Each changed sentence states its facts in the plainest words: plain verbs, things named, the
       reader's own terms ("State the facts, plainly")
@@ -222,6 +248,8 @@ end. Read the rest yourself.
 - [ ] Every relative link and every repo path in backticks resolves (script)
 - [ ] Every coined term of `reference\terms.md` has a row in a terms table at or before its first
       use (script)
+- [ ] `CHANGELOG.md` has the release script's form: each section `## [x.y.z] - YYYY-MM-DD`, newest
+      first, with its link, and only the groups Added, Changed, Fixed, Removed and Security (script)
 - [ ] Outside terms used without a table row: needed at this level? (script lists them)
 - [ ] "doesn't", "never", "no longer", "not yet", "for now" lines reviewed against rule 3 (script
       lists them)
@@ -238,4 +266,6 @@ end. Read the rest yourself.
       same for each, and every variation's doc states it
 - [ ] The matching README, `CONTRIBUTING.md` and the dev skill changed together (dev skill, "Docs move
       with the code")
+- [ ] A change users notice has one to three lines in its pull request's Changelog section and one
+      type label. Any other pull request is labelled `internal` ("The changelog")
 - [ ] The commit subject is `Docs: what changed`

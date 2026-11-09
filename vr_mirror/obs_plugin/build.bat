@@ -12,8 +12,12 @@ rem delay the plugins share, the crash dump, the files kept in %%LOCALAPPDATA%%\
 rem telemetry listed by
 rem ..\..\shared\telemetry\sources.bat, which also finds LMU's headers: LMU_SDK; without them the plugin
 rem builds without LMU, and race auto-record reads no game).
-rem Optional argument "install": copies it to OBS's per-machine plugin folder
-rem (C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror\bin\64bit). Close OBS first.
+rem Its version comes from ..\..\shared\build\version.bat (VERSION at the repo's root, and git),
+rem and goes into the DLL's version resource (version.rc).
+rem Writes bin\manifest.json from manifest.json with the version filled in, for OBS 32 and later.
+rem Optional argument "install": copies the DLL and manifest.json to OBS's per-machine plugin folder
+rem (C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror: the DLL in bin\64bit, manifest.json in
+rem data, where OBS reads it). Close OBS first.
 rem It links against OBS through an import library made here from ..\..\shared\obs_lib\obs.def (the
 rem functions OBS 32.2.2's obs.dll exports).
 setlocal
@@ -22,8 +26,10 @@ call "%~dp0..\..\shared\build\vs_env.bat" || exit /b 1
 cd /d "%~dp0"
 if not exist obj mkdir obj
 if not exist bin mkdir bin
+call ..\..\shared\build\version.bat obj || exit /b 1
 lib /nologo /def:..\..\shared\obs_lib\obs.def /machine:x64 /out:obj\obs.lib >nul || exit /b 1
 call ..\..\shared\telemetry\sources.bat
+rc /nologo /i ..\.. /i obj /fo obj\version.res version.rc || exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\core\build\embed_text.ps1 ^
    ..\core\pipeline\5_warp\warp.hlsli obj\warp_hlsli.h kWarpHlsli || exit /b 1
 cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Fo:obj\ ^
@@ -36,10 +42,17 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_S
    @..\core\build\common.rsp @..\core\build\pipeline.rsp @..\core\build\adapters.rsp ^
    @..\frame_sources\pimax\pimax.rsp @..\frame_sources\openxr\openxr.rsp ^
    /LD /Fe:bin\%NAME%.dll ^
-   /link obj\obs.lib d3d11.lib dxgi.lib winmm.lib user32.lib d3dcompiler.lib dbghelp.lib || exit /b 1
+   /link obj\version.res obj\obs.lib d3d11.lib dxgi.lib winmm.lib user32.lib d3dcompiler.lib ^
+   dbghelp.lib || exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File ..\..\shared\build\fill_version.ps1 ^
+   manifest.json bin\manifest.json || exit /b 1
+rem A line continued with ^ inside the block below runs as a command named " ", so each command
+rem there stays on one line.
+set "PLUGIN_FOLDER=C:\ProgramData\obs-studio\plugins\%NAME%"
 if /i "%~1"=="install" (
-   if not exist "C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit" ^
-      mkdir "C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit"
-   copy /y bin\%NAME%.dll "C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit\" >nul || exit /b 1
-   echo installed to C:\ProgramData\obs-studio\plugins\%NAME%\bin\64bit
+   if not exist "%PLUGIN_FOLDER%\bin\64bit" mkdir "%PLUGIN_FOLDER%\bin\64bit" || exit /b 1
+   if not exist "%PLUGIN_FOLDER%\data" mkdir "%PLUGIN_FOLDER%\data" || exit /b 1
+   copy /y bin\%NAME%.dll "%PLUGIN_FOLDER%\bin\64bit\" >nul || exit /b 1
+   copy /y bin\manifest.json "%PLUGIN_FOLDER%\data\" >nul || exit /b 1
+   echo installed to %PLUGIN_FOLDER%
 )
