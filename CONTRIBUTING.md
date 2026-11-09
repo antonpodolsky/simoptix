@@ -99,7 +99,7 @@ way OBS does and measures what a viewer would see.
 2. Close LMU and the mirror app. For runs whose numbers are compared, close Pimax Play too, because its
    compositor disturbs the timing.
 3. Run `vr_mirror\e2e\bin\e2e_runner.exe`. To run some scenarios only, name them
-   (`e2e_runner.exe head_still`). `--list` lists them. The 54 runs take about 13 minutes, each in a
+   (`e2e_runner.exe head_still`). `--list` lists them. The 57 runs take about 14 minutes, each in a
    small window on top of everything. Don't use the PC meanwhile.
 4. Compare the results with `.agents\skills\dev\reference\e2e_results.md`, and update the numbers there
    when they change for a reason. Each run's files are in `vr_mirror\e2e\out\<scenario>\`.

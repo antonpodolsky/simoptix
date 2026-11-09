@@ -23,7 +23,7 @@ core and the mirror app, not the OBS plugins.
 | patch | A small square (32×32 texels) cut from an eye image. The cockpit correction measures how patches move, and the e2e runner reads them from the captured window |
 | slot lead | The runtime's next display slot minus the moment a frame arrived. It shifts when the game queues frames |
 | observer | The debugging code beside the pipeline. It numbers the stamp and writes the frame trace |
-| frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals |
+| frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
 | output delay | How far VR Mirror's view runs behind the game: about 1 s with Smoothest, about 0.5 s with Smooth, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
 | fake runtime | The stand-in for Pimax's client library (`vr_mirror\e2e\fake_pvr\`) that the e2e tests use in place of a headset and a game |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
@@ -45,7 +45,7 @@ Eight synthetic tests check what synthetic motion tests best:
   comparison
 - what the mirror app does while no game runs
 
-Five more tests run on the OpenXR layer's frames (below). Every other edge case is a **replay of real
+Six more tests run on the OpenXR layer's frames (below). Every other edge case is a **replay of real
 footage** (five of them). A replay holds the real head poses and frame timing of a session, and the
 game's real thumbnails as the slot check saw them. Each test has been shown to fail when what it checks
 is broken, except the stall measure.
@@ -102,15 +102,24 @@ above its worst measured run, so a regression still fails. The dust replay's wor
      captured image to the frame it shows.
 5. **The OpenXR layer's frames** (`fake_openxr\`, scenarios `openxr_*`). With `frame_source=openxr`, the
    mirror app reads the frames the way it reads the layer in the game. The runner starts
-   `fake_openxr.exe` beside it. This fake game hands its frames over through the layer's own publisher
-   (`vr_mirror\frame_sources\openxr\openxr_publisher.*`: the shared memory, the frame records, the three
-   textures, the copy and its "done" marker, the clock reading).
+   `fake_openxr.exe` beside it. This fake game makes a game's OpenXR calls into the layer's own frame
+   code (`vr_mirror\frame_sources\openxr\openxr_layer_frames.*` and `openxr_publisher.*`). It has a
+   swapchain of three images. For each frame it acquires an image, draws into it, releases it and ends
+   the frame. The layer picks the image each frame shows, and hands it over as in the game: the shared
+   memory, the frame records, the three textures, the copy and its "done" marker, the clock reading.
    - It draws the left eye at 5084×4168 in LMU's field of view (52.6° out, 47.6° in, 44.6° up and down)
      with the shared image, encoded once as a game draws it. Both eyes are turned 1° out.
    - Its XrTime is 123.456789 s ahead of the performance counter, so the mirror app must use the clock
      reading.
    - Its timing is fake_pvr's, and `drop_rate`, `queue_lag` and `game_start_s` work the same. When it is
      behind, a frame still reports the slot it was drawn for.
+   - With `render_thread=1`, one thread draws each frame and releases its image as soon as the frame
+     begins. Another thread ends the frames, and the fake runtime holds each xrEndFrame until the
+     frame's vsync. So the next frame's image is released while the frame before is still in
+     xrEndFrame. Both threads use the one device context, protected for that as a game must protect it.
+   - With the render thread, `stall_every_s` and `stall_ms` make a frame that much slower to draw that
+     often. It ends late for the slot it was drawn for, and the frames due meanwhile never come. The
+     next frame follows it at once.
    - Its log has fake_pvr's format. The runner matches its frames with the mirror app's by the slot
      they were drawn for (the trace's `drawn_slot`), because the mirror app sees them a frame or two
      after the game ended them.
@@ -192,6 +201,7 @@ though the frame is shown up to a second after the slot check's short memory mov
 | `openxr_game_behind` | `queued_cockpit`'s game (`queue_lag=2`, `drop_rate=0.09`) with the direction codes, from the layer. Frames come up to two slots late for the slot they were drawn for, and they report it | No frame from the wrong pose, no visible pose jump, no stall, mirror app at least 75 fps |
 | `openxr_black_borders` | `black_borders`' motion in the layer's field of view | No black at any edge or corner, no stall |
 | `openxr_game_starts_late` | The layer's memory appears 5 s after the mirror app starts (`game_start_s=5`) | At most 1 of the game's first frames missed (the first, because the layer learns the image's size from it) |
+| `openxr_stall` | `stabilization`'s motion from a game with a render thread (`render_thread=1`), and a 64 ms stall every 3 s. Each frame's image is released before the frame it follows has left xrEndFrame | Each frame shows its own image: image/pose mismatch at most 0.2° rms and 0.5° in the worst frame, mirror app at least 80 fps |
 
 ## Smoothing compared with Instant
 
@@ -246,7 +256,7 @@ three things:
 |---|---|
 | `build.bat` | Builds the fake runtime, the fake OpenXR game, the runner and `stage_replay` into `bin\` |
 | `fake_game\` | What both fakes share: the head motion (`fake_game_motion.h`) and the game's image (`fake_game_picture.*`: the direction codes or the cockpit, stored as the faked source stores it) |
-| `fake_openxr\` | `fake_openxr.exe`: the fake game with the OpenXR layer's frames, through the layer's own publisher |
+| `fake_openxr\` | `fake_openxr.exe`: the fake game with the OpenXR layer's frames, through the layer's own frame code (`fake_openxr_layer.*` makes the game's calls into it) |
 | `fake_pvr\` | The fake PVR runtime and game (`libPVRClient64.dll`): replays of real sessions (`fake_pvr_replay.h`) and their real thumbnails (`fake_pvr_thumbs.h`) |
 | `runner\` | `e2e_runner.exe`: the scenarios (`scenarios.*`), running the mirror app (`tool_process.*`), capturing its window (`capture.h`, `patches.h`), the measures (`analysis.*`), and the comparison with Instant (`compare.*`) |
 | `stage_replay\` | `stage_replay.exe`: one run per stage (`runs_*.cpp`), the whole pipeline (`runs_pipeline.cpp`), its scores (`scores.*`), and the golden file (`golden.*`) |
