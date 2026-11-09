@@ -14,6 +14,7 @@ namespace {
     constexpr int kBlockedTop = 54;
     constexpr int kRowHeight = 84;
     constexpr int kRowPadding = 16;
+    constexpr int kVersionGap = 8;       // between a name and the version after it
     constexpr int kDescriptionTop = 38;  // below the row's top
     constexpr int kButtonWidth = 88;
     constexpr int kButtonHeight = 30;
@@ -67,6 +68,29 @@ namespace {
             DrawTextW(dc_, text.c_str(), -1, &measured, DT_WORDBREAK | DT_NOPREFIX | DT_CALCRECT);
             DrawTextW(dc_, text.c_str(), -1, &area, DT_WORDBREAK | DT_NOPREFIX);
             return measured.bottom;
+        }
+
+        // Draws `text` on one line with its baseline at `baseline`, and returns its right edge. Texts in
+        // two sizes drawn on one baseline line up as words of one line do.
+        int Label(const std::wstring& text, int left, int baseline, HFONT font, COLORREF colour) const {
+            SelectObject(dc_, font);
+            SetTextColor(dc_, colour);
+
+            TEXTMETRICW metrics = {};
+            GetTextMetricsW(dc_, &metrics);
+
+            RECT area = {left, baseline - metrics.tmAscent, left, baseline + metrics.tmDescent};
+            DrawTextW(dc_, text.c_str(), -1, &area, DT_SINGLELINE | DT_NOPREFIX | DT_CALCRECT);
+            DrawTextW(dc_, text.c_str(), -1, &area, DT_SINGLELINE | DT_NOPREFIX);
+            return area.right;
+        }
+
+        // Where a line of `font` drawn from `top` has its baseline.
+        int Baseline(int top, HFONT font) const {
+            SelectObject(dc_, font);
+            TEXTMETRICW metrics = {};
+            GetTextMetricsW(dc_, &metrics);
+            return top + metrics.tmAscent;
         }
 
     private:
@@ -136,8 +160,15 @@ void PaintWindow(HDC dc, const WindowLayout& layout, const LookFonts& fonts, con
 
     paint.Fill({0, 0, layout.client.cx, layout.client.cy}, kBackground);
 
-    const RECT title = {margin, paint.Scale(kTitleTop), right, layout.headerBottom};
-    paint.Text(L"SimOptix Setup", title, fonts.title.get(), kText);
+    const int titleBaseline = paint.Baseline(paint.Scale(kTitleTop), fonts.title.get());
+    const int titleRight = paint.Label(L"SimOptix Setup", margin, titleBaseline, fonts.title.get(), kText);
+    paint.Label(
+        texts.setupVersion,
+        titleRight + paint.Scale(kVersionGap),
+        titleBaseline,
+        fonts.body.get(),
+        kSecondaryText
+    );
 
     const RECT blocked = {margin, paint.Scale(kBlockedTop), right, layout.headerBottom};
     paint.Text(texts.blockedBy, blocked, fonts.body.get(), kAttention);
@@ -145,11 +176,19 @@ void PaintWindow(HDC dc, const WindowLayout& layout, const LookFonts& fonts, con
     for (size_t i = 0; i < kParts.size(); ++i) {
         const RECT& row = layout.rows[i];
         const int textRight = layout.mainSlots[i].left - margin;
-        const RECT name = {margin, row.top + paint.Scale(kRowPadding), textRight, row.bottom};
+        const int nameBaseline = paint.Baseline(row.top + paint.Scale(kRowPadding), fonts.strong.get());
         const RECT description = {margin, row.top + paint.Scale(kDescriptionTop), textRight, row.bottom};
 
         paint.Line(0, layout.client.cx, row.top);
-        paint.Text(kParts[i].shownName, name, fonts.strong.get(), kText);
+        const int
+            nameRight = paint.Label(kParts[i].shownName, margin, nameBaseline, fonts.strong.get(), kText);
+        paint.Label(
+            texts.installedVersions[i],
+            nameRight + paint.Scale(kVersionGap),
+            nameBaseline,
+            fonts.body.get(),
+            kSecondaryText
+        );
         paint.Text(kParts[i].description, description, fonts.body.get(), kSecondaryText);
     }
 

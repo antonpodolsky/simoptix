@@ -13,6 +13,10 @@ std::wstring PluginDllPath(const Part& part, PluginLayout layout) {
     return PluginFolder(part) + inside + part.dllName;
 }
 
+std::wstring PluginManifestPath(const Part& part) {
+    return PluginFolder(part) + L"\\data\\" + part.manifestName;
+}
+
 std::wstring SimOptixFolder() {
     return ProgramFilesFolder() + L"\\simoptix";
 }
@@ -26,7 +30,7 @@ std::wstring LayerDllPath() {
 }
 
 std::wstring LayerManifestPath() {
-    return LayerFolder() + L"\\" + kLayerManifestName;
+    return LayerFolder() + L"\\" + PartOf(PartId::kOpenXrLayer).manifestName;
 }
 
 std::wstring InstalledSetupPath() {

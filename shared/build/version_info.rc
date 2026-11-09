@@ -1,13 +1,18 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The Windows version resource (VERSIONINFO) of a shipped SimOptix DLL, which Windows shows in the
-// file's Properties, under Details. The DLL's own .rc defines SIMOPTIX_FILE_NAME and
-// SIMOPTIX_FILE_DESCRIPTION, then includes this. The numbers come from simoptix_version.h, which
-// version.bat writes into the build's obj\ folder.
+// The Windows version resource (VERSIONINFO) of a shipped SimOptix file, which Windows shows in the
+// file's Properties, under Details. The file's own .rc defines SIMOPTIX_FILE_NAME and
+// SIMOPTIX_FILE_DESCRIPTION, then includes this. A program (SimOptix Setup) also defines
+// SIMOPTIX_FILE_TYPE as VFT_APP. The numbers come from simoptix_version.h, which version.bat writes
+// into the build's obj\ folder.
 
 #include <winver.h>
 
 #include "simoptix_version.h"
+
+#ifndef SIMOPTIX_FILE_TYPE
+#define SIMOPTIX_FILE_TYPE VFT_DLL
+#endif
 
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION SIMOPTIX_FILE_VERSION_PARTS
@@ -15,7 +20,7 @@ PRODUCTVERSION SIMOPTIX_FILE_VERSION_PARTS
 FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
 FILEFLAGS 0
 FILEOS VOS_NT_WINDOWS32
-FILETYPE VFT_DLL
+FILETYPE SIMOPTIX_FILE_TYPE
 FILESUBTYPE VFT2_UNKNOWN
 BEGIN
     BLOCK "StringFileInfo"

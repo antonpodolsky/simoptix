@@ -9,6 +9,7 @@
 #include "setup_probe.h"
 #include "setup_registry.h"
 #include "setup_system.h"
+#include "setup_version.h"
 
 namespace {
 
@@ -25,15 +26,15 @@ namespace {
     bool InstallPlugin(const Part& part, const SystemFacts& system, std::wstring* error) {
         const std::wstring folder = PluginFolder(part);
         const bool flat = system.obsLayout == PluginLayout::kFlat;
-
-        // OBS 33's own example of the new layout has a data folder beside the DLL.
         const std::wstring dllFolder = flat ? folder : folder + L"\\bin\\64bit";
 
-        if (!CreateFolders(dllFolder, error) || (flat && !CreateFolders(folder + L"\\data", error))) {
+        if (!CreateFolders(dllFolder, error) || !CreateFolders(folder + L"\\data", error)) {
             return false;
         }
 
-        if (!WritePartFile(part.dllResource, PluginDllPath(part, system.obsLayout), error)) {
+        // The DLL goes first, so a manifest is never there without its DLL.
+        if (!WritePartFile(part.dllResource, PluginDllPath(part, system.obsLayout), error)
+            || !WritePartFile(part.manifestResource, PluginManifestPath(part), error)) {
             return false;
         }
 
@@ -70,7 +71,7 @@ namespace {
 
         // The DLL goes first, so a manifest is never there without its DLL.
         if (!WritePartFile(part.dllResource, LayerDllPath(), error)
-            || !WritePartFile(kLayerManifestResource, manifest, error)) {
+            || !WritePartFile(part.manifestResource, manifest, error)) {
             return false;
         }
 
@@ -123,6 +124,7 @@ namespace {
             std::wstring value;
         } values[] = {
             {L"DisplayName", L"SimOptix"},
+            {L"DisplayVersion", SetupVersion()},
             {L"Publisher", L"Anton Podolsky"},
             {L"DisplayIcon", installed},
             {L"InstallLocation", SimOptixFolder()},

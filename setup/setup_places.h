@@ -24,6 +24,10 @@ std::wstring PluginFolder(const Part& part);
 // The DLL's path in the plugin's folder, in the layout given.
 std::wstring PluginDllPath(const Part& part, PluginLayout layout);
 
+// <plugin folder>\data\manifest.json, where OBS 32 and later read the plugin's name and version, in
+// either layout.
+std::wstring PluginManifestPath(const Part& part);
+
 // C:\Program Files\simoptix
 std::wstring SimOptixFolder();
 

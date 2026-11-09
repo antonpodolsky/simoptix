@@ -7,14 +7,16 @@ beside it.
 ## What it shows
 
 The window has a row for each part, with what the part adds and the buttons that fit what is installed.
-Under its title, it says what to close before a part can be changed (OBS for the plugins, LMU for the
-layer), or that OBS Studio wasn't found.
+After each part's name is the version installed, as its DLL's Properties show it, such as
+`0.1.0+14.g31637d5`. After the window's title is setup's own version, which is also the version of the
+parts it carries. Under the title, setup says what to close before a part can be changed (OBS for the
+plugins, LMU for the layer), or that OBS Studio wasn't found.
 
 | Buttons | What is installed |
 |---|---|
 | **Install** | Nothing of the part |
 | **Uninstall** | The same build as the one in setup, in its place |
-| **Update** and **Uninstall** | A different build from the one in setup |
+| **Update** and **Uninstall** | A different build from the one in setup. Setup compares the files themselves, so a build of the same version that differs counts too |
 | **Repair** and **Uninstall** | The same build, out of place: a plugin in the folders of another OBS version, or a layer that is switched off, missing from OpenXR's list, missing its files, or registered from another folder too |
 
 Setup reads the PC again whenever its window is activated. So after closing OBS or LMU, click the
@@ -40,14 +42,14 @@ window and the buttons follow.
 
 | Part | Where |
 |---|---|
-| VR Mirror | `C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror\` |
-| Overlays | `C:\ProgramData\obs-studio\plugins\simoptix_overlays\` |
+| VR Mirror | `C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror\`: the DLL, and `manifest.json` with the plugin's name and version in a folder named data |
+| Overlays | `C:\ProgramData\obs-studio\plugins\simoptix_overlays\`, the same way |
 | OpenXR layer | The DLL and its manifest in `C:\Program Files\simoptix\openxr_frame_source\`, registered in `HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` with the value 0 (on) |
 | Setup's own copy | `C:\Program Files\simoptix\simoptix_setup.exe`, while anything is installed |
 
 - **The plugins' folders depend on the OBS version.** OBS 32 and earlier load a plugin's DLL from its
-  `bin\64bit\` folder. OBS 33 and later load it from the plugin's folder itself, with a folder named data
-  beside it. They flag a DLL in `bin\64bit\` as "Legacy", and OBS 34 won't load it. Setup installs into
+  `bin\64bit\` folder. OBS 33 and later load it from the plugin's folder itself. Both read
+  `manifest.json` from the folder named data. They flag a DLL in `bin\64bit\` as "Legacy", and OBS 34 won't load it. Setup installs into
   the folders of the OBS it finds, and removes the copy in the other folders. Only OBS 32.2.2 has been
   tried.
 - **The layer goes where `vr_mirror\frame_sources\openxr\install.ps1` puts it.** Each one replaces and
@@ -56,7 +58,8 @@ window and the buttons follow.
 
 ## Windows' list of installed apps
 
-While any part is installed, SimOptix is listed in Windows' Settings, under Apps, Installed apps. Its
+While any part is installed, SimOptix is listed in Windows' Settings, under Apps, Installed apps, with
+setup's version. Its
 **Uninstall** removes all three parts and the listing. It runs setup's own copy in
 `C:\Program Files\simoptix`, which copies itself to the temporary folder to do the work, because a
 running program can't delete its own file. Windows deletes that temporary copy at the next restart.
@@ -73,11 +76,12 @@ running program can't delete its own file. Windows deletes that temporary copy a
 | `setup_install.cpp` | Installs and removes each part, and keeps the entry in Windows' installed apps |
 | `setup_uninstall.cpp` | The removal of everything that Windows' installed apps start |
 | `setup_places.cpp` | Where each part goes, and the registry keys |
-| `setup_parts.h` | The three parts, their files and the resources that carry them |
+| `setup_parts.h` | The three parts, their DLLs and manifests, and the resources that carry them |
+| `setup_version.h` | Setup's own version, from the build |
 | `setup_facts.h` | What setup found on the PC, as plain data |
 | `setup_payload.cpp` | The files inside the exe: finding, comparing and writing them |
 | `setup_signature.cpp` | A file's code signature, by Windows' own check |
-| `setup_registry.cpp`, `setup_system.cpp` | The registry, folders, processes and OBS's version |
-| `setup.rc` | Puts the two plugins and the layer into the exe |
+| `setup_registry.cpp`, `setup_system.cpp` | The registry, folders, processes, and the versions of OBS and of installed files |
+| `setup.rc` | Puts the two plugins and the layer, with their manifests, into the exe, and gives the exe its version resource |
 | `setup.manifest` | Administrator rights, sharp text at any display scale, and Windows' current controls |
 | `build.bat` | Builds both plugins and setup |

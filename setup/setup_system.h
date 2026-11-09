@@ -24,6 +24,10 @@ struct ObsInstall {
 // bin\64bit\obs64.exe.
 ObsInstall FindObs();
 
+// The ProductVersion text of the file's version resource ("0.1.0+14.g31637d5"), empty when it has
+// none.
+std::wstring ReadProductVersion(const std::wstring& path);
+
 // Whether a process with this file name ("obs64.exe") runs, in any session.
 bool IsProcessRunning(const wchar_t* exeName);
 

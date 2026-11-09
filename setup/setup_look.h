@@ -45,6 +45,8 @@ struct WindowLayout {
 WindowLayout LayOut(UINT dpi);
 
 struct WindowTexts {
+    std::wstring setupVersion;                      // after the title
+    std::array<std::wstring, 3> installedVersions;  // after each part's name, empty when not installed
     std::wstring blockedBy;  // what to close before a part can be changed, empty when nothing
 };
 

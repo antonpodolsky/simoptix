@@ -13,6 +13,7 @@
 #include "setup_signature.h"
 #include "setup_status.h"
 #include "setup_system.h"
+#include "setup_version.h"
 
 namespace {
 
@@ -301,9 +302,11 @@ namespace {
 
     void SetupWindow::Refresh() {
         facts_ = ReadFacts(setupLayerSignature_);
+        texts_.setupVersion = SetupVersion();
         texts_.blockedBy.clear();
 
         for (size_t i = 0; i < kParts.size(); ++i) {
+            texts_.installedVersions[i] = facts_.parts[i].installedVersion;
             statuses_[i] = DescribePart(kParts[i].id, facts_.parts[i], facts_.system);
             AddSentenceOnce(&texts_.blockedBy, statuses_[i].installBlockedBy);
         }

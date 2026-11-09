@@ -11,16 +11,22 @@
 
 namespace {
 
-    // Every file that makes up the part is compared, so a copy whose manifest differs counts as different.
-    InstalledCopy CompareCopy(const std::wstring& path, const wchar_t* resource) {
-        if (!FileExists(path)) {
+    bool IsSameAsEmbedded(const std::wstring& path, const wchar_t* resource) {
+        EmbeddedFile file;
+        std::wstring error;
+        return FindEmbeddedFile(resource, &file, &error) && HasSameBytes(path, file);
+    }
+
+    // The part's DLL decides whether it is installed. It is the same build only when its manifest is
+    // the same too, so a copy with a missing or older manifest counts as different.
+    InstalledCopy
+    CompareCopy(const Part& part, const std::wstring& dllPath, const std::wstring& manifestPath) {
+        if (!FileExists(dllPath)) {
             return InstalledCopy::kNone;
         }
 
-        EmbeddedFile file;
-        std::wstring error;
-
-        if (!FindEmbeddedFile(resource, &file, &error) || !HasSameBytes(path, file)) {
+        if (!IsSameAsEmbedded(dllPath, part.dllResource)
+            || !IsSameAsEmbedded(manifestPath, part.manifestResource)) {
             return InstalledCopy::kDifferent;
         }
 
@@ -33,41 +39,42 @@ namespace {
 
     PartFacts ReadPluginFacts(const Part& part, const SystemFacts& system) {
         PartFacts facts;
+        const std::wstring manifest = PluginManifestPath(part);
 
         // Without OBS there is no layout to prefer, so a copy in either one counts as installed.
         if (system.obsFound) {
-            facts.copy = CompareCopy(PluginDllPath(part, system.obsLayout), part.dllResource);
+            const std::wstring dll = PluginDllPath(part, system.obsLayout);
+            facts.copy = CompareCopy(part, dll, manifest);
+            facts.installedVersion = ReadProductVersion(dll);
             facts.inOtherLayout = FileExists(PluginDllPath(part, OtherLayout(system.obsLayout)));
             return facts;
         }
 
         for (const PluginLayout layout : {PluginLayout::kBin64bit, PluginLayout::kFlat}) {
-            const InstalledCopy copy = CompareCopy(PluginDllPath(part, layout), part.dllResource);
+            const std::wstring dll = PluginDllPath(part, layout);
+            const InstalledCopy copy = CompareCopy(part, dll, manifest);
 
             if (copy != InstalledCopy::kNone) {
                 facts.copy = copy;
+                facts.installedVersion = ReadProductVersion(dll);
             }
         }
 
         return facts;
     }
 
-    PartFacts ReadLayerFacts() {
+    PartFacts ReadLayerFacts(const Part& part) {
         PartFacts facts;
         const std::wstring manifest = LayerManifestPath();
 
-        facts.copy = CompareCopy(LayerDllPath(), PartOf(PartId::kOpenXrLayer).dllResource);
-
-        if (facts.copy == InstalledCopy::kSame
-            && CompareCopy(manifest, kLayerManifestResource) != InstalledCopy::kSame) {
-            facts.copy = InstalledCopy::kDifferent;
-        }
+        facts.copy = CompareCopy(part, LayerDllPath(), manifest);
+        facts.installedVersion = ReadProductVersion(LayerDllPath());
 
         for (const RegistryDword& value : ReadDwordValues(kLayerRegistryKey)) {
             if (EqualsNoCase(value.name, manifest)) {
                 facts.registered = true;
                 facts.switchedOn = value.value == 0;
-            } else if (EndsWithNoCase(value.name, std::wstring(L"\\") + kLayerManifestName)) {
+            } else if (EndsWithNoCase(value.name, std::wstring(L"\\") + part.manifestName)) {
                 facts.otherRegistrations.push_back(value.name);
             }
         }
@@ -95,7 +102,7 @@ Facts ReadFacts(SignatureKind setupLayerSignature) {
 
     for (const Part& part : kParts) {
         PartFacts& partFacts = facts.parts[static_cast<size_t>(part.id)];
-        partFacts = IsPlugin(part.id) ? ReadPluginFacts(part, facts.system) : ReadLayerFacts();
+        partFacts = IsPlugin(part.id) ? ReadPluginFacts(part, facts.system) : ReadLayerFacts(part);
     }
 
     return facts;
@@ -105,7 +112,7 @@ std::vector<std::wstring> FindLayerRegistrations() {
     std::vector<std::wstring> paths;
 
     for (const RegistryDword& value : ReadDwordValues(kLayerRegistryKey)) {
-        if (EndsWithNoCase(value.name, std::wstring(L"\\") + kLayerManifestName)) {
+        if (EndsWithNoCase(value.name, std::wstring(L"\\") + PartOf(PartId::kOpenXrLayer).manifestName)) {
             paths.push_back(value.name);
         }
     }

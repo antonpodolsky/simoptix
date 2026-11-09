@@ -46,16 +46,27 @@ namespace {
         return folder;
     }
 
-    bool ReadFileVersion(const std::wstring& path, VS_FIXEDFILEINFO* version) {
+    // The file's version resource, empty when it has none.
+    std::vector<char> ReadVersionBlock(const std::wstring& path) {
         const DWORD size = GetFileVersionInfoSizeW(path.c_str(), nullptr);
 
         if (size == 0) {
-            return false;
+            return {};
         }
 
         std::vector<char> block(size);
 
         if (!GetFileVersionInfoW(path.c_str(), 0, size, block.data())) {
+            return {};
+        }
+
+        return block;
+    }
+
+    bool ReadFileVersion(const std::wstring& path, VS_FIXEDFILEINFO* version) {
+        std::vector<char> block = ReadVersionBlock(path);
+
+        if (block.empty()) {
             return false;
         }
 
@@ -138,6 +149,32 @@ ObsInstall FindObs() {
     obs.found = true;
     obs.major = HIWORD(version.dwFileVersionMS);
     return obs;
+}
+
+std::wstring ReadProductVersion(const std::wstring& path) {
+    std::vector<char> block = ReadVersionBlock(path);
+    void* translation = nullptr;
+    UINT translationSize = 0;
+
+    if (block.empty()
+        || !VerQueryValueW(block.data(), L"\\VarFileInfo\\Translation", &translation, &translationSize)
+        || translationSize < 2 * sizeof(WORD)) {
+        return L"";
+    }
+
+    // The first language and code page the file lists: 0x409 and 1200 in SimOptix's (version_info.rc).
+    const WORD* language = static_cast<const WORD*>(translation);
+    wchar_t query[64] = {};
+    swprintf_s(query, L"\\StringFileInfo\\%04x%04x\\ProductVersion", language[0], language[1]);
+
+    void* text = nullptr;
+    UINT length = 0;
+
+    if (!VerQueryValueW(block.data(), query, &text, &length) || length == 0) {
+        return L"";
+    }
+
+    return std::wstring(static_cast<const wchar_t*>(text));
 }
 
 bool IsProcessRunning(const wchar_t* exeName) {

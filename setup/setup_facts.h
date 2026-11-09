@@ -20,6 +20,7 @@ enum class SignatureKind { kNone, kTrusted, kUntrusted };
 
 struct PartFacts {
     InstalledCopy copy = InstalledCopy::kNone;
+    std::wstring installedVersion;  // the installed DLL's ("0.1.0+14.g31637d5"), empty without one
 
     // Plugins: a copy of the DLL in the layout this OBS doesn't use, which OBS ignores or flags.
     bool inOtherLayout = false;
