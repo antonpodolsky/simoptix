@@ -180,6 +180,7 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 - Sign off every commit ("Sign-off", below).
 - Send changes as a pull request against `main`. Say what changed, why, and what you verified: the
   builds, the e2e results if `vr_mirror\core\` or the mirror app changed, and what you checked by hand.
+  The description covers that change only. Plans, next steps and work on other branches go in an issue.
 
 ## Sign-off
 

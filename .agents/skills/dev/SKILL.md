@@ -671,6 +671,15 @@ Record what each start of the game showed in `findings\openxr.md`.
 - **Every change goes through a pull request on GitHub,** once the repo has its GitHub remote. Push the
   worktree's branch, open a pull request against `main` that says what changed, why and what was
   verified, and merge it on GitHub after its checks. Nothing is pushed to `main` directly.
+- **A pull request's description covers its own change and nothing else.** Every sentence is about what
+  the branch changes against `main`, or about a check or step done for that change. These stay out:
+  - plans, next steps and follow-ups
+  - work that isn't on `main` or in this branch: other branches, other sessions, other pull requests
+  - what happened in the agent's session but isn't in the branch, such as ideas dropped along the way
+
+  An agent tells the user about follow-ups in chat instead. Before opening the pull request, and after
+  every edit of its description, read the description against `git diff main...<branch>`. Delete each
+  sentence that the diff and the checks don't back.
 - Until the remote exists, there are two cases:
   - If `main` isn't checked out anywhere, run `git push . <branch>:main` (fast-forward only).
   - If `main` is checked out in the main folder and that folder's tracked files are clean, run
