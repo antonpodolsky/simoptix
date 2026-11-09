@@ -33,9 +33,10 @@ SimOptix is early software. There are no ready-made downloads, so you build it f
 - **Games:** LMU. The stabilized view has been measured with LMU, and the G-meter's live values and
   race auto-record read LMU's telemetry.
 - **OBS:** built against OBS Studio 32.2.2. Other versions haven't been tried.
-- **OpenXR Mirror** and its API layer (`vr_mirror\frame_sources\openxr\`) are experimental. They work
-  in LMU started without Easy Anti-Cheat. Whether a layer signed with a certificate Windows trusts
-  gets past Easy Anti-Cheat is not known.
+- **OpenXR Mirror** and its API layer (`vr_mirror\frame_sources\openxr\`) are experimental. Unsigned,
+  the layer works in LMU started without Easy Anti-Cheat. Signed with a code signing certificate
+  Windows trusts, it loaded and worked in LMU started with Easy Anti-Cheat, and online play stayed
+  enabled. It hasn't been tried in an online session.
 
 ## SimOptix and Easy Anti-Cheat
 
@@ -51,11 +52,16 @@ interfaces.
   source is shown in OBS. It passes every OpenXR call on unchanged, except that it asks the runtime for
   one time-conversion extension. Its README has the details (`vr_mirror\frame_sources\openxr\README.md`).
 
-**Don't install the API layer on a PC used for online racing.** Easy Anti-Cheat refuses the unsigned
-layer that this repo builds. With the layer installed, LMU started the usual way showed Easy
-Anti-Cheat's "Untrusted system file" warning, and online play was disabled. The layer works in LMU
-started without Easy Anti-Cheat, which means offline. `vr_mirror\frame_sources\openxr\uninstall.bat`
-removes it.
+**Don't install the API layer on a PC used for online racing.** Racing online with the layer
+installed hasn't been tried.
+- **Unsigned,** the layer is refused by Easy Anti-Cheat. With it installed, LMU started the usual way
+  showed Easy Anti-Cheat's "Untrusted system file" warning, and online play was disabled. The
+  unsigned layer works in LMU started without Easy Anti-Cheat, which means offline.
+- **Signed with a code signing certificate Windows trusts,** the layer loaded and worked in LMU started
+  the usual way, with Easy Anti-Cheat, and online play stayed enabled. The layer is built unsigned
+  unless you sign it with such a certificate of your own (Install, step 3).
+
+`vr_mirror\frame_sources\openxr\uninstall.bat` removes the layer.
 
 ## Requirements
 
@@ -63,7 +69,7 @@ To run:
 - 64-bit Windows (developed on Windows 11)
 - OBS Studio 32 (built against 32.2.2)
 - For Pimax Mirror: a Pimax headset with Pimax Play running
-- For OpenXR Mirror: the API layer installed, and LMU started without Easy Anti-Cheat
+- For OpenXR Mirror: the API layer installed. Unsigned, it needs LMU started without Easy Anti-Cheat
 - For live game data (the G-meter's values and race auto-record): LMU
 
 To build:
@@ -71,6 +77,8 @@ To build:
 - For reading LMU: LMU's telemetry headers. The build finds them in the game's folder, in any Steam
   library, and `LMU_SDK` can name their folder instead. Without them, the build says so, and both
   plugins build and read no game. The G-meter's demo lap still plays.
+- For a signed API layer: a code signing certificate that Windows trusts, in your certificate store.
+  A certificate kept in the cloud, such as Certum's, shows there while its desktop app is logged in.
 
 ## Install
 
@@ -81,7 +89,9 @@ To build:
    they share the game's data and check that they match.
 3. For OpenXR Mirror, also install the API layer. Read the warning above first, close LMU, and run
    `vr_mirror\frame_sources\openxr\install.bat`. It builds the layer and installs it with
-   administrator rights, which Windows asks for.
+   administrator rights, which Windows asks for. To sign the layer, set the environment variable
+   `SIMOPTIX_SIGN_THUMBPRINT` to your code signing certificate's thumbprint. The build then signs
+   the layer, or stops if it can't.
 4. Start OBS and add a **SimOptix: Pimax Mirror**, **SimOptix: OpenXR Mirror** or **SimOptix: G-Meter
    Overlay** source. Each plugin's README describes its settings: `vr_mirror\obs_plugin\README.md`
    and `overlays\README.md`.
