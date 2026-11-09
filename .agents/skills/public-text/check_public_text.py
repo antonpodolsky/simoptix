@@ -172,7 +172,9 @@ def repo_lines():
     files = []
 
     for path in run(["git", "ls-files"]).split("\n"):
-        if not path or path.startswith("third_party/") or path in EXAMPLE_FILES:
+        is_legal_text = path.startswith("third_party/") or path in ("LICENSE", "THIRD_PARTY_NOTICES.md")
+
+        if not path or is_legal_text or path in EXAMPLE_FILES:
             continue
 
         text = read_text(os.path.join(ROOT, path))

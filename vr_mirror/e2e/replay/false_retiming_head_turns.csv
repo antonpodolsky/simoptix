@@ -1,4 +1,4 @@
-# Replay of a real LMU race (Monza, McLaren, Pimax Dream Air), 2026-10-21, recording 22-30-50 at
+# Replay of session B, a real LMU race (Pimax Dream Air), from its recording at
 # 24:17-24:29: cornering at a steady 90 fps, no dropped frames, head turning into the corner (peaks 57 deg/s). The game
 # renders every frame for the slot its timing says (lag 0, confirmed by the recording); the first
 # frame-matching build re-timed 69 of these frames wrongly. Times in seconds from the start of this file.

@@ -4,13 +4,13 @@ r"""The scenery's change between video frames once the cockpit is lined up: each
 one before by the shift (a fraction of a pixel, bilinear) that best lines up the cockpit's roof and
 pillars, and the road ahead is then compared. The cockpit is fixed in head-tracking space (a sim
 rig), so what is left on the road is the car's own motion through the world: about 0 on a frozen
-game frame (4 Nov 10:41.73: 1.05 against about 6 around it), about double on a skipped one.
+game frame (race F at 10:41.73: 1.05 against about 6 around it), about double on a skipped one.
 
 usage: python -I aligned_diff.py <recording .mp4> <mm:ss.ss> <seconds> [--stamps first-last]
        [--cockpit "x0,y0,x1,y1;..."] [--road "x0,y0,x1,y1"]
 The clip is decoded at the recording's full size (cached as trace_common.ExtractVideo does). Regions
-are in pixels of the recording; the defaults are the McLaren's roof lettering and left door and the
-road ahead at 2560x1440: pick new ones for another car (cockpit only, also in corners: not the wheel,
+are in pixels of the recording; the defaults are the roof lettering and left door of the car in the
+recordings analysed so far, and the road ahead, at 2560x1440: pick new ones for another car (cockpit only, also in corners: not the wheel,
 screens, mirrors or OBS overlays). Shifts in px of the recording; change in grey levels (mean
 absolute difference).
 """

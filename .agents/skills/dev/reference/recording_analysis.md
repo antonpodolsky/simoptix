@@ -83,7 +83,7 @@ python -I frozen_check.py "<output folder>"
 - `moment.py` prints the trace's rows and the runtime's arrival rows, frame by frame.
 - `aligned_diff.py` says how much the road changed between frames once the cockpit is lined up: about
   1 on a frozen game frame, about 6 on a normal one, and double on a skipped one. Its default regions
-  fit the McLaren at 2560x1440. Pick new ones for another car.
+  fit the car of the recordings analysed so far, at 2560x1440. Pick new ones for another car.
 - `frozen_check.py` says which of the video's "frozen" frames the trace confirms.
 
 ## What the plugin re-timed in a recording

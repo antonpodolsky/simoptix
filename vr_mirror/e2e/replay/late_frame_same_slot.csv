@@ -1,4 +1,4 @@
-# Replay of a real LMU race (Le Mans, McLaren, Pimax), 2026-11-04, recording 19-35-51_s2 at
+# Replay of race F, a real LMU race (Pimax), from its recording at
 # 7:33.5-7:45.5, smoothing Smooth. At 7:39.57 the game sends one frame 7.4 ms late (18.5 ms after the one
 # before) and the next 4 ms late; the arrival timing rounded the late frame (serial 469895) forward onto the
 # slot of the next one, so it was lined up from the head pose one slot later than it was drawn with: a

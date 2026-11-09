@@ -63,8 +63,8 @@ that a game frame was lined up from.
 
 **Lining up with the trace.** Each frame carries its tick's number stamp (top-left). The stamp wraps
 every 32768 ticks (6 minutes), so a recording fits every 6 minutes of a long trace equally well.
-- The OBS log's clock gives a first guess, but it can be minutes off. For the recording of 3 Nov 20:20
-  it is 481 s late (more than one wrap), because the trace's first head pose was written long after
+- The OBS log's clock gives a first guess, but it can be minutes off. For the recording on Instant
+  in the table below it is 481 s late (more than one wrap), because the trace's first head pose was written long after
   the log says the trace opened.
 - `lineup.py` therefore tries every place where the stamps fit and checks the images. On a repeated
   game frame, everything in the image moves with the cockpit, so the patches' spread around the
@@ -76,8 +76,8 @@ every 32768 ticks (6 minutes), so a recording fits every 6 minutes of a long tra
 
 | Recording | Single repeats on a dip | Chance at the chosen place | At the next best place |
 |---|---|---|---|
-| 3 Nov 20:20 (Instant, 217 repeats) | 174 of 174 | 1 in 10^251 | 1 in 10^6.0 |
-| 4 Nov 19:35 (Smooth, 18 repeats) | 6 of 8 | 1 in 10^7.4 | 1 in 10^1.3 |
+| A session on Instant, 217 repeats | 174 of 174 | 1 in 10^251 | 1 in 10^6.0 |
+| A clean race on Smooth, 18 repeats | 6 of 8 | 1 in 10^7.4 | 1 in 10^1.3 |
 
 When the trace has too few single repeats to tell, the script takes the log's guess, and `lineup.txt`
 then says **NOT SURE**. `lineup.txt` also checks the result: shifted by a frame or two, the repeats
@@ -95,15 +95,15 @@ should miss.
 - **The video-only repeat detector (`shake_causes.py`) raises false alarms in a clean race.** It calls
   a frame repeated when 90% of the patches follow the cockpit within 0.6 px.
   - Real repeats read 0.12 to 0.31 px, but new game frames under a slow view can read 0.48 to 0.60.
-  - In the recording of 4 Nov 19:35 it flagged 381 frames (128 of them during the race), and the trace
+  - In the clean race on Smooth (above) it flagged 381 frames (128 of them during the race), and the trace
     confirms 10 of them. The trace has 18 repeats in all.
   - So its count is not a count of freezes. The trace's serials are (`events.py`, and the "repeated
     game frames" line of `summary.txt`). The summary says how many of the detector's finds the trace
     confirms.
 - `followed_serial` in OBS traces is the OBS tick's own id (2^62 plus the tick count) wherever the view
-  follows the tick's moment rather than a game frame. That is every tick in the recordings of 3 and 4
-  Nov. `shake_traced.py` counts no image as shown for another frame there. The earlier scripts read
-  every such tick as one (88114 of 88130 on 4 Nov).
+  follows the tick's moment rather than a game frame. That is every tick in both recordings above.
+  `shake_traced.py` counts no image as shown for another frame there. The earlier scripts read every
+  such tick as one (88114 of 88130 in the clean race).
 - The trace doesn't hold which slot the game really drew a frame for. `shake_traced.py` infers it from
   the cockpit's motion where the head moved enough to tell.
 - Shake rows are labelled with video times (k + 1) / 90 s, as in the earlier investigations. So a

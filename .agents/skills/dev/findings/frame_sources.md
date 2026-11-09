@@ -21,7 +21,7 @@ full-size mirror ("What Pimax could add", below).
 ## Game window
 
 LMU draws a desktop "VR mirror" window (`VrMirror=1` in its VR settings) from the full-resolution eye
-image, so it holds about twice the detail of the game eye. Measured on 2026-10-18.
+image, so it holds about twice the detail of the game eye. Measured in LMU.
 
 - **What it shows:** a fixed crop of the left eye, x 0.05–0.95 and y 0.25–0.75 of the eye image.
   - Found by capturing the game eye and the window at the same moment (replay paused, headset still),

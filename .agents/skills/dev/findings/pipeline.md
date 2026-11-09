@@ -22,7 +22,7 @@ own README. The e2e side of most findings here is in `findings\e2e.md`.
 
 Rounding to the nearest slot gave a frame that arrived more than half a period late the *next* slot.
 The frame after it then took that slot too. Two frames sat on one slot, and the first was lined up
-from the next slot's head pose: a one-frame jolt, 3.5 px at 1080p at 7:39 of the 4 Nov race
+from the next slot's head pose: a one-frame jolt, 3.5 px at 1080p at 7:39 of race F
 (`vr_mirror\e2e\replay\late_frame_same_slot.csv`).
 
 The rule: a frame falling more than 0.2 periods (2.2 ms) before its nearest slot gets the slot before,
@@ -34,24 +34,24 @@ Measured over 4.4 h of traced driving and in e2e:
 
 | Measure | Nearest slot | The rule |
 |---|---|---|
-| Two consecutive frames on one slot, 4 Nov / 3 Nov traces | 87 / 150 | 52 / 116 |
-| Frames given another slot, 4 Nov / 3 Nov | – | 122 / 152 (0.02% / 0.02%) |
+| Two consecutive frames on one slot, race F / session E traces | 87 / 150 | 52 / 116 |
+| Frames given another slot, race F / session E | – | 122 / 152 (0.02% / 0.02%) |
 | e2e `replay_late_frame_same_slot`, frames from the wrong pose, Instant / Smooth / Smoothest | 1 / 1 / 1 (0.17°) | 0 / 0 / 0 |
 | e2e `replay_queued_late_frames_smooth`, frames from the wrong pose, several runs | 4.0–5.7% | 4.1–4.9% |
 
-The pairs left, 4 Nov / 3 Nov (`pairs_left.py` in the data folder):
+The pairs left, race F / session E (`pairs_left.py` in the data folder):
 - a late frame right after another late frame, which the rule leaves alone on purpose: 26 / 80
 - two frames arriving almost together, the second 1.5–2.6 ms after the first (median), both rounding
   to one slot: 24 / 27
 - a late frame whose slot before was taken: 2 / 9
 
 Most come in rough stretches: 39 of 52 and 98 of 116 have another late frame among the five before.
-The 3 Nov recording has 12 pairs, which showed no jolt because the head was too still. The 4 Nov
+Session E's recording has 12 pairs, which showed no jolt because the head was too still. Race F's
 recording has one pair, at 7:39. Not checked: whether the drawn pose stage catches them.
 
 **Tried and dropped on the way:**
 - **Without the "previous frame on time" condition.** It took more pairs (87 → 29, 150 → 56). Every
-  moved frame whose true slot the 3 Nov video tells (19) was indeed drawn earlier. But many of them
+  moved frame whose true slot session E's video tells (19) was indeed drawn earlier. But many of them
   were frames in a queue: 8 of the 19 were three slots early. There the drawn pose stage counts its
   lag from this stage's slot, so the two corrections added up. e2e `replay_queued_late_frames_smooth`
   went to 7.0–7.3% from the wrong pose (limit 7%, failing), against 4.0–5.7%.
@@ -147,13 +147,13 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   (`vr_mirror\core\adapters\d3d\drawn_pose_feed.*`) kept its thumbnail and patch makers from the old
   device, and used them with the new device's context. So the stage saw each frame's image only 1–2 s
   after it arrived.
-- **Its effect.** In the 4 Nov session (hidden and shown at 18:18:21–31), the frames shown at Smooth's
-  533 ms delay found their own judgement on 0.2% of ticks, for two hours. Records turned up 1.2–2 s
+- **Its effect.** In race F (hidden, then shown 10 s later), the frames shown at Smooth's 533 ms delay
+  found their own judgement on 0.2% of ticks, for the rest of the session. Records turned up 1.2–2 s
   after arrival, so only frames shown during pauses had one. Each frame fell back to the slot judged
   last.
-- **The other sessions.** The four other traced sessions since 1 Nov had no hide and show, and found
-  their own judgement on 100% of ticks (Smooth on 1 Nov included).
-- **A crash, maybe related.** OBS also crashed on closing that evening, and only then. Not checked
+- **The other traces.** The four other traced sessions of the same build had no hide and show, and
+  found their own judgement on 100% of ticks (one on Smooth included).
+- **A crash, maybe related.** OBS also crashed on closing after race F, and only then. Not checked
   whether this was why: there was no debugger to read the dump.
 - **The fix.** `Init` with another device makes the images afresh, and the ring's `Stop` releases them
   (`DrawnPoseFeed::Release`).
@@ -200,7 +200,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 
 - **Identical to the plugin's own picking before this stage,** tick by tick. Checked with
   `vr_mirror\e2e\stage_replay --stage frame_picker`, at each smoothing:
-  - on two OBS traces: 2026-10-22 14:26 (54,444 ticks) and 2026-10-21 21:49 (403,469 ticks)
+  - on two OBS traces, of 54,444 and 403,469 ticks
   - on synthetic ticks at 50, 59.94, 60 and 144 Hz, with the smoothing changed mid-run
 
   Compared: the entry, the kind, the delay, the moment, the tick the delay is fixed, and the entries in
@@ -212,8 +212,8 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 - **The ring's size follows the delay:** the frames in the delay plus 3, at least 4
   (`vr_mirror\obs_plugin\README.md`).
 - **The fixed delay's moments trail their images and jump once. The slot timeline's didn't**
-  (`stage_replay --stage frame_picker --frame_picker K`, 2026-10-30, OBS trace 2026-10-22 14:26 and
-  synthetic ticks). The slot-timeline picker was removed on 2026-11-07 (below).
+  (`stage_replay --stage frame_picker --frame_picker K`, 2026-10-30, the shorter of those OBS traces
+  and synthetic ticks). The slot-timeline picker was removed on 2026-11-07 (below).
 
   | Measure | Fixed delay | Slot timeline |
   |---|---|---|

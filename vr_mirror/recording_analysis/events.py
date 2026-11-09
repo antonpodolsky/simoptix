@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 r"""Timing events of a recording, from the frame trace lined up with it (lineup.npz) and the cockpit's
 steps (shake_causes.py's _frames.npz):
-- same slot twice: two consecutive game frames given the same display slot (the 7:39 kind of 4 Nov:
+- same slot twice: two consecutive game frames given the same display slot (the 7:39 kind of race F:
   one of them is lined up from a neighbouring slot's head pose, unless the game really drew both for it);
 - slot gap: the next game frame given a slot two or more periods on (the game drew nothing for a slot);
 - repeat: the tick showed the same game frame again (the scenery holds for a tick);

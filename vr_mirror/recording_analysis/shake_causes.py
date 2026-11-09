@@ -10,7 +10,7 @@ frames judged "game behind"). Needs no frame trace.
 
 The repeated-frame detector here reads the video alone (everything in the picture moves with the
 cockpit). It finds the real repeats (they read 0.12 to 0.31 px) but also flags frames near its cut-off
-(0.48 to 0.60 px) that are new game frames: in a clean race (4 Nov, 18 real repeats) it flagged 128.
+(0.48 to 0.60 px) that are new game frames: in a clean race (race F, 18 real repeats) it flagged 128.
 Its count is then no count of freezes. With a frame trace, take the repeats from the trace's serials
 (cadence.py, events.py).
 

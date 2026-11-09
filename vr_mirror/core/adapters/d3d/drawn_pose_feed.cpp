@@ -40,7 +40,7 @@ bool DrawnPoseFeed::Init(ID3D11Device* device) {
     // Another device (the OBS plugin makes a new one each time its source is shown): the thumbnails
     // and patches are made afresh on it. The old device's shaders, targets, staging textures and
     // queries can't be used with the new one's context; kept, they left stage 2 without a frame's
-    // picture until 1-2 s after it arrived, for two hours after a hide and show (4 Nov 2026).
+    // picture until 1-2 s after it arrived, for the rest of a session after a hide and show.
     if (device != device_.Get()) {
         Release();
     }

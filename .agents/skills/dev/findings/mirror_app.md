@@ -18,7 +18,7 @@ In the studies, **"today"** means Instant's filter as it was then, and as it sti
 - **Why paced presents.** OBS grabs the newest present on its own 90 Hz clock, which drifts against
   the headset's by about 1.1 ms per 100 s. So the two line up roughly every 17 minutes.
   - With presents wobbling around OBS's grab time, OBS repeated and skipped frames for minutes at a
-    time. Measured on 2026-10-18: 13.8 repeats per second of motion at one phase and 0.9 at another,
+    time. Measured in LMU: 13.8 repeats per second of motion at one phase and 0.9 at another,
     while the mirror app itself missed 3 frames in 73 s.
   - Steady presents shrink each crossing to a single repeat. They are spaced about 0.13 ms rms in e2e,
     against about 1 ms when presenting right away. About ±2 ms was measured in LMU.
@@ -28,8 +28,8 @@ In the studies, **"today"** means Instant's filter as it was then, and as it sti
   after the start of a turn. Beta 2.0 was chosen by feel in the headset.
 - **Window capture** delivered the window at about 55 fps on a 164 Hz monitor, while the mirror app
   showed 90. So a 60 fps recording repeated roughly 1 frame in 10 during head motion. OBS's Game
-  Capture on the mirror app hooks its own presents and avoids this. It was used for the 90 fps recordings measured on
-  2026-10-18.
+  Capture on the mirror app hooks its own presents and avoids this. It was used for the 90 fps recordings measured
+  there.
 
 ## Study 1: look-ahead with a short delay (offline, 2026-10-26)
 
@@ -68,11 +68,8 @@ outputs, the extracted traces' paths and the helper scripts are in the data fold
 
 **Head poses.** The `P` rows (the measured head pose, about 730 Hz) of the four OBS plugin frame
 traces in the data folder's `2026-10 late frames after drops\trace\`, slerped onto the 90 Hz display
-grid. That is 4.3 h with game frames arriving:
-- 2026-10-21, a race at Imola, 76 min
-- 2026-10-21, an evening at Monza, 73 min
-- 2026-10-22 at Monza, 8 min
-- 2026-10-23, a race at Monza, 98 min
+grid. That is 4.3 h with game frames arriving, from four sessions: races A and D, session B, and the
+short session C.
 
 They were split at gaps and at a view recenter. Left out: the first second of each stretch, and 140 s
 of the headset in the hands (taking it off and putting it down: rolls to 76°, a 35° recenter). Checked
@@ -173,7 +170,7 @@ On the still part, every row of both tables except the last two leaves under 0.0
   the head shakes, and 2.8× with the head still. The delay adds the rest: forward-backward at 122 ms
   and 1 Hz gives 1.50°.
 - **"Causal, D ahead" leads the head in fast flicks.** Its p99 is like forward-backward's. But at the
-  start of a 300°/s flick (the 2026-10-21 race, 2666.2 s on the trace's clock), it ran 24° (122 ms) to
+  start of a 300°/s flick (race A, 2666.2 s on the trace's clock), it ran 24° (122 ms) to
   30° (144 ms) ahead of the head.
   - Forward-backward stays within 5–7° there, because its backward pass follows quickly once the head
     moves fast.
@@ -230,7 +227,7 @@ headset not handled), 1.38 million frames. Jitter is as a share of the head's, a
   times the given frame sizes, not measured. Late and dropped frames inside the buffer have been
   covered by e2e at every smoothing since (`findings\e2e.md`, "Smoothing compared with Instant: what
   it found").
-- One driver, LMU at Imola and Monza, four sessions.
+- One driver, LMU on two tracks, four sessions.
 
 ### Tried and dropped
 

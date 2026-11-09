@@ -143,7 +143,7 @@ namespace {
 
     void AddGameTimingScenarios(std::vector<Scenario>* out) {
         {
-            // The game behind as in a real race at 82 fps (2026-10-28: 278 visible jumps a minute): it misses
+            // The game behind as in a real race at 82 fps (278 visible jumps a minute): it misses
             // 9% of its slots and queues up to two frames, each drawn for an earlier slot than it arrives
             // for, the lag changing at drops and catch-ups. The picture is a cockpit with detail on its
             // roof, pillars and dashboard, a plain panel, a turning wheel and the world turning past the

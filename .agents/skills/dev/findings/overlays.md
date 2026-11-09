@@ -106,7 +106,7 @@ telemetry. How it worked:
 - **What it learned was kept** per car model and tyre compound, in `grip_limits.json` in OBS's
   `plugin_config\simoptix_overlays` folder. It was saved every 2 minutes while driving, when the car or
   compound changed, and when the meter was hidden or OBS closed. So a car driven before started tuned.
-  A new one started from values measured in an LMP2 at Monza.
+  A new one started from values measured in one car on one track.
 - **The OBS log** showed what it used every 10 s while driving ("G-Meter Overlay grip"): which limits
   were learned, and which were still the starting values.
 - **Slip was measured from free rolling.** LMU's slip ratio reads about −0.018 with no pedal pressed,

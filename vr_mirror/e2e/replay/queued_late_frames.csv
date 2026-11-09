@@ -1,4 +1,4 @@
-# Replay of a real LMU race (Imola, McLaren, Pimax Dream Air), 2026-10-21, recording 19-30-12 at
+# Replay of race A, a real LMU race (Pimax Dream Air), from its recording at
 # 18:30-18:42: driving into a dust cloud behind two cars. At 18:38.5 the game falls two frames
 # behind for about a second (frames arrive on time but were rendered for an earlier slot), then
 # catches up at two dropped frames. Times in seconds from the start of this file.

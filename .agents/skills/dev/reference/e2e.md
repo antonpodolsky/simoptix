@@ -172,9 +172,9 @@ vr_mirror\e2e\bin\stage_replay.exe --stage arrival_timing [--arrival_timing K] [
 It runs the arrival timing alone over the traces' frame arrivals. It reports the noise it removes, how
 far the de-jittered arrivals' spacing stays off the display grid, and how often its slot agrees with the
 one the plugin recorded.
-- The grid on 2026-10-22 14:26: 0.487 ms rms removed, 0.031 ms off the grid against the plugin's 0.026,
-  100% agreement.
-- On 2026-10-21 21:49: 0.708 ms, 0.065 against 0.062, 99.99%.
+- The grid on the shorter of the two traces in the data folder's `2026-10 late frames after drops\trace\`:
+  0.487 ms rms removed, 0.031 ms off the grid against the plugin's 0.026, 100% agreement.
+- On the longer one: 0.708 ms, 0.065 against 0.062, 99.99%.
 - The small differences come from the plugin's session restarts, which the run doesn't see.
 
 ```
@@ -192,8 +192,8 @@ It runs the frame picker as the OBS plugin does: the fixed delay, unless `--fram
   (without a smoothing change).
 - When the plugin's picking became this stage, it was checked identical tick by tick against a verbatim
   copy of the plugin's earlier code: the entry shown, the kind of pick, the output delay, the moment,
-  the tick the delay is fixed, and the entries in use. There were 0 differences on the traces of
-  2026-10-22 14:26 and 2026-10-21 21:49 (457,913 ticks) at each smoothing, and on the synthetic ticks.
+  the tick the delay is fixed, and the entries in use. There were 0 differences on those two traces
+  (457,913 ticks) at each smoothing, and on the synthetic ticks.
 
 ## Adding a replay of a real session
 

@@ -5,7 +5,7 @@ r"""Lining a whole recording up with its frame trace: which tick row each video 
 Each video frame carries the tick's frame-number stamp (top-left, 15 bits), which wraps every 32768
 ticks (6 min 4 s at 90 Hz), so a run of stamps fits every 6 minutes of a long trace equally well. The
 log's clock gives a first guess of the recording's first tick, but it can be minutes off: the trace's
-first head pose can be written long after the log says the trace opened (3 Nov 20:20: 481 s late). So the
+first head pose can be written long after the log says the trace opened (session E: 481 s late). So the
 place is chosen by the pictures. On a tick where the game frame repeats, everything in the picture
 moves with the cockpit, so the patches' spread around the cockpit's rotation (shake.py) dips below
 that of the frames either side. At the right place most of the trace's single repeated game frames

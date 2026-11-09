@@ -83,8 +83,8 @@ was closed and OBS open. Whether Pimax Play ran was not checked.
 **Run 7 (2026-11-09): the layer's image noted before xrEndFrame, with `openxr_stall` and the fake game
 through the layer's frame code** (issue 12). LMU, OBS and Pimax Play were closed. The 57 runs took
 837 s. 54 of 57 passed, and 17 of 19 comparisons with Instant.
-- `openxr_stall_smoothest` failed: 5.9% from the wrong pose, 20.5° worst on screen. Another session's
-  test started a fake OpenXR game during it, which wrote the same shared memory (the mirror app logged
+- `openxr_stall_smoothest` failed: 5.9% from the wrong pose, 20.5° worst on screen. Another test
+  started a fake OpenXR game during it, which wrote the same shared memory (the mirror app logged
   "another layout" and textures of 4168×27). Two e2e runs with OpenXR scenarios can't share the PC.
 - `black_borders_low_zoom` at Instant had one stall (as in run 5), and `openxr_black_borders` Smooth
   tilted 0.245° against Instant's 0.128°.

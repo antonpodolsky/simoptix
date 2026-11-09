@@ -47,7 +47,7 @@ This file holds what was measured on the plugin, and what was tried.
   - with the source hidden: back to −120 and 0 ms
 - **LMU's sound trails the image** by about 120 ms, so it needs about −120 ms of its own Sync Offset
   (on its Application Audio Capture).
-  - Measured on LMU's menu clicks (2026-10-25): 113–136 ms between the menu changing on screen (in one
+  - Measured on LMU's menu clicks: 113–136 ms between the menu changing on screen (in one
     frame) and the click being heard.
   - The plugin shows each game frame 5 ms after it arrives. So the delay is in the game's sound or its
     capture, not in the image.
@@ -100,8 +100,8 @@ This file holds what was measured on the plugin, and what was tried.
 - **The game's frame rate in the 10 s stats is over the same 10 s.** Until October 2026 it was over
   the last 3 s only, so a stretch with a game stall in its first seconds read "90 fps" beside hundreds
   of repeats.
-- **At a steady 90 fps the repeats match the frames the game never rendered.** In the traces of 27
-  and 28 Oct: 1,506 repeats against 1,648 missing frames. OBS's clock against the headset's adds about
+- **At a steady 90 fps the repeats match the frames the game never rendered.** In two race
+  traces: 1,506 repeats against 1,648 missing frames. OBS's clock against the headset's adds about
   one skip every 1000 s (data folder: `2026-10 resync check`).
 - **CPU is counted in cycles,** because `GetThreadTimes` charges whole 15.6 ms timer ticks and can't
   see a thread that runs a few microseconds at a time. Checked: a thread spinning flat out reads

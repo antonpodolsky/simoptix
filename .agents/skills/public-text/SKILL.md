@@ -26,8 +26,9 @@ it is committed or posted. An edit doesn't take anything out.
 ## Personal information stays out
 
 - recording file names, which carry the date and the time (OBS names a recording by its start)
-- the dates and clock times of the maintainer's sessions, and how long they lasted. Counts of frames,
-  ticks or events give the length away.
+- the dates and clock times of the maintainer's sessions, and how long a named or dated session
+  lasted. A count of frames or ticks gives the length away, so it stays only where nothing beside it
+  says when or where the session was.
 - tracks, cars, and anything else that says when or what the maintainer drove
 - local paths, user names, machine names, email addresses, tokens and the values of environment
   variables
@@ -35,12 +36,13 @@ it is committed or posted. An edit doesn't take anything out.
   committing or posting one, and before cropping or blurring it.
 
 Describe the setup only as far as the point needs it: "one recording, OpenXR Mirror on Smooth, 4K
-canvas". Name a recording by what it shows ("the dust replay", "a recording with late frames"), and a
-measurement by the build it was made on ("on commit `abc1234`"), not by the day.
+canvas". Name a recording or a driving session by what it shows ("the dust replay", "a race with late
+frames") or by a letter ("race A"), never by its date or its file name.
 
 These may stay:
 - the maintainer's name, in the copyright lines and the sign-off, and where a screenshot shows it
-- dates of code: a commit, a release, "the plugin before this change"
+- dates of work on the code: a commit, a fix, a release, a run of the e2e suite or of `stage_replay`,
+  an offline study
 - commit hashes, and numbers measured in the e2e suite
 - video times inside a recording that has no name or date (`18:31`), when the point needs them
 - paths inside the repo, and folders that are the same on every PC (`%LOCALAPPDATA%\simoptix\`,

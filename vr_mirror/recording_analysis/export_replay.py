@@ -6,7 +6,8 @@ with the lag it was really rendered with, times in seconds from the file's start
 
 usage: python -I export_replay.py <OBS log> <recording .mp4> <start mm:ss> <secs> <out.csv>
            --about "what happened" [--lags "first-last:lag,..."] [--offset S]
-  --about   the header text: where the session comes from and what happened (several lines: use \n)
+  --about   the header text: what the session shows and what happened (several lines: use \n). The
+            replay is public: no recording name, date, clock time, track or car.
   --lags    true lags of game frames by serial (e.g. "630873-630940:-2,630941-630973:-1"), as found
             with window.py; every other frame is lag 0 (on time)
   --offset  the video time offset window.py printed, so the stretch matches the video exactly

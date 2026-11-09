@@ -30,7 +30,7 @@ private:
     // its own slot. Measured on 4.4 h of traced driving (2026-11-05): rounding to the nearest slot gave
     // two consecutive frames the same slot 237 times, most of them after a late frame that fell 0.3 to
     // 0.5 periods before its slot; the video showed that frame lined up from the next slot's head pose
-    // (a one-frame jolt, 3.5 px at 7:39 of the 4 Nov race). Early arrivals fade out by 0.2 periods
+    // (a one-frame jolt, 3.5 px at 7:39 of race F). Early arrivals fade out by 0.2 periods
     // (0.1-0.2 early: 15,500 frames; 0.2-0.3: 1,000). Without kOnTime the rule also moved frames inside
     // queues, where the drawn pose stage's lag (counted from this slot) then came out a slot off:
     // e2e replay_queued_late_frames_smooth 7.0-7.3% from the wrong pose against 4.0-5.7%.

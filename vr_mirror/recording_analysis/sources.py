@@ -3,8 +3,8 @@
 r"""Finding what belongs to a recording: the OBS log that recorded it (its start and stop) and the
 plugin's frame trace that was open then. Knows nothing about the analysis: it only reads the log.
 
-A recording '2026-11-04 19-35-51_s2.mp4' (OBS names files by their start; '_s1',
-'_s2', ... may follow) belongs to the log with a '==== Recording Start' within 5 s of 19:35:51 on that
+A recording 'YYYY-MM-DD HH-MM-SS_s2.mp4' (OBS names files by their start; '_s1',
+'_s2', ... may follow) belongs to the log with a '==== Recording Start' within 5 s of HH:MM:SS on that
 day. Its trace is the one named in the last 'frame trace:' line of the plugin before that start.
 Times are wall-clock seconds since the midnight of the log's first day (past midnight they keep
 counting up).

@@ -364,7 +364,7 @@ short hiccup, and in normal driving).
 **Penalties,** tuned on the rebuilt real thumbnails (scored against the lags fitted to the videos) and
 checked in e2e: 0.03 deg² per lag change, and 0.004 deg² for going back to lag 0.
 - Real dust queue: pose error 0.076° rms, against 0.130° doing nothing and 0.164° with the first build.
-- No false re-timing in the cornering, the hiccup, and the 2026-10-22 0:34 windows.
+- No false re-timing in the cornering, the hiccup, and session C's 0:34 windows.
 - e2e: dust 3.2% from the wrong pose, worst frame 0.20°.
 - **Tried and dropped:**
   - 0.004 per change, tuned on the smooth fake. Noise switched the lag on real images.
@@ -389,7 +389,7 @@ comparing more than two frames, so a change shows in several pairs.
 
 ### Fixed: false re-timing where the cockpit is featureless
 
-Jitter in a slow corner at 18:31 of 2026-10-23 (`replay_false_retiming_featureless_cockpit`).
+Jitter in a slow corner at 18:31 of race D (`replay_false_retiming_featureless_cockpit`).
 - **The problem.** A one-frame hiccup opened the gate. The image's detail was in the scenery and cars
   through the windscreen, which move on their own, and the dark cockpit was almost featureless.
   Featureless texels match any rotation, so they filled the better-matching half, and the evidence was
@@ -460,7 +460,7 @@ Smooth and Smoothest to 0.1–0.2%.
 
 ### Tried and dropped: poses from the arrival timing alone (2026-10-31)
 
-**The idea.** The shake study of the 2026-10-28 races (the data folder's `2026-10 shake in recordings`)
+**The idea.** The shake study of two later races (the data folder's `2026-10 shake in recordings`)
 found the frame matching re-timing frames all race long while the game ran under 90 fps: 278 visible
 jumps a minute, against 11 at 90 fps. Without the matching, a frame the game drew late would be warped
 from a steady wrong pose, which isn't seen, instead of flipping between slots.

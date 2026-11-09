@@ -205,7 +205,7 @@ float ReprojectionError(
     // Only texels with detail: the share of the overlap with the least (local gradient of either
     // thumbnail) is left out first. Featureless texels (a dark cockpit, the sky) match whatever
     // the rotation; in a slow corner they filled the better-matching half below, so the evidence
-    // was noise and the matcher re-timed on-time frames (jitter at 18:31 of 2026-10-23, where the
+    // was noise and the matcher re-timed on-time frames (jitter at 18:31 of race D, where the
     // detail was in the scenery and cars). On thumbnails rebuilt from the recordings
     // (vr_mirror\recording_analysis\replica.py), with the timing gate: 25 on-time frames re-timed by up to
     // 3 slots there -> 5 by one slot; the real dust queue 11 -> 0, its late frames found 43 -> 49

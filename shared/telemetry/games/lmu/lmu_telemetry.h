@@ -18,7 +18,7 @@
 // shared\telemetry\games\lmu\fake wakes one), so two readers might each see only some of the updates.
 //
 // Raw data only: no slip maths, filtering, learning or decisions here. LMU leaves the tyre forces and
-// the tyre load at zero (measured 2026-10-22), so they aren't copied; the vertical tyre deflection
+// the tyre load at zero (measured in LMU), so they aren't copied; the vertical tyre deflection
 // stands in for load.
 #pragma once
 

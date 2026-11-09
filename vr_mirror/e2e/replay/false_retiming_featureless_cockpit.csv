@@ -1,4 +1,4 @@
-# Replay of a real LMU session (Monza, McLaren, Pimax Dream Air), 2026-10-23, recording 23-14-57 at
+# Replay of race D, a real LMU session (Pimax Dream Air), from its recording at
 # 18:25-18:37: a slow corner (43 km/h, 1st gear, cars just ahead) at a steady 90 fps, with one late
 # arrival at 18:31.6 (a two-slot step, then the slot lead ~6 ms high for a few frames) and no queue:
 # every frame on time (lag 0, confirmed by the recording's cockpit motion). The timing gate opened on it,

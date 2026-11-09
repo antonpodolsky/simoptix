@@ -1,4 +1,4 @@
-# Replay of a real LMU session (Monza, Porsche, Pimax Dream Air), 2026-10-22, recording 14-26-10 at
+# Replay of session C, a real LMU session (Pimax Dream Air), from its recording at
 # 1:52-2:04: driving at a steady 90 fps, with one short hiccup at 1:57.0 (three arrivals ~7 ms late,
 # the slot lead off by 3-5 ms for three frames) and no queue: every frame on time (lag 0, confirmed
 # by the recording). The gate's two-drops rule opened on it, and the matcher re-timed 75 on-time
