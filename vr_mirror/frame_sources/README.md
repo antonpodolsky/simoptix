@@ -18,6 +18,6 @@ A frame source delivers the game's frames and head poses to VR Mirror. VR Mirror
 | Folder | What |
 |---|---|
 | `pimax\` | Pimax's client mirror: a half-size copy of the game's left eye, with a signal for every new frame. A PVR session of its own reads it, together with the head poses and the pose Pimax predicted for each display slot. The OBS plugin (SimOptix: Pimax Mirror) and the mirror app run it. Its README says what it does |
-| `openxr\` | An API layer that loads only into LMU and copies the game's full-size left eye with the pose each frame was drawn with and the moment it was drawn for. The copy happens after the frame has gone to the headset and only while VR Mirror reads. Also the reader that hands those frames to the OBS plugin (SimOptix: OpenXR Mirror) and the mirror app. Unsigned, the layer works only in LMU started without Easy Anti-Cheat. Its README says what it does and where it stands |
+| `openxr\` | An API layer that loads only into LMU and copies the game's full-size left eye with the pose each frame was drawn with and the moment it was drawn for. The copy happens after the frame has gone to the headset and only while VR Mirror reads. Also the reader that hands those frames to the OBS plugin (SimOptix: OpenXR Mirror) and the mirror app. Unsigned, the layer works only in LMU started without Easy Anti-Cheat. Its README says what it does |
 
 Only the API layer goes into the game. OpenXR's own mechanism for API layers loads it.
