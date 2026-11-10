@@ -29,7 +29,7 @@ sessions, and recordings made there were successful. `uninstall.bat` removes the
 - **The reader** (`OpenXrSource`) runs in VR Mirror, outside the game. It opens what the layer shares
   and hands the frames to the OBS plugin and the mirror app, like the Pimax source does.
 
-## Where it stands
+## Easy Anti-Cheat
 
 Unsigned, the layer works in LMU started without Easy Anti-Cheat, which means offline and with online
 play disabled. There, the version that only watched the game loaded and worked. It saw the game's two
