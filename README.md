@@ -13,9 +13,10 @@ view, and Overlays adds a G-meter source. Both work with Le Mans Ultimate (LMU) 
     - It is the full size the game draws.
     - It needs an API layer in the game, which is experimental and works offline only (below).
 - **Stabilization** is set by the source's Smoothing setting:
-  - **Off:** the headset's view as it is, with no delay.
-  - **Instant:** no delay, for live streams.
-  - **Look-ahead:** half a second behind the game, for recording. It is the default.
+  - **Off:** raw headset view.
+  - **Instant:** prioritizes latency (no delay), best for live streams.
+  - **Look-ahead:** prioritizes smoothness over latency (runs half a second behind the game), best for
+    recording. It is the default.
   - OBS's audio, the G-meter and race auto-record follow the delay, so they stay in sync with the view.
 - **Race auto-record** makes OBS record each LMU race by itself.
   - It records from the start lights to 5 s after the car stops past the finish.
