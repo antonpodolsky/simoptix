@@ -8,8 +8,9 @@ view, and Overlays adds a G-meter source. Both work with Le Mans Ultimate (LMU) 
 
 - **SimOptix: VR Mirror** adds two OBS sources with the stabilized view:
   - **SimOptix: Pimax Mirror** takes Pimax Play's copy of the left eye.
-    - It is half the size the game draws, and grows with Render Quality.
-  - **SimOptix: OpenXR Mirror** takes the game's own left eye at full size.
+    - It is half the size the game draws.
+  - **SimOptix: OpenXR Mirror** takes the game's own left eye.
+    - It is the full size the game draws.
     - It needs an API layer in the game, which is experimental and works offline only (below).
 - **Stabilization** is set by the source's Smoothing setting:
   - **Off:** the headset's view as it is, with no delay.
