@@ -166,18 +166,21 @@ assumes.
     - Change all of them in the same commit.
 11. **What holds for one headset or one game goes in one place.** The size of the eye image, the
     canvases that are native and their zoom differ by headset, Render Quality and game. So do the
-    field of view, the room at a zoom, and how a game behaves (its sound's delay, when it picks its
-    render size). The root README's "Headsets and games" lists the headsets and games SimOptix works
-    with, and these numbers for each measured headset and game.
+    field of view, the room at a zoom, the refresh rate the user sets for the headset, and how a game
+    behaves (its sound's delay, when it picks its render size).
+    - The root README's "Headsets and games" holds them in short tables: the games, the headsets, and
+      for each measured headset its eye image sizes and suggested canvases. Each headset and game is a
+      row, never a section of its own. The tables say what was measured, and nothing more.
     - Everywhere else, describe the sources in words that hold for every headset and every game ("a
       half-size copy of the left eye", "the left eye at full size", "the game queues up to two
-      frames"), and point to that section where the reader needs the numbers.
+      frames", "the headset's refresh rate"), and point to that section where the reader needs the
+      numbers.
     - A technical passage that needs such a number or behaviour, such as a diagnostics section or a
       findings file, names the headset, its Render Quality and the game with it ("On a Pimax Dream
       Air in LMU, a copy takes 84.8 MB", "LMU's sound trails by about 120 ms").
     - What only one game has stays named for that game: LMU's telemetry, race auto-record, and the
       API layer, which loads only in LMU.
-    - A new headset or game gets its rows in that section.
+    - A new headset or game gets its rows in those tables.
 
 ## Formatting
 
@@ -249,6 +252,7 @@ The dev skill's files are read by people and agents in the middle of work. They 
 | Pimax Mirror takes the game's view from Pimax's software | Loses the fact that matters: the size | Pimax Mirror takes the half-size copy of the left eye that Pimax Play makes |
 | OpenXR Mirror shows the left eye the game draws, 5084×4168 in LMU | One headset's number, in a description of every headset (rule 11) | OpenXR Mirror shows the left eye the game draws, at full size |
 | Raise Render Quality: LMU draws 1.56× the pixels at 1.25 | One game, in advice for every game (rule 11) | Raise Render Quality: the game draws 1.56× the pixels at 1.25 |
+| Record at 90 fps, the game's own rate | The rate is the headset's, which the user sets (rule 11) | Set OBS's frame rate to the headset's refresh rate |
 | Depends on: plain data | Replaced the stage's "Must not know" rule, which the dev skill asks for | **Must not know:** PVR calls, threads, the frame's image, or anything later in the pipeline |
 | Two sources, the same but for where their picture comes from | Confusing | Two sources show the same view. They differ in where the game's image comes from |
 | Both read the game's telemetry through one reader for the whole of OBS | Internal design in the root README | The G-meter and race auto-record read the same game data |

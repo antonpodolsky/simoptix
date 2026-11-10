@@ -33,64 +33,29 @@ SimOptix is early software. There are no ready-made downloads, so you build it f
 
 ## Headsets and games
 
-**Games:**
-
 | Game | VR Mirror | G-meter and race auto-record |
 |---|---|---|
 | LMU | Measured, with both sources | Read LMU's telemetry |
-| Other VR games | Pimax Mirror reads only Pimax Play, so it should work. Not tried. OpenXR Mirror's API layer loads only in LMU | The G-meter's demo lap plays. They get no live values from other games |
-
-**Headsets:**
+| Other VR games | Pimax Mirror should work, not tried. OpenXR Mirror's API layer loads only in LMU | The G-meter's demo lap only |
 
 | Headset | Pimax Mirror | OpenXR Mirror |
 |---|---|---|
-| Pimax Dream Air | Measured | Measured, with Pimax's OpenXR runtime |
-| Other Pimax headsets | Works through Pimax Play. Not measured | Should work. Not tried |
-| Other OpenXR headsets | Needs a Pimax headset and Pimax Play | Uses no Pimax software, so it should work. Not tried |
+| Pimax Dream Air | Measured | Measured |
+| Other Pimax headsets | Works through Pimax Play, not measured | Should work, not tried |
+| Other OpenXR headsets | Needs a Pimax headset | Should work, not tried |
 
-### Pimax Dream Air in LMU
+To record at the source's native resolution, set OBS's canvas and output to the suggested size
+(Settings → Video), and its frame rate to the headset's refresh rate. Each canvas is native up to the
+zoom given. At a higher zoom the image is enlarged, and the video gets softer.
 
-The left eye image each source gets, measured:
+| Headset | Source | Render Quality | Left eye image | Suggested canvas | Native up to zoom |
+|---|---|---|---|---|---|
+| Pimax Dream Air | Pimax Mirror | 1.0 | 2508×2084 | 1920×1080 | 1.31 |
+| Pimax Dream Air | Pimax Mirror | 1.25 | 3134×2604 | 2560×1440 | 1.22 |
+| Pimax Dream Air | OpenXR Mirror | 1.0 | 5084×4168 | 3840×2160 | 1.32 |
 
-| Source | Render Quality | Left eye image |
-|---|---|---|
-| Pimax Mirror | 1.0 | 2508×2084 |
-| Pimax Mirror | 1.25 | 3134×2604 |
-| OpenXR Mirror | 1.0 | 5084×4168 |
-
-For the sharpest video, record at the source's native resolution: one canvas pixel per pixel of the
-eye image. Upscale once, at the end, if at all. Set the canvas and the output to the same size in OBS
-(Settings → Video, Base (Canvas) Resolution and Output (Scaled) Resolution). Set the frame rate to 90
-fps, the game's own (Integer FPS Value).
-
-The zoom in each row is the highest at which that canvas is native. Up to that zoom, the eye image has
-at least one pixel for each canvas pixel, and is shrunk to the canvas. Above it, the image is enlarged
-to fill the canvas, so the video isn't native and gets softer. Zoom is a setting of both sources, 1.25
-by default. A higher zoom gives the stabilization more room to turn the view.
-
-| Source | Render Quality | Canvas | Highest native zoom | Stabilization room at that zoom (side to side) |
-|---|---|---|---|---|
-| Pimax Mirror | 1.0 | **1920×1080** | 1.31 | about 7.7° each way |
-| Pimax Mirror | 1.0 | 1660×930, softer once upscaled | 1.5 | about 11.5° each way |
-| Pimax Mirror | 1.25 | 1920×1080 | 1.63 | about 13.8° each way |
-| Pimax Mirror | 1.25 | 2400×1350 | 1.31 | about 7.7° each way |
-| Pimax Mirror | 1.25 | **2560×1440** | 1.22 | about 5.7° each way |
-| OpenXR Mirror | 1.0 | 2560×1440 | 1.98 | about 18.9° each way |
-| OpenXR Mirror | 1.0 | **3840×2160** | 1.32 | about 7.9° each way |
-
-The canvases in bold are the suggested ones. At the default zoom 1.25, the two at Render Quality 1.0
-are native. The 2560×1440 canvas at Render Quality 1.25 is native only up to zoom 1.22, so at 1.25 the
-image is enlarged by about 2.5%.
-- **Pimax Mirror at Render Quality 1.0** can't fill 1440p or 4K natively. Even zoom 1.0, with no room
-  at all, gives only about 2480×1400 of the eye image.
-- **Render Quality 1.25** costs the game 1.56× the pixels. Restart LMU after changing Render Quality,
-  because it picks its render size at start.
-- **OpenXR Mirror on a 4K canvas** with Look-ahead keeps up to about 4.7 GB of the eye images in
-  video memory.
-
-The eye image sizes were measured. The zooms and the room are worked out from them and from the
-headset's field of view. `vr_mirror\obs_plugin\README.md` ("Recording at the source's native
-resolution") explains how each source keeps the eye image.
+The image sizes were measured in LMU. `vr_mirror\obs_plugin\README.md` ("Recording at the source's
+native resolution") has more canvases and zooms.
 
 ## SimOptix and Easy Anti-Cheat
 

@@ -22,7 +22,7 @@ The two sources show the same view. They differ in where the game's image comes 
 | client mirror | A feature of the Pimax runtime. It gives other programs a half-size copy of the left eye image the game draws, and a signal for each new frame |
 | game eye | The eye image a source works from. The Pimax source's is the client mirror's half-size copy of the left eye. The OpenXR source's is the left eye at full size |
 | output delay | How far the view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden |
-| display slot | One of the regular moments, 90 per second, at which the headset shows a new image. The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
+| display slot | One of the regular moments at which the headset shows a new image, one per refresh (90 per second at 90 Hz). The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
 | game behind | The game's GPU has fallen behind and queues up to two frames. Each arrives one or two display slots after the slot it was drawn for |
 | slot check | How the Pimax source finds the slot a late frame was really drawn for: it compares small thumbnails of consecutive frames |
 | cockpit correction | A refinement of the slot check. It measures how the fixed cockpit moved between two frames, and corrects the pose by what the head poses don't explain |
@@ -80,10 +80,10 @@ its number (`0.1.0`). Any other build adds the commits since that release and th
 
 **SimOptix: Pimax Mirror** shows the Pimax game eye, a half-size copy of the left eye the game
 renders. It grows with Render Quality ("Recording at the source's native resolution", below). It
-arrives with every game frame at 90 fps and costs almost
-nothing (`vr_mirror\frame_sources\pimax\README.md`). The source keeps the image at its own size. Each
-frame's pose is Pimax's prediction for the slot the frame arrived for, and the slot check finds the
-slot a late frame was really drawn for ("When the game falls behind", below).
+arrives with every game frame and costs almost nothing (`vr_mirror\frame_sources\pimax\README.md`).
+The source keeps the image at its own size. Each frame's pose is Pimax's prediction for the slot the
+frame arrived for, and the slot check finds the slot a late frame was really drawn for ("When the game
+falls behind", below).
 
 **SimOptix: OpenXR Mirror** shows the left eye the game itself draws, at full size. The layer
 copies it after each frame has gone to the headset, and the copy takes about 0.2 ms of the game's
@@ -220,14 +220,29 @@ frontend on the UI thread.
 ## Recording at the source's native resolution
 
 Record at the source's **native** resolution, one recorded pixel per source pixel, and upscale once,
-at the end. Every scaling step in between softens the image. Record at 90 fps, the game's own rate. The
-source then shows every game frame exactly once, so motion is even.
+at the end. Every scaling step in between softens the image. Set OBS's frame rate to the headset's
+refresh rate, which you choose in the headset's software, such as Pimax Play. While the game keeps up,
+it draws one frame per refresh, so the source shows every game frame exactly once and motion is even.
 
 The canvas that is native depends on the headset, its Render Quality and the zoom. The root
-`README.md` ("Headsets and games") lists each measured headset's eye image sizes and the canvases that
-are native from them, with their zoom and stabilization room. On a Pimax Dream Air in LMU, the Pimax
-game eye has about 1059 source pixels per unit of view tangent at Render Quality 1.0 and 1323 at 1.25.
-The OpenXR source's image has about 2115 at 1.0.
+`README.md` ("Headsets and games") suggests a canvas for each measured headset. On a Pimax Dream Air
+in LMU, the Pimax game eye has about 1059 source pixels per unit of view tangent at Render Quality 1.0
+and 1323 at 1.25. The OpenXR source's image has about 2115 at 1.0. So a 16:9 canvas there is native up
+to these zooms:
+
+| Source | Render Quality | Canvas | Native up to zoom | Stabilization room at that zoom (side to side) |
+|---|---|---|---|---|
+| Pimax Mirror | 1.0 | 1920x1080 | 1.31 | about 7.7° each way |
+| Pimax Mirror | 1.0 | 1660x930 (soft once upscaled) | 1.5 | about 11.5° each way |
+| Pimax Mirror | 1.25 | 1920x1080 | 1.63 | about 13.8° each way |
+| Pimax Mirror | 1.25 | 2400x1350 | 1.31 | about 7.7° each way |
+| Pimax Mirror | 1.25 | 2560x1440 | 1.22 | about 5.7° each way |
+| OpenXR Mirror | 1.0 | 2560x1440 | 1.98 | about 18.9° each way |
+| OpenXR Mirror | 1.0 | 3840x2160 | 1.32 | about 7.9° each way |
+
+The zooms and the room are worked out from the measured image sizes and the headset's field of view.
+At Render Quality 1.0, 1440p and 4K can't be native from the Pimax game eye. Even zoom 1.0, with no
+room at all, gives only about 2480x1400 of source.
 
 **The OpenXR source** keeps each frame's image at the game's own size when the canvas shows it at 83%
 of that size or more. Otherwise it keeps the image at the size the canvas shows it 1:1. Each
@@ -246,8 +261,8 @@ straight from the game's.
 **For more detail from the Pimax game eye, raise Render Quality in Pimax Play.** The game eye is always
 half the size of the eye image Pimax asks the game to draw, with no cap. The price is the game's: it
 draws 1.56× the pixels at 1.25. Restart the game after changing Render Quality if it picks its render
-size at start, as LMU does. The Pimax runtime has no size, crop or field-of-view option
-for its mirrors, so Render Quality is the only way to a larger game eye.
+size at start, as LMU does. The Pimax runtime has no size, crop or field-of-view option for its
+mirrors, so Render Quality is the only way to a larger game eye.
 
 ## Diagnostics
 
@@ -255,8 +270,8 @@ for its mirrors, so Render Quality is the only way to a larger game eye.
 
 Every 10 s while a source is shown, also while no game runs, the OBS log (Help → Log Files) shows:
 - how many output ticks showed a new game frame, a repeat, or held the last image
-- the game's frame rate over the same 10 s. At a steady 90 fps the repeats match the frames the game
-  never rendered.
+- the game's frame rate over the same 10 s. When OBS's frame rate is the headset's refresh rate, the
+  repeats match the frames the game never rendered.
 - the footprint ("footprint: ..."):
   - how much CPU the source's own threads use, as a percentage of one core, and how often each wakes
     up. They are the poll thread, which watches the frame signal and samples head poses, and the copy
@@ -350,8 +365,8 @@ where 1, the slot check alone, is the default.
   poses explain.
   - From frame to frame the image decides, and in the long run the head poses do. The correction is
     pulled back towards them over 0.3 s, so it can't drift.
-  - It fades in and out over 0.3 s, and goes after half a second of a steady 90 fps. At a steady 90 fps
-    it does nothing extra.
+  - It fades in and out over 0.3 s, and goes after half a second of the game keeping up with the
+    headset. While the game keeps up, it does nothing extra.
   - Where the cockpit is too plain to measure, the frame keeps the slot check's pose
     (`vr_mirror\core\pipeline\2_drawn_pose\README.md`, "The cockpit correction").
   - Every 10 s the log says how many frames it corrected, how many it measured from the image, how

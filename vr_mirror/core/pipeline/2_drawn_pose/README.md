@@ -104,11 +104,12 @@ plugin draws frames after their images were read, so this hardly ever applies th
 
 ## The cockpit correction (`CockpitDrawnPose`)
 
-**Why.** The slot check chooses between whole slots from 64×32 thumbnails. Below 90 fps it chooses
-wrong often enough to make the view jump, and every wrong slot stays. The cockpit is fixed in the
-headset's tracking space (a sim rig). So between two frames it moves only as the poses they are shown
-with say. Whatever it moves beyond that is the frame's pose error. The correction measures that error
-as a small rotation (yaw, pitch and roll), not as a choice of slot.
+**Why.** The slot check chooses between whole slots from 64×32 thumbnails. When the game falls below
+the headset's refresh rate, it chooses wrong often enough to make the view jump, and every wrong slot
+stays. The cockpit is fixed in the headset's tracking space (a sim rig). So between two frames it
+moves only as the poses they are shown with say. Whatever it moves beyond that is the frame's pose
+error. The correction measures that error as a small rotation (yaw, pitch and roll), not as a choice
+of slot.
 
 **How, per frame:**
 
@@ -140,9 +141,10 @@ as a small rotation (yaw, pitch and roll), not as a choice of slot.
    - A frame it can't measure keeps the last correction, pulled back.
 
 The correction is applied after the slot's predicted pose, inside `PoseOf`. A corrected frame keeps
-the slot it was corrected against, not the slot check's later hindsight. At a steady 90 fps it makes
-no patches and corrects nothing. The correction is then the identity, which `PredictedPose` leaves out
-entirely. With the default setting, `stage_replay --golden` is byte for byte main's.
+the slot it was corrected against, not the slot check's later hindsight. While the game keeps up with
+the headset, it makes no patches and corrects nothing. The correction is then the identity, which
+`PredictedPose` leaves out entirely. With the default setting, `stage_replay --golden` is byte for
+byte main's.
 
 **Cost:** 0.36 ms of the copy thread per frame while it measures (20 patch pairs), plus 40 small tiles
 on the GPU from the frame already copied. It costs nothing while frames arrive regularly. The OBS
