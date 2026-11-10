@@ -95,8 +95,7 @@ To run:
 - 64-bit Windows (developed on Windows 11)
 - OBS Studio 32 (built against 32.2.2)
 - For Pimax Mirror: a Pimax headset with Pimax Play running
-- For OpenXR Mirror: the API layer installed. Unsigned, it needs LMU started without Easy Anti-Cheat
-- For live game data (the G-meter's values and race auto-record): LMU
+- For OpenXR Mirror: the API layer installed. If unsigned, LMU needs to be started without Easy Anti-Cheat (with a `+XR` flag).
 
 To build:
 - Visual Studio 2019 or later, or its Build Tools, with the C++ tools. Only 2019 has been tried.
