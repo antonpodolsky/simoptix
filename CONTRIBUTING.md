@@ -34,7 +34,7 @@ project settings set `context.fileName` to `AGENTS.md`.
   way ("Sign-off", below). Every new source file starts with a copyright line and the licence tag, as
   the existing ones do. Yours carries the year and your name: `Copyright (C) <year> <your name>` and
   `SPDX-License-Identifier: GPL-2.0-or-later`.
-- **Never touch the game.** LMU runs Easy Anti-Cheat. Don't inject code, hook, put DLLs in the game
+- **The game is accessed only through official interfaces.** LMU runs Easy Anti-Cheat. Don't inject code, hook, put DLLs in the game
   folder, or read the game's memory. Use only official interfaces:
   - Pimax's client interface (PVR)
   - LMU's shared memory
@@ -95,8 +95,8 @@ they share checks that they match.
 
 ## Test
 
-There are no unit tests, and none are wanted. The automated tests are the end-to-end suite in
-`vr_mirror\e2e\` (`vr_mirror\e2e\README.md` says what each scenario checks). It runs the real mirror
+SimOptix is tested by the end-to-end suite in `vr_mirror\e2e\` rather than by unit tests
+(`vr_mirror\e2e\README.md` says what each scenario checks). It runs the real mirror
 app against the fake runtime, which plays synthetic head motion or a replay. It captures the window the
 way OBS does and measures what a viewer would see.
 
