@@ -59,11 +59,12 @@ eye image. Upscale once, at the end, if at all. Set the canvas and the output to
 (Settings → Video, Base (Canvas) Resolution and Output (Scaled) Resolution). Set the frame rate to 90
 fps, the game's own (Integer FPS Value).
 
-Each canvas below is native at the zoom given. At a lower zoom the eye image is shrunk to the canvas,
-which stays sharp. At a higher zoom it is enlarged, and the video gets softer. Zoom is a setting of
-both sources, 1.25 by default. A higher zoom gives the stabilization more room to turn the view.
+The zoom in each row is the highest at which that canvas is native. Up to that zoom, the eye image has
+at least one pixel for each canvas pixel, and is shrunk to the canvas. Above it, the image is enlarged
+to fill the canvas, so the video isn't native and gets softer. Zoom is a setting of both sources, 1.25
+by default. A higher zoom gives the stabilization more room to turn the view.
 
-| Source | Render Quality | Canvas | Native at zoom | Stabilization room (side to side) |
+| Source | Render Quality | Canvas | Highest native zoom | Stabilization room at that zoom (side to side) |
 |---|---|---|---|---|
 | Pimax Mirror | 1.0 | **1920×1080** | 1.31 | about 7.7° each way |
 | Pimax Mirror | 1.0 | 1660×930, softer once upscaled | 1.5 | about 11.5° each way |
@@ -73,7 +74,9 @@ both sources, 1.25 by default. A higher zoom gives the stabilization more room t
 | OpenXR Mirror | 1.0 | 2560×1440 | 1.98 | about 18.9° each way |
 | OpenXR Mirror | 1.0 | **3840×2160** | 1.32 | about 7.9° each way |
 
-The canvases in bold are the suggested ones. Each is native or close to it at the default zoom.
+The canvases in bold are the suggested ones. At the default zoom 1.25, the two at Render Quality 1.0
+are native. The 2560×1440 canvas at Render Quality 1.25 is native only up to zoom 1.22, so at 1.25 the
+image is enlarged by about 2.5%.
 - **Pimax Mirror at Render Quality 1.0** can't fill 1440p or 4K natively. Even zoom 1.0, with no room
   at all, gives only about 2480×1400 of the eye image.
 - **Render Quality 1.25** costs the game 1.56× the pixels. Restart LMU after changing Render Quality,
