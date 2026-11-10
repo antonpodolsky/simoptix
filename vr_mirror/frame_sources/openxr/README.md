@@ -34,13 +34,13 @@ layer.
 
 Unsigned, the layer works in LMU started without Easy Anti-Cheat, which means offline and with online
 play disabled. There, the version that only watched the game loaded and worked. It saw the game's two
-image buffers, one per eye, and its 90 frames a second, and the game kept 90 fps.
+image buffers, one per eye, and every frame the game drew, and the game kept its frame rate.
 
 In LMU started the usual way, Easy Anti-Cheat decides by the DLL's signature:
 - Unsigned, the DLL is refused as an "untrusted system file".
 - Signed with a certificate Windows doesn't trust, the DLL still isn't loaded.
-- Signed with a code signing certificate Windows trusts, the layer loads and hands VR Mirror 90
-  frames a second, and online play stays enabled. It also works in online sessions, and recordings
+- Signed with a code signing certificate Windows trusts, the layer loads and hands VR Mirror
+  every frame the game draws, and online play stays enabled. It also works in online sessions, and recordings
   made there were successful. In these starts the layer wrote no log of its own.
 
 `build.bat` builds the layer unsigned. A signed layer is the DLL in `bin\` signed with your own
