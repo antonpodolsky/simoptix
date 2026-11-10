@@ -78,7 +78,7 @@ interfaces.
   source is shown in OBS. It passes every OpenXR call on unchanged, except that it asks the runtime for
   one time-conversion extension. Its README has the details (`vr_mirror\frame_sources\openxr\README.md`).
 
-**Don't install the API layer on a PC used for online racing.**
+**The unsigned API layer conflicts with Easy Anti-Cheat.**
 - **Unsigned,** the layer is refused by Easy Anti-Cheat. With it installed, LMU started the usual way
   showed Easy Anti-Cheat's "Untrusted system file" warning, and online play was disabled. The
   unsigned layer works in LMU started without Easy Anti-Cheat, which means offline.
