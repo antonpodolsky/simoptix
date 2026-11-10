@@ -164,6 +164,16 @@ assumes.
     - When one variation's doc states such a fact, the others' docs state it too, in the matching
       place (the Install section of each plugin README, say).
     - Change all of them in the same commit.
+11. **Numbers of one headset go in one place.** The size of the eye image, the canvases that are
+    native and their zoom differ by headset and Render Quality. The root README's "Headsets and games"
+    lists the headsets and games SimOptix works with, and these numbers for each measured headset.
+    - Everywhere else, describe the sources in words that hold for every headset ("a half-size copy of
+      the left eye", "the left eye at full size"), and point to that section where the reader needs
+      the numbers.
+    - A technical passage that needs such a number, such as a diagnostics section or a findings file,
+      names the headset and its Render Quality with it ("On a Pimax Dream Air in LMU, a copy takes
+      84.8 MB").
+    - A new headset or game gets its rows in that section.
 
 ## Formatting
 
@@ -232,7 +242,8 @@ The dev skill's files are read by people and agents in the middle of work. They 
 | A terms table with "LMU: Le Mans Ultimate" and "OpenXR: the open standard that a VR game uses to talk to the headset's software" | Defines what every VR sim racer knows | (no row) |
 | OpenXR calls this kind of add-on an "API layer": it sits between the game and the runtime | Explains what the reader knows | An API layer that OpenXR loads into LMU |
 | Then Gauss-Newton fitting, which refines the move step by step, runs on both patches | Explains a standard method to a contributor | Then a Gauss-Newton fit runs on both patches |
-| Pimax Mirror takes the game's view from Pimax's software | Loses the fact that matters: the size | Pimax Mirror takes the half-size copy of the left eye that Pimax Play makes (2508×2084 in LMU at Render Quality 1.0) |
+| Pimax Mirror takes the game's view from Pimax's software | Loses the fact that matters: the size | Pimax Mirror takes the half-size copy of the left eye that Pimax Play makes |
+| OpenXR Mirror shows the left eye the game draws, 5084×4168 in LMU | One headset's number, in a description of every headset (rule 11) | OpenXR Mirror shows the left eye the game draws, at full size |
 | Depends on: plain data | Replaced the stage's "Must not know" rule, which the dev skill asks for | **Must not know:** PVR calls, threads, the frame's image, or anything later in the pipeline |
 | Two sources, the same but for where their picture comes from | Confusing | Two sources show the same view. They differ in where the game's image comes from |
 | Both read the game's telemetry through one reader for the whole of OBS | Internal design in the root README | The G-meter and race auto-record read the same game data |
@@ -276,6 +287,8 @@ them)". A clean run is not the end. Read the rest yourself.
 - [ ] A new term is in `reference\terms.md` and in each README's table that uses it
 - [ ] A fact shared by several variations (both plugins, both sources, the kinds of file) reads the
       same for each, and every variation's doc states it
+- [ ] Eye image sizes, native canvases and their zoom appear only in the root README's "Headsets and
+      games", or name their headset and Render Quality (rule 11)
 - [ ] The matching README, `CONTRIBUTING.md` and the dev skill changed together (dev skill, "Docs move
       with the code")
 - [ ] A change users notice has one to three lines in its pull request's Changelog section and one

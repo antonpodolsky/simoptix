@@ -79,13 +79,13 @@ its number (`0.1.0`). Any other build adds the commits since that release and th
 ## What the sources show
 
 **SimOptix: Pimax Mirror** shows the Pimax game eye, a half-size copy of the left eye the game
-renders. It is 2508×2084 in LMU at Render Quality 1.0 and grows with Render Quality ("Recording at the
-source's native resolution", below). It arrives with every game frame at 90 fps and costs almost
+renders. It grows with Render Quality ("Recording at the source's native resolution", below). It
+arrives with every game frame at 90 fps and costs almost
 nothing (`vr_mirror\frame_sources\pimax\README.md`). The source keeps the image at its own size. Each
 frame's pose is Pimax's prediction for the slot the frame arrived for, and the slot check finds the
 slot a late frame was really drawn for ("When the game falls behind", below).
 
-**SimOptix: OpenXR Mirror** shows the left eye the game itself draws, 5084×4168 in LMU. The layer
+**SimOptix: OpenXR Mirror** shows the left eye the game itself draws, at full size. The layer
 copies it after each frame has gone to the headset, and the copy takes about 0.2 ms of the game's
 graphics card (`vr_mirror\frame_sources\openxr\README.md`). The source keeps the image at the size the
 canvas shows it (below). Each frame says the moment it was drawn for and the pose it was drawn with, so
@@ -222,46 +222,30 @@ Record at the source's **native** resolution, one recorded pixel per source pixe
 at the end. Every scaling step in between softens the image. Record at 90 fps, the game's own rate. The
 source then shows every game frame exactly once, so motion is even.
 
+The canvas that is native depends on the headset, its Render Quality and the zoom. The root
+`README.md` ("Headsets and games") lists each measured headset's eye image sizes and the canvases that
+are native from them, with their zoom and stabilization room. On a Pimax Dream Air in LMU, the Pimax
+game eye has about 1059 source pixels per unit of view tangent at Render Quality 1.0 and 1323 at 1.25.
+The OpenXR source's image has about 2115 at 1.0.
+
 **The OpenXR source** keeps each frame's image at the game's own size when the canvas shows it at 83%
 of that size or more. Otherwise it keeps the image at the size the canvas shows it 1:1. Each
 resampling softens the finest detail, so near the game's size the view resamples the image once,
 straight from the game's.
-- LMU's left eye is 5084×4168 at Render Quality 1.0, about 2115 source pixels per unit of view tangent.
-  That is enough for 1440p at any zoom up to 1.98, and for 4K up to 1.32.
-- A 4K canvas at zoom 1.25 shows the game's image at 95% of its size, so the source keeps it whole. A
-  1440p canvas shows it at 63%, so the source stores it at that size.
 - All stored images together may take at most 4.7 GB of video memory. Look-ahead stores 52 to 55
-  images, which fit at the game's own size. So a 3840x2160 canvas is native up to zoom 1.32, from the
-  game's image as it is.
-- A higher Render Quality makes the game's image larger than 55 of them fit in 4.7 GB. At 1.25 each is
-  then stored at about 80% of its size.
+  images.
+- On a Pimax Dream Air in LMU at Render Quality 1.0, a 4K canvas at zoom 1.25 shows the game's image
+  at 95% of its size, so the source keeps it whole. 55 images fit in 4.7 GB at that size. A 1440p
+  canvas shows it at 63%, so the source stores it at that size.
+- A higher Render Quality makes the game's image larger than 55 of them fit in 4.7 GB. On the Dream
+  Air at 1.25, each is then stored at about 80% of its size.
 - The OBS log showed "frame ring: 5084x4168" with Look-ahead on a 4K canvas at zoom 1.25. The other
   sizes are worked out, not measured.
 
-**The Pimax game eye** (LMU) has about 1059 source pixels per unit of view tangent. A 16:9 recording is
-native at:
-
-| Recording | Zoom | Stabilization room (side to side) |
-|---|---|---|
-| **1920x1080** | **1.31** | about 7.7° each way |
-| 1660x930 (soft) | 1.5 | about 11.5° each way |
-
-At Pimax Play's default Render Quality 1.0, 1440p and 4K can't be native from the Pimax game eye. Even
-zoom 1.0, with no room at all, gives only about 2480x1400 of source.
-
 **For more detail from the Pimax game eye, raise Render Quality in Pimax Play.** The game eye is always
-half the size of the eye image Pimax asks the game to draw, with no cap. Measured: 2508x2084 at Render
-Quality 1.0, and 3134x2604 at 1.25 (about 1323 source pixels per unit of tangent). At 1.25 a 16:9
-recording is native at:
-
-| Recording | Zoom | Stabilization room (side to side) |
-|---|---|---|
-| 1920x1080 | 1.63 | about 13.8° each way |
-| 2400x1350 | 1.31 | about 7.7° each way |
-| 2560x1440 | 1.22 | about 5.7° each way |
-
-The price is the game's: LMU draws 1.56× the pixels at 1.25. Restart LMU after changing Render Quality,
-because it picks its render size at start. The Pimax runtime has no size, crop or field-of-view option
+half the size of the eye image Pimax asks the game to draw, with no cap. The price is the game's: LMU
+draws 1.56× the pixels at 1.25. Restart LMU after changing Render Quality, because it picks its render
+size at start. The Pimax runtime has no size, crop or field-of-view option
 for its mirrors, so Render Quality is the only way to a larger game eye.
 
 ## Diagnostics
@@ -308,10 +292,11 @@ delay ... ms", about 4–5 ms measured). The frame picker (`vr_mirror\core\pipel
 `FixedDelayPicker`) decides which copy each tick shows, the delay, and the copies needed.
 - The ring starts with 8 copies, because the source allows 40 ms until it has measured that delay. It
   then keeps only the frames inside the delay plus 3, and at least 4.
-- From the OpenXR source each copy is the game's own size, or the size the canvas shows it (above). At
-  the game's own size, 5084x4168, a copy takes 84.8 MB. From the Pimax source each copy is the size of
-  the game eye: 21 MB at Render Quality 1.0 (2508x2084) and 33 MB at 1.25 (3134x2604). So 4 copies
-  take 84 and 130 MB instead of 167 and 261 MB.
+- From the OpenXR source each copy is the game's own size, or the size the canvas shows it (above).
+  From the Pimax source each copy is the size of the game eye. A copy takes 4 bytes per pixel.
+- On a Pimax Dream Air in LMU, an OpenXR copy at the game's own size takes 84.8 MB. A Pimax copy takes
+  21 MB at Render Quality 1.0 and 33 MB at 1.25. So 4 Pimax copies take 84 and 130 MB instead of 167
+  and 261 MB.
 - The log says "frame ring: ... 8 slots, ... MB" when the first frame arrives, and "frame ring: 4
   slots, ... MB" about 2 s later.
 - If a copy is ever too late for its frame, the 10 s stats count it as "held the last image (copy

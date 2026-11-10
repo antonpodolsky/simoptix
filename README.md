@@ -9,11 +9,10 @@ view, and Overlays adds a G-meter source. Both work with Le Mans Ultimate (LMU) 
 - **SimOptix: VR Mirror** adds two OBS sources that show the stabilized view. They differ in where
   the game's image comes from:
   - **SimOptix: Pimax Mirror** takes the copy of the left eye that Pimax Play makes for other
-    programs. It is half the size the game draws, 2508×2084 in LMU at Render Quality 1.0, and grows
-    with Render Quality.
-  - **SimOptix: OpenXR Mirror** takes the game's own left eye at full size, 5084×4168 in LMU, with
-    the exact head pose each frame was drawn with. It needs an API layer in the game, which is
-    experimental and works offline only (below).
+    programs. It is half the size the game draws, and grows with Render Quality.
+  - **SimOptix: OpenXR Mirror** takes the game's own left eye at full size, with the exact head pose
+    each frame was drawn with. It needs an API layer in the game, which is experimental and works
+    offline only (below).
 - **Smoothing** trades delay for calm. Look-ahead runs half a second behind the game, sees where the
   head goes next, and is meant for recording. Instant adds no delay, for live streams. OBS's audio,
   the G-meter and race auto-record follow the delay, so they stay in sync with the view.
@@ -26,16 +25,65 @@ view, and Overlays adds a G-meter source. Both work with Le Mans Ultimate (LMU) 
 
 SimOptix is early software. There are no ready-made downloads, so you build it from source.
 
-- **Headsets:** Pimax, through Pimax Play. Measured on one headset, a Pimax Dream Air. OpenXR Mirror
-  uses no Pimax software, so any OpenXR headset should work with it. It has been tried only with
-  Pimax's runtime.
-- **Games:** LMU. The stabilized view has been measured with LMU, and the G-meter's live values and
-  race auto-record read LMU's telemetry.
 - **OBS:** built against OBS Studio 32.2.2. Other versions haven't been tried.
 - **OpenXR Mirror** and its API layer (`vr_mirror\frame_sources\openxr\`) are experimental. Unsigned,
   the layer works in LMU started without Easy Anti-Cheat. Signed with a code signing certificate
   Windows trusts, it loaded and worked in LMU started with Easy Anti-Cheat, and online play stayed
   enabled. It hasn't been tried in an online session.
+
+## Headsets and games
+
+**Games:** LMU. The stabilized view has been measured with LMU, and the G-meter's live values and race
+auto-record read LMU's telemetry.
+
+**Headsets:**
+
+| Headset | Pimax Mirror | OpenXR Mirror |
+|---|---|---|
+| Pimax Dream Air | Measured | Measured, with Pimax's OpenXR runtime |
+| Other Pimax headsets | Works through Pimax Play. Not measured | Should work. Not tried |
+| Other OpenXR headsets | Needs a Pimax headset and Pimax Play | Uses no Pimax software, so it should work. Not tried |
+
+### Pimax Dream Air
+
+The left eye image each source gets in LMU, measured:
+
+| Source | Render Quality | Left eye image |
+|---|---|---|
+| Pimax Mirror | 1.0 | 2508×2084 |
+| Pimax Mirror | 1.25 | 3134×2604 |
+| OpenXR Mirror | 1.0 | 5084×4168 |
+
+For the sharpest video, record at the source's native resolution: one canvas pixel per pixel of the
+eye image. Upscale once, at the end, if at all. Set the canvas and the output to the same size in OBS
+(Settings → Video, Base (Canvas) Resolution and Output (Scaled) Resolution). Set the frame rate to 90
+fps, the game's own (Integer FPS Value).
+
+Each canvas below is native at the zoom given. At a lower zoom the eye image is shrunk to the canvas,
+which stays sharp. At a higher zoom it is enlarged, and the video gets softer. Zoom is a setting of
+both sources, 1.25 by default. A higher zoom gives the stabilization more room to turn the view.
+
+| Source | Render Quality | Canvas | Native at zoom | Stabilization room (side to side) |
+|---|---|---|---|---|
+| Pimax Mirror | 1.0 | **1920×1080** | 1.31 | about 7.7° each way |
+| Pimax Mirror | 1.0 | 1660×930, softer once upscaled | 1.5 | about 11.5° each way |
+| Pimax Mirror | 1.25 | 1920×1080 | 1.63 | about 13.8° each way |
+| Pimax Mirror | 1.25 | 2400×1350 | 1.31 | about 7.7° each way |
+| Pimax Mirror | 1.25 | **2560×1440** | 1.22 | about 5.7° each way |
+| OpenXR Mirror | 1.0 | 2560×1440 | 1.98 | about 18.9° each way |
+| OpenXR Mirror | 1.0 | **3840×2160** | 1.32 | about 7.9° each way |
+
+The canvases in bold are the suggested ones. Each is native or close to it at the default zoom.
+- **Pimax Mirror at Render Quality 1.0** can't fill 1440p or 4K natively. Even zoom 1.0, with no room
+  at all, gives only about 2480×1400 of the eye image.
+- **Render Quality 1.25** costs the game 1.56× the pixels. Restart LMU after changing Render Quality,
+  because it picks its render size at start.
+- **OpenXR Mirror on a 4K canvas** with Look-ahead keeps up to about 4.7 GB of the eye images in
+  video memory.
+
+The eye image sizes were measured. The zooms and the room are worked out from them and from the
+headset's field of view. `vr_mirror\obs_plugin\README.md` ("Recording at the source's native
+resolution") explains how each source keeps the eye image.
 
 ## SimOptix and Easy Anti-Cheat
 

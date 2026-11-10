@@ -34,8 +34,8 @@ session of its own. It needs Pimax Play.
     frame that slot's prediction. While the game is behind, the slot check judges which slot the frame
     was really drawn for, and the frame gets that slot's prediction
     (`vr_mirror\core\pipeline\2_drawn_pose\README.md`).
-- **It keeps each frame's image at the client mirror's size.** That is 2508×2084 in LMU at Render
-  Quality 1.0, and it grows with Render Quality. The game overwrites the image about a frame later, so a
+- **It keeps each frame's image at the client mirror's size.** That is half the size the game draws,
+  and it grows with Render Quality. The game overwrites the image about a frame later, so a
   host copies each frame as soon as it arrives. The image is sRGB-encoded twice, and the warp decodes
   one encoding.
 - **Log lines** report the display's refresh rate, the client mirror switched on and off, and going

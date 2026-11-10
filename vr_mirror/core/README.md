@@ -10,7 +10,7 @@ counters are in `shared\`, because the Overlays plugin uses them too.
 
 | Term | Meaning |
 |---|---|
-| game eye | The eye image a frame source delivers. The Pimax source's is a half-size copy of the left eye (2508×2084 in LMU at Render Quality 1.0). The OpenXR source's is the left eye at full size (5084×4168 in LMU) |
+| game eye | The eye image a frame source delivers. The Pimax source's is a half-size copy of the left eye. The OpenXR source's is the left eye at full size |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | display slot | One of the regular moments, 90 per second, at which the headset shows a new image. The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
 | frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`) or the OpenXR source (`vr_mirror\frame_sources\openxr\`) |
