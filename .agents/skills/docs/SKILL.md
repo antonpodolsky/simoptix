@@ -26,6 +26,9 @@ It doesn't try to sound good.
   would have to work out what is meant.
 - **Use the reader's own terms.** An OBS plugin adds a **source**. Pimax Play's setting is **Render
   Quality**. Never write around a word the reader uses every day.
+- **Keep a professional tone.** State a rule as what the project does or requires, in a neutral
+  sentence, with its reason. No slogans or blunt commands as a bold lead ("Never touch the game"),
+  and no dismissive asides ("There are no unit tests, and none are wanted").
 - **The rules below serve this one.** If applying a rule makes a sentence vaguer, the rule is being
   misapplied. Avoiding jargon never means avoiding a word the reader knows. A product description never
   means adding how the product behaves.
@@ -241,6 +244,8 @@ The dev skill's files are read by people and agents in the middle of work. They 
 |---|---|---|
 | Two OBS plugins, in one repo. | "Two" and "in one repo" tell the reader nothing | SimOptix adds sources to OBS Studio |
 | Neither needs the other: each builds, installs and runs alone. | States a design decision, and what the code doesn't do | (delete) |
+| **Never touch the game.** | A slogan, not a professional statement of the rule | **The game is accessed only through official interfaces.** |
+| There are no unit tests, and none are wanted. | A dismissive aside | SimOptix is tested by an end-to-end suite rather than by unit tests. |
 | Stabilized VR footage of sim racing for recording and streaming | Reads like an item name | SimOptix is a set of sim racing tools for capturing stabilized VR footage and overlays |
 | It works as plugins for OBS Studio, the free program for recording and streaming video | Explains OBS to people who use it | It works as plugins for OBS Studio |
 | Its Overlays plugin draws a G-meter over the video, in step with it (in the root README's opening) | A detail of how a part behaves, in the opening | The tools are available as OBS Studio plugins: VR Mirror adds sources with the stabilized headset view, and Overlays adds a G-meter source |
@@ -275,6 +280,7 @@ them)". A clean run is not the end. Read the rest yourself.
 
 - [ ] Each changed sentence states its facts in the plainest words: plain verbs, things named, the
       reader's own terms ("State the facts, plainly")
+- [ ] The tone is professional: no slogans, blunt commands as bold leads, or dismissive asides
 - [ ] Only what the maintainer pointed at changed, and their wording is used as given
 - [ ] No semicolons outside code blocks, inline code and legal text (script)
 - [ ] Every relative link and every repo path in backticks resolves (script)

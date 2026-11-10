@@ -63,7 +63,7 @@ for the agents that read those files. Change the rules here, never in those file
 
 ### General
 
-- **Never touch the game, with one exception.** LMU runs Easy Anti-Cheat. Don't inject code, hook,
+- **The game is accessed only through official interfaces.** LMU runs Easy Anti-Cheat. Don't inject code, hook,
   put DLLs in the game folder, or read game memory. Use only official interfaces: Pimax's PVR client
   interface, LMU's shared memory (`LMU_Data`), the OpenVR mirror, Windows capture, and OpenXR's own mechanism
   for API layers, for one layer only: `vr_mirror\frame_sources\openxr\`.
@@ -233,8 +233,8 @@ for the agents that read those files. Change the rules here, never in those file
 
 ### Tests
 
-- **No unit tests.** The automated tests are the end-to-end suite in `vr_mirror\e2e\`. Don't add a
-  unit-test layer.
+- **End-to-end tests rather than unit tests.** The automated tests are the end-to-end suite in
+  `vr_mirror\e2e\`. New tests are scenarios there, not a unit-test layer.
 - **End-to-end (`vr_mirror\e2e\`):** the real, unmodified `simoptix_vr_mirror.exe` runs against the
   fake PVR runtime (`vr_mirror\e2e\fake_pvr`), with its window captured like OBS. The suite covers the
   `vr_mirror\core\` pipeline: frames, smoothing, lag, horizon, black borders.
@@ -697,7 +697,7 @@ its support ships (Rules, "Other games").
 
 Build it, run its check program, sign it, install it and test it with Easy Anti-Cheat as
 `reference\openxr.md` says. Every change to the layer is signed again before it goes into the game,
-because a rebuilt DLL is unsigned (Rules, "Never touch the game"). Sign it with the user's own
+because a rebuilt DLL is unsigned (Rules, "The game is accessed only through official interfaces"). Sign it with the user's own
 signing skill, and install it with `install.ps1`, because `install.bat` builds an unsigned one first.
 Record what each start of the game showed in `findings\openxr.md`.
 
