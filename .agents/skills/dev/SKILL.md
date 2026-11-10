@@ -313,10 +313,14 @@ read, without decoding.
 
 - Other sessions use the main folder, sometimes on another branch. Never switch its branch, and don't
   leave uncommitted changes there.
-- Make a worktree from `main` under `.claude\worktrees\`
-  (`git worktree add -b <name> .claude/worktrees/<name> main`) and work, build and test there. Its
-  build output stays in it. Claude Code makes its own worktrees in that folder, and `.gitignore` leaves
-  it out.
+- **Start from GitHub's `main`, before anything else.** Run `git fetch origin` first. The local `main`
+  can be behind GitHub's, and a branch made from it conflicts with what was merged since.
+- Make a worktree from GitHub's `main` under `.claude\worktrees\`
+  (`git worktree add -b <name> .claude/worktrees/<name> origin/main`) and work, build and test there.
+  Its build output stays in it. Claude Code makes its own worktrees in that folder, and `.gitignore`
+  leaves it out.
+- Before each push, run `git fetch origin` again. If GitHub's `main` has moved, merge it into the
+  branch (`git merge origin/main`), so the pull request has no conflicts.
 - When done, bring `main` up to it as step 7 says. Install the OBS plugins from the worktree with the
   finished code (step 4).
 
