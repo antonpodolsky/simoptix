@@ -11,7 +11,8 @@ view, and Overlays adds a G-meter source. Both currently work with Le Mans Ultim
     - It is half the size the game draws.
   - **SimOptix: OpenXR Mirror** takes the game's own left eye.
     - It is the full size the game draws.
-    - It needs an API layer in the game, which is experimental and works offline only (below).
+    - It needs an API layer in the game, which is experimental.
+    - The layer works with Easy Anti-Cheat only when it is signed (below).
 - **Stabilization** is set by the source's Smoothing setting:
   - **Off:** raw headset view.
   - **Instant:** prioritizes latency (no delay), best for live streams.
