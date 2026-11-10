@@ -6,11 +6,12 @@ description: Dev workflow for SimOptix. The rules for the whole repo and the ord
 # Dev workflow for SimOptix
 
 SimOptix is a set of sim racing tools for capturing stabilized VR footage and overlays. Its
-OBS plugins stabilize the headset view of Le Mans Ultimate, from a Pimax headset or through OpenXR,
-and draw a G-meter over it. `README.md` has the layout of the repo, and each part has its own README
-that describes it. This skill holds the rules for the whole repo (below) and the order to work in. Its
-`reference\` files have the procedures, and its `findings\` files have what was measured and tried per
-part. The terms are in `reference\terms.md`. Read it first if a word is unfamiliar.
+OBS plugins stabilize a VR game's headset view, from a Pimax headset or through OpenXR, and draw a
+G-meter over it. They work with Le Mans Ultimate (LMU). `README.md` has the layout of the repo, and
+each part has its own README that describes it. This skill holds the rules for the whole repo (below)
+and the order to work in. Its `reference\` files have the procedures, and its `findings\` files have
+what was measured and tried per part. The terms are in `reference\terms.md`. Read it first if a word
+is unfamiliar.
 
 The rules apply to the whole repo:
 - `vr_mirror\`: VR Mirror with race auto-record, its frame sources, its core, the mirror app, e2e and

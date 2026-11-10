@@ -6,36 +6,60 @@ view, and Overlays adds a G-meter source. Both work with Le Mans Ultimate (LMU) 
 
 ## What you get
 
-- **SimOptix: VR Mirror** adds two OBS sources that show the stabilized view. They differ in where
-  the game's image comes from:
-  - **SimOptix: Pimax Mirror** takes the copy of the left eye that Pimax Play makes for other
-    programs. It is half the size the game draws, 2508×2084 in LMU at Render Quality 1.0, and grows
-    with Render Quality.
-  - **SimOptix: OpenXR Mirror** takes the game's own left eye at full size, 5084×4168 in LMU, with
-    the exact head pose each frame was drawn with. It needs an API layer in the game, which is
-    experimental and works offline only (below).
-- **Smoothing** trades delay for calm. Look-ahead runs half a second behind the game, sees where the
-  head goes next, and is meant for recording. Instant adds no delay, for live streams. OBS's audio,
-  the G-meter and race auto-record follow the delay, so they stay in sync with the view.
-- **Race auto-record** makes OBS record each LMU race by itself, from the start lights to 5 s after
-  the car stops past the finish.
-- **SimOptix: Overlays** adds the **SimOptix: G-Meter Overlay** source. It also works over a normal
-  capture of a flat-screen game, and plays a demo lap so you can try it without the game.
+- **SimOptix: VR Mirror** adds two OBS sources with the stabilized view:
+  - **SimOptix: Pimax Mirror** takes Pimax Play's copy of the left eye.
+    - It is half the size the game draws.
+  - **SimOptix: OpenXR Mirror** takes the game's own left eye.
+    - It is the full size the game draws.
+    - It needs an API layer in the game, which is experimental and works offline only (below).
+- **Stabilization** is set by the source's Smoothing setting:
+  - **Off:** raw headset view.
+  - **Instant:** prioritizes latency (no delay), best for live streams.
+  - **Look-ahead:** prioritizes smoothness over latency (runs half a second behind the game), best for
+    recording. It is the default.
+  - OBS's audio, the G-meter and race auto-record follow the delay, so they stay in sync with the view.
+- **Race auto-record** makes OBS record each LMU race by itself.
+  - It records from the start lights to 5 s after the car stops past the finish.
+- **SimOptix: Overlays** adds the **SimOptix: G-Meter Overlay** source.
+  - It also works over a normal capture of a flat-screen game.
+  - It plays a demo lap, so you can try it without the game.
 
 ## Status
 
 SimOptix is early software. There are no ready-made downloads, so you build it from source.
 
-- **Headsets:** Pimax, through Pimax Play. Measured on one headset, a Pimax Dream Air. OpenXR Mirror
-  uses no Pimax software, so any OpenXR headset should work with it. It has been tried only with
-  Pimax's runtime.
-- **Games:** LMU. The stabilized view has been measured with LMU, and the G-meter's live values and
-  race auto-record read LMU's telemetry.
 - **OBS:** built against OBS Studio 32.2.2. Other versions haven't been tried.
 - **OpenXR Mirror** and its API layer (`vr_mirror\frame_sources\openxr\`) are experimental. Unsigned,
   the layer works in LMU started without Easy Anti-Cheat. Signed with a code signing certificate
   Windows trusts, it loaded and worked in LMU started with Easy Anti-Cheat, and online play stayed
   enabled. It hasn't been tried in an online session.
+
+## Headsets and games
+
+| Game | VR Mirror | G-meter and race auto-record |
+|---|---|---|
+| LMU | Measured, with both sources | Read LMU's telemetry |
+| Other VR games | Pimax Mirror should work, not tried. OpenXR Mirror's API layer loads only in LMU | The G-meter's demo lap only |
+
+| Headset | Pimax Mirror | OpenXR Mirror |
+|---|---|---|
+| Pimax Dream Air | Measured | Measured |
+| Other Pimax headsets | Works through Pimax Play, not measured | Should work, not tried |
+| Other OpenXR headsets | Needs a Pimax headset | Should work, not tried |
+
+To record at the source's native resolution, set OBS's canvas and output to the suggested size
+(Settings → Video), and its frame rate to the headset's refresh rate. "Max zoom for native" is the
+highest Zoom setting at which the recording stays native. Above it, the image is enlarged, and the
+video gets softer.
+
+| Headset | Source | Render Quality | Left eye image | Suggested canvas | Max zoom for native |
+|---|---|---|---|---|---|
+| Pimax Dream Air | Pimax Mirror | 1.0 | 2508×2084 | 1920×1080 | 1.31 |
+| Pimax Dream Air | Pimax Mirror | 1.25 | 3134×2604 | 2560×1440 | 1.22 |
+| Pimax Dream Air | OpenXR Mirror | 1.0 | 5084×4168 | 3840×2160 | 1.32 |
+
+The image sizes were measured in LMU. `vr_mirror\obs_plugin\README.md` ("Recording at the source's
+native resolution") has more canvases and zooms.
 
 ## SimOptix and Easy Anti-Cheat
 

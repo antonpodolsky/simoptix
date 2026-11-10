@@ -163,6 +163,24 @@ assumes.
     - When one variation's doc states such a fact, the others' docs state it too, in the matching
       place (the Install section of each plugin README, say).
     - Change all of them in the same commit.
+11. **What holds for one headset or one game goes in one place.** The size of the eye image, the
+    canvases that are native and their zoom differ by headset, Render Quality and game. So do the
+    field of view, the room at a zoom, the refresh rate the user sets for the headset, and how a game
+    behaves (its sound's delay, when it picks its render size).
+    - The root README's "Headsets and games" holds them in short tables: the games, the headsets, and
+      for each measured headset its eye image sizes and suggested canvases. Each headset and game is a
+      row, never a section of its own. The tables say what was measured, and nothing more.
+    - Every other README, `CONTRIBUTING.md` and the dev skill's `SKILL.md` describe the sources in
+      words that hold for every headset and every game ("a half-size copy of the left eye", "the left
+      eye at full size", "the game queues up to two frames", "the headset's refresh rate"). They hold
+      no number of one headset or one game, not even one that names its headset ("On a Pimax Dream Air
+      in LMU, ..."). They point to that section where the reader needs the numbers.
+    - The measurements behind those tables, and every other number of one headset or game, go in the
+      findings files (`findings\<part>.md`), which name their conditions.
+    - What only one game has stays named for that game: LMU's telemetry, race auto-record, Easy
+      Anti-Cheat, and the API layer, which loads only in LMU. So does what a test simulates: the e2e
+      fakes copy a measured headset and game.
+    - A new headset or game gets its rows in those tables.
 
 ## Formatting
 
@@ -231,7 +249,11 @@ The dev skill's files are read by people and agents in the middle of work. They 
 | A terms table with "LMU: Le Mans Ultimate" and "OpenXR: the open standard that a VR game uses to talk to the headset's software" | Defines what every VR sim racer knows | (no row) |
 | OpenXR calls this kind of add-on an "API layer": it sits between the game and the runtime | Explains what the reader knows | An API layer that OpenXR loads into LMU |
 | Then Gauss-Newton fitting, which refines the move step by step, runs on both patches | Explains a standard method to a contributor | Then a Gauss-Newton fit runs on both patches |
-| Pimax Mirror takes the game's view from Pimax's software | Loses the fact that matters: the size | Pimax Mirror takes the half-size copy of the left eye that Pimax Play makes (2508×2084 in LMU at Render Quality 1.0) |
+| Pimax Mirror takes the game's view from Pimax's software | Loses the fact that matters: the size | Pimax Mirror takes the half-size copy of the left eye that Pimax Play makes |
+| OpenXR Mirror shows the left eye the game draws, 5084×4168 in LMU | One headset's number, in a description of every headset (rule 11) | OpenXR Mirror shows the left eye the game draws, at full size |
+| Raise Render Quality: LMU draws 1.56× the pixels at 1.25 | One game, in advice for every game (rule 11) | Raise Render Quality: the game draws 1.56× the pixels at 1.25 |
+| Record at 90 fps, the game's own rate | The rate is the headset's, which the user sets (rule 11) | Set OBS's frame rate to the headset's refresh rate |
+| On a Pimax Dream Air in LMU, a copy takes 84.8 MB (in the OBS plugin README) | A labelled number of one headset and game, outside the root tables (rule 11) | A copy takes 4 bytes per pixel. The 84.8 MB goes in the findings |
 | Depends on: plain data | Replaced the stage's "Must not know" rule, which the dev skill asks for | **Must not know:** PVR calls, threads, the frame's image, or anything later in the pipeline |
 | Two sources, the same but for where their picture comes from | Confusing | Two sources show the same view. They differ in where the game's image comes from |
 | Both read the game's telemetry through one reader for the whole of OBS | Internal design in the root README | The G-meter and race auto-record read the same game data |
@@ -275,6 +297,8 @@ them)". A clean run is not the end. Read the rest yourself.
 - [ ] A new term is in `reference\terms.md` and in each README's table that uses it
 - [ ] A fact shared by several variations (both plugins, both sources, the kinds of file) reads the
       same for each, and every variation's doc states it
+- [ ] No README outside the root README's "Headsets and games" holds a number of one headset or one
+      game, labelled or not. Those numbers are in the findings (rule 11)
 - [ ] The matching README, `CONTRIBUTING.md` and the dev skill changed together (dev skill, "Docs move
       with the code")
 - [ ] A change users notice has one to three lines in its pull request's Changelog section and one

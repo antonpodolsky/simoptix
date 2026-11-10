@@ -23,8 +23,8 @@ LMU with Easy Anti-Cheat, and online play stayed enabled. `uninstall.bat` remove
 ## The two halves
 
 - **The layer** is an OpenXR API layer that the OpenXR loader puts into LMU when the game starts. It
-  gives VR Mirror the game's full-size frames, 5084×4168 per eye instead of the Pimax source's
-  2508×2084 at Render Quality 1.0, together with the exact pose each frame was drawn with and the
+  gives VR Mirror the game's full-size frames, where the Pimax source gets a half-size copy, together
+  with the exact pose each frame was drawn with and the
   moment it was drawn for.
 - **The reader** (`OpenXrSource`) runs in VR Mirror, outside the game. It opens what the layer shares
   and hands the frames to the OBS plugin and the mirror app, like the Pimax source does.
@@ -33,7 +33,7 @@ LMU with Easy Anti-Cheat, and online play stayed enabled. `uninstall.bat` remove
 
 Unsigned, the layer works in LMU started without Easy Anti-Cheat, which means offline and with online
 play disabled. There, the version that only watched the game loaded and worked. It saw the game's two
-5084×4168 image buffers and its 90 frames a second, and the game kept 90 fps.
+image buffers, one per eye, and its 90 frames a second, and the game kept 90 fps.
 
 In LMU started the usual way, Easy Anti-Cheat decides by the DLL's signature:
 - Unsigned, the DLL is refused as an "untrusted system file".
@@ -69,9 +69,9 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
   The layer knows a copy is finished by a marker it checks at the next frame without waiting, and
   then tells VR Mirror. If VR Mirror is still reading the texture that is next in turn, the layer
   skips that frame's copy, so the game is not held up.
-- **It copies only while VR Mirror reads.** The three textures take 85 MB each at 5084×4168, which is
-  254 MB of the graphics card's memory. The layer makes them when VR Mirror starts reading and lets
-  them go 10 s after it stopped. With nobody reading, the layer only writes each frame's record.
+- **It copies only while VR Mirror reads.** The three textures are the size of the game's left eye
+  image, at 4 bytes per pixel. The layer makes them when VR Mirror starts reading and lets them go 10 s
+  after it stopped. With nobody reading, the layer only writes each frame's record.
 - **In LMU, it writes one log per game start,**
   `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`. The newest 10 logs are kept. When a
   game start reaches OpenXR, the layer deletes the oldest beyond 10. Its log says how many it deleted.
