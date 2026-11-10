@@ -109,8 +109,8 @@ Anti-Cheat. Signed with a trusted certificate, it loaded in LMU started with Eas
 play stayed enabled, and it worked in online sessions (`findings\openxr.md`).
 
 Test a signed DLL cheapest first, and stop at the first step where the game doesn't start:
-1. **Offline.** Install it, start LMU the usual way, stay out of online sessions, and drive a few laps.
-   The layer loads whenever LMU runs in OpenXR mode, however it is started. Write down whether the game
+1. **Outside online sessions.** Install it, start LMU the usual way, with Easy Anti-Cheat, and drive
+   a few laps outside online sessions. The layer loads whenever LMU runs in OpenXR mode, however it is started. Write down whether the game
    starts, any Easy Anti-Cheat message, and whether online play is enabled.
 2. **Online.** The same, in an online session. This risks the LMU account, so do it only after step 1
    went cleanly.

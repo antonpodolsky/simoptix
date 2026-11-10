@@ -82,8 +82,8 @@ for the agents that read those files. Change the rules here, never in those file
   - The repo holds no signing tools or certificate details. The user signs with a skill of their
     own outside the repo, whose description says it signs the OpenXR layer. Use it when there is
     one. Without it, say that the layer is unsigned (`reference\openxr.md`, "Signing").
-  - The signed layer is tested offline before online (`reference\openxr.md`, "The Easy Anti-Cheat
-    test").
+  - The signed layer is tested in LMU started with Easy Anti-Cheat, first outside online sessions,
+    then in one (`reference\openxr.md`, "The Easy Anti-Cheat test").
 - **Other games.** Before support for another game ships, check that game's terms for outside tools.
 - **Licences.** The repo is GPL-2.0-or-later (`LICENSE`, `THIRD_PARTY_NOTICES.md`), and everything
   added must be compatible with it.
