@@ -11,7 +11,7 @@ view, and Overlays adds a G-meter source. Both currently work with Le Mans Ultim
     - It is half the size the game draws.
   - **SimOptix: OpenXR Mirror** takes the game's own left eye.
     - It is the full size the game draws.
-    - It needs an API layer in the game, which is experimental.
+    - It needs an API layer in the game.
     - The layer works with Easy Anti-Cheat only when it is signed (below).
 - **Stabilization** is set by the source's Smoothing setting:
   - **Off:** raw headset view.
@@ -30,8 +30,8 @@ view, and Overlays adds a G-meter source. Both currently work with Le Mans Ultim
 SimOptix is early software. There are no ready-made downloads, so you build it from source.
 
 - **OBS:** built against OBS Studio 32.2.2. Other versions haven't been tried.
-- **OpenXR Mirror** and its API layer (`vr_mirror\frame_sources\openxr\`) are experimental. Unsigned,
-  the layer works in LMU started without Easy Anti-Cheat. Signed with a code signing certificate
+- **OpenXR Mirror:** unsigned, its API layer (`vr_mirror\frame_sources\openxr\`) works in LMU started
+  without Easy Anti-Cheat. Signed with a code signing certificate
   Windows trusts, it loaded and worked in LMU started with Easy Anti-Cheat, and online play stayed
   enabled. It also worked in online sessions, and recordings made there were successful.
 
