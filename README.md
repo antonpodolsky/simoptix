@@ -36,16 +36,18 @@ SimOptix is early software. There are no ready-made downloads, so you build it f
 
 ## Headsets and games
 
+### Games
 | Game | VR Mirror | G-meter and race auto-record |
 |---|---|---|
-| LMU | Measured, with both sources | Read LMU's telemetry |
-| Other VR games | Pimax Mirror should work, not tried. OpenXR Mirror's API layer loads only in LMU | The G-meter's demo lap only |
+| LMU | Supported, with both sources | Supported |
+| Other games | Pimax Mirror should work, not tested. OpenXR Mirror's API layer currently loads only in LMU by design | Not supported |
 
+### Headsets
 | Headset | Pimax Mirror | OpenXR Mirror |
 |---|---|---|
-| Pimax Dream Air | Measured | Measured |
-| Other Pimax headsets | Works through Pimax Play, not measured | Should work, not tried |
-| Other OpenXR headsets | Needs a Pimax headset | Should work, not tried |
+| Pimax Dream Air | Supported | **Measured** |
+| Other Pimax headsets | Should work, not tested | Should work, not tested |
+| Other OpenXR headsets | Should work, not tested | Should work, not tested |
 
 To record at the source's native resolution, set OBS's canvas and output to the suggested size
 (Settings → Video), and its frame rate to the headset's refresh rate. "Max zoom for native" is the
