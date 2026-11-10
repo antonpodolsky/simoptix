@@ -1,21 +1,21 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The memory the OpenXR layer shares with VR Mirror: what the layer publishes about each frame the
-// game hands the headset, where its copy of the left eye's picture is, and the little the reader tells
+// game hands the headset, where its copy of the left eye's image is, and the little the reader tells
 // the layer back. The layer (openxr_publisher.*) writes it, the OpenXR frame source in VR Mirror
 // (openxr_source.*) reads it; the e2e tests' fake game writes it with the layer's own code.
 //
 // The layer makes it when the game's D3D11 session starts, as a named file mapping in this Windows
-// session (kMappingName), and sets the event kNewPictureEvent each time a copy of a picture is finished;
+// session (kMappingName), and sets the event kNewImageEvent each time a copy of an image is finished;
 // a reader sets kReaderEvent when it starts, and the layer sets a waiting reader's kSessionEvent.
 // Only plain data and fixed sizes: no pointers, no OpenXR or D3D types, so both sides (64-bit) agree by
 // construction; kVersion changes with every change of layout or meaning.
 //
 // Each frame (Record), in order: the layer's frame number, the display time the game drew it for, the
 // two eyes' poses and fields of view as the game passed them, which of the kTextures shared textures
-// holds the left eye's picture (-1: none, the frame was not copied), and how the game handed that image
+// holds the left eye's image (-1: none, the frame was not copied), and how the game handed that image
 // over (which swapchain image, on which threads). A record is written under a sequence
-// count (odd while it is written), so a reader never takes half of one. The picture in texture k is
+// count (odd while it is written), so a reader never takes half of one. The image in texture k is
 // frame `textureFrame[k]`'s once its copy is finished on the GPU; 0 while one is being copied in.
 //
 // Who may touch a texture: the layer copies into texture k only while no reader reads it (readerBusy's
@@ -36,7 +36,8 @@
 namespace openxr_share {
 
     constexpr const wchar_t* kMappingName = L"Local\\SimOptix.OpenXR.FrameSource";
-    constexpr const wchar_t* kNewPictureEvent = L"Local\\SimOptix.OpenXR.FrameSource.NewPicture";
+    // The name keeps the word the first layers shipped with, so installed layers and VR Mirror still meet.
+    constexpr const wchar_t* kNewImageEvent = L"Local\\SimOptix.OpenXR.FrameSource.NewPicture";
     // Set by a reader when it starts reading, so the layer makes its textures at once rather than at its
     // thread's next tick (half a second).
     constexpr const wchar_t* kReaderEvent = L"Local\\SimOptix.OpenXR.FrameSource.Reader";
@@ -76,7 +77,7 @@ namespace openxr_share {
         int64_t endFrameCounter;    // performance counter when xrEndFrame returned to the layer
         Pose eye[2];                // the projection layer's views 0 (left) and 1 (right), as passed
         Fov fov[2];
-        int32_t texture;  // the shared texture its picture is copied into; -1: not copied
+        int32_t texture;  // the shared texture its image is copied into; -1: not copied
         // the part of the game's image copied (pixels); the texture holds it at 0, 0
         int32_t x, y, width, height;
 
@@ -120,7 +121,7 @@ namespace openxr_share {
         uint32_t textureFormat;                   // DXGI_FORMAT of the shared textures
         uint32_t gameFormat;                      // DXGI_FORMAT of the game's swapchain (its colour meaning)
         uint64_t textureHandle[kTextures];
-        std::atomic<uint64_t> textureFrame[kTextures];  // the frame whose picture texture k holds; 0: none
+        std::atomic<uint64_t> textureFrame[kTextures];  // the frame whose image texture k holds; 0: none
 
         // The reader's side.
         std::atomic<int64_t> readerSigned;  // performance counter of the reader's last sign; 0: no reader

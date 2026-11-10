@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Pipeline: the glue that runs the output thread's stages for each output frame: the drawn pose's
-// answers (2), smoothing (4, which keeps the view inside the pictures by itself) and warp (5), in that
+// answers (2), smoothing (4, which keeps the view inside the images by itself) and warp (5), in that
 // order (the frame picker, 3, it only holds: a host that picks frames on its own clock asks it,
 // Picker, before Update). Nothing between the smoothing and the warp changes the view. It holds what
 // belongs to no single stage: the step clock, the previous output, the head's path and its drawn
@@ -9,7 +9,7 @@
 // decides, and knows no implementation: the
 // builder (pipeline_builder.h) makes the stages and hands them in. Stage 1 (arrival timing) runs on
 // another thread and is handed to its adapter instead (PimaxSource); the drawn pose is shared with
-// the adapter that feeds it pictures on the copy device's thread (DrawnPoseFeed, through
+// the adapter that feeds it images on the copy device's thread (DrawnPoseFeed, through
 // SharedDrawnPose). Knows nothing about PVR, windows, swap chains or OBS.
 //
 // Output thread only (OBS's graphics thread, the mirror app's main thread).
@@ -33,7 +33,7 @@
 struct OutputRequest {
     // the frame itself (TimesOf), or a host tick's own moment (MomentTimes)
     FrameTimes view;
-    // the frame whose picture is shown, when not `view` itself (a stand-in)
+    // the frame whose image is shown, when not `view` itself (a stand-in)
     const FrameTimes* image = nullptr;
     double now = 0;            // the poses' clock (source seconds): steps frames that aren't synced
     float aspect = 16.0f / 9;  // the output's width / height
@@ -78,23 +78,23 @@ public:
     const PipelineConfig& Config() const { return config_; }
     // Stage 3, for a host that picks stored frames on its own clock.
     FramePicker* Picker() { return stages_.framePicker.get(); }
-    // Stage 2, for the host to hand to the adapter that feeds it pictures (DrawnPoseFeed); a new one
+    // Stage 2, for the host to hand to the adapter that feeds it images (DrawnPoseFeed); a new one
     // whenever its config value changes.
     const std::shared_ptr<DrawnPose>& SharedDrawnPose() const { return stages_.drawnPose; }
 
     // Once per output frame. The image is the game's left eye, filling its texture. With look-ahead
     // smoothing, call no earlier than the smoothing's DelayS after the frame's arrival. With an
-    // `image` (the OBS plugin's ticks), the view follows `view`'s pose and the picture is
+    // `image` (the OBS plugin's ticks), the view follows `view`'s pose and the image is
     // re-projected from its own.
     WarpParams Update(const MirrorSettings& s, PoseSource& poses, const EyeInfo& eye, const OutputRequest& r);
 
     // Restart smoothing (stabilization switched): the smoothing's Reset, and no previous view.
     void Reset();
 
-    // The followed picture's pose and the view shown for the last frame (for traces and tests).
+    // The followed image's pose and the view shown for the last frame (for traces and tests).
     const Quat& LastRaw() const { return lastRaw_; }
     const Quat& LastView() const { return lastView_; }
-    // The pose the last picture was re-projected from (its frame's pose).
+    // The pose the last image was re-projected from (its frame's pose).
     const Quat& LastImagePose() const { return lastImage_; }
     // The zoom used for the last frame.
     float Zoom() const { return zoom_; }
@@ -104,9 +104,9 @@ public:
     unsigned EdgePlanned() const { return planned_; }
 
 private:
-    // How far after the frames' moments the shown pictures run (s), when an older picture stands in
-    // (each frame showing its own picture: 0, not asked), so the look-ahead's path is checked against
-    // the pictures that will be shown at its moments. `lead`: this tick's, the shown frame's moment
+    // How far after the frames' moments the shown images run (s), when an older image stands in
+    // (each frame showing its own image: 0, not asked), so the look-ahead's path is checked against
+    // the images that will be shown at its moments. `lead`: this tick's, the shown frame's moment
     // minus the tick's (DrawnPose::MomentOf: their timing, not their poses); `dt` the step (s).
     double ShownLead(double lead, float dt);
 
@@ -116,7 +116,7 @@ private:
     };
 
     // Step: the smoothing's step for this frame (and the step clock moves on). FillPath: the head's path and
-    // the shown pictures' poses around the frame, for the look-ahead. Record: what the observer is told
+    // the shown images' poses around the frame, for the look-ahead. Record: what the observer is told
     // about the frame.
     float Step(const FrameTimes& f, const OutputRequest& r);
     void FillPath(
@@ -141,8 +141,8 @@ private:
     PipelineConfig config_;
     std::vector<double> times_;  // the smoothing window's sample times and heads (grown once)
     std::vector<Quat> heads_;
-    std::vector<Quat> pictures_;            // ...the pose of the picture shown at each moment
-    std::vector<double> pictureTimes_;      // ...the time it is looked up at, when an older picture stands in
+    std::vector<Quat> images_;              // ...the pose of the image shown at each moment
+    std::vector<double> imageTimes_;        // ...the time it is looked up at, when an older image stands in
     double lastStep_ = 0, lastUpdate_ = 0;  // the step clock: the last synced frame's step, the last `now`
     bool hasView_ = false;
     Quat lastRaw_, lastView_, lastImage_;

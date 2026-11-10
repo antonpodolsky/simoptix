@@ -25,7 +25,7 @@ Smoothed InstantSmoothing::Smooth(const SmoothingInput& in) {
         const EdgeRoom r = RoomIn(in.shown, in.previous.view, in.geometry);
 
         // Head turning speed, smoothed over ~50 ms so vibration and tremor don't count.
-        const float speed = AngleBetween(in.previous.picture, in.picture) / in.dt;
+        const float speed = AngleBetween(in.previous.followed, in.followed) / in.dt;
         headSpeed_ += (speed - headSpeed_) * (1 - std::exp(-in.dt / 0.05f));
 
         // The cutoff at which the two smoothing stages trail a turn at this speed by 70% of
@@ -37,7 +37,7 @@ Smoothed InstantSmoothing::Smooth(const SmoothingInput& in) {
 
     const float deg = 3.14159265f / 180.0f;
     const Quat view = filter_.Update(
-        in.picture,
+        in.followed,
         in.dt,
         kMinCutoffHz,
         kBeta,

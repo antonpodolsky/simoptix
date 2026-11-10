@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Stage 5, warp: the parameters of the per-pixel warp a host draws (warp.hlsli, the GPU half of
-// this stage) for one output frame, from the pose the shown picture was drawn with, the view to
+// this stage) for one output frame, from the pose the shown image was drawn with, the view to
 // show and the output's geometry. Interface and its data; implementations beside it. Knows nothing
 // about how the view was chosen, about frames or timing, or about D3D and OBS.
 #pragma once
@@ -23,7 +23,7 @@ static_assert(sizeof(WarpParams) == 7 * 16, "WarpParams must match warp.hlsli");
 class Warp {
 public:
     virtual ~Warp() = default;
-    // `shown`: the head pose the shown picture was drawn with; `view`: the view to show (both
+    // `shown`: the head pose the shown image was drawn with; `view`: the view to show (both
     // head orientations).
     virtual WarpParams Params(const Quat& shown, const Quat& view, const ViewGeometry& g) const = 0;
     // Its numbers since the last Report, for the host's log.

@@ -11,7 +11,7 @@ inside the game's eye images by itself, so no black edge shows. The view it give
 | Term | Meaning |
 |---|---|
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
-| picture room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
+| image room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
 | look-ahead | The method behind the Look-ahead smoothing. The view runs half a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
@@ -36,8 +36,8 @@ inside the game's eye images by itself, so no black edge shows. The view it give
 - whether its last resort stopped the view at an edge, and by how much. The glue counts the stops
   for the log, the trace and e2e.
 
-**How it stays inside the image** is its own business, with the picture room's geometry
-(`..\picture_room\README.md`):
+**How it stays inside the image** is its own business, with the image room's geometry
+(`..\image_room\README.md`):
 - Instant asks the room of its previous view and catches up faster as it runs out.
 - The look-ahead checks each moment of its solved path against the image shown at that moment
   (`Within`). Where the path would pass 90% of its room, it makes the margin point that moment's
@@ -62,7 +62,7 @@ own constants (`instant_smoothing.h`). `LookaheadFor` and `LookaheadOutputDelayS
 **Thread:** the host's output thread (OBS's graphics thread, the mirror app's main thread). Per-frame
 allocation stops once the look-ahead's buffers have grown.
 
-**Uses:** plain data and the picture room's geometry. It asks the picture room how much room
+**Uses:** plain data and the image room's geometry. It asks the image room how much room
 a view has.
 
-**Must not know:** how the room is measured (it asks the picture room), frames' images, PVR or threads.
+**Must not know:** how the room is measured (it asks the image room), frames' images, PVR or threads.

@@ -123,7 +123,7 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
     arrive in, which is that moment when the frame is on time. The frame's drawn pose is that
     moment's pose (stage 2's reported methods).
 - **It keeps each frame's image at its own size, or as large as the output needs.**
-  - A host says how wide (`SetPictureNeed`: 1:1 in the middle of its output, within 4.7 GB for all its
+  - A host says how wide (`SetImageNeed`: 1:1 in the middle of its output, within 4.7 GB for all its
     stored images).
   - The reader copies the image as it is when that width is at least 83% of the image's own (1 / 1.2,
     `kFullSizeMaxShrink`) and the memory holds it. The host's view then resamples it once.
@@ -165,7 +165,7 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 | `install.bat`, `uninstall.bat` | Double-click to install or remove the layer. They ask for administrator rights and run the scripts below |
 | `install.ps1`, `uninstall.ps1` | Install or remove the layer for every user (as administrator). `install.ps1` shows the installed DLL's signature |
 | `openxr_source.*` | `OpenXrSource`: the reader, a frame source for the hosts (`vr_mirror\core\adapters\d3d\frame_source.h`) |
-| `openxr_pictures.*` | `OpenXrPictures`: the layer's textures opened on a host's device, and the copy of an eye image into the host's store at the size it needs |
+| `openxr_images.*` | `OpenXrImages`: the layer's textures opened on a host's device, and the copy of an eye image into the host's store at the size it needs |
 | `openxr.rsp` | The reader's `.cpp` files, as a `cl` response file that the hosts' build scripts list |
 | `check\` | The check program. It runs the built layer the way the game will, before the layer goes anywhere near the game: with LMU's name, a D3D11 session, one image buffer per eye in the game's format, and five seconds of frames, through a real OpenXR loader. It reads what the layer publishes as VR Mirror would |
 

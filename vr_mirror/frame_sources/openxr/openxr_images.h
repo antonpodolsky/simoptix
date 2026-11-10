@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// OpenXrPictures: the OpenXR layer's three shared textures, opened on a host's device, and the copy of a
-// frame's picture from one of them into the host's store (FrameCopy): as it is when the host needs nearly
+// OpenXrImages: the OpenXR layer's three shared textures, opened on a host's device, and the copy of a
+// frame's image from one of them into the host's store (FrameCopy): as it is when the host needs nearly
 // its own size and the memory holds it, else drawn at the size the host needs, averaged over each stored
 // pixel's area in linear light. Stored sRGB-encoded once, as the game drew it (EyeInfo::encodedTwice
 // false).
@@ -23,12 +23,12 @@
 #include "openxr_share.h"
 #include "shared/unique_handle.h"
 
-class OpenXrPictures {
+class OpenXrImages {
 public:
-    ~OpenXrPictures() { Release(); }
+    ~OpenXrImages() { Release(); }
 
-    // How wide (pixels) the host needs a stored picture, and the most memory one may take (bytes); the
-    // stored picture is its own width when that is within 1.2x of the need, else that wide, as tall as
+    // How wide (pixels) the host needs a stored image, and the most memory one may take (bytes); the
+    // stored image is its own width when that is within 1.2x of the need, else that wide, as tall as
     // its shape asks, and within the memory.
     void SetNeed(float width, double maxBytes) {
         needWidth_ = width;
@@ -38,7 +38,7 @@ public:
     // On `device` (every 2 s): maps the layer's memory if it is there, and opens its textures (again
     // when the layer made new ones, or on another device).
     void Open(ID3D11Device* device);
-    // Copies frame `layerFrame`'s picture (`width` x `height` at 0, 0 of texture `texture`) into `into`;
+    // Copies frame `layerFrame`'s image (`width` x `height` at 0, 0 of texture `texture`) into `into`;
     // false if it is gone (the layer wrote another frame into the texture) or can't be opened.
     bool Copy(
         ID3D11Device* device,
@@ -55,7 +55,7 @@ public:
     void Poll(ID3D11DeviceContext* context);
     // Lets go of everything opened on the device, and of the layer's memory.
     void Release();
-    // Copies that found their picture gone, since the last call.
+    // Copies that found their image gone, since the last call.
     uint64_t TakeGone() { return gone_.exchange(0); }
 
 private:
@@ -75,7 +75,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> views_[openxr_share::kTextures];  // in linear light
     Microsoft::WRL::ComPtr<ID3D11Query> read_[openxr_share::kTextures];  // after a read of the texture
     bool reading_[openxr_share::kTextures] = {};
-    bool sameFamily_ = false;  // the layer's textures hold R8G8B8A8: a picture kept at its size is copied
+    bool sameFamily_ = false;  // the layer's textures hold R8G8B8A8: an image kept at its size is copied
     Microsoft::WRL::ComPtr<ID3D11VertexShader> vs_;
     Microsoft::WRL::ComPtr<ID3D11PixelShader> ps_;
     Microsoft::WRL::ComPtr<ID3D11Buffer> constants_;

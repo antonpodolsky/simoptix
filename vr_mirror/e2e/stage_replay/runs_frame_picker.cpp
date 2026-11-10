@@ -134,7 +134,7 @@ namespace stage_replay {
             size_t frame = 0, change = 0;
             int counts[5] = {}, fixedTick = -1;
             double fixedDelay = 0, jump = 0, lastTick = 0, lastMoment = 0;
-            std::vector<double> behind;  // per pick: the shown picture's slot minus the tick's moment (s)
+            std::vector<double> behind;  // per pick: the shown image's slot minus the tick's moment (s)
 
             for (size_t t = 0; t < in.ticks.size(); t++) {
                 const double tick = in.ticks[t];
@@ -170,7 +170,7 @@ namespace stage_replay {
                     continue;
                 }
 
-                // The tick's moment: how far its view trails the shown picture's slot, and how far it moved
+                // The tick's moment: how far its view trails the shown image's slot, and how far it moved
                 // other than with the ticks (a jump of the whole view).
                 const StoredFrame& shown = store->slots[p.index];
                 if (shown.slotTime > 0) {
@@ -187,7 +187,7 @@ namespace stage_replay {
                 "%-40s %s, smoothing %d: %zu ticks, %d next, %d repeat, %d jump, %d held, %d none; delay "
                 "fixed at "
                 "tick "
-                "%d (%.1f ms), %d entries; view behind its picture %.1f ms (median), moment jumps up to %.1f "
+                "%d (%.1f ms), %d entries; view behind its image %.1f ms (median), moment jumps up to %.1f "
                 "ms\n",
                 in.name.c_str(),
                 NameOf(kind),

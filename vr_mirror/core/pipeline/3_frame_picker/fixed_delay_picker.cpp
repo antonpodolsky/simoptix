@@ -110,7 +110,7 @@ Pick FixedDelayPicker::Tick(double tick, double period, const StoredFrame* frame
     }
 
     if (chosen < 0) {
-        // Nothing due is ready (a copy running late): show the last picture again, re-projected to
+        // Nothing due is ready (a copy running late): show the last image again, re-projected to
         // this tick's head pose, rather than an empty frame.
         if (lastSlot_ >= 0 && lastSlot_ < slots_ && lastSlot_ < total && frames[lastSlot_].valid
             && frames[lastSlot_].serial == lastShown_) {

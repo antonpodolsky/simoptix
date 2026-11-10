@@ -10,7 +10,7 @@ the wheel and anything else that moves on its own. Shake is the cockpit's step a
 path: its position against a quadratic through the 7 frames either side, the frame itself left out.
 
 usage: python -I shake.py <grid.f32> <out.npz> [--start s]   (--start: video time of the first frame)
-Conventions: angles in degrees of view rotation; screen sizes in pixels of the 1920x1080 picture
+Conventions: angles in degrees of view rotation; screen sizes in pixels of the 1920x1080 video
 the user sees (17.7 px per degree at the centre at zoom 1.25); frame i is video time (i + 1) / 90.
 """
 
@@ -25,7 +25,7 @@ W, H = 960, 540
 K = (W / 2) / (1.1838 / 1.25)
 TO_1080 = 2.0  # 960 px -> 1920 px
 DEG = np.pi / 180
-PX_PER_DEG = K * DEG * TO_1080  # px of the 1920x1080 picture per degree at the centre (17.7)
+PX_PER_DEG = K * DEG * TO_1080  # px of the 1920x1080 video per degree at the centre (17.7)
 HALF = 7  # frames either side for the smooth path
 
 

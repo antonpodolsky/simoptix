@@ -33,8 +33,8 @@ A new term goes here, and into the table of every README that uses it.
 | re-time | What the slot check does when it assigns a frame a display slot other than its arrival slot |
 | cockpit correction | A refinement of the drawn pose. It measures how the fixed cockpit moved between two frames and corrects the pose by what the head poses don't explain |
 | look-ahead | The method behind the Look-ahead smoothing. The view runs half a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
-| picture room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
-| edge stop | The smoothing's last resort. It holds the view at 95% of its picture room when the smoothing's own planning wasn't enough |
+| image room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
+| edge stop | The smoothing's last resort. It holds the view at 95% of its image room when the smoothing's own planning wasn't enough |
 | output delay | How far VR Mirror's view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
 | observer | The debugging code beside the pipeline. It numbers the stamp and writes the frame trace |
 | stamp | The frame number that VR Mirror draws as 15 small squares in the top-left corner of the view, when its Debug setting is on |

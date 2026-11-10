@@ -23,8 +23,8 @@ public:
     // Room for `frames` held frames (their copies are made as frames arrive). Clears the hold.
     void Resize(int frames);
     int Capacity() const { return int(ring_.size()); }
-    // Copies frame `f`'s picture from `source`. Null (the frame is dropped) if the hold is full or the
-    // picture can't be copied.
+    // Copies frame `f`'s image from `source`. Null (the frame is dropped) if the hold is full or the
+    // image can't be copied.
     Held* Add(ID3D11Device* device, ID3D11DeviceContext* context, FrameSource& source, const GameFrame& f);
     int Count() const { return count_; }
     // The k-th held frame, oldest first (k < Count()).

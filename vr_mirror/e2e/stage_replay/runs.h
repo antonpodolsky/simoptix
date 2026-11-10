@@ -63,7 +63,7 @@ namespace stage_replay {
 
     // --stage frame_picker: the frame picker over OBS traces (pairs of _ticks.csv, _pimax.csv) and
     // synthetic ticks: the picks by kind, the delay fixed, how far each tick's moment trails the shown
-    // picture's slot and how far the moments jump; the fixed delay unless --frame_picker says otherwise.
+    // image's slot and how far the moments jump; the fixed delay unless --frame_picker says otherwise.
     int RunFramePicker(const std::vector<std::pair<std::string, std::string>>& traces, FramePickerKind kind);
 
     // --stage arrival_timing: the arrival timing over OBS traces' frame arrivals (_pimax.csv F rows).

@@ -53,7 +53,7 @@ bool FrameCopy::Fit(ID3D11Device* device, const FrameCopyShape& shape) {
     td.MiscFlags = shape.shared ? D3D11_RESOURCE_MISC_SHARED : 0;
 
     if (FAILED(device->CreateTexture2D(&td, nullptr, &copy_))) {
-        CoreLog("picture copy %ux%u (format %d) not made", shape.width, shape.height, int(shape.format));
+        CoreLog("image copy %ux%u (format %d) not made", shape.width, shape.height, int(shape.format));
         return true;
     }
 

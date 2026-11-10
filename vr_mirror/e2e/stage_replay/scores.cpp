@@ -12,7 +12,7 @@ namespace stage_replay {
 
         constexpr double kDeg = 180.0 / 3.14159265358979;
 
-        // Whether any corner of the output, warped as warp.hlsli's WarpSrc does, falls outside the picture.
+        // Whether any corner of the output, warped as warp.hlsli's WarpSrc does, falls outside the image.
         bool Black(const WarpParams& p) {
             for (int corner = 0; corner < 4; corner++) {
                 const float x = corner & 1 ? p.outTan[0] : -p.outTan[0],
@@ -70,7 +70,7 @@ namespace stage_replay {
 
         // The view's jitter as e2e measures it: what is left of its direction after fitting a local
         // quadratic over +-50 ms (deliberate turns count as zero, tremor and shake fully), rms in degrees,
-        // over the outputs whose picture turned at speeds in [lo, hi) deg/s.
+        // over the outputs whose image turned at speeds in [lo, hi) deg/s.
         double Jitter(
             const std::vector<double>& t,
             const std::vector<Vec3>& dirs,
@@ -141,17 +141,17 @@ namespace stage_replay {
         outputs_++;
         black_ += Black(o.warp);
         clamps_ = p.EdgeStops(), planned_ = p.EdgePlanned();
-        const Vec3 view = Dir(p.LastView()), picture = Dir(p.LastRaw());
-        lags_.push_back(float(AngleDeg(view, picture)));
+        const Vec3 view = Dir(p.LastView()), image = Dir(p.LastRaw());
+        lags_.push_back(float(AngleDeg(view, image)));
 
-        // For the jitter: the view's direction per output, and how fast the picture turned (deg/s).
+        // For the jitter: the view's direction per output, and how fast the image turned (deg/s).
         const double step = o.view.step;
         const double dt = times_.empty() ? 0 : step - times_.back();
-        speeds_.push_back(hasPicture_ && dt > 0 ? AngleDeg(picture, pictureDir_) / dt : 1e9);
+        speeds_.push_back(hasImage_ && dt > 0 ? AngleDeg(image, imageDir_) / dt : 1e9);
         times_.push_back(step), dirs_.push_back(view);
-        pictureDir_ = picture, hasPicture_ = true;
+        imageDir_ = image, hasImage_ = true;
 
-        // The pose the picture was warped from against the one it was drawn with.
+        // The pose the image was warped from against the one it was drawn with.
         const FrameTimes& shown = o.image ? *o.image : o.view;
         Quat truth;
         if (shown.synced && shown.shownSlot > 0

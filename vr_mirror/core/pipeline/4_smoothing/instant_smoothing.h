@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // InstantSmoothing: the view with no delay (setting smoothing 1, for live streaming): a causal
 // One-Euro style filter on orientation (OrientationFilter, below) that follows the drawn pose, and
-// catches up faster as the previous view runs out of room in the picture (picture_room), scaled to
+// catches up faster as the previous view runs out of room in the image (image_room), scaled to
 // the head's turning speed (kCatchUpHz, kCatchUpStart). Its last resort, when that isn't enough:
-// the view stopped at the edge of the frame's pictures (StopAtEdge), and the filter's state pulled
+// the view stopped at the edge of the frame's images (StopAtEdge), and the filter's state pulled
 // along at once, so it can't keep hidden lag behind the stop.
 //
 // Logic only. Knows nothing about the room's geometry, frames or PVR.
@@ -15,7 +15,7 @@
 
 #include "common/rot.h"
 #include "pipeline/4_smoothing/smoothing.h"
-#include "pipeline/picture_room/picture_room.h"
+#include "pipeline/image_room/image_room.h"
 
 // One-Euro style filter on orientation: heavy smoothing when the head is nearly still,
 // following quickly during deliberate head turns. minCutoffHz sets the baseline
@@ -104,7 +104,7 @@ public:
     // how fast the cutoff rises with the head's speed (Hz per rad/s)
     static constexpr float kBeta = 2.0f;
     static constexpr float kDeadzoneDeg = 0.5f;   // tremor below this is held (degrees)
-    static constexpr float kMaxAngleDeg = 20;     // the most the view trails the picture (degrees)
+    static constexpr float kMaxAngleDeg = 20;     // the most the view trails the image (degrees)
     static constexpr float kCatchUpHz = 6;        // extra cutoff as the view runs out of room (Hz)...
     static constexpr float kCatchUpStart = 0.4f;  // ...from this share of the room
 

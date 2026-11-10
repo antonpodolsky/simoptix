@@ -119,7 +119,7 @@ Bad: the call that does the work hides in a wrapped condition, and the `return` 
     }
     ...
     D3D11_QUERY_DESC queryDesc = {D3D11_QUERY_EVENT, 0};
-    return picture_.Init(device_.Get(), thumbTiles_ > 0) && SUCCEEDED(device_->CreateQuery(&queryDesc, &done_));
+    return image_.Init(device_.Get(), thumbTiles_ > 0) && SUCCEEDED(device_->CreateQuery(&queryDesc, &done_));
 ```
 
 Good (`fake_pvr::Headset::CreateDevice`):
@@ -142,7 +142,7 @@ Good (`fake_pvr::Headset::CreateDevice`):
         return false;
     }
     ...
-    if (!picture_.Init(device_.Get(), thumbTiles_ > 0)) {
+    if (!image_.Init(device_.Get(), thumbTiles_ > 0)) {
         return false;
     }
 

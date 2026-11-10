@@ -10,7 +10,7 @@ namespace {
 
     constexpr float kBoard = 480;  // the design's board, design pixels; the meter's centre is at (240, 240)
     constexpr float kMaxG = 3;
-    constexpr float kRing3G = 112;  // the 3G ring's radius, design pixels (in the base picture)
+    constexpr float kRing3G = 112;  // the 3G ring's radius, design pixels (in the base image)
 
     // Colours from the design, 0..1 RGB.
     constexpr float kAccent[3] = {1.0f, 0.353f, 0.122f};  // #ff5a1f: the dot, its glow, the live G
@@ -26,7 +26,7 @@ namespace {
     constexpr uint32_t kAccentRgb = 0xFF5A1F;
     constexpr int kLabelOpacity = 60;  // white at 60 %: the ring labels and the highest values
 
-    // The pedal tracks just inside the 3G ring (in the base picture) and the bars filling them from their
+    // The pedal tracks just inside the 3G ring (in the base image) and the bars filling them from their
     // lower ends, with flat ends as the tracks: degrees clockwise from up. Brake 215 -> 325 on the left,
     // throttle 145 -> 35 on the right.
     constexpr float kBarR = 103, kBarWidth = 5, kBarSpan = 110;
@@ -47,7 +47,7 @@ namespace {
     }
 
     // The ring labels (1G, 2G, 3G): 10 px, white at 60 %, their ink from x 245.3 and their ink's bottom on
-    // these lines, design pixels (measured on the design's base picture with and without them).
+    // these lines, design pixels (measured on the design's base image with and without them).
     constexpr float kRingInkLeft = 245.3f;
     constexpr float kRingInkBottom[3] = {218.5f, 181.5f, 144.0f};
 
@@ -212,7 +212,7 @@ void ChronoMeter::DrawValues(const MeterView& m, float k) {
         );
     }
 
-    // The live G in its window (in the base picture), two decimals, no unit, in tabular figures so its
+    // The live G in its window (in the base image), two decimals, no unit, in tabular figures so its
     // digits stay in place as it changes. Centred to a fraction of a pixel, on the window as it looks:
     // its inner shadow is offset 1 px down, so it reads about 0.5 px higher than its box (centre y
     // 314.7). On the box, the gaps above and below the digits measured 7.1 and 6.2 px at size 500.

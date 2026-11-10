@@ -45,8 +45,8 @@ void CheckColour(int index, float rgba[4]) {
     rgba[3] = 1;
 }
 
-bool OpenXrCheckCopies::Start(LUID adapter, bool pictures, bool srgb) {
-    pictures_ = pictures;
+bool OpenXrCheckCopies::Start(LUID adapter, bool images, bool srgb) {
+    images_ = images;
     srgb_ = srgb;
 
     ComPtr<IDXGIFactory1> factory;
@@ -206,7 +206,7 @@ void OpenXrCheckCopies::ReadRecords() {
         }
 
         if (r.texture >= 0 && r.texture < openxr_share::kTextures) {
-            withPicture_++;
+            withImage_++;
             if (!firstCopied_) {
                 firstCopied_ = r.frame;
             }
@@ -221,23 +221,23 @@ void OpenXrCheckCopies::ReadWaiting() {
         const Waiting w = waiting_[i];
         const uint64_t held = h.textureFrame[w.texture].load();
         if (held == w.frame) {
-            ReadPicture(w);
+            ReadImage(w);
         } else if (held < w.frame && waiting_.size() < 8) {
             i++;  // its copy isn't finished yet
             continue;
         } else {
-            picturesMissed_++;  // written over before it was read
+            imagesMissed_++;  // written over before it was read
         }
 
         waiting_.erase(waiting_.begin() + i);
     }
 }
 
-void OpenXrCheckCopies::ReadPicture(const Waiting& w) {
+void OpenXrCheckCopies::ReadImage(const Waiting& w) {
     openxr_share::Header& h = *header_;
-    if (!pictures_ || !textures_[w.texture] || !staging_
+    if (!images_ || !textures_[w.texture] || !staging_
         || !openxr_share::ClaimTexture(h, w.texture, w.frame)) {
-        picturesMissed_++;
+        imagesMissed_++;
         return;
     }
 
@@ -257,7 +257,7 @@ void OpenXrCheckCopies::ReadPicture(const Waiting& w) {
     const HRESULT hr = context_->Map(staging_.Get(), 0, D3D11_MAP_READ, 0, &m);
     openxr_share::ReleaseTexture(h, w.texture);
     if (FAILED(hr)) {
-        picturesMissed_++;
+        imagesMissed_++;
         return;
     }
 
@@ -269,10 +269,10 @@ void OpenXrCheckCopies::ReadPicture(const Waiting& w) {
     context_->Unmap(staging_.Get(), 0);
     const int shown = levels[0] | levels[1] << 4 | levels[2] << 8;
     if (shown == (w.index & 0xFFF)) {
-        picturesRight_++;
-    } else if (picturesWrong_++ < 5) {
+        imagesRight_++;
+    } else if (imagesWrong_++ < 5) {
         printf(
-            "  frame %llu: the copy shows frame %d's picture, not frame %d's\n",
+            "  frame %llu: the copy shows frame %d's image, not frame %d's\n",
             static_cast<unsigned long long>(w.frame),
             shown,
             w.index & 0xFFF
@@ -292,28 +292,28 @@ int OpenXrCheckCopies::Report() const {
     failures += recordsWrong_ + recordsLost_ + (records_ == 0);
     const uint64_t since = firstCopied_ ? nextFrame_ - firstCopied_ : 0;
     printf(
-        "pictures: %d copied of %llu frames since the first copy; read back %d right, %d wrong, %d "
+        "images: %d copied of %llu frames since the first copy; read back %d right, %d wrong, %d "
         "missed\n",
-        withPicture_,
+        withImage_,
         static_cast<unsigned long long>(since),
-        picturesRight_,
-        picturesWrong_,
-        picturesMissed_
+        imagesRight_,
+        imagesWrong_,
+        imagesMissed_
     );
 
-    if (pictures_) {
-        failures += picturesWrong_;
-        if (picturesRight_ == 0) {
-            printf("  no picture was read back right\n");
+    if (images_) {
+        failures += imagesWrong_;
+        if (imagesRight_ == 0) {
+            printf("  no image was read back right\n");
             failures++;
         }
 
-        if (since > 0 && withPicture_ < 0.9 * double(since)) {
+        if (since > 0 && withImage_ < 0.9 * double(since)) {
             printf("  fewer than 90%% of the frames were copied\n");
             failures++;
         }
     } else {
-        printf("  (the swapchain isn't R8G8B8A8: pictures not compared)\n");
+        printf("  (the swapchain isn't R8G8B8A8: images not compared)\n");
     }
 
     if (counterToTime_) {

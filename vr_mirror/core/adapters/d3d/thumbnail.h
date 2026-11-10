@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Thumbnailer: tiny greyscale or colour versions of images (64x32 by default), or of several areas
 // of an image side by side (tiles), read back to the CPU, so two images can be compared by content.
-// DrawnPoseFeed makes the pictures a drawn pose looks at with it: the thumbnails the slot check
-// tells from which display slot a game frame was rendered for (how its picture moved), and the
+// DrawnPoseFeed makes the images a drawn pose looks at with it: the thumbnails the slot check
+// tells from which display slot a game frame was rendered for (how its image moved), and the
 // cockpit patches the cockpit correction measures.
 //
 // Make() draws a thumbnail on the GPU and queues its readback; Read() returns it once the GPU
@@ -22,7 +22,7 @@ public:
     static constexpr int kWidth = 64, kHeight = 32;
 
     // color: thumbnails with red, green and blue per texel (Read returns 3 floats per texel,
-    // row by row) instead of luminance. width, height: the picture read back, in texels; samples:
+    // row by row) instead of luminance. width, height: the image read back, in texels; samples:
     // each texel is the average of samples x samples samples across its footprint.
     bool
     Init(ID3D11Device* device, bool color = false, int width = kWidth, int height = kHeight, int samples = 8);
@@ -52,7 +52,7 @@ public:
     // The thumbnail for `ticket` once the GPU is done (false: not yet, or too old to still exist).
     bool Read(ID3D11DeviceContext* context, int64_t ticket, std::vector<float>* out);
 
-    // Zero-mean normalized cross-correlation of two thumbnails: 1 = same picture (up to
+    // Zero-mean normalized cross-correlation of two thumbnails: 1 = same image (up to
     // brightness and contrast), around 0 = unrelated.
     static float Similarity(const std::vector<float>& a, const std::vector<float>& b);
 

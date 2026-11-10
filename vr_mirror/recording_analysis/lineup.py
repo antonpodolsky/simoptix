@@ -6,7 +6,7 @@ Each video frame carries the tick's frame-number stamp (top-left, 15 bits), whic
 ticks (6 min 4 s at 90 Hz), so a run of stamps fits every 6 minutes of a long trace equally well. The
 log's clock gives a first guess of the recording's first tick, but it can be minutes off: the trace's
 first head pose can be written long after the log says the trace opened (session E: 481 s late). So the
-place is chosen by the pictures. On a tick where the game frame repeats, everything in the picture
+place is chosen by the images. On a tick where the game frame repeats, everything in the image
 moves with the cockpit, so the patches' spread around the cockpit's rotation (shake.py) dips below
 that of the frames either side. At the right place most of the trace's single repeated game frames
 fall on such a dip; at a wrong one only the few that chance puts there (about 4%). Long runs of
@@ -135,8 +135,8 @@ def LineUp(stamps, num, spread, approx):
     if not cands:
         raise SystemExit("the recording's stamps don't fit the trace anywhere")
     nearest = min(cands, key=lambda c: abs(c["off_estimate"]))
-    by_pictures = sorted(cands, key=lambda c: (-c["score"], -c["hits"], abs(c["off_estimate"])))
-    best, second = by_pictures[0], (by_pictures[1] if len(by_pictures) > 1 else None)
+    by_images = sorted(cands, key=lambda c: (-c["score"], -c["hits"], abs(c["off_estimate"])))
+    best, second = by_images[0], (by_images[1] if len(by_images) > 1 else None)
     sure = best["score"] >= SURE and (second is None or best["score"] >= second["score"] + MARGIN)
     chosen = best if sure else nearest
     lines = [
@@ -160,7 +160,7 @@ def LineUp(stamps, num, spread, approx):
 
     if sure:
         lines.append(
-            f"  chosen by the pictures: {best['dips']} of the trace's {best['single']} single "
+            f"  chosen by the images: {best['dips']} of the trace's {best['single']} single "
             f"repeated game "
             f"frames fall on a dip (chance 1 in 10^{best['score']:.1f}"
             + (f"; next best place 1 in 10^{second['score']:.1f})" if second else ")")
@@ -168,7 +168,7 @@ def LineUp(stamps, num, spread, approx):
     else:
         lines.append(
             "  NOT SURE: too few single repeated game frames to tell the places apart by the "
-            "pictures; "
+            "images; "
             "took the one nearest the log's estimate"
         )
 

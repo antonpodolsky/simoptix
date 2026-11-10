@@ -145,10 +145,10 @@ namespace {
         {
             // The game behind as in a real race at 82 fps (278 visible jumps a minute): it misses
             // 9% of its slots and queues up to two frames, each drawn for an earlier slot than it arrives
-            // for, the lag changing at drops and catch-ups. The picture is a cockpit with detail on its
+            // for, the lag changing at drops and catch-ups. The image is a cockpit with detail on its
             // roof, pillars and dashboard, a plain panel, a turning wheel and the world turning past the
             // windows as the car corners; the head glances about as in racing, without road vibration (a
-            // sim rig). Graded on the cockpit correction (drawn_pose 2): the picture's jumps against
+            // sim rig). Graded on the cockpit correction (drawn_pose 2): the image's jumps against
             // the poses the frames were drawn with, and no drift. Judged by poses (exact here), not on
             // screen: the cockpit holds no direction codes.
             Scenario c{
@@ -381,7 +381,7 @@ namespace {
 
 std::vector<Scenario> BuiltInScenarios() {
     // Only what synthetic motion tests best; every other edge case (queued frames, timing hiccups,
-    // pictures that mislead the frame matching) is a replay of real footage. Each runs at every
+    // images that mislead the frame matching) is a replay of real footage. Each runs at every
     // smoothing; the runner then compares Look-ahead with Instant (compare.h).
     std::vector<Scenario> s;
     AddMotionScenarios(&s);
@@ -411,11 +411,11 @@ void AddReplayScenarios(const fs::path& replayDir, std::vector<Scenario>* out) {
 
         c.fake["replay"] = e.path().string();
 
-        // The game's real pictures, as the frame matching saw them: the replay's thumbnails, rebuilt
+        // The game's real images, as the frame matching saw them: the replay's thumbnails, rebuilt
         // from the session's recording. The fake shows them where the tool makes its thumbnails,
         // which covers nearly all of the window (u 0.2-0.8, v 0.25-0.85 of the eye; the window shows
         // about u 0.17-0.83, v 0.28-0.72), so the view is judged by poses (exact here), not read on
-        // screen, and black borders aren't checked (the real picture's dark pixels hold no direction
+        // screen, and black borders aren't checked (the real image's dark pixels hold no direction
         // code; the corners read 85-100% "black"). black_borders covers them.
         fs::path thumbsFile = e.path();
         thumbsFile.replace_extension(".thumbs.png");

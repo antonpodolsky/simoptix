@@ -3,7 +3,7 @@
 // OpenXrPublisher: the OpenXR layer's part that hands the game's frames to VR Mirror through the
 // shared memory of openxr_share.h. Per frame, on the game's thread, after the frame went on to the
 // runtime: a record of it (its display time, the eyes' poses and fields of view), and, while a reader is
-// there, one GPU copy of the left eye's picture into one of three shared textures, with a marker after it
+// there, one GPU copy of the left eye's image into one of three shared textures, with a marker after it
 // that a later frame checks without waiting or flushing; a finished copy is announced by an event. A
 // thread of its own signs the layer's presence once a second, reads the runtime's clock for the reader,
 // and makes the textures when a reader comes (lets them go 10 s after it left).
@@ -42,7 +42,7 @@ struct OpenXrPublishedFrame {
 // The publisher's numbers since the last TakeStats (the game's thread).
 struct OpenXrPublisherStats {
     uint32_t frames = 0;                        // frames published
-    uint32_t copied = 0;                        // ...whose picture was copied
+    uint32_t copied = 0;                        // ...whose image was copied
     uint32_t readerBusy = 0;                    // ...not copied: the reader was reading the next texture
     uint32_t copyPending = 0;                   // ...not copied: the next texture's copy wasn't finished yet
     uint32_t timed = 0;                         // copies whose GPU time was read
@@ -72,7 +72,7 @@ public:
     }
 
     // The game's thread, after the frame went on to the runtime: records it, and copies `box` of
-    // subresource `subresource` of `src` (the left eye's picture, the game's swapchain format
+    // subresource `subresource` of `src` (the left eye's image, the game's swapchain format
     // `gameFormat`) if a reader is there and the next texture is free.
     void Publish(
         const OpenXrPublishedFrame& f,

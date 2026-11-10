@@ -8,7 +8,7 @@
 namespace {
 
     // Share of the overlapping texels left out for lack of detail (see ReprojectionError). 0.5 cleared
-    // the slow corner on real pictures completely but cost e2e's dust replay a frame at the queue's
+    // the slow corner on real images completely but cost e2e's dust replay a frame at the queue's
     // start (worst frame 0.26-0.29 deg, a fail); 0.4 too (4.2% from the wrong pose).
     constexpr float kLeastDetail = 0.3f;
 
@@ -188,9 +188,9 @@ float ReprojectionError(
 
     // Both thumbnails re-projected halfway, to the pose between the two, so both get the same
     // interpolation blur. Re-projecting only one blurs only that one (head motion is a fraction
-    // of a texel per frame), so the smallest rotation always matched best: on real pictures the
+    // of a texel per frame), so the smallest rotation always matched best: on real images the
     // matcher took on-time frames for frames 1-3 slots late (measured on four recordings: the
-    // picture's motion fitted 0.1 of the head's instead of 1.0; 132-612 false re-timings per
+    // image's motion fitted 0.1 of the head's instead of 1.0; 132-612 false re-timings per
     // window, none with this).
     const Quat mid = Halfway(prevPose, curPose);
     float mp[3][3], mc[3][3];

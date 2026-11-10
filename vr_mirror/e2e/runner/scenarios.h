@@ -66,7 +66,7 @@ struct Scenario {
     // patches (Bit(Patch)) where no direction code counts as black; 0: unchecked
     int borderPatches = kEdgePatches;
     // The view's direction can be read on screen (the center patches show direction codes); not
-    // in replays with real thumbnails, which cover the middle of the picture.
+    // in replays with real thumbnails, which cover the middle of the image.
     bool viewOnScreen = true;
     // The poses each game frame was drawn with are what the tool can look up, so its pose measures
     // (frames from the wrong pose, visible pose jumps) are exact: replays, and the synthetic

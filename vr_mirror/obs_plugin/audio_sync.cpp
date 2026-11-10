@@ -61,7 +61,7 @@ namespace {
             blog(
                 LOG_INFO,
                 "[simoptix_vr_mirror] audio sync: %d audio source%s now %+lld ms on top of their own offsets "
-                "(the picture's delay)",
+                "(the view's delay)",
                 ctx.changed,
                 ctx.changed == 1 ? "" : "s",
                 static_cast<long long>(ctx.shift / 1000000)

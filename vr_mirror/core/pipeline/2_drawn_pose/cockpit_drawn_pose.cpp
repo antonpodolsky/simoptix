@@ -17,8 +17,8 @@ namespace {
     // head tremor, predictions one slot apart differed by up to 0.4 degree where the head moved 0.05.
     constexpr int kEnvelopeSlots = 6;
     constexpr double kSlackRad = 0.05 * kPi / 180;
-    // The pull back to the head poses (CockpitDrawnPose::kPullS) moves the picture by at most this much
-    // (rad/s): pulling a large correction back at the time constant's full speed moved the picture by
+    // The pull back to the head poses (CockpitDrawnPose::kPullS) moves the image by at most this much
+    // (rad/s): pulling a large correction back at the time constant's full speed moved the image by
     // 0.1 degree a frame and more where the slot error was 3-4 degrees (fast glances two slots behind,
     // e2e), itself a visible jump on every frame (offline: 6.3% of frames against 1.4%). Not beyond
     // kPlausibleRad over the predictions' motion (CockpitDrawnPose::Correct): a correction that large is
@@ -89,8 +89,8 @@ namespace {
 
 }
 
-PictureNeeds CockpitDrawnPose::Needs() const {
-    PictureNeeds n;
+ImageNeeds CockpitDrawnPose::Needs() const {
+    ImageNeeds n;
     n.thumbnail = true;
     n.patches = kLayout;
     return n;
@@ -392,9 +392,9 @@ void CockpitDrawnPose::Correct(
             measured = AngleRad(Quat(), step) <= envelope;
         }
 
-        // Follow the picture from frame to frame; the head poses pull it back over kPullS, at most
+        // Follow the image from frame to frame; the head poses pull it back over kPullS, at most
         // kPullRadS (unless the correction is larger than the predictions' motion makes plausible).
-        // The fade scales what is shown, not the filter: faded in or out, the picture moves by a share
+        // The fade scales what is shown, not the filter: faded in or out, the image moves by a share
         // of the correction per frame (kFadeS), and the filter keeps its state.
         const Quat u = measured ? Mul(unfaded_, step) : unfaded_;
         const double size = AngleRad(Quat(), u);
@@ -503,7 +503,7 @@ void CockpitDrawnPose::Report(StatsReport& r) {
     }
     r.Line("cockpit correction");
     r.Value("frames corrected", s.frames);
-    r.Value("measured from the picture", s.measured);
+    r.Value("measured from the image", s.measured);
     r.Value("with a cockpit too plain or moving to measure", s.unmeasured);
     r.Value("deg largest", s.largestDeg, 2);
 }

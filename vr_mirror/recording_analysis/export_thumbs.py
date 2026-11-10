@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
 r"""The real thumbnails of an e2e replay's game frames, rebuilt from the session's recording, for the
-fake runtime to show (vr_mirror\e2e\README.md, "Real pictures in replays"): one 64x32 tile per F row of the
+fake runtime to show (vr_mirror\e2e\README.md, "Real images in replays"): one 64x32 tile per F row of the
 replay file, in its order, in a PNG next to it (<replay>.thumbs.png, 64 wide, 32 rows per frame).
 RGB is the displayed colour of the linear average of each texel's samples, so a flat block of it
 gives the tool exactly that texel. Alpha 255 where the recording covers the texel; 128 where it

@@ -107,7 +107,7 @@ bool PvrSession::Open(std::string* error) {
     for (int eye = 0; eye < 2; eye++) {
         PvrEyeRenderInfo info = {};
         if (pvr_->getEyeRenderInfo(hmd, eye == 0 ? kPvrEyeLeft : kPvrEyeRight, &info) == kPvrSuccess) {
-            // The client mirror holds the game's picture sRGB-encoded twice.
+            // The client mirror holds the game's image sRGB-encoded twice.
             eyes_[eye] = {
                 info.fov.leftTan,
                 info.fov.rightTan,

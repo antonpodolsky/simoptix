@@ -30,7 +30,7 @@ namespace {
 
         // Graphics thread (the tick callback).
         RaceRecorder recorder;
-        double nextStep = 0;  // performance-counter seconds, on the picture's clock (Telemetry::Shown)
+        double nextStep = 0;  // performance-counter seconds, on the view's clock (Telemetry::Shown)
         bool logged = false;  // loggedKind and loggedPhase hold what was logged last
         SessionKind loggedKind = SessionKind::Other;
         SessionPhase loggedPhase = SessionPhase::Unknown;
@@ -52,8 +52,8 @@ namespace {
     void Tick(void*, float) {
         State& st = TheState();
 
-        // Everything on the picture's clock (now less the VR Mirror source's published delay), so the race
-        // starts and ends in the recording where the recorded picture shows it.
+        // Everything on the view's clock (now less the VR Mirror source's published delay), so the race
+        // starts and ends in the recording where the recorded video shows it.
         const double now = Telemetry::Shown();
         if (now < st.nextStep) {
             return;

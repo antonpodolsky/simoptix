@@ -176,7 +176,7 @@ namespace {
         // The answers' poses, fed in time order up to each frame's draw, as a host has them.
         std::unique_ptr<stage_replay::ReplayPoses> poses_;
         std::shared_ptr<DrawnPose> drawnPose_;
-        PictureNeeds needs_;
+        ImageNeeds needs_;
         std::vector<float> areas_;
         const std::vector<float> noPatches_;
         static constexpr size_t kTexels = size_t(thumbs::kWidth) * thumbs::kHeight;
@@ -265,7 +265,7 @@ namespace {
         prevThumb_ = thumb_;
         prevFrame_ = f;
         r.prev = stage.PoseOf(times_[k], *poses_);  // before its own thumbnail is read
-        if (needs_.thumbnail) {  // as the feed: a drawn pose that looks at no pictures isn't fed
+        if (needs_.thumbnail) {  // as the feed: a drawn pose that looks at no images isn't fed
             stage.Arrived(f, lookup_, kEye, kPeriod, reinterpret_cast<float (*)[4]>(areas_.data()));
             stage.Look(f, thumb_, noPatches_, lookup_, kEye, kPeriod);
         }

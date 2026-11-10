@@ -1,18 +1,18 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Stage 2, drawn pose: the head pose each game frame's picture was drawn with, which the warp
+// Stage 2, drawn pose: the head pose each game frame's image was drawn with, which the warp
 // re-projects it from and the view follows; and, for moments of the head's path around a frame,
-// the pose a picture shown then is drawn with (what the smoothing keeps its path inside). How an
-// implementation finds it (Pimax's prediction for a slot, a judgement from the pictures, a
+// the pose an image shown then is drawn with (what the smoothing keeps its path inside). How an
+// implementation finds it (Pimax's prediction for a slot, a judgement from the images, a
 // correction measured on the cockpit, the measured head) is its own business: nothing of it
 // crosses this interface. Interface and its inputs; implementations beside it. Knows nothing about
-// D3D, PVR or threads: pictures and predicted poses come in as parameters
-// (adapters\d3d\drawn_pose_feed makes the pictures on the GPU and feeds them).
+// D3D, PVR or threads: images and predicted poses come in as parameters
+// (adapters\d3d\drawn_pose_feed makes the images on the GPU and feeds them).
 //
 // Two threads use it. Feeding, on the thread that owns the copy device: Arrived for each new game
-// frame, in order (it may ask for patches of the eye), then Look with the pictures it asked for
+// frame, in order (it may ask for patches of the eye), then Look with the images it asked for
 // (Needs), in the same order. Answers, on the output thread: PoseOf and PosesAt. An implementation
-// that looks at pictures guards what both threads touch with its own briefly held lock.
+// that looks at images guards what both threads touch with its own briefly held lock.
 #pragma once
 
 #include <cstdint>
@@ -40,7 +40,7 @@ protected:
 // panels in the fake), coarser texels; so not.
 constexpr float kThumbArea[4] = {0.2f, 0.25f, 0.8f, 0.85f};
 
-// Small grey pictures of several areas of the eye, side by side in one picture of `columns` x `rows`
+// Small grey images of several areas of the eye, side by side in one image of `columns` x `rows`
 // tiles of `size` x `size` texels (tile i in column i % columns, row i / columns); the areas per
 // frame: Arrived. Values as displayed (the thumbnails' colours). count 0: none.
 struct PatchLayout {
@@ -48,8 +48,8 @@ struct PatchLayout {
     int samples = 4;  // samples per texel along each side (box average)
 };
 
-// What an implementation looks at of each frame's picture.
-struct PictureNeeds {
+// What an implementation looks at of each frame's image.
+struct ImageNeeds {
     bool thumbnail = false;  // a 64x32 colour thumbnail of kThumbArea (3 floats per texel)
     PatchLayout patches;     // patches of the eye, for the frames Arrived asks them for
 };
@@ -59,7 +59,7 @@ public:
     virtual ~DrawnPose() = default;
 
     // Feeding (the copy device's thread). What it looks at; nothing by default.
-    virtual PictureNeeds Needs() const { return {}; }
+    virtual ImageNeeds Needs() const { return {}; }
     // Forget the history (new session, other image source).
     virtual void Reset() {}
     // A new game frame, in order. Returns how many patches of the eye it wants of it (their areas in
@@ -69,7 +69,7 @@ public:
         return 0;
     }
 
-    // Frame `f`'s pictures, read back, in the order the frames arrived: its thumbnail (empty when
+    // Frame `f`'s images, read back, in the order the frames arrived: its thumbnail (empty when
     // none is wanted or it couldn't be made) and its patches (empty when none were made).
     virtual void Look(
         const GameFrame& /*f*/,
@@ -80,11 +80,11 @@ public:
         double /*period*/
     ) {}
 
-    // Answers (the output thread). The head pose frame `f`'s picture was drawn with, as known now
+    // Answers (the output thread). The head pose frame `f`'s image was drawn with, as known now
     // (it may change as later frames are looked at).
     virtual Quat PoseOf(const FrameTimes& f, PoseSource& poses) const = 0;
     // Where on the head's timeline frame `f`'s drawn pose sits (source seconds; where the look-ahead's
-    // window is centred): a steady rhythm, never a slot judged from the picture. By default the
+    // window is centred): a steady rhythm, never a slot judged from the image. By default the
     // frame's own moment (FrameTimes::moment: the slot it arrived for), which Pimax's predictions are
     // for.
     virtual double MomentOf(const FrameTimes& f) const { return f.moment; }
@@ -94,7 +94,7 @@ public:
     PosesAt(const double* times, const Quat* heads, int n, PoseSource& poses, Quat* out) const = 0;
 
     // The same for moments anywhere between display slots (`times` in increasing order, a period
-    // apart, `heads` the head at the unshifted window moments): what a picture drawn there would have
+    // apart, `heads` the head at the unshifted window moments): what an image drawn there would have
     // been warped from, interpolated between the slots around.
     virtual void
     PosesBetween(const double* times, const Quat* heads, int n, PoseSource& poses, Quat* out) const = 0;

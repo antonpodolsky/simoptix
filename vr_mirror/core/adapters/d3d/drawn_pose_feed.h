@@ -1,17 +1,17 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// DrawnPoseFeed: feeds the pipeline's drawn pose (stage 2, DrawnPose) the pictures it looks at,
+// DrawnPoseFeed: feeds the pipeline's drawn pose (stage 2, DrawnPose) the images it looks at,
 // from the GPU. For every new Pimax game-eye frame it tells the drawn pose the frame arrived, makes
 // what it needs of the frame's copy on the host's device (a small colour thumbnail, and patches of
 // the eye for the frames it asks them for), reads them back once the GPU is done (never waiting,
 // never flushing), and hands them over with the frame source's pose predictions. Thin glue: what the
-// pictures mean is the drawn pose's business; a drawn pose that looks at no pictures gets
+// images mean is the drawn pose's business; a drawn pose that looks at no images gets
 // nothing made. Knows nothing about windows, OBS, swap chains or where the frames come from.
 //
 // Use, on one thread (the one with the host's device context): SetDrawnPose, Init, then Submit
 // after copying each new game frame, and Poll often (before drawing, or whenever Busy). Init again
-// with a new device makes the pictures afresh on it; Release lets go of the device's. The output
-// thread asks the drawn pose itself (the pipeline holds it too). A frame's own pictures are ready
+// with a new device makes the images afresh on it; Release lets go of the device's. The output
+// thread asks the drawn pose itself (the pipeline holds it too). A frame's own images are ready
 // about a millisecond after its copy: a host that draws a few milliseconds after arrival (the OBS
 // plugin) gets each frame's own answer; one that draws at once (the mirror app) gets the one from the
 // frames before, unless it waits while Measuring.
@@ -56,13 +56,13 @@ public:
         double period
     );
 
-    // Reads finished pictures and hands them to the drawn pose.
+    // Reads finished images and hands them to the drawn pose.
     void Poll(ID3D11DeviceContext* context, const PoseLookup& predictions, const EyeInfo& eye, double period);
 
     // Whether frame `serial`'s patches are still waiting for the GPU (the drawn pose looks at them
     // once they are read; Poll).
     bool Measuring(uint64_t serial) const;
-    // True while pictures are waiting for the GPU: Poll again within about a millisecond.
+    // True while images are waiting for the GPU: Poll again within about a millisecond.
     bool Busy() const { return pendingCount_ > 0; }
     // The time the drawn pose took looking at frames with patches on this thread, since the last
     // call (for 10 s stats).
@@ -72,7 +72,7 @@ public:
         return t;
     }
 
-    // That time as a line of the shared report ("looking at pictures with patches"), when any.
+    // That time as a line of the shared report ("looking at images with patches"), when any.
     static void ReportLookTime(const CallStats& time, StatsReport& r);
 
 private:
@@ -85,19 +85,19 @@ private:
     static constexpr int kPending = 6;
 
     // Sets up the thumbnails and patches the drawn pose needs; false if they can't be made.
-    bool InitPictures();
+    bool InitImages();
 
     Microsoft::WRL::ComPtr<ID3D11Device> device_;
     Thumbnailer thumbs_;
-    Thumbnailer patches_;  // the drawn pose's patches (PictureNeeds::patches), if it asks for any
-    PictureNeeds needs_;   // the drawn pose's (SetDrawnPose)
+    Thumbnailer patches_;  // the drawn pose's patches (ImageNeeds::patches), if it asks for any
+    ImageNeeds needs_;     // the drawn pose's (SetDrawnPose)
     Pending pending_[kPending];
     int pendingHead_ = 0, pendingCount_ = 0;
     uint64_t lastSubmitted_ = 0;      // the same frame can be drawn more than once
     std::vector<float> cur_;          // the thumbnail being read
     std::vector<float> patchesRead_;  // the patches being read
-    std::vector<float> areas_;        // the patches' areas for a frame (4 floats each; InitPictures)
-    const std::vector<float> none_;   // no picture
+    std::vector<float> areas_;        // the patches' areas for a frame (4 floats each; InitImages)
+    const std::vector<float> none_;   // no image
     CallStats lookTime_;              // Look's time on this thread for frames with patches (10 s stats)
     std::shared_ptr<DrawnPose> drawnPose_;
 };

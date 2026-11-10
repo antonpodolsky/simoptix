@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Telemetry: the game's telemetry as the overlays and race auto-record read it, in either plugin, already
-// matched to the picture: Shown() is the moment of the game the picture shows (VR Mirror's view runs
+// matched to the view: Shown() is the moment of the game the view shows (VR Mirror's view runs
 // behind the game), and every read is as of such a moment, so readers never deal with the delay.
 //
 // Each thing that needs telemetry (a G-meter on screen, race auto-record switched on) holds it with
@@ -29,7 +29,7 @@ public:
     // This plugin is unloading: stops its reader if it runs (the other plugin then takes over).
     static void Shutdown();
 
-    // The moment of the game the picture shows, in performance-counter seconds: now, less the picture's
+    // The moment of the game the view shows, in performance-counter seconds: now, less the view's
     // delay (0 without VR Mirror's view on screen). Never goes back (shown_moment.h). Read it once per
     // frame or step and pass it to the reads below, so they all describe the same moment.
     static double Shown();

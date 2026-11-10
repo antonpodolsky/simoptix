@@ -3,7 +3,7 @@
 r"""Every cockpit jump of a recording with a frame trace, classified by cause from the trace.
 
 The recording is lined up with the trace by the frame-number stamp. Per video frame the trace
-gives the pose the shown picture was warped from (img), the view, the slot the frame arrived for,
+gives the pose the shown image was warped from (img), the view, the slot the frame arrived for,
 the edge counters, and the runtime's predicted pose for every slot. The cockpit's measured path
 (shake.py) is split into the view's own path and the error of the warp pose; that error is
 compared with the poses of the neighbouring slots, so each frame's true slot (the one whose pose
@@ -15,7 +15,7 @@ explains the cockpit) is known where the head moved enough to tell. A jump is th
 
 usage: python -I shake_traced.py <out folder of analyse_recording.py>
 (analyse_recording.py runs it; it needs that folder's shake.npz and lineup.npz.)
-Angles in degrees; jumps in px of the 1920x1080 picture, as shake.py and shake_causes.py count them.
+Angles in degrees; jumps in px of the 1920x1080 video, as shake.py and shake_causes.py count them.
 Needs a trace with 26 or more columns (zoom, edge counters, view time).
 """
 
@@ -48,7 +48,7 @@ AIM = Qmul(
 WIDE = np.tan((np.arctan(EYE["L"]) + np.arctan(EYE["R"])) / 2)
 TALL = np.tan((np.arctan(EYE["U"]) + np.arctan(EYE["D"])) / 2)
 
-# vr_mirror\core\pipeline\picture_room\picture_room.h kStopShare (in older builds: 5_edges kEdge)
+# vr_mirror\core\pipeline\image_room\image_room.h kStopShare (in older builds: 5_edges kEdge)
 EDGE = 0.95
 LAGS = np.arange(-3, 2)  # candidate true slots, display periods from the slot the frame arrived for
 
@@ -74,15 +74,15 @@ def Matrix(q):
     )
 
 
-# ---- the plugin's edge test (vr_mirror\core\pipeline\picture_room\, in older builds 5_edges\), vectorised
+# ---- the plugin's edge test (vr_mirror\core\pipeline\image_room\, in older builds 5_edges\), vectorised
 # ----
-def Fits(picture, view, zoom):
+def Fits(image, view, zoom):
     tw = WIDE / zoom
     th = tw / ASPECT
     th, tw = (np.minimum(th, TALL / zoom), tw)
-    delta = Qmul(Conj(picture), view)
+    delta = Qmul(Conj(image), view)
     rm = Matrix(Qmul(Qmul(Qmul(Conj(CANT), delta), CANT), AIM))
-    ok = np.ones(picture.shape[:-1], bool)
+    ok = np.ones(image.shape[:-1], bool)
     for cx in (-1, 1):
         for cy in (-1, 1):
             v = np.stack([cx * tw, cy * th, -np.ones_like(tw)], -1)
@@ -102,7 +102,7 @@ def Fits(picture, view, zoom):
 
 def RoomShare(raw, view, zoom):
     """How far `view` trails `raw` as a share of the room it has in that direction (1 = at the
-    picture's edge; the clamp holds it at 0.95)."""
+    image's edge; the clamp holds it at 0.95)."""
 
     d = Qmul(Conj(raw), view)
     d = d * np.where(d[:, 3:] < 0, -1, 1)

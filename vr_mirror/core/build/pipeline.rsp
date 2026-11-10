@@ -13,6 +13,6 @@
 ..\core\pipeline\3_frame_picker\held_frame_picker.cpp
 ..\core\pipeline\4_smoothing\instant_smoothing.cpp
 ..\core\pipeline\4_smoothing\lookahead_smoothing.cpp
-..\core\pipeline\picture_room\picture_room.cpp
+..\core\pipeline\image_room\image_room.cpp
 ..\core\pipeline\5_warp\rotation_warp.cpp
 ..\core\pipeline\observer\stamp_trace_observer.cpp

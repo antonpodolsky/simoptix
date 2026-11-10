@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The G-meter's picture layers (design\README.md), embedded in the plugin as PNG data and read
+// The G-meter's image layers (design\README.md), embedded in the plugin as PNG data and read
 // by name in meter_image.cpp.
 GMETER_BASE RCDATA "design\\gmeter_base.png"
 GMETER_GLASS RCDATA "design\\gmeter_glass.png"

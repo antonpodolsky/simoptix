@@ -379,7 +379,7 @@ namespace fake_pvr {
 
         event_.Reset(CreateEventW(nullptr, TRUE, FALSE, nullptr));  // manual reset, like the real one
 
-        if (!picture_.Init(device_.Get(), thumbTiles_ > 0)) {
+        if (!image_.Init(device_.Get(), thumbTiles_ > 0)) {
             return false;
         }
 
@@ -396,14 +396,14 @@ namespace fake_pvr {
         const bool real = tile >= 0 && tile < thumbTiles_;
         const size_t tileBytes = size_t(thumbs::kWidth) * thumbs::kHeight * 4;
 
-        FakeGamePicture::Look look;
+        FakeGameImage::Look look;
         look.leftTan = kFov[0].leftTan, look.rightTan = kFov[0].rightTan;
         look.upTan = kFov[0].upTan, look.downTan = kFov[0].downTan;
         look.drawnFov = float(config_.drawnFov);
         look.cockpit = config_.cockpit;
         look.encodedTwice = true;  // the client mirror's
 
-        picture_.Draw(
+        image_.Draw(
             context_.Get(),
             rtv_.Get(),
             config_.width,

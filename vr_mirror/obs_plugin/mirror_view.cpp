@@ -159,7 +159,7 @@ PipelineConfig MirrorView::ConfigOf() const {
     return c;
 }
 
-// Hands the pipeline's drawn pose to the ring's copy thread, which feeds it the frames' pictures,
+// Hands the pipeline's drawn pose to the ring's copy thread, which feeds it the frames' images,
 // when it is a new one (its config value changed). Graphics thread.
 void MirrorView::FeedDrawnPose() {
     const std::shared_ptr<DrawnPose>& p = pipeline_.SharedDrawnPose();
@@ -182,7 +182,7 @@ void MirrorView::RestartDelay() {
     picker.Restart(SmoothingDelayS(config.smoothing), FrameRing::kMaxSlots);
     outDelay_ = picker.OutDelay();
     ring_.SetSlotCount(picker.SlotsInUse());
-    SetPictureNeed();
+    SetImageNeed();
 }
 
 // Starts and stops the frame source as the source is shown and hidden. The session worker does
@@ -236,7 +236,7 @@ void MirrorView::Tick() {
     ToggleTrace(
         trace_ && frameSource_->FramesArrived() > framesAtStart_
     );  // no trace before the game's frames
-    SetPictureNeed();
+    SetImageNeed();
     const uint64_t q0 = os_gettime_ns();
     const double now = frameSource_->Now();
     const uint64_t q1 = os_gettime_ns();
@@ -286,7 +286,7 @@ void MirrorView::Prepare(uint64_t tickNs) {
             break;
         case PickKind::kHeld:
             statHeld_++;
-            break;  // a copy running late: the last picture again
+            break;  // a copy running late: the last image again
         case PickKind::kNone:
             statNoFrame_++;
             return;
@@ -373,15 +373,15 @@ void MirrorView::OpenSlotTexture(const FrameRing::SlotInfo& slot) {
     }
 }
 
-// How large the canvas shows the pictures: a frame source that can scale them (the OpenXR layer's) keeps
+// How large the canvas shows the images: a frame source that can scale them (the OpenXR layer's) keeps
 // them that size, within the memory allowed for the ring's slots. Graphics thread: before the frame source
 // starts, and every tick while it runs (the canvas, the zoom, the slots and the game's field of view can
 // change).
-void MirrorView::SetPictureNeed() {
+void MirrorView::SetImageNeed() {
     const float aspect = float(width_) / float(std::max<uint32_t>(1, height_));
-    frameSource_->SetPictureNeed(
-        NativePictureWidth(frameSource_->Eye(), settings_, int(width_), aspect),
-        kPictureMemory / ring_.SlotCount()
+    frameSource_->SetImageNeed(
+        NativeImageWidth(frameSource_->Eye(), settings_, int(width_), aspect),
+        kImageMemory / ring_.SlotCount()
     );
 }
 
@@ -443,7 +443,7 @@ void MirrorView::LogStats(uint64_t tickNs) {
         const uint64_t frames = frameSource_->FramesArrived();
 
         // Every stage's own numbers (the drawn pose's: frames judged and re-timed, corrections), and
-        // the copy thread's time looking at pictures with patches.
+        // the copy thread's time looking at images with patches.
         {
             LineStatsReport<void (*)(const char*)> log(LogLine);
             pipeline_.Report(log);

@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// FrameCopy: a host's own copy of a game frame's picture, on the host's device: the texture, a view
+// FrameCopy: a host's own copy of a game frame's image, on the host's device: the texture, a view
 // that reads its bytes as they are (a UNORM view: an _SRGB one would decode them; the warp knows the
-// picture's encoding, EyeInfo::encodedTwice), and, for a frame source that draws its picture in (a
+// image's encoding, EyeInfo::encodedTwice), and, for a frame source that draws its image in (a
 // scaled one), a render target. A shared copy (another device opens it: the OBS plugin's store) has a
 // legacy shared handle and a plain UNORM format; an unshared one is typeless with a UNORM view.
-// The frame source fills it (FrameSource::CopyPicture); this only makes and keeps the texture.
+// The frame source fills it (FrameSource::CopyImage); this only makes and keeps the texture.
 #pragma once
 
 #include <d3d11.h>
@@ -13,7 +13,7 @@
 
 struct FrameCopyShape {
     UINT width = 0, height = 0;
-    DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;  // the picture's channel order
+    DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;  // the image's channel order
     bool shared = false;                       // another device opens it
     bool drawn = false;                        // with a render target
 };

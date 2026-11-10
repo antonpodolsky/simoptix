@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SimOptix: VR Mirror, the mirror app: shows a stabilized view of the headset in a desktop window,
 // drawn once per game frame. This file is only the window host; the frame sources (..\frame_sources\:
-// the Pimax game eye, or the OpenXR layer's picture), smoothing and warp math are shared with the OBS
+// the Pimax game eye, or the OpenXR layer's image), smoothing and warp math are shared with the OBS
 // plugin. Its settings come from simoptix_vr_mirror.ini (mirror_app_settings.h); it has no controls.
 
 #include <windows.h>
@@ -47,7 +47,7 @@ namespace {
         FrameHold
             hold;  // look-ahead smoothing (settings smoothing 2, 3): frames held until their view is known
         Pipeline pipeline;     // stages 2-6 (vr_mirror\core\pipeline), built for the settings at start
-        DrawnPoseFeed feed;    // feeds the pipeline's drawn pose the frames' pictures
+        DrawnPoseFeed feed;    // feeds the pipeline's drawn pose the frames' images
         FrameTimes lastTimes;  // the frame last drawn: its times
 
         WindowOutput output;   // the device, swap chain and warp shader
@@ -68,7 +68,7 @@ namespace {
     }
 
     // The device on the headset's adapter, the window's swap chain and shader, and the drawn pose's
-    // pictures on that device.
+    // images on that device.
     bool CreateDevice(App& app) {
         if (!app.output.Create(app.hwnd, app.source->AdapterLuid())) {
             return false;
@@ -77,17 +77,17 @@ namespace {
         return true;
     }
 
-    // How large the window shows the pictures: the frame source keeps them that size, if it can.
-    void SetPictureNeed(App& app) {
+    // How large the window shows the images: the frame source keeps them that size, if it can.
+    void SetImageNeed(App& app) {
         const float aspect = float(app.output.Width()) / float(std::max(1, app.output.Height()));
         const int held = std::max(1, app.hold.Capacity());
-        app.source->SetPictureNeed(
-            NativePictureWidth(app.source->Eye(), app.settings.core, app.output.Width(), aspect),
-            kPictureMemory / held
+        app.source->SetImageNeed(
+            NativeImageWidth(app.source->Eye(), app.settings.core, app.output.Width(), aspect),
+            kImageMemory / held
         );
     }
 
-    // Hands the drawn pose the pictures the GPU has finished.
+    // Hands the drawn pose the images the GPU has finished.
     void PollFeed(App& app) {
         app.feed.Poll(
             app.output.Context(),
@@ -96,7 +96,7 @@ namespace {
             app.source->Period()
         );
 
-        app.source->PollPictures(app.output.Context());
+        app.source->PollImages(app.output.Context());
     }
 
     // A line of the stages' shared report (StatsReport), on the console.
@@ -104,7 +104,7 @@ namespace {
         printf("%s\n", line);
     }
 
-    // Every stage's numbers since the last call, and the time looking at pictures with patches.
+    // Every stage's numbers since the last call, and the time looking at images with patches.
     void PrintStats(App& app) {
         LineStatsReport<void (*)(const char*)> out(PrintLine);
         app.pipeline.Report(out);
@@ -177,12 +177,12 @@ namespace {
     // frame later).
     void Render(App& app, const GameFrame& f, double now, double presentAt) {
         if (f.buffer < 0
-            || !app.source->CopyPicture(app.output.Device(), app.output.Context(), f, &app.frame, false)) {
+            || !app.source->CopyImage(app.output.Device(), app.output.Context(), f, &app.frame, false)) {
             Draw(app, nullptr, f, f, now, presentAt);
             return;
         }
 
-        // The pictures the drawn pose looks at (if the game has frames queued, it warps from the slot
+        // The images the drawn pose looks at (if the game has frames queued, it warps from the slot
         // the frame was rendered for).
         PollFeed(app);
         const float whole[4] = {0, 0, 1, 1};
@@ -329,18 +329,18 @@ namespace {
         std::vector<StoredFrame> stored;
     };
 
-    void KeepPicturesCurrent(App& app, FrameLoop& loop, double now) {
-        // Lets go of the source's pictures as soon as their copies are done (the OpenXR layer reuses its
+    void KeepImagesCurrent(App& app, FrameLoop& loop, double now) {
+        // Lets go of the source's images as soon as their copies are done (the OpenXR layer reuses its
         // textures two frames later and skips a copy into one still being read).
-        app.source->PollPictures(app.output.Context());
+        app.source->PollImages(app.output.Context());
 
-        // The source may re-create its pictures (Pimax when a VR app starts or stops, the OpenXR layer for
-        // a new game session); pick up new handles. A source that can scale its pictures keeps them as
+        // The source may re-create its images (Pimax when a VR app starts or stops, the OpenXR layer for
+        // a new game session); pick up new handles. A source that can scale its images keeps them as
         // large as the window shows them (the eye's field of view can change with the game).
         if (now - loop.lastReopen > 2.0) {
             loop.lastReopen = now;
-            SetPictureNeed(app);
-            app.source->OpenPictures(app.output.Device());
+            SetImageNeed(app);
+            app.source->OpenImages(app.output.Device());
         }
     }
 
@@ -470,7 +470,7 @@ namespace {
             }
 
             const double now = app.source->Now();
-            KeepPicturesCurrent(app, loop, now);
+            KeepImagesCurrent(app, loop, now);
 
             if (app.source->Idle()) {
                 WaitWhileIdle(app, now);
@@ -550,8 +550,8 @@ int wmain() {
     }
 
     app.output.ResizeSwapChain();
-    SetPictureNeed(app);
-    app.source->OpenPictures(app.output.Device());
+    SetImageNeed(app);
+    app.source->OpenImages(app.output.Device());
     ShowWindow(app.hwnd, SW_SHOW);
 
     // Draw once per new mirror frame, right after it arrives: the game overwrites its single

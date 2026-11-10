@@ -151,7 +151,7 @@ Before the fake's fix the same pattern held, less steadily:
 ## The edges in the smoothing
 
 **What changed.** Since this change nothing after the smoothing changes the view. Each smoothing keeps
-it inside the image that is shown with it (`vr_mirror\core\pipeline\picture_room\README.md`).
+it inside the image that is shown with it (`vr_mirror\core\pipeline\image_room\README.md`).
 - On ticks that is the game image standing in for the tick's moment. With the fixed delay it is drawn
   about 16–22 ms after that moment, and sometimes it is the previous one again.
 - The one count of stops ("edge limit acted") covers it. Before, the clip against that image was a
@@ -225,7 +225,7 @@ the smooth view and the pose the moment's image will be warped from.
   target becomes the margin point, weighted 10,000 against the head's 1.
 - The path is solved again, up to three times. The jerk penalty eases the path out to the margin and
   back, ahead of time.
-- The code is in `vr_mirror\core\pipeline\4_smoothing\lookahead_smoothing.cpp`, against the picture
+- The code is in `vr_mirror\core\pipeline\4_smoothing\lookahead_smoothing.cpp`, against the image
   room. In older builds it was in the edges.
 
 **`black_borders`' motion at Smoothest, by zoom** (jitter as a share of the head's, and the frames where

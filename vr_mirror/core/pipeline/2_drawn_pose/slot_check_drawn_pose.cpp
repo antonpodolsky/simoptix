@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "pipeline/2_drawn_pose/slot_check_drawn_pose.h"
 
-PictureNeeds SlotCheckDrawnPose::Needs() const {
-    PictureNeeds n;
+ImageNeeds SlotCheckDrawnPose::Needs() const {
+    ImageNeeds n;
     n.thumbnail = true;
     return n;
 }
@@ -183,5 +183,5 @@ void SlotCheckDrawnPose::Report(StatsReport& r) {
     }
     r.Line("game behind");
     r.Value("frames rendered for an earlier slot (warped from that slot's pose)", late);
-    r.Value("frames judged by picture", judged);
+    r.Value("frames judged by image", judged);
 }

@@ -17,7 +17,7 @@
 //    stored sRGB-encoded so that the tool's gamma fix turns it back into the plain code.
 //    The e2e runner reads these colors from the captured output to know exactly where the
 //    stabilized view points. A replay can bring the game's real thumbnails (key `thumbs`):
-//    shown where the tool makes its own, so its slot check sees the real pictures.
+//    shown where the tool makes its own, so its slot check sees the real images.
 //    Key `drawn_fov` (below 1) draws black at the image's edges, inside the FOV it reports:
 //    a game image smaller than the tool assumes, which shows as black borders.
 //  - Head pose: from a motion spec (fake_game_motion.h). Queries for the future are extrapolated

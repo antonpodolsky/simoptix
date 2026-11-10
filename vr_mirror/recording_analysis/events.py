@@ -10,7 +10,7 @@ steps (shake_causes.py's _frames.npz):
 Each with the cockpit's largest step within a frame of it.
 
 usage: python -I events.py <out folder of analyse_recording.py>
-(analyse_recording.py runs it.) Steps in px of the 1920x1080 picture.
+(analyse_recording.py runs it.) Steps in px of the 1920x1080 video.
 """
 
 import os
