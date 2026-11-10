@@ -33,8 +33,12 @@ SimOptix is early software. There are no ready-made downloads, so you build it f
 
 ## Headsets and games
 
-**Games:** LMU. The stabilized view has been measured with LMU, and the G-meter's live values and race
-auto-record read LMU's telemetry.
+**Games:**
+
+| Game | VR Mirror | G-meter and race auto-record |
+|---|---|---|
+| LMU | Measured, with both sources | Read LMU's telemetry |
+| Other VR games | Pimax Mirror reads only Pimax Play, so it should work. Not tried. OpenXR Mirror's API layer loads only in LMU | The G-meter's demo lap plays. They get no live values from other games |
 
 **Headsets:**
 
@@ -44,9 +48,9 @@ auto-record read LMU's telemetry.
 | Other Pimax headsets | Works through Pimax Play. Not measured | Should work. Not tried |
 | Other OpenXR headsets | Needs a Pimax headset and Pimax Play | Uses no Pimax software, so it should work. Not tried |
 
-### Pimax Dream Air
+### Pimax Dream Air in LMU
 
-The left eye image each source gets in LMU, measured:
+The left eye image each source gets, measured:
 
 | Source | Render Quality | Left eye image |
 |---|---|---|

@@ -142,9 +142,9 @@ About 2 s after the first game frame, the OBS log says the delay the source sett
   start lights and ends after the finish, as the recorded video shows them.
 - **The sound.** While the source is shown, the plugin adds the delay to every audio source's own Sync
   Offset (Edit → Advanced Audio Properties), and takes it off again when the source is hidden.
-  - Keep each audio source's own offset as it is. LMU's sound needs about −120 ms of its own, because
-    it trails the image by that much. With Look-ahead, LMU's sound then shows about +415 ms and the
-    microphone about +535 ms.
+  - Keep each audio source's own offset as it is. A game whose sound trails its image needs an offset
+    of its own. LMU's sound trails by about 120 ms, so it needs about −120 ms. With Look-ahead, LMU's
+    sound then shows about +415 ms and the microphone about +535 ms.
   - The OBS log says so: "audio sync: 2 audio sources now +535 ms on top of their own offsets".
   - Each audio source remembers the shift it got, saved with the scene. So its own offset comes back
     exactly, also after OBS was closed with the source shown.
@@ -155,9 +155,9 @@ About 2 s after the first game frame, the OBS log says the delay the source sett
 More zoom means a calmer camera on big head movements. Less zoom means more detail and a wider view.
 
 The view looks at the middle of the eye image, halfway between its edges, so it has the same room on
-each side. At zoom 1.25 it is about 87° wide, with about 6.4° of room each way, in both sources. The
-view looks 2.3° (Pimax) to 2.5° (OpenXR) outward of straight ahead, because LMU's left eye image
-reaches further outward than inward.
+each side. On a Pimax Dream Air in LMU, at zoom 1.25 it is about 87° wide, with about 6.4° of room
+each way, in both sources. There the view looks 2.3° (Pimax) to 2.5° (OpenXR) outward of straight
+ahead, because the left eye image reaches further outward than inward.
 
 - With Look-ahead, a lower zoom costs less calm. The source sees each edge coming in the time
   it runs behind, and eases the view towards the head ahead of time instead of stopping it at the
@@ -165,7 +165,8 @@ reaches further outward than inward.
 - With Instant, the view catches up faster near the edge, and stops at it as a last resort.
 - On real head motion, the edge is never reached at zoom 1.29, and touched on about one frame in a
   thousand at 1.2. At 1.1 the view gets shakier than with Instant. So don't go below about 1.2 with
-  Look-ahead. These were measured with the Pimax source, with 0.5° more room on the view's
+  Look-ahead. These were measured with the Pimax source on a Pimax Dream Air in LMU, with 0.5° more
+  room on the view's
   outer side than it has now, and not measured again.
 - The source draws on OBS's clock, so each OBS frame shows a game frame drawn for a slightly later
   moment, or the previous one again. The smoothing keeps the view inside that frame's image and plans
@@ -243,9 +244,9 @@ straight from the game's.
   sizes are worked out, not measured.
 
 **For more detail from the Pimax game eye, raise Render Quality in Pimax Play.** The game eye is always
-half the size of the eye image Pimax asks the game to draw, with no cap. The price is the game's: LMU
-draws 1.56× the pixels at 1.25. Restart LMU after changing Render Quality, because it picks its render
-size at start. The Pimax runtime has no size, crop or field-of-view option
+half the size of the eye image Pimax asks the game to draw, with no cap. The price is the game's: it
+draws 1.56× the pixels at 1.25. Restart the game after changing Render Quality if it picks its render
+size at start, as LMU does. The Pimax runtime has no size, crop or field-of-view option
 for its mirrors, so Render Quality is the only way to a larger game eye.
 
 ## Diagnostics
