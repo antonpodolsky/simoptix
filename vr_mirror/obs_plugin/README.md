@@ -143,9 +143,9 @@ About 2 s after the first game frame, the OBS log says the delay the source sett
 - **The sound.** While the source is shown, the plugin adds the delay to every audio source's own Sync
   Offset (Edit → Advanced Audio Properties), and takes it off again when the source is hidden.
   - Keep each audio source's own offset as it is. A game whose sound trails its image needs an offset
-    of its own. LMU's sound trails by about 120 ms, so it needs about −120 ms. With Look-ahead, LMU's
-    sound then shows about +415 ms and the microphone about +535 ms.
-  - The OBS log says so: "audio sync: 2 audio sources now +535 ms on top of their own offsets".
+    of its own.
+  - The OBS log says how far the sources were shifted ("audio sync: 2 audio sources now ... ms on top
+    of their own offsets").
   - Each audio source remembers the shift it got, saved with the scene. So its own offset comes back
     exactly, also after OBS was closed with the source shown.
   - Changing an offset while it is shifted changes the source's own offset by as much.
@@ -155,19 +155,15 @@ About 2 s after the first game frame, the OBS log says the delay the source sett
 More zoom means a calmer camera on big head movements. Less zoom means more detail and a wider view.
 
 The view looks at the middle of the eye image, halfway between its edges, so it has the same room on
-each side. On a Pimax Dream Air in LMU, at zoom 1.25 it is about 87° wide, with about 6.4° of room
-each way, in both sources. There the view looks 2.3° (Pimax) to 2.5° (OpenXR) outward of straight
-ahead, because the left eye image reaches further outward than inward.
+each side. Where the eye image reaches further outward than inward, the view looks a little outward of
+straight ahead.
 
 - With Look-ahead, a lower zoom costs less calm. The source sees each edge coming in the time
   it runs behind, and eases the view towards the head ahead of time instead of stopping it at the
   edge.
 - With Instant, the view catches up faster near the edge, and stops at it as a last resort.
-- On real head motion, the edge is never reached at zoom 1.29, and touched on about one frame in a
-  thousand at 1.2. At 1.1 the view gets shakier than with Instant. So don't go below about 1.2 with
-  Look-ahead. These were measured with the Pimax source on a Pimax Dream Air in LMU, with 0.5° more
-  room on the view's
-  outer side than it has now, and not measured again.
+- A lower zoom leaves less room, so the view reaches the edge more often. How low it can go and
+  stay calm depends on the headset's field of view and on the head's motion.
 - The source draws on OBS's clock, so each OBS frame shows a game frame drawn for a slightly later
   moment, or the previous one again. The smoothing keeps the view inside that frame's image and plans
   ahead for it.
@@ -225,43 +221,21 @@ refresh rate, which you choose in the headset's software, such as Pimax Play. Wh
 it draws one frame per refresh, so the source shows every game frame exactly once and motion is even.
 
 The canvas that is native depends on the headset, its Render Quality and the zoom. The root
-`README.md` ("Headsets and games") suggests a canvas for each measured headset. On a Pimax Dream Air
-in LMU, the Pimax game eye has about 1059 source pixels per unit of view tangent at Render Quality 1.0
-and 1323 at 1.25. The OpenXR source's image has about 2115 at 1.0. So a 16:9 canvas there stays
-native up to these Zoom settings. Above them, the image is enlarged, and the video gets softer.
-
-| Source | Render Quality | Canvas | Max zoom for native | Stabilization room at that zoom (side to side) |
-|---|---|---|---|---|
-| Pimax Mirror | 1.0 | 1920x1080 | 1.31 | about 7.7° each way |
-| Pimax Mirror | 1.0 | 1660x930 (soft once upscaled) | 1.5 | about 11.5° each way |
-| Pimax Mirror | 1.25 | 1920x1080 | 1.63 | about 13.8° each way |
-| Pimax Mirror | 1.25 | 2400x1350 | 1.31 | about 7.7° each way |
-| Pimax Mirror | 1.25 | 2560x1440 | 1.22 | about 5.7° each way |
-| OpenXR Mirror | 1.0 | 2560x1440 | 1.98 | about 18.9° each way |
-| OpenXR Mirror | 1.0 | 3840x2160 | 1.32 | about 7.9° each way |
-
-The zooms and the room are worked out from the measured image sizes and the headset's field of view.
-At Render Quality 1.0, 1440p and 4K can't be native from the Pimax game eye. Even zoom 1.0, with no
-room at all, gives only about 2480x1400 of source.
+`README.md` ("Headsets and games") suggests a canvas for each measured headset, and the highest zoom at
+which it stays native. Above that zoom, the image is enlarged, and the video gets softer.
 
 **The OpenXR source** keeps each frame's image at the game's own size when the canvas shows it at 83%
 of that size or more. Otherwise it keeps the image at the size the canvas shows it 1:1. Each
 resampling softens the finest detail, so near the game's size the view resamples the image once,
 straight from the game's.
 - All stored images together may take at most 4.7 GB of video memory. Look-ahead stores 52 to 55
-  images.
-- On a Pimax Dream Air in LMU at Render Quality 1.0, a 4K canvas at zoom 1.25 shows the game's image
-  at 95% of its size, so the source keeps it whole. 55 images fit in 4.7 GB at that size. A 1440p
-  canvas shows it at 63%, so the source stores it at that size.
-- A higher Render Quality makes the game's image larger than 55 of them fit in 4.7 GB. On the Dream
-  Air at 1.25, each is then stored at about 80% of its size.
-- The OBS log showed "frame ring: 5084x4168" with Look-ahead on a 4K canvas at zoom 1.25. The other
-  sizes are worked out, not measured.
+  images. When that many don't fit at the game's own size, each is stored smaller, to fit.
+- The OBS log says the size each image is stored at ("frame ring: ...").
 
 **For more detail from the Pimax game eye, raise Render Quality in Pimax Play.** The game eye is always
 half the size of the eye image Pimax asks the game to draw, with no cap. The price is the game's: it
 draws 1.56× the pixels at 1.25. Restart the game after changing Render Quality if it picks its render
-size at start, as LMU does. The Pimax runtime has no size, crop or field-of-view option for its
+size at start. The Pimax runtime has no size, crop or field-of-view option for its
 mirrors, so Render Quality is the only way to a larger game eye.
 
 ## Diagnostics
@@ -309,10 +283,8 @@ delay ... ms", about 4–5 ms measured). The frame picker (`vr_mirror\core\pipel
 - The ring starts with 8 copies, because the source allows 40 ms until it has measured that delay. It
   then keeps only the frames inside the delay plus 3, and at least 4.
 - From the OpenXR source each copy is the game's own size, or the size the canvas shows it (above).
-  From the Pimax source each copy is the size of the game eye. A copy takes 4 bytes per pixel.
-- On a Pimax Dream Air in LMU, an OpenXR copy at the game's own size takes 84.8 MB. A Pimax copy takes
-  21 MB at Render Quality 1.0 and 33 MB at 1.25. So 4 Pimax copies take 84 and 130 MB instead of 167
-  and 261 MB.
+  From the Pimax source each copy is the size of the game eye. A copy takes 4 bytes per pixel, so 4
+  copies take half the memory of 8.
 - The log says "frame ring: ... 8 slots, ... MB" when the first frame arrives, and "frame ring: 4
   slots, ... MB" about 2 s later.
 - If a copy is ever too late for its frame, the 10 s stats count it as "held the last image (copy

@@ -104,6 +104,45 @@ This file holds what was measured on the plugin, and what was tried.
   tried. Losing field of view in the headset isn't acceptable.
 - **Render Quality 1.25** makes LMU draw 1.56× the pixels. Not measured: the GPU load or frame rate
   while driving.
+- **LMU restarts to take a new Render Quality.** It picks its render size at start.
+
+## Native canvases on a Pimax Dream Air in LMU
+
+The root `README.md` ("Headsets and games") suggests one canvas per source from these.
+- **Source pixels per unit of view tangent:** the Pimax game eye about 1059 at Render Quality 1.0
+  (2508×2084) and 1323 at 1.25 (3134×2604). The OpenXR source's image about 2115 at 1.0 (5084×4168).
+- **The highest zoom at which a 16:9 canvas is native,** and the room at that zoom, worked out from
+  those and the Dream Air's eye tangents (`findings\mirror_app.md`, "Zoom"):
+
+| Source | Render Quality | Canvas | Max zoom for native | Stabilization room at that zoom (side to side) |
+|---|---|---|---|---|
+| Pimax Mirror | 1.0 | 1920x1080 | 1.31 | about 7.7° each way |
+| Pimax Mirror | 1.0 | 1660x930 (soft once upscaled) | 1.5 | about 11.5° each way |
+| Pimax Mirror | 1.25 | 1920x1080 | 1.63 | about 13.8° each way |
+| Pimax Mirror | 1.25 | 2400x1350 | 1.31 | about 7.7° each way |
+| Pimax Mirror | 1.25 | 2560x1440 | 1.22 | about 5.7° each way |
+| OpenXR Mirror | 1.0 | 2560x1440 | 1.98 | about 18.9° each way |
+| OpenXR Mirror | 1.0 | 3840x2160 | 1.32 | about 7.9° each way |
+
+- **At Render Quality 1.0, 1440p and 4K can't be native from the Pimax game eye.** Even zoom 1.0, with
+  no room at all, gives only about 2480x1400 of source.
+- **The OpenXR source's stored size:** at Render Quality 1.0 a 4K canvas at zoom 1.25 shows the game's
+  image at 95% of its size, so the source keeps it whole, and 55 images fit in 4.7 GB. A 1440p canvas
+  shows it at 63%, so the source stores it at that size. At Render Quality 1.25, 55 images no longer
+  fit in 4.7 GB, and each is stored at about 80% of its size. The OBS log showed "frame ring:
+  5084x4168" with Look-ahead on a 4K canvas at zoom 1.25. The other sizes are worked out.
+- **Video memory per copy:** 84.8 MB from the OpenXR source at the game's own size. From the Pimax
+  source 21 MB at Render Quality 1.0 and 33 MB at 1.25, so 4 copies take 84 and 130 MB instead of 167
+  and 261 MB. The OpenXR layer's three textures take 85 MB each, 254 MB.
+- **The view at zoom 1.25** is about 87° wide, with about 6.4° of room each way, in both sources. It
+  looks 2.3° (Pimax) to 2.5° (OpenXR) outward of straight ahead, because the left eye image reaches
+  further outward than inward.
+- **How low a zoom stays calm, with Look-ahead:** on real head motion, the edge is never reached at
+  zoom 1.29, and touched on about one frame in a thousand at 1.2. At 1.1 the view gets shakier than
+  with Instant. So about 1.2 is the lowest zoom that stays calm. These were measured with the Pimax
+  source, with 0.5° more room on the view's outer side than it has now, and not measured again.
+- **Audio:** with Look-ahead, LMU's sound shows about +415 ms and the microphone about +535 ms ("audio
+  sync: 2 audio sources now +535 ms on top of their own offsets").
 
 ## Diagnostics
 

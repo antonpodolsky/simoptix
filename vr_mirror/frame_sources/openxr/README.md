@@ -70,9 +70,8 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
   then tells VR Mirror. If VR Mirror is still reading the texture that is next in turn, the layer
   skips that frame's copy, so the game is not held up.
 - **It copies only while VR Mirror reads.** The three textures are the size of the game's left eye
-  image. On a Pimax Dream Air in LMU, that is 85 MB each, 254 MB of the graphics card's memory. The
-  layer makes them when VR Mirror starts reading and lets them go 10 s after it stopped. With nobody
-  reading, the layer only writes each frame's record.
+  image, at 4 bytes per pixel. The layer makes them when VR Mirror starts reading and lets them go 10 s
+  after it stopped. With nobody reading, the layer only writes each frame's record.
 - **In LMU, it writes one log per game start,**
   `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`. The newest 10 logs are kept. When a
   game start reaches OpenXR, the layer deletes the oldest beyond 10. Its log says how many it deleted.

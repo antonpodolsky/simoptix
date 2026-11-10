@@ -27,7 +27,7 @@ correction never leaves the stage, so the stages after it can't tell which imple
 
 ## Why it is more than "the prediction for the frame's slot"
 
-When the game's GPU falls behind (in LMU: dust clouds, traffic), the game queues up to two frames.
+When the game's GPU falls behind, the game queues up to two frames.
 Each is still rendered with the pose predicted for its own slot, but it arrives one or two slots later
 at the usual rhythm.
 The arrival timing then takes it for an on-time frame, and its arrival slot's prediction is 11–22 ms
