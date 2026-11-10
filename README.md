@@ -6,20 +6,22 @@ view, and Overlays adds a G-meter source. Both work with Le Mans Ultimate (LMU) 
 
 ## What you get
 
-- **SimOptix: VR Mirror** adds two OBS sources that show the stabilized view. They differ in where
-  the game's image comes from:
-  - **SimOptix: Pimax Mirror** takes Pimax Play's copy of the left eye. It is half the size the game
-    draws, and grows with Render Quality.
-  - **SimOptix: OpenXR Mirror** takes the game's own left eye at full size, with the exact head pose
-    each frame was drawn with. It needs an API layer in the game, which is experimental and works
-    offline only (below).
-- **Smoothing** trades delay for calm. Look-ahead runs half a second behind the game, sees where the
-  head goes next, and is meant for recording. Instant adds no delay, for live streams. OBS's audio,
-  the G-meter and race auto-record follow the delay, so they stay in sync with the view.
-- **Race auto-record** makes OBS record each LMU race by itself, from the start lights to 5 s after
-  the car stops past the finish.
-- **SimOptix: Overlays** adds the **SimOptix: G-Meter Overlay** source. It also works over a normal
-  capture of a flat-screen game, and plays a demo lap so you can try it without the game.
+- **SimOptix: VR Mirror** adds two OBS sources with the stabilized view:
+  - **SimOptix: Pimax Mirror** takes Pimax Play's copy of the left eye.
+    - It is half the size the game draws, and grows with Render Quality.
+  - **SimOptix: OpenXR Mirror** takes the game's own left eye at full size.
+    - It has the exact head pose each frame was drawn with.
+    - It needs an API layer in the game, which is experimental and works offline only (below).
+- **Stabilization** is set by the source's Smoothing setting:
+  - **Off:** the headset's view as it is, with no delay.
+  - **Instant:** no delay, for live streams.
+  - **Look-ahead:** half a second behind the game, for recording. It is the default.
+  - OBS's audio, the G-meter and race auto-record follow the delay, so they stay in sync with the view.
+- **Race auto-record** makes OBS record each LMU race by itself.
+  - It records from the start lights to 5 s after the car stops past the finish.
+- **SimOptix: Overlays** adds the **SimOptix: G-Meter Overlay** source.
+  - It also works over a normal capture of a flat-screen game.
+  - It plays a demo lap, so you can try it without the game.
 
 ## Status
 
