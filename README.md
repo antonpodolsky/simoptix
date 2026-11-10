@@ -49,6 +49,7 @@ SimOptix is early software. There are no ready-made downloads, so you build it f
 | Other Pimax headsets | Should work, not tested | Should work, not tested |
 | Other OpenXR headsets | Should work, not tested | Should work, not tested |
 
+## Recording in OBS
 To record at the source's native resolution, set OBS's canvas and output to the suggested size
 (Settings → Video), and its frame rate to the headset's refresh rate. "Max zoom for native" is the
 highest Zoom setting at which the recording stays native. Above it, the image is enlarged, and the
