@@ -11,7 +11,8 @@ view, and Overlays adds a G-meter source. Both currently work with Le Mans Ultim
     - It is half the size the game draws.
   - **SimOptix: OpenXR Mirror** takes the game's own left eye.
     - It is the full size the game draws.
-    - It needs an API layer in the game, which is experimental and works offline only (below).
+    - It needs an API layer in the game.
+    - The layer works with Easy Anti-Cheat only when it is signed (below).
 - **Stabilization** is set by the source's Smoothing setting:
   - **Off:** raw headset view.
   - **Instant:** prioritizes latency (no delay), best for live streams.
@@ -29,10 +30,10 @@ view, and Overlays adds a G-meter source. Both currently work with Le Mans Ultim
 SimOptix is early software. There are no ready-made downloads, so you build it from source.
 
 - **OBS:** built against OBS Studio 32.2.2. Other versions haven't been tried.
-- **OpenXR Mirror** and its API layer (`vr_mirror\frame_sources\openxr\`) are experimental. Unsigned,
-  the layer works in LMU started without Easy Anti-Cheat. Signed with a code signing certificate
+- **OpenXR Mirror:** unsigned, its API layer (`vr_mirror\frame_sources\openxr\`) works in LMU started
+  without Easy Anti-Cheat. Signed with a code signing certificate
   Windows trusts, it loaded and worked in LMU started with Easy Anti-Cheat, and online play stayed
-  enabled. It hasn't been tried in an online session.
+  enabled. It also worked in online sessions, and recordings made there were successful.
 
 ## Headsets and games
 
@@ -78,13 +79,13 @@ interfaces.
   source is shown in OBS. It passes every OpenXR call on unchanged, except that it asks the runtime for
   one time-conversion extension. Its README has the details (`vr_mirror\frame_sources\openxr\README.md`).
 
-**Don't install the API layer on a PC used for online racing.** Racing online with the layer
-installed hasn't been tried.
+**The unsigned API layer is blocked by Easy Anti-Cheat.**
 - **Unsigned,** the layer is refused by Easy Anti-Cheat. With it installed, LMU started the usual way
   showed Easy Anti-Cheat's "Untrusted system file" warning, and online play was disabled. The
   unsigned layer works in LMU started without Easy Anti-Cheat, which means offline.
 - **Signed with a code signing certificate Windows trusts,** the layer loaded and worked in LMU started
-  the usual way, with Easy Anti-Cheat, and online play stayed enabled. The layer is built unsigned
+  the usual way, with Easy Anti-Cheat, and online play stayed enabled. It also worked in online
+  sessions, and recordings made there were successful. The layer is built unsigned
   unless you sign it with such a certificate of your own (Install, step 3).
 
 `vr_mirror\frame_sources\openxr\uninstall.bat` removes the layer.

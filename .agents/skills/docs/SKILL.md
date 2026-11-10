@@ -108,7 +108,7 @@ assumes.
      - rules and prohibitions for contributors ("Don't inject code into the game", "Never rename a
        setting key")
      - a stage's "Must not know" line, which the dev skill asks every stage README for
-     - warnings ("Don't install the layer on a PC used for online racing")
+     - warnings ("The unsigned API layer is blocked by Easy Anti-Cheat")
      - facts about other software that the reader needs ("The Pimax runtime has no size option for
        its mirrors")
      - measured limits that matter to the reader, said as plain facts ("VR Mirror stabilizes the

@@ -4,11 +4,11 @@ This frame source gives VR Mirror the game's full-size left eye, with the exact 
 was drawn with. It has two halves: an OpenXR API layer in LMU, and the reader in VR Mirror that opens
 what the layer shares.
 
-**Experimental. Don't install it on a PC used for online racing.** Racing online with the layer
-installed hasn't been tried. Easy Anti-Cheat, which LMU runs, refuses the layer unsigned. With the
-unsigned layer installed, LMU started the usual way showed an "Untrusted system file" warning, and
-online play was disabled. Signed with a code signing certificate Windows trusts, the layer loaded in
-LMU with Easy Anti-Cheat, and online play stayed enabled. `uninstall.bat` removes the layer.
+**The unsigned layer is blocked by Easy Anti-Cheat,** which LMU runs. With the unsigned layer
+installed, LMU started the usual way showed an "Untrusted system file" warning, and online play was
+disabled. Signed with a code signing certificate Windows trusts, the
+layer loaded in LMU with Easy Anti-Cheat, and online play stayed enabled. It also worked in online
+sessions, and recordings made there were successful. `uninstall.bat` removes the layer.
 
 ## Terms
 
@@ -29,17 +29,18 @@ LMU with Easy Anti-Cheat, and online play stayed enabled. `uninstall.bat` remove
 - **The reader** (`OpenXrSource`) runs in VR Mirror, outside the game. It opens what the layer shares
   and hands the frames to the OBS plugin and the mirror app, like the Pimax source does.
 
-## Where it stands
+## Easy Anti-Cheat
 
 Unsigned, the layer works in LMU started without Easy Anti-Cheat, which means offline and with online
 play disabled. There, the version that only watched the game loaded and worked. It saw the game's two
-image buffers, one per eye, and its 90 frames a second, and the game kept 90 fps.
+image buffers, one per eye, and every frame the game drew, and the game kept its frame rate.
 
 In LMU started the usual way, Easy Anti-Cheat decides by the DLL's signature:
 - Unsigned, the DLL is refused as an "untrusted system file".
 - Signed with a certificate Windows doesn't trust, the DLL still isn't loaded.
-- Signed with a code signing certificate Windows trusts, the layer loads and hands VR Mirror 90 frames a second, and online play stays enabled. It hasn't been
-  tried in an online session. In these starts the layer wrote no log of its own.
+- Signed with a code signing certificate Windows trusts, the layer loads and hands VR Mirror every
+  frame the game draws, and online play stays enabled. It also works in online sessions, and
+  recordings made there were successful. In these starts the layer wrote no log of its own.
 
 `build.bat` builds the layer unsigned. A signed layer is the DLL in `bin\` signed with your own
 certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
