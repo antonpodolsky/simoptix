@@ -133,7 +133,8 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
   - Online play stayed enabled.
   - The layer wrote no log in either start: neither `openxr_frame_source.log` nor
     `openxr_frame_source_loads.log` in `%LOCALAPPDATA%\simoptix\` changed. Why not is not known.
-  - Not tested: an online session (step 2 of the test in `reference\openxr.md`).
+  - **The signed layer also worked in online sessions** (step 2 of the test in
+    `reference\openxr.md`), and recordings made there were successful.
 
 ## The image a frame shows
 

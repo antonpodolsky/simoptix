@@ -32,7 +32,7 @@ SimOptix is early software. There are no ready-made downloads, so you build it f
 - **OpenXR Mirror** and its API layer (`vr_mirror\frame_sources\openxr\`) are experimental. Unsigned,
   the layer works in LMU started without Easy Anti-Cheat. Signed with a code signing certificate
   Windows trusts, it loaded and worked in LMU started with Easy Anti-Cheat, and online play stayed
-  enabled. It hasn't been tried in an online session.
+  enabled. It also worked in online sessions, and recordings made there were successful.
 
 ## Headsets and games
 
@@ -78,13 +78,13 @@ interfaces.
   source is shown in OBS. It passes every OpenXR call on unchanged, except that it asks the runtime for
   one time-conversion extension. Its README has the details (`vr_mirror\frame_sources\openxr\README.md`).
 
-**Don't install the API layer on a PC used for online racing.** Racing online with the layer
-installed hasn't been tried.
+**Don't install the API layer on a PC used for online racing.**
 - **Unsigned,** the layer is refused by Easy Anti-Cheat. With it installed, LMU started the usual way
   showed Easy Anti-Cheat's "Untrusted system file" warning, and online play was disabled. The
   unsigned layer works in LMU started without Easy Anti-Cheat, which means offline.
 - **Signed with a code signing certificate Windows trusts,** the layer loaded and worked in LMU started
-  the usual way, with Easy Anti-Cheat, and online play stayed enabled. The layer is built unsigned
+  the usual way, with Easy Anti-Cheat, and online play stayed enabled. It also worked in online
+  sessions, and recordings made there were successful. The layer is built unsigned
   unless you sign it with such a certificate of your own (Install, step 3).
 
 `vr_mirror\frame_sources\openxr\uninstall.bat` removes the layer.

@@ -105,8 +105,8 @@ start.
 ## The Easy Anti-Cheat test
 
 Unsigned, or signed with a certificate Windows doesn't trust, the layer is kept out by Easy
-Anti-Cheat. Signed with a trusted certificate, it loaded offline, and online play stayed enabled
-(`findings\openxr.md`).
+Anti-Cheat. Signed with a trusted certificate, it loaded offline, online play stayed enabled, and it
+worked in online sessions (`findings\openxr.md`).
 
 Test a signed DLL cheapest first, and stop at the first step where the game doesn't start:
 1. **Offline.** Install it, start LMU the usual way, stay out of online sessions, and drive a few laps.
