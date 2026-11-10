@@ -227,10 +227,10 @@ it draws one frame per refresh, so the source shows every game frame exactly onc
 The canvas that is native depends on the headset, its Render Quality and the zoom. The root
 `README.md` ("Headsets and games") suggests a canvas for each measured headset. On a Pimax Dream Air
 in LMU, the Pimax game eye has about 1059 source pixels per unit of view tangent at Render Quality 1.0
-and 1323 at 1.25. The OpenXR source's image has about 2115 at 1.0. So a 16:9 canvas there is native up
-to these zooms:
+and 1323 at 1.25. The OpenXR source's image has about 2115 at 1.0. So a 16:9 canvas there stays
+native up to these Zoom settings. Above them, the image is enlarged, and the video gets softer.
 
-| Source | Render Quality | Canvas | Native up to zoom | Stabilization room at that zoom (side to side) |
+| Source | Render Quality | Canvas | Max zoom for native | Stabilization room at that zoom (side to side) |
 |---|---|---|---|---|
 | Pimax Mirror | 1.0 | 1920x1080 | 1.31 | about 7.7° each way |
 | Pimax Mirror | 1.0 | 1660x930 (soft once upscaled) | 1.5 | about 11.5° each way |

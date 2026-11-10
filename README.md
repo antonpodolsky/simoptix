@@ -45,10 +45,11 @@ SimOptix is early software. There are no ready-made downloads, so you build it f
 | Other OpenXR headsets | Needs a Pimax headset | Should work, not tried |
 
 To record at the source's native resolution, set OBS's canvas and output to the suggested size
-(Settings → Video), and its frame rate to the headset's refresh rate. Each canvas is native up to the
-zoom given. At a higher zoom the image is enlarged, and the video gets softer.
+(Settings → Video), and its frame rate to the headset's refresh rate. "Max zoom for native" is the
+highest Zoom setting at which the recording stays native. Above it, the image is enlarged, and the
+video gets softer.
 
-| Headset | Source | Render Quality | Left eye image | Suggested canvas | Native up to zoom |
+| Headset | Source | Render Quality | Left eye image | Suggested canvas | Max zoom for native |
 |---|---|---|---|---|---|
 | Pimax Dream Air | Pimax Mirror | 1.0 | 2508×2084 | 1920×1080 | 1.31 |
 | Pimax Dream Air | Pimax Mirror | 1.25 | 3134×2604 | 2560×1440 | 1.22 |
