@@ -40,7 +40,7 @@ SimOptix is early software. There are no ready-made downloads, so you build it f
 | Game | VR Mirror | G-meter and race auto-record |
 |---|---|---|
 | LMU | Supported, with both sources | Supported |
-| Other games | Pimax Mirror should work, not tested. OpenXR Mirror's API layer currently loads only in LMU by design | Not supported |
+| Other games | Pimax Mirror should work, not tested. OpenXR Mirror's API layer currently loads only in LMU by design. | Not supported |
 
 ### Headsets
 | Headset | Pimax Mirror | OpenXR Mirror |
@@ -60,7 +60,7 @@ video gets softer.
 | Pimax Dream Air | Pimax Mirror | 1.25 | 3134×2604 | 2560×1440 | 1.22 |
 | Pimax Dream Air | OpenXR Mirror | 1.0 | 5084×4168 | 3840×2160 | 1.32 |
 
-The image sizes were measured in LMU. `vr_mirror\obs_plugin\README.md` ("Recording at the source's
+`vr_mirror\obs_plugin\README.md` ("Recording at the source's
 native resolution") has more canvases and zooms.
 
 ## SimOptix and Easy Anti-Cheat
