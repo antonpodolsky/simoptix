@@ -4,9 +4,9 @@ This frame source gives VR Mirror the game's full-size left eye, with the exact 
 was drawn with. It has two halves: an OpenXR API layer in LMU, and the reader in VR Mirror that opens
 what the layer shares.
 
-**The unsigned layer conflicts with Easy Anti-Cheat,** which LMU runs. Easy Anti-Cheat refuses it.
-With the unsigned layer installed, LMU started the usual way showed an "Untrusted system file"
-warning, and online play was disabled. Signed with a code signing certificate Windows trusts, the
+**The unsigned layer is blocked by Easy Anti-Cheat,** which LMU runs. With the unsigned layer
+installed, LMU started the usual way showed an "Untrusted system file" warning, and online play was
+disabled. Signed with a code signing certificate Windows trusts, the
 layer loaded in LMU with Easy Anti-Cheat, and online play stayed enabled. It also worked in online
 sessions, and recordings made there were successful. `uninstall.bat` removes the layer.
 
