@@ -24,14 +24,6 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
   - It also works over a normal capture of a flat-screen game.
   - It plays a demo lap, so you can try it without the game.
 
-## Status
-
-SimOptix is early software. There are no ready-made downloads, so you build it from source.
-
-- **OBS:** built against OBS Studio 32.2.2. Other versions haven't been tried.
-- **OpenXR Mirror:** unsigned, its API layer (`vr_mirror\frame_sources\openxr\`) works in LMU started
-  without EAC, see details below.
-
 ## Headsets and games
 
 ### Games
