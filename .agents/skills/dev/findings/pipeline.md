@@ -211,6 +211,25 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   entry can be ready but excluded would need it.
 - **The ring's size follows the delay:** the frames in the delay plus 3, at least 4
   (`vr_mirror\obs_plugin\README.md`).
+- **The fixed delay stores every frame, and OBS shows only some of them.** Measured with
+  `stage_replay --stage frame_picker` on the synthetic frames of a 90 Hz headset, with Look-ahead for
+  most of each 30 s run. Shares are of the frames due before the run ends, about 2,550 per run:
+
+  | OBS | Frames shown | Still stored when due | Most entries holding a frame |
+  |---|---|---|---|
+  | 144 fps, faster than the headset | 98% | 98% | 55 |
+  | 60 fps, slower than the headset | 67% | 98% | 55 |
+  | 59.94 fps | 67% | 98% | 55 |
+  | 50 fps | 56% | 98% | 55 |
+
+  - At 144 fps the 2% not shown are skipped where the view jumps ahead. 44 frames go at the switch
+    from Look-ahead to Instant (0.5 s), and 3 each time the copy delay is fixed (about 35 ms). A few
+    single frames are skipped with Instant, when their copy wasn't ready in time.
+  - The 2% gone before they were due are let go of when the store shrinks. About 41 frames per run go
+    at the switch from Look-ahead to Instant. Another 2–3 go each time the copy delay is fixed and the
+    store shrinks to its size.
+  - The store holds 55 entries during the warm-up, which assumes 90 Hz, and 52 once the copy delay is
+    fixed, whatever OBS's frame rate.
 - **The fixed delay's moments trail their images and jump once. The slot timeline's didn't**
   (`stage_replay --stage frame_picker --frame_picker K`, the shorter of those OBS traces and
   synthetic ticks). The slot-timeline picker has since been removed (below).

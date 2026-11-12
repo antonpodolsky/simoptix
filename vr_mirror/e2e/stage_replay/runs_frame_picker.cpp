@@ -1,11 +1,12 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // stage_replay --stage frame_picker: runs the frame picker (stage 3) the way the OBS plugin does,
-// over OBS frame traces (their ticks and frame arrivals) and synthetic ticks at 50, 59.94, 60 and
-// 144 Hz, with copies finishing after a seeded random time (now and then late) and a store that
-// shrinks and grows as the picker asks; prints the picks by kind and the delay it fixed. Checked
-// identical to the plugin's picking before the stage (vr_mirror\e2e\README.md, "Stage replay").
-// Knows nothing about textures or OBS.
+// over OBS frame traces (their ticks and frame arrivals) and synthetic frames from a 90 Hz headset
+// with OBS ticking at 50, 59.94, 60 and 144 fps, with copies finishing after a seeded random time
+// (now and then late) and a store that shrinks and grows as the picker asks; prints the picks by
+// kind, the delay it fixed, and what the store held: the frames shown, the frames still stored when
+// due and the most entries holding a frame. Checked identical to the plugin's picking before the
+// stage (vr_mirror\e2e\README.md, "Stage replay"). Knows nothing about textures or OBS.
 
 #include <algorithm>
 #include <cmath>
@@ -36,6 +37,15 @@ namespace stage_replay {
             std::vector<TraceFrame> frames;
             std::vector<double> ticks;
             std::vector<std::pair<size_t, int>> smoothingAt;  // (tick index, SmoothingKind) from then on
+        };
+
+        // What the store held over a run, for the memory a picker needs. A frame no tick shows was
+        // copied for nothing; a frame gone from the store before it was due was let go of early.
+        struct FrameUse {
+            size_t stored = 0, shown = 0, keptUntilDue = 0, goneBeforeDue = 0;
+            int mostHolding = 0;  // entries holding a frame at once
+            uint64_t lastShown = 0;
+            size_t nextDue = 0;  // the first stored frame not yet due
         };
 
         bool LoadTrace(const std::string& ticksPath, const std::string& pimaxPath, TraceInput* in) {
@@ -71,12 +81,12 @@ namespace stage_replay {
             return !in->frames.empty() && !in->ticks.empty();
         }
 
-        // Frames at 90 Hz for `seconds` (arrival noise, ~3% dropped, a stall of 20 frames) and ticks at
-        // `hz` with a little jitter; the smoothing changes twice.
+        // Frames at 90 Hz for `seconds` (arrival noise, ~3% dropped, a stall of 20 frames) and OBS's
+        // ticks at `hz` with a little jitter; the smoothing changes twice.
         TraceInput Synthetic(double hz, double seconds) {
             TraceInput in;
             char name[64];
-            snprintf(name, sizeof(name), "synthetic %.2f Hz", hz);
+            snprintf(name, sizeof(name), "synthetic: headset 90 Hz, OBS %.2f fps", hz);
             in.name = name;
             uint32_t seed = 777u + uint32_t(hz * 100);
             auto next = [&] {
@@ -114,6 +124,29 @@ namespace stage_replay {
             return (*v)[v->size() / 2];
         }
 
+        // Counts the frames due by `tick` (the output delay after their de-jittered arrival) and
+        // whether the store still holds each.
+        void
+        CountDue(const TraceInput& in, double tick, double outDelay, const FrameStore& store, FrameUse* use) {
+            for (; use->nextDue < use->stored; use->nextDue++) {
+                const TraceFrame& f = in.frames[use->nextDue];
+
+                if (f.smooth + outDelay > tick) {
+                    break;
+                }
+
+                if (store.Holds(f.serial)) {
+                    use->keptUntilDue++;
+                } else {
+                    use->goneBeforeDue++;
+                }
+            }
+        }
+
+        double Percent(size_t part, size_t whole) {
+            return whole > 0 ? 100.0 * static_cast<double>(part) / static_cast<double>(whole) : 0;
+        }
+
         void Run(const TraceInput& in, int smoothing, FramePickerKind kind) {
             auto store = std::make_unique<FrameStore>();
             PipelineConfig config;
@@ -135,6 +168,7 @@ namespace stage_replay {
             int counts[5] = {}, fixedTick = -1;
             double fixedDelay = 0, jump = 0, lastTick = 0, lastMoment = 0;
             std::vector<double> behind;  // per pick: the shown image's slot minus the tick's moment (s)
+            FrameUse use;
 
             for (size_t t = 0; t < in.ticks.size(); t++) {
                 const double tick = in.ticks[t];
@@ -157,6 +191,9 @@ namespace stage_replay {
                 }
 
                 store->Finish(tick);
+                use.stored = frame;
+                use.mostHolding = std::max(use.mostHolding, store->Holding());
+                CountDue(in, tick, picker->OutDelay(), *store, &use);
                 const Pick p = picker->Tick(tick, kDisplayPeriod, store->slots, kMaxSlots);
                 if (picker->OutDelay() != outDelay) {  // the delay fixed
                     outDelay = picker->OutDelay();
@@ -173,6 +210,10 @@ namespace stage_replay {
                 // The tick's moment: how far its view trails the shown image's slot, and how far it moved
                 // other than with the ticks (a jump of the whole view).
                 const StoredFrame& shown = store->slots[p.index];
+                if (shown.serial != use.lastShown) {
+                    use.shown++;
+                    use.lastShown = shown.serial;
+                }
                 if (shown.slotTime > 0) {
                     behind.push_back(shown.slotTime - p.moment);
                 }
@@ -203,6 +244,16 @@ namespace stage_replay {
                 picker->SlotsInUse(),
                 Median(&behind) * 1000,
                 jump * 1000
+            );
+            printf(
+                "%-40s frames: %zu stored, %zu due by the end; of those %.0f%% shown, %.0f%% still stored "
+                "when due; up to %d entries holding a frame\n",
+                "",
+                use.stored,
+                use.nextDue,
+                Percent(use.shown, use.nextDue),
+                Percent(use.keptUntilDue, use.nextDue),
+                use.mostHolding
             );
         }
 

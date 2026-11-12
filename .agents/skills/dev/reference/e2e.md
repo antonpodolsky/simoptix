@@ -183,13 +183,17 @@ vr_mirror\e2e\bin\stage_replay.exe --stage frame_picker [--frame_picker K] [--tr
 
 It runs the frame picker as the OBS plugin does: the fixed delay, unless `--frame_picker` names another.
 - **Its inputs:** OBS frame traces, each an `_ticks.csv` with its `_pimax.csv` (the ticks and the frame
-  arrivals), and synthetic ticks at 50, 59.94, 60 and 144 Hz. The traces are in the data folder's
+  arrivals), and synthetic frames from a 90 Hz headset with OBS at 50, 59.94, 60 and 144 fps. So OBS
+  ticks slower than the headset in three runs and faster in one. The traces are in the data folder's
   late frames after drops (its trace folder).
 - **In the synthetic runs** the smoothing changes mid-run, copies finish after a seeded random 1–3 ms
   (5% of them after 5–30 ms), and the store is resized as the picker asks.
 - **It prints** the picks by kind per run and the delay it fixed, how far each tick's moment trails the
   shown image's slot (median), and the largest jump of the moments apart from the ticks' own step
   (without a smoothing change).
+- **A second line per run shows what the store held:** the frames stored, the share that a tick
+  showed, the share still in the store when they were due, and the most entries holding a frame at
+  once. These measure how much video memory a picker needs.
 - When the plugin's picking became this stage, it was checked identical tick by tick against a verbatim
   copy of the plugin's earlier code: the entry shown, the kind of pick, the output delay, the moment,
   the tick the delay is fixed, and the entries in use. There were 0 differences on those two traces

@@ -3,7 +3,8 @@
 // FrameStore: the OBS plugin's store of copied frames (FrameRing) as far as the frame picker sees
 // it: a ring of entries, each new frame written into the next one and ready once its copy
 // finished, resized as the picker asks (shrinking frees the entries past the new size, growing
-// starts over). For stage_replay's runs; knows nothing about textures.
+// starts over), and whether it still holds a frame. For stage_replay's runs; knows nothing about
+// textures.
 #pragma once
 
 #include "pipeline/pipeline_types.h"
@@ -49,6 +50,29 @@ namespace stage_replay {
                     slots[i] = pendingFrame[i], pending[i] = false;
                 }
             }
+        }
+
+        // The frame is in an entry in use, ready or still being copied.
+        bool Holds(uint64_t serial) const {
+            for (int i = 0; i < count; i++) {
+                if ((slots[i].valid && slots[i].serial == serial)
+                    || (pending[i] && pendingFrame[i].serial == serial)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Entries in use that hold a frame, ready or still being copied.
+        int Holding() const {
+            int holding = 0;
+            for (int i = 0; i < count; i++) {
+                if (slots[i].valid || pending[i]) {
+                    holding++;
+                }
+            }
+
+            return holding;
         }
     };
 
