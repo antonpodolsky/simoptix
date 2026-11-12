@@ -11,7 +11,7 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
   - **SimOptix: OpenXR Mirror** takes the game's own left eye.
     - It is the full size the game draws.
     - It needs an API layer in the game.
-    - The layer works with Easy Anti-Cheat only when it is signed (below).
+    - The layer works with Easy Anti-Cheat (EAC) only when it is signed (below).
 - **Stabilization** is set by the source's Smoothing setting:
   - **Off:** raw headset view.
   - **Instant:** prioritizes latency (no delay), best for live streams.
@@ -30,9 +30,7 @@ SimOptix is early software. There are no ready-made downloads, so you build it f
 
 - **OBS:** built against OBS Studio 32.2.2. Other versions haven't been tried.
 - **OpenXR Mirror:** unsigned, its API layer (`vr_mirror\frame_sources\openxr\`) works in LMU started
-  without Easy Anti-Cheat. Signed with a code signing certificate
-  Windows trusts, it loaded and worked in LMU started with Easy Anti-Cheat, and online play stayed
-  enabled. It also worked in online sessions, and recordings made there were successful.
+  without EAC, see details below.
 
 ## Headsets and games
 
@@ -64,30 +62,21 @@ video gets softer.
 `vr_mirror\obs_plugin\README.md` ("Recording at the source's
 native resolution") has more canvases and zooms.
 
-## SimOptix and Easy Anti-Cheat
+## SimOptix and EAC
 
-LMU runs Easy Anti-Cheat, so SimOptix gets the game's frames and data only through official
-interfaces.
-
-- **Pimax Mirror, the G-meter and race auto-record** run in OBS, outside the game. Pimax Mirror asks
-  Pimax Play for its copy of the game's left eye, a signal for each new frame, and the head poses. The
-  G-meter and race auto-record read the telemetry that LMU publishes for outside tools. Both stay out
-  of the game's process and files.
+- **Pimax Mirror, the G-meter and race auto-record** run in OBS, outside the game, and are unaffected by EAC.
+  Pimax Mirror asks Pimax Play for its copy of the game's left eye, a signal for each new frame, and the head
+  poses. The G-meter and race auto-record read the telemetry that LMU publishes for outside tools.
 - **OpenXR Mirror** needs an API layer that OpenXR loads into LMU when the game starts. The layer
   copies the left eye image after each frame has gone to the headset, and only while an OpenXR Mirror
   source is shown in OBS. It passes every OpenXR call on unchanged, except that it asks the runtime for
   one time-conversion extension. Its README has the details (`vr_mirror\frame_sources\openxr\README.md`).
 
-**The unsigned API layer is blocked by Easy Anti-Cheat.**
-- **Unsigned,** the layer is refused by Easy Anti-Cheat. With it installed, LMU started the usual way
-  showed Easy Anti-Cheat's "Untrusted system file" warning, and online play was disabled. The
-  unsigned layer works in LMU started without Easy Anti-Cheat, which means offline.
-- **Signed with a code signing certificate Windows trusts,** the layer loaded and worked in LMU started
-  the usual way, with Easy Anti-Cheat, and online play stayed enabled. It also worked in online
-  sessions, and recordings made there were successful. The layer is built unsigned
+**The unsigned OpenXR layer is blocked by EAC.**
+- **Unsigned,** the layer is refused by EAC, and online play is disabled as a result.
+- **Signed with a code signing certificate Windows trusts,** the layer loads and online is enabled. Currently the layer is built unsigned
   unless you sign it with such a certificate of your own (Install, step 3).
 
-`vr_mirror\frame_sources\openxr\uninstall.bat` removes the layer.
 
 ## Requirements
 
@@ -95,7 +84,7 @@ To run:
 - 64-bit Windows (developed on Windows 11)
 - OBS Studio 32 (built against 32.2.2)
 - For Pimax Mirror: a Pimax headset with Pimax Play running
-- For OpenXR Mirror: the API layer installed. If unsigned, LMU needs to be started without Easy Anti-Cheat (with a `+XR` flag).
+- For OpenXR Mirror: the API layer installed. If unsigned, LMU needs to be started without EAC (with a `+XR` flag).
 
 To build:
 - Visual Studio 2019 or later, or its Build Tools, with the C++ tools. Only 2019 has been tried.
