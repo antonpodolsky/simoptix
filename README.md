@@ -170,7 +170,7 @@ what was measured and tried so far. `.agents\skills\docs\` holds the rules for w
 ## How SimOptix is built
 
 SimOptix's development is AI-assisted, using software engineering best practices. It has a strict dev
-workflow, code and product quality/correctness gates, and the author reviews the code. The work rests on
+workflow, quality gates, and the author reviews the code. The work rests on
 end-to-end tests with a simulated headset and game, and on decisions made from measurements.
 `HOW_SIMOPTIX_IS_BUILT.md` describes these practices.
 
