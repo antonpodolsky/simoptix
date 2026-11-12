@@ -5,11 +5,11 @@
 #include <algorithm>
 #include <cmath>
 
-int WarmupSlots(double smoothingDelayS, int maxSlots) {
-    return std::clamp(int(std::ceil((0.045 + smoothingDelayS) * 90)) + 3, 4, maxSlots);
+int WarmupSlots(double smoothingDelayS, double period, int maxSlots) {
+    return std::clamp(int(std::ceil((0.045 + smoothingDelayS) / period)) + 3, 4, maxSlots);
 }
 
-void FixedDelayPicker::Restart(double smoothingDelayS, int maxSlots) {
+void FixedDelayPicker::Restart(double smoothingDelayS, double period, int maxSlots) {
     smoothingDelay_ = smoothingDelayS;
     maxSlots_ = std::min(maxSlots, kMaxOrder);
     copyDelay_ = warmStart_ = 0;
@@ -17,7 +17,7 @@ void FixedDelayPicker::Restart(double smoothingDelayS, int maxSlots) {
     delays_.reserve(32768);  // 2 s of warm-up at up to 144 ticks/s over up to ~110 stored frames
     lastShown_ = 0;
     lastSlot_ = -1;
-    slots_ = WarmupSlots(smoothingDelayS, maxSlots_);
+    slots_ = WarmupSlots(smoothingDelayS, period, maxSlots_);
     fixedPending_ = false;
 }
 
@@ -32,6 +32,9 @@ void FixedDelayPicker::Report(StatsReport& r) {
 }
 
 void FixedDelayPicker::WarmUp(double tick, double period, const StoredFrame* frames, int total) {
+    // The OpenXR source learns the display's period from the layer, which can come after Restart.
+    slots_ = WarmupSlots(smoothingDelay_, period, maxSlots_);
+
     for (int i = 0; i < total; i++) {
         if (frames[i].valid) {
             delays_.push_back(frames[i].ready - frames[i].arrival);

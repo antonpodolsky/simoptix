@@ -25,9 +25,9 @@
 #include "pipeline/2_drawn_pose/drawn_pose.h"
 #include "pipeline/pipeline_config.h"
 
-// The most memory one host's stored images may take (bytes): Look-ahead holds at most 55 frames (its
-// half second, the copy delay up to 45 ms, and 3 more: FixedDelayPicker), 4.66 GB at the OpenXR layer's
-// full 5084x4168.
+// The most memory one host's stored images may take (bytes): with a 90 Hz headset Look-ahead holds at
+// most 55 frames (its half second, the copy delay up to 45 ms, and 3 more: FixedDelayPicker), 4.66 GB
+// at the OpenXR layer's full 5084x4168.
 constexpr double kImageMemory = 4.7e9;
 
 class FrameSource : public PoseSource {

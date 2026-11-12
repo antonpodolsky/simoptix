@@ -65,6 +65,7 @@ private:
     void Prepare(uint64_t tickNs);
     void ApplySettingChanges(const PipelineConfig& config);
     void ApplyFixedDelay(FramePicker& picker);
+    void FollowSlotCount(int slots);
     void OpenSlotTexture(const FrameRing::SlotInfo& slot);
     void SetImageNeed();
     void StartFootprint();

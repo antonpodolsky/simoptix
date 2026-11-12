@@ -21,12 +21,16 @@ follows, and how many stored frames it needs.
 
 **In:** the tick's time, the display period and the host's store of copied frames (`StoredFrame` in
 `pipeline_types.h`: serial, arrival, de-jittered arrival, slot, and when the copy was seen complete).
+`Restart` takes the display period too, as the host knows it then. With OpenXR it is known only once
+the layer runs, which can be later.
 
 **Out:**
 - `Pick`: the store entry to show, the kind of pick (`kNext`, `kRepeat`, `kJump`, `kHeld`, `kNone`,
   for the host's 10 s stats), the tick's moment and when the frame was due.
 - The output delay (`OutDelay`). When it changes, the host logs it and gives the picker's `Report`.
-- The entries in use (`SlotsInUse`).
+- The entries in use (`SlotsInUse`). They can change at any tick, and the host resizes its store when
+  they do. The fixed delay changes them when it fixes its delay, and during the warm-up when the
+  display period changes.
 - Through the shared report, once, the tick at which the delay was fixed (`TakeDelayFixed`, for the
   host's log line).
 

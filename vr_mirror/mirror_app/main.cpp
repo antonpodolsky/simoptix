@@ -578,7 +578,7 @@ int wmain() {
         app.hold.Resize(int(std::ceil(holdDelay / app.source->Period())) + 6);
     }
 
-    app.pipeline.Picker()->Restart(holdDelay, loop.lookahead ? app.hold.Capacity() : 1);
+    app.pipeline.Picker()->Restart(holdDelay, app.source->Period(), loop.lookahead ? app.hold.Capacity() : 1);
     loop.stored.resize(size_t(app.hold.Capacity()) + 1);
 
     RunFrames(app, loop);

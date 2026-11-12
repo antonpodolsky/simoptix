@@ -17,17 +17,18 @@ public:
     virtual ~FramePicker() = default;
     // Starts again (the host started, or the smoothing changed): `delayS` how long after its
     // de-jittered arrival a frame is due at the earliest (the smoothing's output delay,
-    // SmoothingDelayS, plus any presentation delay the host adds), `maxSlots` the most store
-    // entries the host has.
-    virtual void Restart(double delayS, int maxSlots) = 0;
+    // SmoothingDelayS, plus any presentation delay the host adds), `period` the display's as the
+    // frame source knows it now, `maxSlots` the most store entries the host has.
+    virtual void Restart(double delayS, double period, int maxSlots) = 0;
     // One output tick at source time `tick`; `frames`: the host's store, `total` entries (the first
     // SlotsInUse are in use); `period` the display's.
     virtual Pick Tick(double tick, double period, const StoredFrame* frames, int total) = 0;
     // How long the output runs behind the frames' arrival (s): the copy delay plus the smoothing's.
     // When it changes (a picker that measures its delay fixed it), a host logs it and gives the
-    // picker's Report right away; SlotsInUse may have changed with it.
+    // picker's Report right away.
     virtual double OutDelay() const = 0;
-    // Store entries in use.
+    // Store entries in use. It can change at any tick (the delay fixed, the display's period
+    // learnt); a host resizes its store when it does.
     virtual int SlotsInUse() const = 0;
     // Its numbers since the last Report, for the host's log.
     virtual void Report(StatsReport&) {}

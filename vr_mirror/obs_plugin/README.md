@@ -228,8 +228,9 @@ which it stays native. Above that zoom, the image is enlarged, and the video get
 of that size or more. Otherwise it keeps the image at the size the canvas shows it 1:1. Each
 resampling softens the finest detail, so near the game's size the view resamples the image once,
 straight from the game's.
-- All stored images together may take at most 4.7 GB of video memory. Look-ahead stores 52 to 55
-  images. When that many don't fit at the game's own size, each is stored smaller, to fit.
+- All stored images together may take at most 4.7 GB of video memory. With a 90 Hz headset,
+  Look-ahead stores 52 to 55 images, and more at a higher refresh rate (81 to 86 at 144 Hz). When that
+  many don't fit at the game's own size, each is stored smaller, to fit.
 - The OBS log says the size each image is stored at ("frame ring: ...").
 
 **For more detail from the Pimax game eye, raise Render Quality in Pimax Play.** The game eye is always
@@ -280,8 +281,8 @@ The source copies each game frame into a ring of textures as soon as it arrives,
 overwrites its image about a frame later. It shows the copy a fixed delay later (the OBS log: "output
 delay ... ms", about 4–5 ms measured). The frame picker (`vr_mirror\core\pipeline\3_frame_picker\`,
 `FixedDelayPicker`) decides which copy each tick shows, the delay, and the copies needed.
-- The ring starts with 8 copies, because the source allows 40 ms until it has measured that delay. It
-  then keeps only the frames inside the delay plus 3, and at least 4.
+- Until it has measured that delay, the ring keeps the frames of 45 ms plus 3: 8 copies with a 90 Hz
+  headset, 10 at 144 Hz. It then keeps only the frames inside the delay plus 3, and at least 4.
 - From the OpenXR source each copy is the game's own size, or the size the canvas shows it (above).
   From the Pimax source each copy is the size of the game eye. A copy takes 4 bytes per pixel, so 4
   copies take half the memory of 8.

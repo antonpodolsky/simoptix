@@ -10,6 +10,24 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 11: the frame picker gets the display's period at its start.** LMU, OBS and Pimax Play were
+closed. 36 of 38 runs passed, and 18 of 19 comparisons with Instant. The pipeline's output is the
+same as before (`stage_replay --golden` byte for byte), and the mirror app's pickers ignore the new
+period.
+- Two runs failed, as in earlier runs:
+  - `openxr_black_borders` at Instant had one stall mid-turn, as in runs 7 and 9.
+  - `queued_cockpit_lookahead` missed 3.5% of the game's frames (limit 1%), which also failed its
+    comparison with Instant.
+- A rerun of both, at both smoothings, passed with their comparisons: no stall, and 0 / 0.08% of
+  frames missed.
+- `replay_queued_late_frames` 7.3 / 4.1% from the wrong pose, the featureless replay 1.50 / 0.21%,
+  and `game_starts_late` 5.6 runtime calls/s idle.
+- Recorded view jitter: `stabilization` 0.128 / 0.116°, `dropped_frames` 0.177 / 0.160°.
+- Worst horizon tilt: `openxr_stabilization` 0.214 / 0.166°, `openxr_dropped_frames` 0.164 / 0.140°,
+  `openxr_game_behind` 0.153 / 0.165°, `openxr_black_borders` 0.216 / 0.257°, `stabilization` 0.116 /
+  0.105°.
+- `openxr_stall`: image/pose mismatch 0.054 / 0.054° rms.
+
 **Run 10 (ce4d1fd): the code says "image" for "picture".** LMU and OBS were closed, Pimax Play was
 running. All 38 runs passed, and all 19 comparisons with Instant. The pipeline's output is the same
 as before (`stage_replay --golden` byte for byte).

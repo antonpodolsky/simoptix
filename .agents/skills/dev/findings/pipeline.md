@@ -228,8 +228,22 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   - The 2% gone before they were due are let go of when the store shrinks. About 41 frames per run go
     at the switch from Look-ahead to Instant. Another 2–3 go each time the copy delay is fixed and the
     store shrinks to its size.
-  - The store holds 55 entries during the warm-up, which assumes 90 Hz, and 52 once the copy delay is
-    fixed, whatever OBS's frame rate.
+  - The store holds 55 entries during the warm-up and 52 once the copy delay is fixed, whatever OBS's
+    frame rate.
+- **Fixed: the warm-up's store assumed a 90 Hz headset.** It was sized for 45 ms of copy and the
+  smoothing's delay at 90 Hz: 55 entries with Look-ahead, where a 144 Hz headset needs 86. Frames
+  were overwritten before they were due, and OBS had nothing to show. The size now comes from the
+  display's period that the frame source reports, at the start and on every tick of the warm-up.
+  Measured on the synthetic frames of a 144 Hz headset with OBS at 60 fps:
+
+  | | Assuming 90 Hz | The headset's period |
+  |---|---|---|
+  | Ticks with nothing to show | 308 of 1,800 | 67 (as at 90 Hz) |
+  | Frames still stored when due | 84% | 98% |
+  | Frames shown | 36% | 42% |
+  | Most entries holding a frame | 81 | 86 |
+
+  The 90 Hz runs and `stage_replay --golden` were unchanged, byte for byte.
 - **The fixed delay's moments trail their images and jump once. The slot timeline's didn't**
   (`stage_replay --stage frame_picker --frame_picker K`, the shorter of those OBS traces and
   synthetic ticks). The slot-timeline picker has since been removed (below).

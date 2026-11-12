@@ -14,13 +14,13 @@
 
 #include "pipeline/3_frame_picker/frame_picker.h"
 
-// Store entries while the delay is being measured (allowing 45 ms for the copy), before the
-// display's period is known (90 Hz assumed).
-int WarmupSlots(double smoothingDelayS, int maxSlots);
+// Store entries while the delay is being measured: the frames of a display `period` (s) inside
+// the smoothing's delay plus 45 ms for the copy, and 3 more.
+int WarmupSlots(double smoothingDelayS, double period, int maxSlots);
 
 class FixedDelayPicker : public FramePicker {
 public:
-    void Restart(double smoothingDelayS, int maxSlots) override;
+    void Restart(double smoothingDelayS, double period, int maxSlots) override;
     Pick Tick(double tick, double period, const StoredFrame* frames, int total) override;
     double OutDelay() const override { return (copyDelay_ > 0 ? copyDelay_ : 0.040) + smoothingDelay_; }
     int SlotsInUse() const override { return slots_; }

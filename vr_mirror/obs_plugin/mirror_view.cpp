@@ -179,7 +179,7 @@ void MirrorView::RestartDelay() {
     BuildPipeline(config, &pipeline_);
     FeedDrawnPose();
     FramePicker& picker = *pipeline_.Picker();
-    picker.Restart(SmoothingDelayS(config.smoothing), FrameRing::kMaxSlots);
+    picker.Restart(SmoothingDelayS(config.smoothing), frameSource_->Period(), FrameRing::kMaxSlots);
     outDelay_ = picker.OutDelay();
     ring_.SetSlotCount(picker.SlotsInUse());
     SetImageNeed();
@@ -276,6 +276,7 @@ void MirrorView::Prepare(uint64_t tickNs) {
         ApplyFixedDelay(picker);
     }
 
+    FollowSlotCount(picker.SlotsInUse());
     SetProgramDelay(picker.OutDelay());
     switch (pick.kind) {
         case PickKind::kRepeat:
@@ -350,11 +351,17 @@ void MirrorView::ApplyFixedDelay(FramePicker& picker) {
 
     LineStatsReport<void (*)(const char*)> log(LogLine);
     picker.Report(log);
+}
 
-    // The ring only needs the frames inside the delay, plus room for a late copy. Close
-    // OBS's handles to the slots it frees.
-    ring_.SetSlotCount(picker.SlotsInUse());
-    for (int i = picker.SlotsInUse(); i < FrameRing::kMaxSlots; i++) {
+// The ring as large as the frame picker needs (it changes when the delay is fixed, or when the
+// display's period is learnt during the warm-up). Closes OBS's handles to the slots it frees.
+void MirrorView::FollowSlotCount(int slots) {
+    if (slots == ring_.SlotCount()) {
+        return;
+    }
+
+    ring_.SetSlotCount(slots);
+    for (int i = slots; i < FrameRing::kMaxSlots; i++) {
         if (textures_[i]) {
             gs_texture_destroy(textures_[i]);
         }

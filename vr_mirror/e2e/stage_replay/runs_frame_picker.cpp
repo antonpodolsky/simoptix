@@ -25,7 +25,6 @@ namespace stage_replay {
     namespace {
 
         constexpr int kMaxSlots = FrameStore::kMaxSlots;
-        constexpr double kDisplayPeriod = 1.0 / 90;
 
         struct TraceFrame {
             uint64_t serial = 0;
@@ -37,6 +36,7 @@ namespace stage_replay {
             std::vector<TraceFrame> frames;
             std::vector<double> ticks;
             std::vector<std::pair<size_t, int>> smoothingAt;  // (tick index, SmoothingKind) from then on
+            double period = 1.0 / 90;                         // the headset's display period (s)
         };
 
         // What the store held over a run, for the memory a picker needs. A frame no tick shows was
@@ -81,22 +81,25 @@ namespace stage_replay {
             return !in->frames.empty() && !in->ticks.empty();
         }
 
-        // Frames at 90 Hz for `seconds` (arrival noise, ~3% dropped, a stall of 20 frames) and OBS's
-        // ticks at `hz` with a little jitter; the smoothing changes twice.
-        TraceInput Synthetic(double hz, double seconds) {
+        // Frames at `headsetHz` for `seconds` (arrival noise, ~3% dropped, a stall of 20 frames) and
+        // OBS's ticks at `hz` with a little jitter; the smoothing changes twice.
+        TraceInput Synthetic(int headsetHz, double hz, double seconds) {
             TraceInput in;
             char name[64];
-            snprintf(name, sizeof(name), "synthetic: headset 90 Hz, OBS %.2f fps", hz);
+            snprintf(name, sizeof(name), "synthetic: headset %d Hz, OBS %.2f fps", headsetHz, hz);
             in.name = name;
-            uint32_t seed = 777u + uint32_t(hz * 100);
+            in.period = 1.0 / headsetHz;
+
+            // The seed of the 90 Hz runs is what it was before the headset's rate was a parameter.
+            uint32_t seed = 777u + static_cast<uint32_t>(hz * 100) + static_cast<uint32_t>(headsetHz - 90);
             auto next = [&] {
                 seed = seed * 1664525u + 1013904223u;
                 return double(seed >> 8) / double(1u << 24);
             };
 
             uint64_t serial = 0;
-            for (int k = 0; k * kDisplayPeriod < seconds; k++) {
-                const double slot = 100 + k * kDisplayPeriod;
+            for (int k = 0; k * in.period < seconds; k++) {
+                const double slot = 100 + k * in.period;
                 if (next() < 0.03 || (k > 500 && k < 520)) {
                     continue;
                 }
@@ -154,7 +157,7 @@ namespace stage_replay {
             config.smoothing = SmoothingKind(smoothing);
 
             std::unique_ptr<FramePicker> picker = MakeFramePicker(config.framePicker);
-            picker->Restart(SmoothingDelayS(config.smoothing), kMaxSlots);
+            picker->Restart(SmoothingDelayS(config.smoothing), in.period, kMaxSlots);
             store->Resize(picker->SlotsInUse());
             double outDelay = picker->OutDelay();  // as last seen: a change is the delay fixed
 
@@ -176,7 +179,7 @@ namespace stage_replay {
                     const SmoothingKind k = SmoothingKind(in.smoothingAt[change++].second);
                     if (k != config.smoothing) {
                         config.smoothing = k;
-                        picker->Restart(SmoothingDelayS(k), kMaxSlots);
+                        picker->Restart(SmoothingDelayS(k), in.period, kMaxSlots);
                         store->Resize(picker->SlotsInUse());
                         outDelay = picker->OutDelay();
                         lastTick = 0;  // the moments move with the smoothing's delay: not a jump
@@ -194,11 +197,14 @@ namespace stage_replay {
                 use.stored = frame;
                 use.mostHolding = std::max(use.mostHolding, store->Holding());
                 CountDue(in, tick, picker->OutDelay(), *store, &use);
-                const Pick p = picker->Tick(tick, kDisplayPeriod, store->slots, kMaxSlots);
+                const Pick p = picker->Tick(tick, in.period, store->slots, kMaxSlots);
                 if (picker->OutDelay() != outDelay) {  // the delay fixed
                     outDelay = picker->OutDelay();
                     fixedDelay = outDelay - SmoothingDelayS(config.smoothing);
                     fixedTick = int(t);
+                }
+
+                if (picker->SlotsInUse() != store->count) {
                     store->Resize(picker->SlotsInUse());
                 }
 
@@ -225,7 +231,7 @@ namespace stage_replay {
             }
 
             printf(
-                "%-40s %s, smoothing %d: %zu ticks, %d next, %d repeat, %d jump, %d held, %d none; delay "
+                "%-41s %s, smoothing %d: %zu ticks, %d next, %d repeat, %d jump, %d held, %d none; delay "
                 "fixed at "
                 "tick "
                 "%d (%.1f ms), %d entries; view behind its image %.1f ms (median), moment jumps up to %.1f "
@@ -246,7 +252,7 @@ namespace stage_replay {
                 jump * 1000
             );
             printf(
-                "%-40s frames: %zu stored, %zu due by the end; of those %.0f%% shown, %.0f%% still stored "
+                "%-41s frames: %zu stored, %zu due by the end; of those %.0f%% shown, %.0f%% still stored "
                 "when due; up to %d entries holding a frame\n",
                 "",
                 use.stored,
@@ -274,8 +280,10 @@ namespace stage_replay {
         }
 
         for (double hz : {50.0, 59.94, 60.0, 144.0}) {
-            Run(Synthetic(hz, 30.0), 1, kind);
+            Run(Synthetic(90, hz, 30.0), 1, kind);
         }
+
+        Run(Synthetic(144, 60.0, 30.0), 1, kind);
         return 0;
     }
 
