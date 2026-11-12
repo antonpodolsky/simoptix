@@ -244,6 +244,21 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   | Most entries holding a frame | 81 | 86 |
 
   The 90 Hz runs and `stage_replay --golden` were unchanged, byte for byte.
+- **OBS's ticks can be predicted half a second ahead to within microseconds.** A picker that decides
+  ahead which frame each coming tick shows predicts the ticks as the last tick plus whole OBS frame
+  periods. Measured with `vr_mirror\recording_analysis\tick_regularity.py` on 8 frame traces of the
+  OBS plugin with the OpenXR source, OBS at 90 fps: 1.57 million ticks in 4.9 h.
+  - 0.5 and 0.6 s ahead, the real tick was off the prediction by at most 0.002 ms. None was off by
+    1 ms or more.
+  - The reason: the plugin's tick is the time OBS scheduled for the video frame
+    (`obs_get_video_frame_time`), which steps by exactly one frame period, moved onto the frame
+    source's clock. Only that clock's slow correction moves it, by microseconds.
+  - OBS skipped ticks in 4 places, 1 to 10 ticks in a row. The ticks after a skip were still on the
+    same grid.
+  - So the margin for the clocks' noise in issue #27's first way can be far below 1 ms, and its second
+    way can rely on the predicted ticks. Only OBS at 90 fps with the OpenXR source was traced. Other
+    frame rates use the same scheduled times, and the Pimax source the same clock correction, but
+    neither was measured.
 - **The fixed delay's moments trail their images and jump once. The slot timeline's didn't**
   (`stage_replay --stage frame_picker --frame_picker K`, the shorter of those OBS traces and
   synthetic ticks). The slot-timeline picker has since been removed (below).

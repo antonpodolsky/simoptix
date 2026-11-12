@@ -44,6 +44,7 @@ closer at one moment. They need the trace that the Pimax source's **Debug** sett
 | `lineup.py` | Which trace row each video frame shows. It chooses the stamp's occurrence by the repeated frames |
 | `shake_traced.py` | Each jump's cause from the trace: the view's own motion, an edge stop, or an image lined up from the wrong pose |
 | `cadence.py` | Ticks, game frames and display slots step by step, to find where the scenery's steps go uneven |
+| `tick_regularity.py` | How regular OBS's ticks are, from a trace's tick times alone: how far a tick predicted 0.1, 0.5 and 0.6 s ahead lands from the real one, and the ticks OBS skipped |
 | `events.py` | Repeated game frames, missed slots, two frames on one slot, and frames never shown, with the cockpit's jump at each |
 | `moment.py` | One moment frame by frame: the trace's rows and the runtime's arrival rows |
 | `aligned_diff.py` | The road's change between frames with the cockpit lined up (frozen or skipped game frames) |
