@@ -238,10 +238,11 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 
   | OBS | Frames shown | Still stored when due | Most entries holding a frame |
   |---|---|---|---|
-  | 144 fps, faster than the headset | 98% | 98% | 55 |
-  | 60 fps, slower than the headset | 67% | 98% | 55 |
-  | 59.94 fps | 67% | 98% | 55 |
-  | 50 fps | 56% | 98% | 55 |
+  | 144 fps, faster than the headset | 98% | 100% | 55 |
+  | 90 fps, the headset's own rate | 98% | 98% | 55 |
+  | 60 fps, slower than the headset | 68% | 99% | 57 |
+  | 59.94 fps | 67% | 99% | 57 |
+  | 50 fps | 56% | 98% | 57 |
 
   - At 144 fps the 2% not shown are skipped where the view jumps ahead. 44 frames go at the switch
     from Look-ahead to Instant (0.5 s), and 3 each time the copy delay is fixed (about 35 ms). A few
@@ -323,19 +324,21 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   | Input | Said no | Shown after all |
   |---|---|---|
   | 90 Hz, OBS 60 fps | 633 of 2,548 | 6 |
-  | 90 Hz, OBS 59.94 fps | 643 of 2,564 | 9 |
-  | 90 Hz, OBS 50 fps | 867 of 2,557 | 8 |
-  | 90 Hz, OBS 90 or 144 fps | 0 | 0 |
-  | 144 Hz, OBS 60 fps | 1,854 of 4,104 | 102 |
+  | 90 Hz, OBS 59.94 fps | 643 of 2,564 | 8 |
+  | 90 Hz, OBS 50 fps | 867 of 2,557 | 7 |
+  | 90 Hz, OBS 90 fps, the headset's own rate | 0 | 0 |
+  | 90 Hz, OBS 144 fps | 0 | 0 |
+  | 144 Hz, OBS 60 fps | 1,854 of 4,104 | 15 |
   | Traces, Look-ahead | 82 of 605,005 and 27 of 511,036 | 1 and 0 |
   | Traces, Instant | 87 of 605,005 and 21 of 511,036 | 3 and 1 |
 
   - At 60 fps it says no to about 3 of every 4 frames never shown. The rest come during the
     warm-ups (2 s after each start and smoothing switch), when it can't decide yet.
+  - At the headset's own rate, or faster, it never says no: every frame is shown.
   - With all copies at 1–3 ms, the 90 Hz synthetic runs give 0 or 1 frames shown after a no: those
     are late copies, which the run ahead assumes ready.
-  - At 144 Hz with Instant the ring holds 4 frames (the delay's frames plus 3), but 2.4 frames
-    arrive between two ticks at 60 fps, so frames are written over before a tick can show them.
+  - At 144 Hz the store-size and shrink fixes (above) cut the frames shown after a no from 102 to
+    15. What is left are late copies, as at the other rates.
   - The grid follows every tick. Kept from the first tick on, it drifted over a trace of an hour or
     two (the period rounded, the clocks' correction), and frames due near the 4 ms slack's border
     went the other way: 19 of 45 and 16 of 35 shown after a no with Look-ahead.
