@@ -299,7 +299,9 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   - At 144 fps it counts 140 against 22. 111 of those are the synthetic ticks' ±0.25 ms jitter: the
     picker judges a frame due by the tick's grid time, and the frame became due between the grid time
     and the jittered tick. Real OBS ticks lie on the grid to within 0.002 ms (above). The other 29
-    are late copies.
+    are late copies. With the ticks on the exact grid, the same frames give 28 against 21, and the
+    other runs change by 2 or less. The ±0.25 ms runs stay, because they show how the tick plan
+    depends on the ticks keeping to the grid.
 - **The fixed delay's moments trail their images and jump once. The slot timeline's didn't**
   (`stage_replay --stage frame_picker --frame_picker K`, the shorter of those OBS traces and
   synthetic ticks). The slot-timeline picker has since been removed (below).

@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // stage_replay --stage frame_picker: runs the frame picker (stage 3) the way the OBS plugin does,
 // over OBS frame traces (their ticks and frame arrivals) and synthetic frames (a 90 Hz headset with
-// OBS ticking at 50, 59.94, 60, 90 and 144 fps, and a 144 Hz headset with OBS at 60 fps), with copies
-// finishing after a seeded random time (now and then late) and a store that shrinks and grows as the
-// picker asks; prints the picks by kind, the delay it fixed, what the store held (the frames shown,
-// the frames still stored when due, the most entries holding a frame), and the picker's answers to
-// WillShow against what was shown. Checked identical to the plugin's picking before the stage
-// (vr_mirror\e2e\README.md, "Stage replay"). Knows nothing about textures or OBS.
+// OBS ticking at 50, 59.94, 60, 90 and 144 fps, and a 144 Hz headset with OBS at 60 fps; each set
+// with jittered and with exact ticks), with copies finishing after a seeded random time (now and then
+// late) and a store that shrinks and grows as the picker asks; prints the picks by kind, the delay it
+// fixed, what the store held (the frames shown, the frames still stored when due, the most entries
+// holding a frame), and the picker's answers to WillShow against what was shown. Checked identical to
+// the plugin's picking before the stage (vr_mirror\e2e\README.md, "Stage replay"). Knows nothing
+// about textures or OBS.
 
 #include <algorithm>
 #include <cmath>
@@ -114,7 +115,7 @@ namespace stage_replay {
                 }
 
                 printf(
-                    "%-41s will show: %zu of %zu frames due said no, %zu of those shown after all; %zu "
+                    "%-60s will show: %zu of %zu frames due said no, %zu of those shown after all; %zu "
                     "said yes and never shown\n",
                     "",
                     no,
@@ -172,11 +173,19 @@ namespace stage_replay {
         }
 
         // Frames at `headsetHz` for `seconds` (arrival noise, ~3% dropped, a stall of 20 frames) and
-        // OBS's ticks at `hz` with a little jitter; the smoothing changes twice.
-        TraceInput Synthetic(int headsetHz, double hz, double seconds) {
+        // OBS's ticks at `hz`, each moved by up to `tickJitterS` either way (0: on the exact grid, as
+        // OBS schedules them; findings\pipeline.md); the smoothing changes twice. A pair of runs that
+        // differ only in the jitter has the same frames.
+        TraceInput Synthetic(int headsetHz, double hz, double tickJitterS, double seconds) {
             TraceInput in;
-            char name[64];
-            snprintf(name, sizeof(name), "synthetic: headset %d Hz, OBS %.2f fps", headsetHz, hz);
+            char name[80];
+            char ticks[24] = "ticks exact";
+
+            if (tickJitterS > 0) {
+                snprintf(ticks, sizeof(ticks), "ticks +-%.2f ms", tickJitterS * 1000);
+            }
+
+            snprintf(name, sizeof(name), "synthetic: headset %d Hz, OBS %.2f fps, %s", headsetHz, hz, ticks);
             in.name = name;
             in.period = 1.0 / headsetHz;
             in.tickPeriod = 1 / hz;
@@ -203,7 +212,8 @@ namespace stage_replay {
             }
 
             for (int i = 0; 100 + i / hz < 100 + seconds; i++) {
-                in.ticks.push_back(100 + i / hz + (next() - 0.5) * 0.0005);
+                const double jitter = tickJitterS > 0 ? (next() - 0.5) * 2 * tickJitterS : 0;
+                in.ticks.push_back(100 + i / hz + jitter);
             }
 
             in.smoothingAt = {{0, 1}, {in.ticks.size() / 3, 0}, {2 * in.ticks.size() / 3, 1}};
@@ -330,7 +340,7 @@ namespace stage_replay {
             }
 
             printf(
-                "%-41s %s, smoothing %d: %zu ticks, %d next, %d repeat (%d with a newer frame due), %d jump, "
+                "%-60s %s, smoothing %d: %zu ticks, %d next, %d repeat (%d with a newer frame due), %d jump, "
                 "%d held, %d none; delay fixed at tick %d (%.1f ms), %d entries; view behind its image %.1f "
                 "ms (median), moment jumps up to %.1f ms\n",
                 in.name.c_str(),
@@ -350,7 +360,7 @@ namespace stage_replay {
                 jump * 1000
             );
             printf(
-                "%-41s frames: %zu stored, %zu due by the end; of those %.0f%% shown, %.0f%% still stored "
+                "%-60s frames: %zu stored, %zu due by the end; of those %.0f%% shown, %.0f%% still stored "
                 "when due; up to %d entries holding a frame\n",
                 "",
                 use.stored,
@@ -384,11 +394,14 @@ namespace stage_replay {
             }
         }
 
-        for (double hz : {50.0, 59.94, 60.0, 90.0, 144.0}) {
-            Run(Synthetic(90, hz, 30.0), 1, kind);
-        }
+        // Each set twice: ticks moved by up to 0.25 ms (a stress test), and on the exact grid.
+        for (double tickJitterS : {0.00025, 0.0}) {
+            for (double hz : {50.0, 59.94, 60.0, 90.0, 144.0}) {
+                Run(Synthetic(90, hz, tickJitterS, 30.0), 1, kind);
+            }
 
-        Run(Synthetic(144, 60.0, 30.0), 1, kind);
+            Run(Synthetic(144, 60.0, tickJitterS, 30.0), 1, kind);
+        }
         return 0;
     }
 

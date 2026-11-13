@@ -185,7 +185,9 @@ It runs the frame picker as the OBS plugin does: the fixed delay, unless `--fram
 - **Its inputs:** OBS frame traces, each an `_ticks.csv` with its `_pimax.csv` (the ticks and the frame
   arrivals), synthetic frames from a 90 Hz headset with OBS at 50, 59.94, 60, 90 and 144 fps, and
   from a 144 Hz headset with OBS at 60 fps. So OBS ticks slower than the headset in four runs, at its
-  rate in one and faster in one. The traces are in the data folder's late frames after drops (its trace folder).
+  rate in one and faster in one. Each set runs twice: with the ticks moved by up to 0.25 ms either
+  way, a stress test, and on the exact grid, as OBS schedules them. The two runs of a pair have the
+  same frames. The traces are in the data folder's late frames after drops (its trace folder).
 - **In the synthetic runs** the smoothing changes mid-run, copies finish after a seeded random 1–3 ms
   (5% of them after 5–30 ms), and the store is resized as the picker asks.
 - **It prints** the picks by kind per run and the delay it fixed, how far each tick's moment trails the
