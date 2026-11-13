@@ -178,16 +178,20 @@ one the plugin recorded.
 - The small differences come from the plugin's session restarts, which the run doesn't see.
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS PIMAX ...]
+vr_mirror\e2e\bin\stage_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]
 ```
 
 It runs the frame picker as the OBS plugin does: the fixed delay, unless `--frame_picker` names another.
-- **Its inputs:** OBS frame traces, each an `_ticks.csv` with its `_pimax.csv` (the ticks and the frame
-  arrivals), synthetic frames from a 90 Hz headset with OBS at 50, 59.94, 60, 90 and 144 fps, and
+- **Its inputs:** OBS frame traces, each an `_ticks.csv` with its `_pimax.csv` or `_openxr.csv` (the
+  ticks and the frame arrivals), synthetic frames from a 90 Hz headset with OBS at 50, 59.94, 60, 90 and 144 fps, and
   from a 144 Hz headset with OBS at 60 fps. So OBS ticks slower than the headset in four runs, at its
   rate in one and faster in one. Each set runs twice: with the ticks moved by up to 0.25 ms either
   way, a stress test, and on the exact grid, as OBS schedules them. The two runs of a pair have the
   same frames. The traces are in the data folder's late frames after drops (its trace folder).
+- **An OpenXR trace** holds no de-jittered arrivals, so the source's arrival timing runs again over
+  its frames, restarting where the layer's frame numbers start again (a new game session). A first
+  line per trace says how far that lands from the plugin's own, over the frames its ticks showed.
+  The traces hold no copy times: copies take the synthetic runs' times.
 - **In the synthetic runs** the smoothing changes mid-run, copies finish after a seeded random 1–3 ms
   (5% of them after 5–30 ms), and the store is resized as the picker asks, as the plugin's ring is:
   at the next copy, keeping its frames when it grows.

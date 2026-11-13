@@ -269,6 +269,11 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   does. At the switch back to Look-ahead the frames already held can then be shown: 3 to 7 fewer
   ticks with nothing to show per synthetic run, and the other counts move by 4 or less. The numbers
   in this file from before were measured with the old store. `stage_replay --golden` is unchanged.
+- **OpenXR traces replay in `stage_replay`, as the plugin had them.** Their frames' de-jittered
+  arrivals, rebuilt by the source's arrival timing, match the plugin's to within the trace's 0.001 ms
+  at the median and the 99th percentile, over 615,148 and 520,199 ticks of two traces. 6 and 12
+  ticks are off by more than 1 ms, all within a few frames of a new game session. Restarting the
+  arrival timing at every pause over 1 s instead gave 1,129 and 1,462: the source doesn't.
 - **The tick plan (`TickPlanPicker`) knows a frame won't be shown once the next one arrives.**
   `stage_replay --stage frame_picker --frame_picker tick_plan`, synthetic frames, the store keeping
   every frame:
@@ -292,6 +297,17 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
     at 1–3 ms: 20 of its 21 extra repeats). The next frame then comes 22 ms later, more than OBS's
     16.7 ms, so one tick has no new frame. The fixed delay moves one frame per tick and catches up
     only when two frames are 4 ms overdue, so it is often a frame behind, which covers the gap.
+  - **On real traces it repeats and skips far more than the fixed delay.** Two OpenXR traces with a
+    90 Hz headset and OBS at 90 fps (615,149 and 520,202 ticks), copy times synthetic:
+
+    | Smoothing | Repeats with a newer frame due, fixed delay / tick plan | Jumps |
+    |---|---|---|
+    | Instant | 13,087 / 21,164 and 12,063 / 18,490 | 5,825 / 20,935 and 4,704 / 18,223 |
+    | Look-ahead | 2 / 121 and 2 / 708 | 83 / 269 and 28 / 681 |
+
+    At equal rates a frame's due time can sit close to a tick for a long time, and the tick plan
+    shows it at whichever tick comes first after it, so small noise moves it a tick either way: a
+    repeat, then a jump. The fixed delay's 4 ms slack holds it to one frame per tick there.
   - Tried and dropped: showing frames up to 4 ms before they were due, like the fixed delay's
     slack. With all copies at 1–3 ms, the 60 fps run still repeated 40 times, and frames were shown
     after a no in three runs (41 at 50 fps, 60 at 59.94 fps, 116 at 144 Hz), because a frame 4 ms

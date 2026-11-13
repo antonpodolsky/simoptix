@@ -61,8 +61,8 @@ namespace stage_replay {
     // lag_sim, then --stage frame_matching). argv[1] is the replay.
     int RunDrawnPose(int argc, char** argv, const PipelineConfig& config);
 
-    // --stage frame_picker: the frame picker over OBS traces (pairs of _ticks.csv, _pimax.csv) and
-    // synthetic ticks: the picks by kind, the delay fixed, how far each tick's moment trails the shown
+    // --stage frame_picker: the frame picker over OBS traces (pairs of _ticks.csv, _pimax.csv or _openxr.csv)
+    // and synthetic ticks: the picks by kind, the delay fixed, how far each tick's moment trails the shown
     // image's slot, how far the moments jump, and the frames shown, still stored when due and stored at
     // once; the fixed delay unless --frame_picker says otherwise.
     int RunFramePicker(const std::vector<std::pair<std::string, std::string>>& traces, FramePickerKind kind);

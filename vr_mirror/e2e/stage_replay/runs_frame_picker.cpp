@@ -39,9 +39,10 @@ namespace stage_replay {
             std::string name;
             std::vector<TraceFrame> frames;
             std::vector<double> ticks;
-            std::vector<std::pair<size_t, int>> smoothingAt;  // (tick index, SmoothingKind) from then on
-            double period = 1.0 / 90;                         // the headset's display period (s)
-            double tickPeriod = 0;                            // OBS's frame period (s)
+            std::vector<std::pair<size_t, int>> smoothingAt;       // (tick index, SmoothingKind) from then on
+            double period = 1.0 / 90;                              // the headset's display period (s)
+            double tickPeriod = 0;                                 // OBS's frame period (s)
+            std::vector<std::pair<uint64_t, double>> shownSmooth;  // a trace's: (serial, de-jittered arrival)
         };
 
         // What the store held over a run, for the memory a picker needs. A frame no tick shows was
@@ -52,6 +53,14 @@ namespace stage_replay {
             uint64_t lastShown = 0;
             size_t nextDue = 0;  // the first stored frame not yet due
         };
+
+        double Median(std::vector<double>* v) {
+            if (v->empty()) {
+                return 0;
+            }
+            std::nth_element(v->begin(), v->begin() + v->size() / 2, v->end());
+            return (*v)[v->size() / 2];
+        }
 
         // Each frame's place in `in.frames`, by serial.
         std::unordered_map<uint64_t, size_t> IndexBySerial(const TraceInput& in) {
@@ -139,37 +148,164 @@ namespace stage_replay {
             size_t shownAfterNo_ = 0;
         };
 
-        bool LoadTrace(const std::string& ticksPath, const std::string& pimaxPath, TraceInput* in) {
+        // The ticks of a trace's _ticks.csv, and each shown frame's de-jittered arrival as the plugin had
+        // it (`shownSmooth`, to check frames rebuilt from the source's file against).
+        bool LoadTicks(const std::string& path, TraceInput* in) {
             FILE* f = nullptr;
-            char line[512];
-            if (fopen_s(&f, pimaxPath.c_str(), "r") != 0 || !f) {
+
+            if (fopen_s(&f, path.c_str(), "r") != 0 || !f) {
                 return false;
             }
+
+            char line[512];
+            while (fgets(line, sizeof(line), f)) {
+                unsigned stamp = 0;
+                unsigned long long serial = 0;
+                double tick = 0, arrival = 0, smooth = 0;
+                const int
+                    read = sscanf_s(line, "%u,%lf,%llu,%lf,%lf", &stamp, &tick, &serial, &arrival, &smooth);
+
+                if (read >= 2) {
+                    in->ticks.push_back(tick);
+                }
+                if (read == 5) {
+                    in->shownSmooth.push_back({serial, smooth});
+                }
+            }
+
+            fclose(f);
+            return !in->ticks.empty();
+        }
+
+        // The Pimax source's _pimax.csv: its F rows hold each frame's arrival, de-jittered arrival and
+        // slot as the plugin had them.
+        bool LoadPimaxFrames(const std::string& path, TraceInput* in) {
+            FILE* f = nullptr;
+
+            if (fopen_s(&f, path.c_str(), "r") != 0 || !f) {
+                return false;
+            }
+
+            char line[512];
             while (fgets(line, sizeof(line), f)) {
                 TraceFrame fr;
                 unsigned long long serial = 0;
-                if (line[0] == 'F'
-                    && sscanf_s(line, "F,%llu,%lf,%lf,%lf", &serial, &fr.arrival, &fr.smooth, &fr.slot)
-                           == 4) {
+                const int
+                    read = sscanf_s(line, "F,%llu,%lf,%lf,%lf", &serial, &fr.arrival, &fr.smooth, &fr.slot);
+
+                if (line[0] == 'F' && read == 4) {
                     fr.serial = serial;
                     in->frames.push_back(fr);
                 }
             }
 
             fclose(f);
-            if (fopen_s(&f, ticksPath.c_str(), "r") != 0 || !f) {
+            return !in->frames.empty();
+        }
+
+        // The OpenXR source's _openxr.csv: each A row is a frame handed to the hosts (serial, arrival),
+        // and the F row of the same layer frame says the slot it was drawn for. The file holds no
+        // de-jittered arrival or display period, so the source's own arrival timing runs again over the
+        // frames, as the source ran it: reset where a new game session starts (the layer's frame numbers
+        // start again), and not at a pause. The drawn slots' median step stands in for the period.
+        bool LoadOpenXrFrames(const std::string& path, TraceInput* in) {
+            FILE* f = nullptr;
+
+            if (fopen_s(&f, path.c_str(), "r") != 0 || !f) {
                 return false;
             }
+
+            std::unordered_map<unsigned long long, double> drawnSlot;  // by layer frame
+            std::vector<double> slotSteps;
+            std::vector<bool> startsSession;  // per frame of `in`
+            double lastSlot = 0;
+            unsigned long long lastLayerFrame = 0;
+            char line[512];
+
             while (fgets(line, sizeof(line), f)) {
-                unsigned stamp = 0;
-                double tick = 0;
-                if (sscanf_s(line, "%u,%lf", &stamp, &tick) == 2) {
-                    in->ticks.push_back(tick);
+                unsigned long long layerFrame = 0, serial = 0;
+                double slot = 0, arrival = 0;
+
+                if (line[0] == 'F' && sscanf_s(line, "F,%llu,%*lf,%lf", &layerFrame, &slot) == 2) {
+                    drawnSlot[layerFrame] = slot;
+                    if (lastSlot > 0 && slot > lastSlot && slot - lastSlot < 0.05) {
+                        slotSteps.push_back(slot - lastSlot);
+                    }
+                    lastSlot = slot;
+                } else if (
+                    line[0] == 'A' && sscanf_s(line, "A,%llu,%llu,%lf", &layerFrame, &serial, &arrival) == 3
+                ) {
+                    const auto drawn = drawnSlot.find(layerFrame);
+                    TraceFrame fr;
+                    fr.serial = serial;
+                    fr.arrival = arrival;
+                    fr.slot = drawn != drawnSlot.end() ? drawn->second : 0;  // re-timed below
+                    in->frames.push_back(fr);
+                    startsSession.push_back(layerFrame < lastLayerFrame);
+                    lastLayerFrame = layerFrame;
                 }
             }
 
             fclose(f);
-            return !in->frames.empty() && !in->ticks.empty();
+
+            if (in->frames.empty() || slotSteps.empty()) {
+                return false;
+            }
+
+            in->period = Median(&slotSteps);
+            std::unique_ptr<ArrivalTiming> timing = MakeArrivalTiming(ArrivalTimingKind::kReported);
+
+            for (size_t i = 0; i < in->frames.size(); i++) {
+                TraceFrame& fr = in->frames[i];
+
+                if (startsSession[i]) {
+                    timing->Reset();
+                }
+
+                const ArrivalResult r = timing->Add({fr.arrival, 0, fr.slot, in->period});
+                fr.smooth = r.smooth;
+                fr.slot = r.slot;
+            }
+
+            return true;
+        }
+
+        // How far the frames' de-jittered arrivals are from the plugin's own, over the frames its ticks
+        // showed.
+        void PrintSmoothCheck(const TraceInput& in, const std::unordered_map<uint64_t, size_t>& indexOf) {
+            std::vector<double> off;  // per tick that showed a frame (ms)
+
+            for (const auto& shown : in.shownSmooth) {
+                const auto i = indexOf.find(shown.first);
+
+                if (i != indexOf.end()) {
+                    off.push_back(std::abs(in.frames[i->second].smooth - shown.second) * 1000);
+                }
+            }
+
+            std::sort(off.begin(), off.end());
+            const auto at = [&](double share) {
+                return off.empty() ? 0 : off[size_t(share * (off.size() - 1))];
+            };
+            const auto over = [&](double ms) {
+                return off.end() - std::upper_bound(off.begin(), off.end(), ms);
+            };
+
+            printf(
+                "%s: %zu frames, %zu ticks; display period %.3f ms; de-jittered arrivals off the plugin's, "
+                "over "
+                "%zu ticks: median %.4f, p99 %.4f, max %.4f ms; %zd over 0.01 ms, %zd over 1 ms\n",
+                in.name.c_str(),
+                in.frames.size(),
+                in.ticks.size(),
+                in.period * 1000,
+                off.size(),
+                at(0.5),
+                at(0.99),
+                at(1.0),
+                over(0.01),
+                over(1.0)
+            );
         }
 
         // Frames at `headsetHz` for `seconds` (arrival noise, ~3% dropped, a stall of 20 frames) and
@@ -218,14 +354,6 @@ namespace stage_replay {
 
             in.smoothingAt = {{0, 1}, {in.ticks.size() / 3, 0}, {2 * in.ticks.size() / 3, 1}};
             return in;
-        }
-
-        double Median(std::vector<double>* v) {
-            if (v->empty()) {
-                return 0;
-            }
-            std::nth_element(v->begin(), v->begin() + v->size() / 2, v->end());
-            return (*v)[v->size() / 2];
         }
 
         // Counts the frames due by `tick` (the output delay after their de-jittered arrival) and
@@ -378,8 +506,20 @@ namespace stage_replay {
         for (const auto& t : traces) {
             TraceInput in;
             in.name = t.first.substr(t.first.find_last_of("\\/") + 1);
-            if (!LoadTrace(t.first, t.second, &in)) {
-                printf("cannot read %s / %s\n", t.first.c_str(), t.second.c_str());
+            const std::string& framesPath = t.second;
+            const std::string openXrEnd = "_openxr.csv";
+            const bool openXr = framesPath.size() >= openXrEnd.size()
+                                && framesPath.compare(
+                                       framesPath.size() - openXrEnd.size(),
+                                       openXrEnd.size(),
+                                       openXrEnd
+                                   ) == 0;
+            const bool loaded = LoadTicks(t.first, &in)
+                                && (openXr ? LoadOpenXrFrames(framesPath, &in)
+                                           : LoadPimaxFrames(framesPath, &in));
+
+            if (!loaded) {
+                printf("cannot read %s / %s\n", t.first.c_str(), framesPath.c_str());
                 return -1;
             }
 
@@ -388,6 +528,7 @@ namespace stage_replay {
             std::adjacent_difference(in.ticks.begin(), in.ticks.end(), steps.begin());
             steps.erase(steps.begin());
             in.tickPeriod = Median(&steps);
+            PrintSmoothCheck(in, IndexBySerial(in));
 
             for (int smoothing = 0; smoothing <= 1; smoothing++) {
                 Run(in, smoothing, kind);
