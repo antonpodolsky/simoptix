@@ -52,19 +52,34 @@ namespace stage_replay {
             size_t nextDue = 0;  // the first stored frame not yet due
         };
 
+        // Each frame's place in `in.frames`, by serial.
+        std::unordered_map<uint64_t, size_t> IndexBySerial(const TraceInput& in) {
+            std::unordered_map<uint64_t, size_t> indexOf;
+
+            for (size_t i = 0; i < in.frames.size(); i++) {
+                indexOf[in.frames[i].serial] = i;
+            }
+
+            return indexOf;
+        }
+
+        // A repeat the game didn't cause: the frame after the shown one (`shown`, its place in
+        // `in.frames`) was due by the tick, but not shown (its copy late, or the picker behind). After a
+        // dropped game frame no newer frame is due, and the repeat is the game's.
+        bool NewerFrameDue(const TraceInput& in, size_t shown, double tick, double outDelay) {
+            return shown + 1 < in.frames.size() && in.frames[shown + 1].smooth + outDelay <= tick;
+        }
+
         // The picker's answers to WillShow, asked for each frame once the next one has arrived, held
         // against what the ticks then showed. A frame it said no tick shows, shown after all, is an
         // error: a host that skips its copy would have nothing to show.
         class WillShowCheck {
         public:
-            explicit WillShowCheck(const TraceInput& in)
+            WillShowCheck(const TraceInput& in, const std::unordered_map<uint64_t, size_t>& indexOf)
                 : in_(in),
+                  indexOf_(indexOf),
                   answer_(in.frames.size(), kNotAsked),
-                  shown_(in.frames.size(), false) {
-                for (size_t i = 0; i < in.frames.size(); i++) {
-                    indexOf_[in.frames[i].serial] = i;
-                }
-            }
+                  shown_(in.frames.size(), false) {}
 
             // Frame `next` arrived: asks about the frame before it.
             void Ask(const FramePicker& picker, size_t next) {
@@ -117,9 +132,9 @@ namespace stage_replay {
             }
 
             const TraceInput& in_;
+            const std::unordered_map<uint64_t, size_t>& indexOf_;
             std::vector<char> answer_;  // per frame of `in_`
             std::vector<bool> shown_;   // per frame of `in_`
-            std::unordered_map<uint64_t, size_t> indexOf_;
             size_t shownAfterNo_ = 0;
         };
 
@@ -236,7 +251,8 @@ namespace stage_replay {
             picker->Restart(SmoothingDelayS(config.smoothing), in.period, in.tickPeriod, kMaxSlots);
             store->Resize(picker->SlotsInUse());
             double outDelay = picker->OutDelay();  // as last seen: a change is the delay fixed
-            WillShowCheck willShow(in);
+            const std::unordered_map<uint64_t, size_t> indexOf = IndexBySerial(in);
+            WillShowCheck willShow(in, indexOf);
 
             uint32_t seed = 4242;
             auto next = [&] {
@@ -245,7 +261,7 @@ namespace stage_replay {
             };
 
             size_t frame = 0, change = 0;
-            int counts[5] = {}, fixedTick = -1;
+            int counts[5] = {}, fixedTick = -1, repeatsNewerDue = 0;
             double fixedDelay = 0, jump = 0, lastTick = 0, lastMoment = 0;
             std::vector<double> behind;  // per pick: the shown image's slot minus the tick's moment (s)
             FrameUse use;
@@ -294,6 +310,10 @@ namespace stage_replay {
                 // The tick's moment: how far its view trails the shown image's slot, and how far it moved
                 // other than with the ticks (a jump of the whole view).
                 const StoredFrame& shown = store->slots[p.index];
+                if (p.kind == PickKind::kRepeat
+                    && NewerFrameDue(in, indexOf.at(shown.serial), tick, picker->OutDelay())) {
+                    repeatsNewerDue++;
+                }
                 if (shown.serial != use.lastShown) {
                     use.shown++;
                     use.lastShown = shown.serial;
@@ -310,17 +330,16 @@ namespace stage_replay {
             }
 
             printf(
-                "%-41s %s, smoothing %d: %zu ticks, %d next, %d repeat, %d jump, %d held, %d none; delay "
-                "fixed at "
-                "tick "
-                "%d (%.1f ms), %d entries; view behind its image %.1f ms (median), moment jumps up to %.1f "
-                "ms\n",
+                "%-41s %s, smoothing %d: %zu ticks, %d next, %d repeat (%d with a newer frame due), %d jump, "
+                "%d held, %d none; delay fixed at tick %d (%.1f ms), %d entries; view behind its image %.1f "
+                "ms (median), moment jumps up to %.1f ms\n",
                 in.name.c_str(),
                 NameOf(kind),
                 smoothing,
                 in.ticks.size(),
                 counts[0],
                 counts[1],
+                repeatsNewerDue,
                 counts[2],
                 counts[3],
                 counts[4],

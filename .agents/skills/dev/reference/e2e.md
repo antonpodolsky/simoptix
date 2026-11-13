@@ -191,6 +191,8 @@ It runs the frame picker as the OBS plugin does: the fixed delay, unless `--fram
 - **It prints** the picks by kind per run and the delay it fixed, how far each tick's moment trails the
   shown image's slot (median), and the largest jump of the moments apart from the ticks' own step
   (without a smoothing change).
+- **Of the repeats, it counts those with a newer frame due** by the tick: a late copy, or the picker
+  behind. The other repeats are the game's: after a dropped game frame, no new frame is due.
 - **A second line per run shows what the store held:** the frames stored, the share that a tick
   showed, the share still in the store when they were due, and the most entries holding a frame at
   once. These measure how much video memory a picker needs.

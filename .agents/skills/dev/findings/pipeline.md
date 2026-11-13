@@ -291,6 +291,15 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
     slack. With all copies at 1–3 ms, the 60 fps run still repeated 40 times, and frames were shown
     after a no in three runs (41 at 50 fps, 60 at 59.94 fps, 116 at 144 Hz), because a frame 4 ms
     early often wasn't copied yet.
+  - A repeat after a dropped game frame shows the game as it was, and is allowed (#27). Counting only
+    the repeats with a newer frame due by the tick, the tick plan has 8 / 12 / 7 at 60 / 59.94 / 50
+    fps against the fixed delay's 3 / 4 / 3, and 4 against 2 at 144 Hz. They are late copies: the
+    newer frame was still being copied, where the fixed delay, often a frame behind, gives a late
+    copy more time.
+  - At 144 fps it counts 140 against 22. 111 of those are the synthetic ticks' ±0.25 ms jitter: the
+    picker judges a frame due by the tick's grid time, and the frame became due between the grid time
+    and the jittered tick. Real OBS ticks lie on the grid to within 0.002 ms (above). The other 29
+    are late copies.
 - **The fixed delay's moments trail their images and jump once. The slot timeline's didn't**
   (`stage_replay --stage frame_picker --frame_picker K`, the shorter of those OBS traces and
   synthetic ticks). The slot-timeline picker has since been removed (below).
