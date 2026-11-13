@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // LapVideo: the recorded lap's video while it is recorded. Each frame's image is drawn from a stored frame's
 // texture (any 8-bit RGBA channel order, its bytes kept as they are) into a texture of Windows' video
-// encoder (Media Foundation), which encodes it to HEVC on the graphics card, into an .mp4.
+// encoder (Media Foundation), at the video's size: as it is when it is that size, else scaled to it. The
+// encoder encodes it to HEVC on the graphics card, into an .mp4.
 //
 // Images are taken before they are written: the lap recorder holds the last few until it knows where the lap
 // starts (lap_recorder.h). The encoder's textures are a fixed pool, so a full pool means the encoder has
@@ -14,6 +15,7 @@
 
 #include <windows.h>
 #include <d3d11.h>
+#include <d3dcommon.h>
 #include <mfidl.h>
 #include <mfreadwrite.h>
 #include <wrl/client.h>
@@ -36,8 +38,8 @@ public:
     bool Open(const wchar_t* path, int width, int height, double period, std::string* error);
     bool IsOpen() const { return writer_ != nullptr; }
 
-    // An image of the pool with `image`'s top-left `width` x `height` drawn in (`image`: a texture on this
-    // device); false if the pool is empty or the draw failed.
+    // An image of the pool with `image` drawn in at the video's size (`image`: a texture on this device, any
+    // size); false if the pool is empty or the draw failed.
     bool Take(ID3D11Texture2D* image, Microsoft::WRL::ComPtr<IMFSample>* out);
     // Writes a taken image at `t` seconds from the start.
     bool Write(IMFSample* sample, double t, std::string* error);
@@ -60,6 +62,7 @@ private:
         Microsoft::WRL::ComPtr<ID3D11RenderTargetView> view;
     };
 
+    static Microsoft::WRL::ComPtr<ID3DBlob> Compile(const char* entry, const char* profile);
     bool MakeShaders();
     bool Draw(ID3D11Texture2D* image, ID3D11Texture2D* target, UINT subresource);
     ID3D11ShaderResourceView* ImageView(ID3D11Texture2D* image);
@@ -70,7 +73,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;
     Microsoft::WRL::ComPtr<IMFDXGIDeviceManager> manager_;
     Microsoft::WRL::ComPtr<ID3D11VertexShader> vs_;
-    Microsoft::WRL::ComPtr<ID3D11PixelShader> ps_;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader> copy_, scale_;
+    Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler_;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> constants_;  // ScalePixel's video pixel
     Microsoft::WRL::ComPtr<IMFSinkWriter> writer_;
     Microsoft::WRL::ComPtr<IMFVideoSampleAllocatorEx> pool_;
     std::vector<ImageViewOf> imageViews_;

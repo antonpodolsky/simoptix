@@ -74,6 +74,7 @@ private:
     void FollowCanvas();
     bool FollowSource(SessionWorker::State state);
     void FollowLap();
+    void SizeRing();
     void StopSession(const char* why);
     void ToggleTrace(bool on);
     PipelineConfig ConfigOf() const;
@@ -103,6 +104,7 @@ private:
     std::atomic<bool> telemetryHeld_{false};  // for the lap recorder (Telemetry::Acquire)
     LapRecorder recorder_;
     bool lapStarted_ = false;     // graphics thread: the recorder was started for this run of the source
+    bool ringForLap_ = false;     // graphics thread: the ring was last sized with the lap recorder's frames
     bool started_ = false;        // graphics thread: the session runs and its per-start state is set up
     uint64_t framesAtStart_ = 0;  // graphics thread: FrameSource::FramesArrived() when it started
 

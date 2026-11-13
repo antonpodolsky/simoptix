@@ -16,10 +16,17 @@ using Microsoft::WRL::ComPtr;
 
 namespace {
 
-    // A full-screen triangle that copies each pixel as it is: the image's bytes, in the target's channel
-    // order.
+    // A full-screen triangle that copies each pixel as it is (the image's bytes, in the target's channel
+    // order), or, for a smaller video, averages four bilinear taps spread over the video pixel's area of the
+    // image (each tap blends four image pixels, so up to 2x smaller every image pixel counts).
     constexpr char kShader[] = R"(
 Texture2D image : register(t0);
+SamplerState linearClamp : register(s0);
+
+cbuffer Scale : register(b0) {
+    float2 pixel;  // one video pixel, in the image's uv
+    float2 unused;
+};
 
 float4 FullScreen(uint id : SV_VertexID) : SV_Position {
     float2 uv = float2((id << 1) & 2, id & 2);
@@ -29,10 +36,16 @@ float4 FullScreen(uint id : SV_VertexID) : SV_Position {
 float4 CopyPixel(float4 position : SV_Position) : SV_Target {
     return image.Load(int3(position.xy, 0));
 }
+
+float4 ScalePixel(float4 position : SV_Position) : SV_Target {
+    float2 uv = position.xy * pixel;
+    float2 q = 0.25 * pixel;
+    return 0.25 * (image.Sample(linearClamp, uv + float2(-q.x, -q.y)) + image.Sample(linearClamp, uv + float2(q.x, -q.y))
+                   + image.Sample(linearClamp, uv + float2(-q.x, q.y)) + image.Sample(linearClamp, uv + float2(q.x, q.y)));
+}
 )";
 
-    // About 0.1 bit per pixel: 52 Mbit/s at 2508x2084 and 90 fps, at most 150 Mbit/s (a 2-minute lap: 0.8 to
-    // 2.3 GB).
+    // About 0.1 bit per pixel: 48 Mbit/s at 2560x2098 and 90 fps, at most 150 Mbit/s.
     UINT32 BitRate(int width, int height, double period) {
         const double bits = 0.1 * width * height / period;
         return static_cast<UINT32>(std::min(bits, 150e6));
@@ -84,7 +97,7 @@ LapVideo::~LapVideo() {
 }
 
 bool LapVideo::Init(LUID adapter, std::string* error) {
-    if (device_ && manager_ && ps_) {
+    if (device_ && manager_ && scale_) {
         return true;  // made for an earlier lap
     }
 
@@ -137,45 +150,55 @@ bool LapVideo::Init(LUID adapter, std::string* error) {
     return true;
 }
 
+ComPtr<ID3DBlob> LapVideo::Compile(const char* entry, const char* profile) {
+    ComPtr<ID3DBlob> code;
+
+    const HRESULT hr = D3DCompile(
+        kShader,
+        sizeof(kShader) - 1,
+        "lap_video",
+        nullptr,
+        nullptr,
+        entry,
+        profile,
+        0,
+        0,
+        &code,
+        nullptr
+    );
+
+    return SUCCEEDED(hr) ? code : nullptr;
+}
+
 bool LapVideo::MakeShaders() {
-    ComPtr<ID3DBlob> vs, ps;
+    const ComPtr<ID3DBlob> vs = Compile("FullScreen", "vs_5_0");
+    const ComPtr<ID3DBlob> copy = Compile("CopyPixel", "ps_5_0");
+    const ComPtr<ID3DBlob> scale = Compile("ScalePixel", "ps_5_0");
 
-    const HRESULT vsResult = D3DCompile(
-        kShader,
-        sizeof(kShader) - 1,
-        "lap_video",
-        nullptr,
-        nullptr,
-        "FullScreen",
-        "vs_5_0",
-        0,
-        0,
-        &vs,
-        nullptr
-    );
-
-    const HRESULT psResult = D3DCompile(
-        kShader,
-        sizeof(kShader) - 1,
-        "lap_video",
-        nullptr,
-        nullptr,
-        "CopyPixel",
-        "ps_5_0",
-        0,
-        0,
-        &ps,
-        nullptr
-    );
-
-    if (FAILED(vsResult) || FAILED(psResult)) {
+    if (!vs || !copy || !scale) {
         return false;
     }
 
+    D3D11_SAMPLER_DESC sd = {};
+    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sd.AddressU = sd.AddressV = sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sd.MaxLOD = D3D11_FLOAT32_MAX;
+
+    D3D11_BUFFER_DESC bd = {};
+    bd.ByteWidth = 16;
+    bd.Usage = D3D11_USAGE_DYNAMIC;
+    bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
     return SUCCEEDED(device_->CreateVertexShader(vs->GetBufferPointer(), vs->GetBufferSize(), nullptr, &vs_))
            && SUCCEEDED(
-               device_->CreatePixelShader(ps->GetBufferPointer(), ps->GetBufferSize(), nullptr, &ps_)
-           );
+               device_->CreatePixelShader(copy->GetBufferPointer(), copy->GetBufferSize(), nullptr, &copy_)
+           )
+           && SUCCEEDED(
+               device_->CreatePixelShader(scale->GetBufferPointer(), scale->GetBufferSize(), nullptr, &scale_)
+           )
+           && SUCCEEDED(device_->CreateSamplerState(&sd, &sampler_))
+           && SUCCEEDED(device_->CreateBuffer(&bd, nullptr, &constants_));
 }
 
 bool LapVideo::Open(const wchar_t* path, int width, int height, double period, std::string* error) {
@@ -339,6 +362,24 @@ bool LapVideo::Draw(ID3D11Texture2D* image, ID3D11Texture2D* target, UINT subres
         return false;
     }
 
+    // The image as it is when it is the video's size, else scaled to it.
+    D3D11_TEXTURE2D_DESC imageDesc;
+    image->GetDesc(&imageDesc);
+    const bool asIs = imageDesc.Width == static_cast<UINT>(width_)
+                      && imageDesc.Height == static_cast<UINT>(height_);
+
+    if (!asIs) {
+        D3D11_MAPPED_SUBRESOURCE m;
+
+        if (FAILED(context_->Map(constants_.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &m))) {
+            return false;
+        }
+
+        const float pixel[4] = {1.0f / static_cast<float>(width_), 1.0f / static_cast<float>(height_), 0, 0};
+        memcpy(m.pData, pixel, sizeof(pixel));
+        context_->Unmap(constants_.Get(), 0);
+    }
+
     const D3D11_VIEWPORT viewport = {0, 0, static_cast<float>(width_), static_cast<float>(height_), 0, 1};
 
     context_->OMSetRenderTargets(1, &rtv, nullptr);
@@ -346,8 +387,10 @@ bool LapVideo::Draw(ID3D11Texture2D* image, ID3D11Texture2D* target, UINT subres
     context_->IASetInputLayout(nullptr);
     context_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     context_->VSSetShader(vs_.Get(), nullptr, 0);
-    context_->PSSetShader(ps_.Get(), nullptr, 0);
+    context_->PSSetShader(asIs ? copy_.Get() : scale_.Get(), nullptr, 0);
     context_->PSSetShaderResources(0, 1, &view);
+    context_->PSSetSamplers(0, 1, sampler_.GetAddressOf());
+    context_->PSSetConstantBuffers(0, 1, constants_.GetAddressOf());
     context_->Draw(3, 0);
 
     ID3D11ShaderResourceView* none = nullptr;

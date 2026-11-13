@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "lap_recorder.h"
 
+#include <algorithm>
+#include <cmath>
+
 #include "shared/local_files.h"
 #include "shared/log.h"
 #include "shared/telemetry/qpc_clock.h"
@@ -24,17 +27,12 @@ namespace {
         return f.slotTime > 0 ? f.slotTime : f.time;
     }
 
-    // The eye's field of view without the last column and row of an image `width` x `height`, when they
-    // are cut for the encoder (it takes even sizes).
-    EyeInfo EvenEye(EyeInfo eye, UINT width, UINT height) {
-        if (width % 2) {
-            eye.rightTan -= (eye.leftTan + eye.rightTan) / static_cast<float>(width);
-        }
-        if (height % 2) {
-            eye.downTan -= (eye.upTan + eye.downTan) / static_cast<float>(height);
-        }
-
-        return eye;
+    // The video's size for images `width` x `height`: theirs, or LapRecorder::kWidth wide at their shape,
+    // both even (the encoder takes even sizes). The whole image is drawn into it, so its field of view stays.
+    void VideoSize(UINT width, UINT height, int* videoWidth, int* videoHeight) {
+        const double scale = std::min(1.0, static_cast<double>(LapRecorder::kWidth) / width);
+        *videoWidth = static_cast<int>(std::lround(width * scale / 2)) * 2;
+        *videoHeight = static_cast<int>(std::lround(height * scale / 2)) * 2;
     }
 
     // The folder recorded laps are kept in, and the video's path while it is recorded: a name the kept laps'
@@ -140,25 +138,16 @@ bool LapRecorder::Prepare(std::string* error) {
 void LapRecorder::Step() {
     const double now = QpcNow();
     const double toSource = source_->Now() - now;  // the source's clock is the performance counter's, offset
-
-    TakeFrames();
     const LapDecision d = finder_.Step(Telemetry::SessionAt(now));
 
     if (d.step == LapStep::kStart) {
         start_ = d.at + toSource;
         end_ = 0;
+        firstTaken_ = false;
         lap_.frames.clear();
         lap_.frames.reserve(static_cast<size_t>(LapFinder::kLongestLapS / lap_.period) + 1);
         state_ = static_cast<int>(State::kRecording);
         CoreLog("recorded lap: %s", d.note);
-
-        if (held_.empty() || held_.front().t > start_ + lap_.period) {
-            CoreLog(
-                "recorded lap: the first %.0f ms of the lap came before the frames held (the telemetry was "
-                "late)",
-                held_.empty() ? 0.0 : (held_.front().t - start_) * 1000
-            );
-        }
     } else if (d.step == LapStep::kEnd) {
         end_ = d.at + toSource;
         CoreLog("recorded lap: %s", d.note);
@@ -167,6 +156,7 @@ void LapRecorder::Step() {
         return;
     }
 
+    TakeFrames();
     WriteLap();
 
     if (end_ > 0 && now + toSource > end_ + kLastFramesS) {
@@ -174,9 +164,18 @@ void LapRecorder::Step() {
     }
 }
 
-// Takes the ring's new frames, oldest first.
+// Takes the ring's frames of the lap, oldest first. Before the lap's start is known it copies nothing: the
+// ring keeps the frames since the crossing (kRingFrames) until it is known.
 void LapRecorder::TakeFrames() {
     ring_->Snapshot(slots_);
+
+    if (!video_.IsOpen() && !OpenVideo()) {
+        return;
+    }
+
+    if (start_ == 0) {
+        return;
+    }
 
     for (;;) {
         int next = -1;
@@ -195,40 +194,69 @@ void LapRecorder::TakeFrames() {
         }
 
         lastSerial_ = slots_[next].frame.serial;
+        const double moment = MomentOf(slots_[next].frame);
 
-        if (!TakeFrame(slots_[next], next) && (Get() == State::kFailed || Get() == State::kWaiting)) {
-            return;  // failed, or a lap was given up: the frames after it wait for the next pass
+        if (moment < start_ || (end_ > 0 && moment >= end_)) {
+            continue;  // before the line, or past it
+        }
+
+        if (!firstTaken_) {
+            firstTaken_ = true;
+
+            if (moment > start_ + 1.5 * lap_.period) {
+                CoreLog(
+                    "recorded lap: the first %.0f ms of the lap were gone from the ring (the telemetry was "
+                    "late)",
+                    (moment - start_) * 1000
+                );
+            }
+        }
+
+        if (!TakeFrame(slots_[next], next, moment)) {
+            return;  // failed, or the lap was given up
         }
     }
 }
 
-bool LapRecorder::TakeFrame(const FrameRing::SlotInfo& slot, int index) {
+// Opens the video at the size of the ring's newest image (VideoSize). A later image of another size (the
+// canvas or the zoom changed) is scaled into it.
+bool LapRecorder::OpenVideo() {
+    int newest = -1;
+
+    for (int i = 0; i < FrameRing::kMaxSlots; i++) {
+        if (slots_[i].valid && (newest < 0 || slots_[i].frame.serial > slots_[newest].frame.serial)) {
+            newest = i;
+        }
+    }
+
+    ID3D11Texture2D* texture = newest < 0 ? nullptr : Opened(slots_[newest], newest);
+
+    if (!texture) {
+        return false;
+    }
+
+    D3D11_TEXTURE2D_DESC desc;
+    texture->GetDesc(&desc);
+    VideoSize(desc.Width, desc.Height, &lap_.width, &lap_.height);
+    lap_.eye = source_->Eye();
+    lap_.period = source_->Period();
+    std::string error;
+
+    if (!video_.Open(videoPath_.c_str(), lap_.width, lap_.height, lap_.period, &error)) {
+        Fail(error.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+bool LapRecorder::TakeFrame(const FrameRing::SlotInfo& slot, int index, double moment) {
     ID3D11Texture2D* texture = Opened(slot, index);
 
     if (!texture) {
         return true;  // gone: the next frames carry on
     }
 
-    D3D11_TEXTURE2D_DESC desc;
-    texture->GetDesc(&desc);
-    const int width = static_cast<int>(desc.Width & ~1u), height = static_cast<int>(desc.Height & ~1u);
-
-    if (!video_.IsOpen()) {
-        lap_.eye = EvenEye(source_->Eye(), desc.Width, desc.Height);
-        lap_.width = width, lap_.height = height;
-        lap_.period = source_->Period();
-        std::string error;
-
-        if (!video_.Open(videoPath_.c_str(), width, height, lap_.period, &error)) {
-            Fail(error.c_str());
-            return false;
-        }
-    } else if (width != lap_.width || height != lap_.height) {
-        Discard("the game's image changed size");
-        return false;
-    }
-
-    const double moment = MomentOf(slot.frame);
     Quat pose;
 
     if (!source_->PredictedHeadAt(moment, &pose)) {
@@ -237,39 +265,22 @@ bool LapRecorder::TakeFrame(const FrameRing::SlotInfo& slot, int index) {
 
     ComPtr<IMFSample> image;
 
-    // Before the lap, the oldest held frame makes room.
-    if (!video_.Take(texture, &image) && start_ == 0 && !held_.empty()) {
-        held_.erase(held_.begin());
-        video_.Take(texture, &image);
-    }
-
-    if (!image) {
+    if (!video_.Take(texture, &image)) {
         behind_++;
-
-        if (start_ > 0) {
-            Discard("the video encoder fell behind the game");
-            return false;
-        }
-
-        return true;
+        Discard("the video encoder fell behind the game");
+        return false;
     }
 
     held_.push_back({std::move(image), moment, pose});
     return true;
 }
 
-// Writes the held frames that belong to the lap, and drops the ones before and after it; before the lap's
-// start is known, holds only the newest.
+// Writes the held frames of the lap. Until the closing crossing is known, the newest stay held: they may
+// already be past the line.
 void LapRecorder::WriteLap() {
-    if (start_ == 0) {
-        while (held_.size() > kHeld) {
-            held_.erase(held_.begin());
-        }
+    const size_t keep = end_ == 0 ? kHeld : 0;
 
-        return;
-    }
-
-    while (!held_.empty()) {
+    while (held_.size() > keep) {
         Held& h = held_.front();
         const bool inLap = h.t >= start_ && (end_ == 0 || h.t < end_);
 

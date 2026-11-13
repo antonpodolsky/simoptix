@@ -24,7 +24,7 @@ one name in `%LOCALAPPDATA%\simoptix\recorded_laps`, `recorded_lap_<date>_<time>
 
 | File | What |
 |---|---|
-| `.mp4` | The left eye of every frame of the lap, one video frame per game frame, in HEVC at the size the frame source got it. The bytes are the frame source's own, so an image Pimax encodes twice is stored encoded twice |
+| `.mp4` | The left eye of every frame of the lap, one video frame per game frame, in HEVC, at most 2560 pixels wide (a wider image scaled down). The bytes are the frame source's own encoding, so an image Pimax encodes twice is stored encoded twice |
 | `.csv` | The eye's field of view and its turn in the head, the images' size, the headset's refresh period and the lap's length (line to line), then one row per frame: its moment in the lap and the head pose it was drawn with |
 
 `recorded_lap.h` reads and writes the `.csv`. Its first lines say what each row holds.

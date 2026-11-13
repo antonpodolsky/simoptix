@@ -143,8 +143,13 @@ bool ReadRecordedLap(const std::wstring& stem, RecordedLap* lap, std::string* er
         }
     }
 
-    if (lap->frames.size() < 2 || lap->width <= 0 || lap->height <= 0 || lap->period <= 0
-        || lap->length <= lap->frames.back().t) {
+    // A lap may end with a few frames past the line (recorded before the end of the lap was held back for):
+    // they are left out, and the video's frames after the last one kept are never shown.
+    while (!lap->frames.empty() && lap->frames.back().t >= lap->length) {
+        lap->frames.pop_back();
+    }
+
+    if (lap->frames.size() < 2 || lap->width <= 0 || lap->height <= 0 || lap->period <= 0) {
         *error = "the recorded lap's poses are incomplete";
         return false;
     }

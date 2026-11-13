@@ -268,5 +268,21 @@ graphics card.
 - **The lap finder** gave the right decision in nine made-up sessions: no start when the lap counter
   moves at the pit exit, a start and an end at the two crossings, and a lap thrown away in the pits.
   Where LMU's lap counter moves when the car leaves the pits was not checked in the game.
-- **Not measured:** the encoder's cost beside a running game, a real lap's size on disk, and the demo
-  in OBS. The game's images are harder to encode than the test images.
+- **Tried and dropped: recording at the game's own size, holding copies before the lap.** One real lap in
+  LMU practice, OpenXR source, 5084×4168 at 90 Hz, the first build of the demo:
+  - While a lap was asked for, the source kept its 52 to 55 stored images at the game's own size (4.4 GB),
+    and the recorder copied every frame into the encoder's images to hold the last 12, from the press of
+    the button on. Those 24 images took about 2 GB more.
+  - The game dropped 4.7 frames per 10 s on the out-lap and 1.4 on the lap (repeated game frames in the
+    10 s stats, while the game ran at 85 fps or more). Two earlier sessions on the OpenXR source without
+    the recorder dropped 1.0 and 0.8 (median 0). The drops felt worse in the headset than the counts say.
+  - The lap's video took 150 Mbit/s, about 19 MB per second of the lap. A video player struggled to play
+    it. The encoder never ran out of images.
+  - Its last 3 frames lay past the closing crossing (up to 25 ms), which reached the telemetry after them.
+    The demo refused the lap for it.
+  - Since then the lap is at most 2560 wide (`LapRecorder::kWidth`, a quarter of the pixels), nothing is
+    copied before the first crossing (the ring keeps 24 frames, and the recorder takes the lap's frames
+    from it once the crossing is known), and the last 12 frames stay held until the closing crossing is
+    known. The harness scaled 5084×4168 test images into a 2560×2098 video at 0.2 ms per frame, 1.6
+    levels of 255 off on average.
+- **Not measured:** the encoder's cost beside a running game since the change, and the demo in OBS.

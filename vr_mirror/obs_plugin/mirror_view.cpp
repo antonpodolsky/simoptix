@@ -204,8 +204,25 @@ void MirrorView::RestartDelay() {
     FramePicker& picker = *pipeline_.Picker();
     picker.Restart(SmoothingDelayS(config.smoothing), FrameRing::kMaxSlots);
     outDelay_ = picker.OutDelay();
-    ring_.SetSlotCount(picker.SlotsInUse());
+    SizeRing();
     SetImageNeed();
+}
+
+// The ring keeps the frames the frame picker needs, and while a lap is asked for at least the lap recorder's
+// (LapRecorder::kRingFrames): the recorder takes the lap's frames from the ring once a crossing is known, so
+// it copies nothing before the lap. Closes OBS's handles to the slots the ring frees. Graphics thread.
+void MirrorView::SizeRing() {
+    const int picked = pipeline_.Picker()->SlotsInUse();
+    ring_.SetSlotCount(lapWanted_ ? std::max(picked, LapRecorder::kRingFrames) : picked);
+    ringForLap_ = lapWanted_;
+
+    for (int i = ring_.SlotCount(); i < FrameRing::kMaxSlots; i++) {
+        if (textures_[i]) {
+            gs_texture_destroy(textures_[i]);
+        }
+
+        textures_[i] = nullptr;
+    }
 }
 
 // Starts and stops the frame source as the source is shown and hidden. The session worker does
@@ -285,6 +302,10 @@ void MirrorView::StopSession(const char* why) {
 // failed, the request is done. Graphics thread, every tick.
 void MirrorView::FollowLap() {
     const bool want = lapWanted_ && started_ && frameSource_ == gameSource_.get();
+
+    if (started_ && ringForLap_ != lapWanted_) {
+        SizeRing();
+    }
 
     if (want && !lapStarted_) {
         recorder_.Start(&ring_, frameSource_);
@@ -429,15 +450,8 @@ void MirrorView::ApplyFixedDelay(FramePicker& picker) {
     LineStatsReport<void (*)(const char*)> log(LogLine);
     picker.Report(log);
 
-    // The ring only needs the frames inside the delay, plus room for a late copy. Close
-    // OBS's handles to the slots it frees.
-    ring_.SetSlotCount(picker.SlotsInUse());
-    for (int i = picker.SlotsInUse(); i < FrameRing::kMaxSlots; i++) {
-        if (textures_[i]) {
-            gs_texture_destroy(textures_[i]);
-        }
-        textures_[i] = nullptr;
-    }
+    // The ring only needs the frames inside the delay, plus room for a late copy.
+    SizeRing();
 }
 
 void MirrorView::OpenSlotTexture(const FrameRing::SlotInfo& slot) {
@@ -460,9 +474,10 @@ void MirrorView::SetImageNeed() {
     const float
         native = NativeImageWidth(frameSource_->Eye(), settings_, static_cast<int>(width_.load()), aspect);
 
-    // A lap is recorded at the game's own size: the source keeps its images no larger than that.
-    constexpr float kOwnSize = 1e6f;
-    frameSource_->SetImageNeed(lapWanted_ ? kOwnSize : native, kImageMemory / ring_.SlotCount());
+    // While a lap is asked for, the images are at least as wide as the lap's video (a source keeps them no
+    // larger than its own).
+    const float need = lapWanted_ ? std::max(native, static_cast<float>(LapRecorder::kWidth)) : native;
+    frameSource_->SetImageNeed(need, kImageMemory / ring_.SlotCount());
 }
 
 // Starts a stretch of footprint stats: the threads' cycle counts so far, and what was counted

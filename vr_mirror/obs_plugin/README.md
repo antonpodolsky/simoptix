@@ -189,16 +189,20 @@ game pauses or a new session starts. The recording then waits for the next cross
 recording** gives it up.
 
 What a recorded lap holds:
-- the raw left eye of every game frame, at the size the source gets it from the game, encoded as HEVC
-  video on the graphics card by Windows' own encoder. The OpenXR source keeps its images at the game's
-  own size while a lap records, whatever the canvas.
+- the raw left eye of every game frame, at most 2560 pixels wide, encoded as HEVC video on the graphics
+  card by Windows' own encoder. A wider eye image is scaled down to 2560 on the graphics card. While a
+  lap is asked for, the OpenXR source keeps its images at least 2560 wide, whatever the canvas.
 - each frame's moment in the lap, and the head pose the game drew it with. From the OpenXR source that
   pose is exact. From the Pimax source it is the pose Pimax predicted for the display slot the frame
   arrived for, which is right while the game keeps up.
 
-The video takes about 0.1 bit per pixel and frame, and at most 150 Mbit/s, so a two-minute lap takes
-up to 2.3 GB. Laps are kept in `%LOCALAPPDATA%\simoptix\recorded_laps`. The newest 3 are kept, and the
-oldest beyond them is deleted when a new one is saved.
+Before the first crossing, the recording only waits. The source keeps its last 24 frames, and once the
+crossing is known the recording takes the lap's frames from there, so the out-lap costs the game next to
+nothing.
+
+The video takes about 0.1 bit per pixel and frame: about 50 Mbit/s at 2560 wide and 90 fps, so a
+two-minute lap takes about 0.7 GB. Laps are kept in `%LOCALAPPDATA%\simoptix\recorded_laps`. The newest
+3 are kept, and the oldest beyond them is deleted when a new one is saved.
 
 **Start demo** plays the newest lap in a loop, in place of the game:
 - The source stops reading the game and plays the lap's frames at their own moments, at the headset's
