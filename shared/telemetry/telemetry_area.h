@@ -24,7 +24,7 @@
 #include "shared/telemetry/telemetry_ring.h"
 
 struct TelemetryArea {
-    static constexpr uint32_t kVersion = 2;
+    static constexpr uint32_t kVersion = 3;
 
     std::atomic<uint32_t> version;  // kVersion once set up
     std::atomic<uint32_t> size;     // sizeof(TelemetryArea) once set up
