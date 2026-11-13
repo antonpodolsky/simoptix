@@ -11,6 +11,9 @@
 //
 // Usage: e2e_runner.exe [scenario ...]   (no arguments: run all; --list: list scenarios)
 
+#include <windows.h>
+#include <tlhelp32.h>
+
 #include "analysis.h"
 #include "capture.h"
 #include "common.h"
@@ -18,6 +21,7 @@
 #include "fake_log.h"
 #include "pipeline/4_smoothing/lookahead_smoothing.h"
 #include "scenarios.h"
+#include "shared/unique_handle.h"
 #include "tool_process.h"
 
 namespace {
@@ -37,6 +41,41 @@ namespace {
             s += char(c < 128 ? c : '?');
         }
         return s;
+    }
+
+    bool IsRunning(const wchar_t* exe) {
+        const UniqueHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+        PROCESSENTRY32W entry = {sizeof(entry)};
+
+        if (!snapshot || !Process32FirstW(snapshot.Get(), &entry)) {
+            return false;
+        }
+
+        do {
+            if (_wcsicmp(entry.szExeFile, exe) == 0) {
+                return true;
+            }
+        } while (Process32NextW(snapshot.Get(), &entry));
+
+        return false;
+    }
+
+    // OBS's own OpenXR Mirror source, or the real mirror app's OpenXR source, reads the same shared
+    // memory as the fake game's frames (vr_mirror\frame_sources\openxr\openxr_share.h) and would take
+    // some of them, making the OpenXR scenarios miss frames for a reason that has nothing to do with
+    // the build under test (seen with OBS open: reference\e2e_results.md, run 10).
+    void WarnIfCompetingForFrames() {
+        if (IsRunning(L"obs64.exe")) {
+            printf("WARNING: OBS (obs64.exe) is running. If it has an OpenXR Mirror source, the OpenXR\n");
+            printf("  scenarios will miss frames to it. Close OBS before running them.\n\n");
+        }
+        if (IsRunning(L"simoptix_vr_mirror.exe")) {
+            printf("WARNING: the mirror app (simoptix_vr_mirror.exe) is running. If its source reads the\n");
+            printf(
+                "  OpenXR layer, the OpenXR scenarios will miss frames to it. Close it before running "
+                "them.\n\n"
+            );
+        }
     }
 
     // A scenario's folder: a private copy of the real tool next to the fake runtime, and the tool's ini.
@@ -697,6 +736,8 @@ int wmain(int argc, wchar_t** argv) {
     if (exitCode >= 0) {
         return exitCode;
     }
+
+    WarnIfCompetingForFrames();
 
     int failed = 0, ran = 0;
     std::vector<Scenario> runs;

@@ -31,6 +31,9 @@ list them with `--list`.
 - Run one test of the OpenXR layer at a time on the PC. The fake OpenXR games of two runs, from two
   worktrees say, write the same shared memory, and each breaks the other's frames
   (`reference\e2e_results.md`, run 7).
+- The runner warns, at the start, if OBS or the mirror app is running: either one's OpenXR source
+  would read the OpenXR scenarios' fake frames too and miss some (`reference\e2e_results.md`, run
+  10). Close them if it does, before running the OpenXR scenarios.
 
 | Option | What it does |
 |---|---|
