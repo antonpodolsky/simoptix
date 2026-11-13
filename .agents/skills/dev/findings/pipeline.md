@@ -278,7 +278,7 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   e2e_results.md`, runs 12–14). This is the warm-up's own measurement, not the frame picking, which
   these runs leave unchanged. Not checked whether it matters with a real GPU's smoother copy times,
   where the 95th percentile is less likely to sit near a steep jump in the distribution. The fix
-  (count each frame once) is a separate change from #27's.
+  (count each frame once) is issue #33, separate from #27's.
 - **OBS's ticks can be predicted half a second ahead to within microseconds.** A picker that decides
   ahead which frame each coming tick shows predicts the ticks as the last tick plus whole OBS frame
   periods. Measured with `vr_mirror\recording_analysis\tick_regularity.py` on 8 frame traces of the
