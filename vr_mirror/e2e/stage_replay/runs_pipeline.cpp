@@ -209,7 +209,7 @@ namespace stage_replay {
         void HostDriver::DrawPicked() {
             FramePicker& picker = *pipeline_.Picker();
             auto store = std::make_unique<FrameStore>();
-            picker.Restart(lookahead_, kPeriod, FrameStore::kMaxSlots);
+            picker.Restart(lookahead_, kPeriod, 1 / run_.tickHz, FrameStore::kMaxSlots);
             store->Resize(picker.SlotsInUse());
 
             std::unordered_map<uint64_t, size_t> bySerial;

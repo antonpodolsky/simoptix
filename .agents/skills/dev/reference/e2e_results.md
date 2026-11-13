@@ -10,6 +10,18 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 12: the tick plan picker, and the frame pickers' `Restart` takes the output frame period.** LMU,
+OBS and Pimax Play were closed. 35 of 38 runs passed, and all 19 comparisons with Instant. The mirror
+app's pickers ignore the new period and keep every frame, and the pipeline's output is the same as
+before (`stage_replay --golden` byte for byte).
+- `replay_late_frame_same_slot` at Instant had 1 frame from the wrong pose (0.100%, limit 0), as on
+  `main` (#32).
+- `black_borders_low_zoom` at Instant had one stall mid-turn, as in runs 5, 7 and 8.
+- `stabilization` at Instant smoothed the shake to 0.547 of the head's (limit 0.5). Runs 8 to 11
+  gave 0.42 to 0.50.
+- A rerun of the last two, at both smoothings, passed with their comparisons: 0.460 of the head's
+  shake, no stall.
+
 **Run 11: the frame picker gets the display's period at its start.** LMU, OBS and Pimax Play were
 closed. 36 of 38 runs passed, and 18 of 19 comparisons with Instant. The pipeline's output is the
 same as before (`stage_replay --golden` byte for byte), and the mirror app's pickers ignore the new

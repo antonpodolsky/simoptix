@@ -21,6 +21,17 @@ namespace {
         return double(ns) * 1e-9;
     }
 
+    // OBS's video frame period from its video settings (s); 0 if they can't be read.
+    double ObsFramePeriod() {
+        obs_video_info ovi = {};
+
+        if (!obs_get_video_info(&ovi) || !ovi.fps_num || !ovi.fps_den) {
+            return 0;
+        }
+
+        return static_cast<double>(ovi.fps_den) / ovi.fps_num;
+    }
+
     // A line of the stages' shared report (StatsReport), in OBS's log.
     void LogLine(const char* line) {
         blog(LOG_INFO, "[simoptix_vr_mirror] %s", line);
@@ -179,7 +190,12 @@ void MirrorView::RestartDelay() {
     BuildPipeline(config, &pipeline_);
     FeedDrawnPose();
     FramePicker& picker = *pipeline_.Picker();
-    picker.Restart(SmoothingDelayS(config.smoothing), frameSource_->Period(), FrameRing::kMaxSlots);
+    picker.Restart(
+        SmoothingDelayS(config.smoothing),
+        frameSource_->Period(),
+        ObsFramePeriod(),
+        FrameRing::kMaxSlots
+    );
     outDelay_ = picker.OutDelay();
     ring_.SetSlotCount(picker.SlotsInUse());
     SetImageNeed();

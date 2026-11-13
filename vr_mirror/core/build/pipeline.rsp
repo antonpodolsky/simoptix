@@ -11,6 +11,7 @@
 ..\core\pipeline\3_frame_picker\fixed_delay_picker.cpp
 ..\core\pipeline\3_frame_picker\newest_frame_picker.cpp
 ..\core\pipeline\3_frame_picker\held_frame_picker.cpp
+..\core\pipeline\3_frame_picker\tick_plan_picker.cpp
 ..\core\pipeline\4_smoothing\instant_smoothing.cpp
 ..\core\pipeline\4_smoothing\lookahead_smoothing.cpp
 ..\core\pipeline\image_room\image_room.cpp

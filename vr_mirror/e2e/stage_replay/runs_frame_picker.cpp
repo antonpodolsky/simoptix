@@ -1,19 +1,22 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // stage_replay --stage frame_picker: runs the frame picker (stage 3) the way the OBS plugin does,
-// over OBS frame traces (their ticks and frame arrivals) and synthetic frames from a 90 Hz headset
-// with OBS ticking at 50, 59.94, 60 and 144 fps, with copies finishing after a seeded random time
-// (now and then late) and a store that shrinks and grows as the picker asks; prints the picks by
-// kind, the delay it fixed, and what the store held: the frames shown, the frames still stored when
-// due and the most entries holding a frame. Checked identical to the plugin's picking before the
-// stage (vr_mirror\e2e\README.md, "Stage replay"). Knows nothing about textures or OBS.
+// over OBS frame traces (their ticks and frame arrivals) and synthetic frames (a 90 Hz headset with
+// OBS ticking at 50, 59.94, 60 and 144 fps, and a 144 Hz headset with OBS at 60 fps), with copies
+// finishing after a seeded random time (now and then late) and a store that shrinks and grows as the
+// picker asks; prints the picks by kind, the delay it fixed, what the store held (the frames shown,
+// the frames still stored when due, the most entries holding a frame), and the picker's answers to
+// WillShow against what was shown. Checked identical to the plugin's picking before the stage
+// (vr_mirror\e2e\README.md, "Stage replay"). Knows nothing about textures or OBS.
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <numeric>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "frame_store.h"
@@ -37,6 +40,7 @@ namespace stage_replay {
             std::vector<double> ticks;
             std::vector<std::pair<size_t, int>> smoothingAt;  // (tick index, SmoothingKind) from then on
             double period = 1.0 / 90;                         // the headset's display period (s)
+            double tickPeriod = 0;                            // OBS's frame period (s)
         };
 
         // What the store held over a run, for the memory a picker needs. A frame no tick shows was
@@ -46,6 +50,77 @@ namespace stage_replay {
             int mostHolding = 0;  // entries holding a frame at once
             uint64_t lastShown = 0;
             size_t nextDue = 0;  // the first stored frame not yet due
+        };
+
+        // The picker's answers to WillShow, asked for each frame once the next one has arrived, held
+        // against what the ticks then showed. A frame it said no tick shows, shown after all, is an
+        // error: a host that skips its copy would have nothing to show.
+        class WillShowCheck {
+        public:
+            explicit WillShowCheck(const TraceInput& in)
+                : in_(in),
+                  answer_(in.frames.size(), kNotAsked),
+                  shown_(in.frames.size(), false) {
+                for (size_t i = 0; i < in.frames.size(); i++) {
+                    indexOf_[in.frames[i].serial] = i;
+                }
+            }
+
+            // Frame `next` arrived: asks about the frame before it.
+            void Ask(const FramePicker& picker, size_t next) {
+                if (next == 0) {
+                    return;
+                }
+
+                const bool yes = picker.WillShow(Stored(in_.frames[next - 1]), Stored(in_.frames[next]));
+                answer_[next - 1] = yes ? kYes : kNo;
+            }
+
+            void Shown(uint64_t serial) {
+                const size_t i = indexOf_.at(serial);
+
+                if (!shown_[i] && answer_[i] == kNo) {
+                    shownAfterNo_++;
+                }
+
+                shown_[i] = true;
+            }
+
+            // Over the frames due by the end (`due` of them, the first ones).
+            void Print(size_t due) const {
+                size_t no = 0, yesNotShown = 0;
+
+                for (size_t i = 0; i < due; i++) {
+                    if (answer_[i] == kNo) {
+                        no++;
+                    } else if (answer_[i] == kYes && !shown_[i]) {
+                        yesNotShown++;
+                    }
+                }
+
+                printf(
+                    "%-41s will show: %zu of %zu frames due said no, %zu of those shown after all; %zu "
+                    "said yes and never shown\n",
+                    "",
+                    no,
+                    due,
+                    shownAfterNo_,
+                    yesNotShown
+                );
+            }
+
+        private:
+            enum Answer : char { kNotAsked, kNo, kYes };
+
+            static StoredFrame Stored(const TraceFrame& f) {
+                return {true, f.serial, f.arrival, f.smooth, f.slot, 0, true};
+            }
+
+            const TraceInput& in_;
+            std::vector<char> answer_;  // per frame of `in_`
+            std::vector<bool> shown_;   // per frame of `in_`
+            std::unordered_map<uint64_t, size_t> indexOf_;
+            size_t shownAfterNo_ = 0;
         };
 
         bool LoadTrace(const std::string& ticksPath, const std::string& pimaxPath, TraceInput* in) {
@@ -89,6 +164,7 @@ namespace stage_replay {
             snprintf(name, sizeof(name), "synthetic: headset %d Hz, OBS %.2f fps", headsetHz, hz);
             in.name = name;
             in.period = 1.0 / headsetHz;
+            in.tickPeriod = 1 / hz;
 
             // The seed of the 90 Hz runs is what it was before the headset's rate was a parameter.
             uint32_t seed = 777u + static_cast<uint32_t>(hz * 100) + static_cast<uint32_t>(headsetHz - 90);
@@ -157,9 +233,10 @@ namespace stage_replay {
             config.smoothing = SmoothingKind(smoothing);
 
             std::unique_ptr<FramePicker> picker = MakeFramePicker(config.framePicker);
-            picker->Restart(SmoothingDelayS(config.smoothing), in.period, kMaxSlots);
+            picker->Restart(SmoothingDelayS(config.smoothing), in.period, in.tickPeriod, kMaxSlots);
             store->Resize(picker->SlotsInUse());
             double outDelay = picker->OutDelay();  // as last seen: a change is the delay fixed
+            WillShowCheck willShow(in);
 
             uint32_t seed = 4242;
             auto next = [&] {
@@ -179,7 +256,7 @@ namespace stage_replay {
                     const SmoothingKind k = SmoothingKind(in.smoothingAt[change++].second);
                     if (k != config.smoothing) {
                         config.smoothing = k;
-                        picker->Restart(SmoothingDelayS(k), in.period, kMaxSlots);
+                        picker->Restart(SmoothingDelayS(k), in.period, in.tickPeriod, kMaxSlots);
                         store->Resize(picker->SlotsInUse());
                         outDelay = picker->OutDelay();
                         lastTick = 0;  // the moments move with the smoothing's delay: not a jump
@@ -191,6 +268,7 @@ namespace stage_replay {
                     const double copy = next() < 0.05 ? 0.005 + 0.025 * next() : 0.001 + 0.002 * next();
                     const TraceFrame& f = in.frames[frame];
                     store->Add(f.serial, f.arrival, f.smooth, f.slot, f.arrival + copy);
+                    willShow.Ask(*picker, frame);
                 }
 
                 store->Finish(tick);
@@ -219,6 +297,7 @@ namespace stage_replay {
                 if (shown.serial != use.lastShown) {
                     use.shown++;
                     use.lastShown = shown.serial;
+                    willShow.Shown(shown.serial);
                 }
                 if (shown.slotTime > 0) {
                     behind.push_back(shown.slotTime - p.moment);
@@ -261,6 +340,7 @@ namespace stage_replay {
                 Percent(use.keptUntilDue, use.nextDue),
                 use.mostHolding
             );
+            willShow.Print(use.nextDue);
         }
 
     }
@@ -273,6 +353,12 @@ namespace stage_replay {
                 printf("cannot read %s / %s\n", t.first.c_str(), t.second.c_str());
                 return -1;
             }
+
+            // A trace doesn't hold OBS's frame rate: its ticks' median step stands in.
+            std::vector<double> steps(in.ticks.size());
+            std::adjacent_difference(in.ticks.begin(), in.ticks.end(), steps.begin());
+            steps.erase(steps.begin());
+            in.tickPeriod = Median(&steps);
 
             for (int smoothing = 0; smoothing <= 1; smoothing++) {
                 Run(in, smoothing, kind);

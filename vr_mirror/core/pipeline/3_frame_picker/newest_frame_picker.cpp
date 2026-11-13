@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "pipeline/3_frame_picker/newest_frame_picker.h"
 
-void NewestFramePicker::Restart(double delayS, double /*period*/, int maxSlots) {
+void NewestFramePicker::Restart(double delayS, double /*period*/, double /*tickPeriod*/, int maxSlots) {
     delay_ = delayS;
     maxSlots_ = maxSlots;
     lastSerial_ = 0;

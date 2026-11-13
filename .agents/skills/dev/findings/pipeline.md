@@ -259,6 +259,38 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
     way can rely on the predicted ticks. Only OBS at 90 fps with the OpenXR source was traced. Other
     frame rates use the same scheduled times, and the Pimax source the same clock correction, but
     neither was measured.
+- **When the ring shrinks, it can drop the frame on screen, and the fixed delay steps back.**
+  Shrinking frees the ring's last entries whatever they hold, and a smaller ring soon writes a new
+  frame over the shown one. The picker then starts again at the newest due frame left, which can be
+  older: 1 frame back when the copy delay was fixed with Instant (90 Hz, OBS at 144 fps), 4 frames
+  back right after a switch to Instant (144 Hz, OBS at 60 fps). Not checked in a recording.
+- **The tick plan (`TickPlanPicker`) knows a frame won't be shown once the next one arrives.**
+  `stage_replay --stage frame_picker --frame_picker tick_plan`, synthetic frames, the store keeping
+  every frame:
+
+  | Headset, OBS | Said no | Shown after all | Repeats, tick plan / fixed delay | Jumps |
+  |---|---|---|---|---|
+  | 90 Hz, 60 fps | 655 of 2,548 | 7 | 44 / 17 | 798 / 769 |
+  | 90 Hz, 59.94 fps | 657 of 2,564 | 10 | 40 / 17 | 809 / 786 |
+  | 90 Hz, 50 fps | 872 of 2,557 | 7 | 25 / 14 | 1,070 / 1,056 |
+  | 90 Hz, 144 fps | 0 of 2,550 | 0 | 1,674 / 1,670 | 14 / 2 |
+  | 144 Hz, 60 fps | 1,852 of 4,104 | 19 | 12 / 9 | 1,642 / 1,434 |
+
+  - Every frame said yes to during the warm-ups (2 s after each start and smoothing switch), when it
+    can't decide yet: about 200 per run at 60 fps were said yes and never shown.
+  - The frames shown after a no: the next frame was due, but its copy wasn't finished (5% of the
+    run's copies take 5–30 ms, the copy delay is 5 ms), so the tick showed the frame before. With all
+    copies at 1–3 ms, none was shown after a no, but 1 right after a switch to Instant, where a
+    restart drops the earlier answers. A host that skips those copies would show the last frame
+    again at that tick.
+  - The extra repeats come after a single dropped game frame (measured on the 60 fps run, all copies
+    at 1–3 ms: 20 of its 21 extra repeats). The next frame then comes 22 ms later, more than OBS's
+    16.7 ms, so one tick has no new frame. The fixed delay moves one frame per tick and catches up
+    only when two frames are 4 ms overdue, so it is often a frame behind, which covers the gap.
+  - Tried and dropped: showing frames up to 4 ms before they were due, like the fixed delay's
+    slack. With all copies at 1–3 ms, the 60 fps run still repeated 40 times, and frames were shown
+    after a no in three runs (41 at 50 fps, 60 at 59.94 fps, 116 at 144 Hz), because a frame 4 ms
+    early often wasn't copied yet.
 - **The fixed delay's moments trail their images and jump once. The slot timeline's didn't**
   (`stage_replay --stage frame_picker --frame_picker K`, the shorter of those OBS traces and
   synthetic ticks). The slot-timeline picker has since been removed (below).

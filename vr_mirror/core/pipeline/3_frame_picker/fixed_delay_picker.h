@@ -20,10 +20,12 @@ int WarmupSlots(double smoothingDelayS, double period, int maxSlots);
 
 class FixedDelayPicker : public FramePicker {
 public:
-    void Restart(double smoothingDelayS, double period, int maxSlots) override;
+    void Restart(double smoothingDelayS, double period, double tickPeriod, int maxSlots) override;
     Pick Tick(double tick, double period, const StoredFrame* frames, int total) override;
     double OutDelay() const override { return (copyDelay_ > 0 ? copyDelay_ : 0.040) + smoothingDelay_; }
     int SlotsInUse() const override { return slots_; }
+    // The copy delay is measured and kept: OutDelay changes no more until Restart.
+    bool DelayFixed() const { return copyDelay_ > 0; }
     // Once, after the delay is fixed: "copy delay fixed", the copy delay chosen and the copy times'
     // 95th percentile it was chosen from.
     void Report(StatsReport& r) override;

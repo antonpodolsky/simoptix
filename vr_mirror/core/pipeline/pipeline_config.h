@@ -13,7 +13,7 @@
 #include "common/settings.h"
 
 enum class ArrivalTimingKind { kGrid, kReported };
-enum class FramePickerKind { kFixedDelay, kNewestFrame, kHeldFrame };
+enum class FramePickerKind { kFixedDelay, kNewestFrame, kHeldFrame, kTickPlan };
 // How a host draws: on its own clock's ticks (the OBS plugin), or once per game frame (the mirror app);
 // it decides the frame picker.
 enum class OutputClock { kTicks, kFrames };
@@ -94,12 +94,16 @@ inline const char* NameOf(FramePickerKind k) {
     return k == FramePickerKind::kFixedDelay    ? "fixed_delay"
            : k == FramePickerKind::kNewestFrame ? "newest_frame"
            : k == FramePickerKind::kHeldFrame   ? "held_frame"
+           : k == FramePickerKind::kTickPlan    ? "tick_plan"
                                                 : "?";
 }
 
 inline bool Parse(const char* name, FramePickerKind* k) {
     for (FramePickerKind v :
-         {FramePickerKind::kFixedDelay, FramePickerKind::kNewestFrame, FramePickerKind::kHeldFrame}) {
+         {FramePickerKind::kFixedDelay,
+          FramePickerKind::kNewestFrame,
+          FramePickerKind::kHeldFrame,
+          FramePickerKind::kTickPlan}) {
         if (std::strcmp(name, NameOf(v)) == 0) {
             return *k = v, true;
         }

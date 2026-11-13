@@ -11,6 +11,7 @@
 #include "pipeline/3_frame_picker/fixed_delay_picker.h"
 #include "pipeline/3_frame_picker/held_frame_picker.h"
 #include "pipeline/3_frame_picker/newest_frame_picker.h"
+#include "pipeline/3_frame_picker/tick_plan_picker.h"
 #include "pipeline/4_smoothing/instant_smoothing.h"
 #include "pipeline/4_smoothing/lookahead_smoothing.h"
 #include "pipeline/5_warp/rotation_warp.h"
@@ -36,6 +37,8 @@ std::unique_ptr<FramePicker> MakeFramePicker(FramePickerKind kind) {
             return std::make_unique<NewestFramePicker>();
         case FramePickerKind::kHeldFrame:
             return std::make_unique<HeldFramePicker>();
+        case FramePickerKind::kTickPlan:
+            return std::make_unique<TickPlanPicker>();
     }
 
     return nullptr;

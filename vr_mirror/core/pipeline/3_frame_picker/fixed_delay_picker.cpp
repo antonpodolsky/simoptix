@@ -9,7 +9,7 @@ int WarmupSlots(double smoothingDelayS, double period, int maxSlots) {
     return std::clamp(int(std::ceil((0.045 + smoothingDelayS) / period)) + 3, 4, maxSlots);
 }
 
-void FixedDelayPicker::Restart(double smoothingDelayS, double period, int maxSlots) {
+void FixedDelayPicker::Restart(double smoothingDelayS, double period, double /*tickPeriod*/, int maxSlots) {
     smoothingDelay_ = smoothingDelayS;
     maxSlots_ = std::min(maxSlots, kMaxOrder);
     copyDelay_ = warmStart_ = 0;
