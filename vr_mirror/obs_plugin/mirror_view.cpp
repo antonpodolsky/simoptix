@@ -12,7 +12,9 @@
 #include "pipeline/pipeline_builder.h"
 #include "shared/local_files.h"
 #include "shared/program_delay.h"
+#include "shared/telemetry/telemetry.h"
 #include "shared/thread_cpu.h"
+#include "vr_mirror/frame_sources/demo/demo_source.h"
 #include "warp_effect.h"
 
 namespace {
@@ -34,13 +36,20 @@ namespace {
 
 }
 
-MirrorView::MirrorView(std::unique_ptr<FrameSource> frames, const MirrorSettings& settings, bool debug)
-    : frameSource_(std::move(frames)) {
+MirrorView::MirrorView(std::unique_ptr<FrameSource> game, const MirrorSettings& settings, bool debug)
+    : gameSource_(std::move(game)),
+      demoSource_(std::make_unique<DemoSource>()),
+      frameSource_(gameSource_.get()) {
     FollowCanvas();
     SetSettings(settings, debug);
-    frameSource_->SetArrivalTiming(  // before any Start
-        MakeArrivalTiming(ConfigFor(settings_, OutputClock::kTicks, frameSource_->Report()).arrivalTiming)
-    );
+    session_.SetSource(frameSource_);
+
+    // Before any Start.
+    for (FrameSource* source : {gameSource_.get(), demoSource_.get()}) {
+        source->SetArrivalTiming(
+            MakeArrivalTiming(ConfigFor(settings_, OutputClock::kTicks, source->Report()).arrivalTiming)
+        );
+    }
 
     obs_enter_graphics();
     char* errors = nullptr;
@@ -54,7 +63,12 @@ MirrorView::MirrorView(std::unique_ptr<FrameSource> frames, const MirrorSettings
 
 MirrorView::~MirrorView() {
     tickTrace_.Close();
+    recorder_.Stop();  // it reads the frame source: before the source stops
     session_.StopNow();
+
+    if (telemetryHeld_.exchange(false)) {
+        Telemetry::Release();
+    }
     obs_enter_graphics();
     if (effect_) {
         gs_effect_destroy(effect_);
@@ -68,6 +82,15 @@ void MirrorView::SetSettings(const MirrorSettings& settings, bool debug) {
     settings_ = settings;
     stamp_ = debug;
     trace_ = debug;
+}
+
+void MirrorView::SetRecordLap(bool on) {
+    lapWanted_ = on;
+
+    // Released on the graphics thread once the recorder has stopped (FollowLap).
+    if (on && !telemetryHeld_.exchange(true)) {
+        Telemetry::Acquire();
+    }
 }
 
 // OBS's graphics context entered.
@@ -191,13 +214,20 @@ void MirrorView::RestartDelay() {
 void MirrorView::StartStop() {
     const SessionWorker::State state = session_.Get();
     if (state == SessionWorker::kStopped && session_.TakeFailure()) {
-        wanted_ = false;  // retry when shown again
+        if (frameSource_ == demoSource_.get()) {
+            demoWanted_ = false;  // no lap to play: back to the game
+        } else {
+            wanted_ = false;  // retry when shown again
+        }
     }
 
-    if (wanted_ && state == SessionWorker::kStopped) {
+    const bool sourceWanted = FollowSource(state);
+    const bool run = wanted_ && sourceWanted;
+
+    if (run && state == SessionWorker::kStopped) {
         RestartDelay();  // the ring sized for the warm-up before the first frame: it is made at this size
         session_.Start();
-    } else if (wanted_ && state == SessionWorker::kRunning && !started_) {
+    } else if (run && state == SessionWorker::kRunning && !started_) {
         started_ = true;
         framesAtStart_ = frameSource_->FramesArrived();
         clock_.Reset();
@@ -205,31 +235,79 @@ void MirrorView::StartStop() {
         warpSlot_ = -1;
         statStart_ = 0;  // a new 10 s stretch of stats (LogStats)
         statTicks_ = statRepeats_ = statJumps_ = statNoFrame_ = statHeld_ = 0;
-        blog(LOG_INFO, "[simoptix_vr_mirror] started (source shown)");
-    } else if (!wanted_ && state == SessionWorker::kRunning) {
-        const uint64_t t0 = os_gettime_ns();
-        if (started_) {
-            ToggleTrace(false);
-            started_ = false;
-            warpSlot_ = -1;
-            obs_enter_graphics();
-            DestroyTextures();
-            obs_leave_graphics();
-        }
+        blog(LOG_INFO, "[simoptix_vr_mirror] started (source shown): %s", frameSource_->Name());
+    } else if (!run && state == SessionWorker::kRunning) {
+        StopSession(wanted_ ? "switching between the game and the demo" : "source hidden");
+    }
+}
 
-        session_.Stop();
-        SetProgramDelay(0);
-        blog(
-            LOG_INFO,
-            "[simoptix_vr_mirror] stopping (source hidden): graphics thread done in %.2f ms",
-            (os_gettime_ns() - t0) / 1e6
-        );
+// Switches to the frame source asked for (the game's or the demo's) while none runs. Returns whether the
+// one set is the one asked for. Graphics thread.
+bool MirrorView::FollowSource(SessionWorker::State state) {
+    FrameSource* wanted = demoWanted_ ? demoSource_.get() : gameSource_.get();
+
+    if (wanted != frameSource_ && state == SessionWorker::kStopped) {
+        frameSource_ = wanted;
+        session_.SetSource(frameSource_);
+        blog(LOG_INFO, "[simoptix_vr_mirror] frames from: %s", frameSource_->Name());
+    }
+
+    return wanted == frameSource_;
+}
+
+void MirrorView::StopSession(const char* why) {
+    const uint64_t t0 = os_gettime_ns();
+
+    // The lap recorder reads the frame source: it stops first (a lap not yet complete is given up).
+    recorder_.Stop();
+    lapStarted_ = false;
+
+    if (started_) {
+        ToggleTrace(false);
+        started_ = false;
+        warpSlot_ = -1;
+        obs_enter_graphics();
+        DestroyTextures();
+        obs_leave_graphics();
+    }
+
+    session_.Stop();
+    SetProgramDelay(0);
+    blog(
+        LOG_INFO,
+        "[simoptix_vr_mirror] stopping (%s): graphics thread done in %.2f ms",
+        why,
+        (os_gettime_ns() - t0) / 1e6
+    );
+}
+
+// Runs the lap recorder while a lap is asked for and the game's frames come; once it has saved the lap or
+// failed, the request is done. Graphics thread, every tick.
+void MirrorView::FollowLap() {
+    const bool want = lapWanted_ && started_ && frameSource_ == gameSource_.get();
+
+    if (want && !lapStarted_) {
+        recorder_.Start(&ring_, frameSource_);
+        lapStarted_ = true;
+    } else if (!want && lapStarted_) {
+        recorder_.Stop();
+        lapStarted_ = false;
+    }
+
+    if (lapStarted_ && !recorder_.Running()) {
+        lapStarted_ = false;  // saved or failed: its state says which
+        lapWanted_ = false;
+    }
+
+    if (!lapWanted_ && !lapStarted_ && telemetryHeld_.exchange(false)) {
+        Telemetry::Release();
     }
 }
 
 void MirrorView::Tick() {
     FollowCanvas();  // also while hidden: OBS lays the source out by its size
     StartStop();
+    FollowLap();
     if (!started_) {
         return;
     }
@@ -379,10 +457,12 @@ void MirrorView::OpenSlotTexture(const FrameRing::SlotInfo& slot) {
 // change).
 void MirrorView::SetImageNeed() {
     const float aspect = float(width_) / float(std::max<uint32_t>(1, height_));
-    frameSource_->SetImageNeed(
-        NativeImageWidth(frameSource_->Eye(), settings_, int(width_), aspect),
-        kImageMemory / ring_.SlotCount()
-    );
+    const float
+        native = NativeImageWidth(frameSource_->Eye(), settings_, static_cast<int>(width_.load()), aspect);
+
+    // A lap is recorded at the game's own size: the source keeps its images no larger than that.
+    constexpr float kOwnSize = 1e6f;
+    frameSource_->SetImageNeed(lapWanted_ ? kOwnSize : native, kImageMemory / ring_.SlotCount());
 }
 
 // Starts a stretch of footprint stats: the threads' cycle counts so far, and what was counted

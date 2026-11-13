@@ -191,7 +191,8 @@ for the agents that read those files. Change the rules here, never in those file
     device, the render target, settings storage and UI, and when to draw.
   - Telemetry (`shared\telemetry\`): game adapters (`shared\telemetry\games\`) feed one reader per OBS
     process. The reader feeds the overlays (`overlays\gmeter\`, with `overlays\obs_plugin\` as their
-    OBS module) and race auto-record (`vr_mirror\obs_plugin\race_auto_record\`).
+    OBS module), race auto-record (`vr_mirror\obs_plugin\race_auto_record\`) and the lap recorder for
+    the demo (`vr_mirror\obs_plugin\lap_recorder\`).
   - `vr_mirror\e2e\`, `vr_mirror\recording_analysis\`, the fake LMU, the OpenXR layer's check
     program and SimOptix Setup (`setup\`) are standalone programs. Setup carries the plugins' and the
     layer's built DLLs inside it, and includes none of their code.

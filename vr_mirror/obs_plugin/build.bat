@@ -6,7 +6,9 @@ rem Mirror (plugin.cpp; drawn by mirror_view.cpp with the effect in warp_effect.
 rem copied by frame_ring.cpp, its frame source started and stopped by session_worker.cpp, the audio kept
 rem in step with its view by audio_sync.cpp), and its race
 rem auto-record (race_auto_record\race_recorder.cpp decides when, race_auto_record\auto_record.cpp tells
-rem OBS), plus the Pimax frame source (..\frame_sources\pimax, listed in its pimax.rsp), the VR
+rem OBS), the lap recorder for the demo (lap_recorder\: lap_finder.cpp finds the lap, lap_video.cpp encodes it,
+rem lap_recorder.cpp runs both), plus the frame sources (..\frame_sources\pimax, openxr and demo, each
+rem listed in its .rsp), the VR
 rem Mirror's core (..\core, its sources listed in ..\core\build\*.rsp) and ..\..\shared (the view's
 rem delay the plugins share, the crash dump, the files kept in %%LOCALAPPDATA%%\simoptix, and the game's
 rem telemetry listed by
@@ -36,14 +38,15 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_S
    /I..\.. /I..\core /I..\..\third_party\obs-32.2.2\libobs /Iobj %TELEMETRY_FLAGS% ^
    plugin.cpp mirror_view.cpp warp_effect.cpp frame_ring.cpp session_worker.cpp audio_sync.cpp ^
    race_auto_record\race_recorder.cpp race_auto_record\auto_record.cpp ^
+   lap_recorder\lap_finder.cpp lap_recorder\lap_video.cpp lap_recorder\lap_recorder.cpp ^
    ..\..\shared\shared_memory.cpp ..\..\shared\program_delay.cpp ..\..\shared\crash_dump.cpp ^
    ..\..\shared\local_files.cpp ^
    %TELEMETRY_FILES% ^
    @..\core\build\common.rsp @..\core\build\pipeline.rsp @..\core\build\adapters.rsp ^
-   @..\frame_sources\pimax\pimax.rsp @..\frame_sources\openxr\openxr.rsp ^
+   @..\frame_sources\pimax\pimax.rsp @..\frame_sources\openxr\openxr.rsp @..\frame_sources\demo\demo.rsp ^
    /LD /Fe:bin\%NAME%.dll ^
    /link obj\version.res obj\obs.lib d3d11.lib dxgi.lib winmm.lib user32.lib d3dcompiler.lib ^
-   dbghelp.lib || exit /b 1
+   dbghelp.lib mfplat.lib mfreadwrite.lib mfuuid.lib ole32.lib propsys.lib || exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\..\shared\build\fill_version.ps1 ^
    manifest.json bin\manifest.json || exit /b 1
 rem A line continued with ^ inside the block below runs as a command named " ", so each command

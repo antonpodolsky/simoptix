@@ -20,6 +20,10 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
   - OBS's audio, the G-meter and race auto-record follow the delay, so they stay in sync with the view.
 - **Race auto-record** makes OBS record each LMU race by itself.
   - It records from the start lights to 5 s after the car stops past the finish.
+- **The demo** plays a lap of LMU that you recorded, in place of the game, so you can try Smoothing and
+  Zoom without the game or the headset.
+  - **Record a lap** records one full lap in practice, from a crossing of the line to the next.
+  - **Start demo** plays it in a loop, and each change of Smoothing or Zoom shows at once.
 - **SimOptix: Overlays** adds the **SimOptix: G-Meter Overlay** source.
   - It also works over a normal capture of a flat-screen game.
   - It plays a demo lap, so you can try it without the game.
@@ -117,8 +121,8 @@ its Uninstall removes everything. `setup\README.md` describes setup.
 | Folder | What |
 |---|---|
 | `vr_mirror\` | SimOptix: VR Mirror |
-| `vr_mirror\obs_plugin\` | The OBS sources Pimax Mirror and OpenXR Mirror, and race auto-record (`race_auto_record\`) |
-| `vr_mirror\frame_sources\` | Where the game's frames and head poses come from: `pimax\` through Pimax Play, and `openxr\` through the API layer and its reader. Each has a check program |
+| `vr_mirror\obs_plugin\` | The OBS sources Pimax Mirror and OpenXR Mirror, race auto-record (`race_auto_record\`), and the lap recorder for the demo (`lap_recorder\`) |
+| `vr_mirror\frame_sources\` | Where the game's frames and head poses come from: `pimax\` through Pimax Play, and `openxr\` through the API layer and its reader, each with a check program. `demo\` plays a lap you recorded, in their place |
 | `vr_mirror\core\` | The stabilization itself, the same in OBS and in the desktop window |
 | `vr_mirror\mirror_app\` | VR Mirror in a desktop window, which the end-to-end tests run |
 | `vr_mirror\e2e\` | End-to-end tests: the desktop window against a simulated Pimax headset and game, or a simulated game with the API layer |

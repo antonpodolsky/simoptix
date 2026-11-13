@@ -267,7 +267,7 @@ void FrameRing::TakeNewDrawnPose() {
 
 // Hands finished copies to OBS (never waits, never submits work). True while any is pending.
 bool FrameRing::CheckCopies() {
-    bool pending = false;
+    bool pending = false, finished = false;
     for (int i = 0; i < kMaxSlots; i++) {
         if (!inFlight_[i]) {
             continue;
@@ -278,10 +278,15 @@ bool FrameRing::CheckCopies() {
         }
 
         inFlight_[i] = false;
+        finished = true;
         std::lock_guard<std::mutex> lock(mutex_);
         info_[i].frame = inFlightFrame_[i];
         info_[i].ready = source_->Now();
         info_[i].valid = true;
+    }
+
+    if (finished) {
+        SetEvent(copiedEvent_.Get());
     }
 
     return pending;

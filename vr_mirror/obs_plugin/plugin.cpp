@@ -8,7 +8,9 @@
 // MirrorView (mirror_view.h).
 //
 // Each source also holds race auto-record's switch ("Record races automatically",
-// race_auto_record\auto_record.h), which works whether the source is shown or not.
+// race_auto_record\auto_record.h), which works whether the source is shown or not, and the demo's two
+// buttons: Record a lap (the next full lap the game shows, lap_recorder\lap_recorder.h) and Start demo
+// (the newest lap in place of the game, vr_mirror\frame_sources\demo\). Neither is saved.
 
 #include <obs-module.h>
 
@@ -24,6 +26,7 @@
 #include "shared/log.h"
 #include "shared/telemetry/telemetry.h"
 #include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
+#include "vr_mirror/frame_sources/demo/recorded_lap.h"
 #include "vr_mirror/frame_sources/openxr/openxr_source.h"
 #include "vr_mirror/frame_sources/pimax/pimax_source.h"
 
@@ -44,11 +47,57 @@ namespace {
         blog(LOG_INFO, "[simoptix_vr_mirror] %s", message);
     }
 
-    // One source as OBS holds it: its view, and its race auto-record switch.
+    // One source as OBS holds it: its view, its race auto-record switch, and what its properties last showed
+    // of the demo.
     struct Source {
         std::unique_ptr<MirrorView> view;
         bool autoRecord = false;  // "Record races automatically" (race_auto_record\auto_record.h); UI thread
+        obs_weak_source_t* weak = nullptr;  // to refresh its properties from the UI thread
+        int shownDemo = -1;                 // graphics thread: DemoKey as the properties were last refreshed
     };
+
+    // What the demo's buttons and status line show, as one number: a change refreshes the properties.
+    int DemoKey(const MirrorView& view) {
+        return static_cast<int>(view.LapState()) * 4 + (view.RecordingLap() ? 2 : 0)
+               + (view.DemoOn() ? 1 : 0);
+    }
+
+    // UI thread: shows the demo's buttons and status as they are now. `data`: a weak reference, released
+    // here.
+    void RefreshProperties(void* data) {
+        obs_weak_source_t* weak = static_cast<obs_weak_source_t*>(data);
+
+        if (obs_source_t* source = obs_weak_source_get_source(weak)) {
+            obs_source_update_properties(source);
+            obs_source_release(source);
+        }
+
+        obs_weak_source_release(weak);
+    }
+
+    // The demo's status line.
+    const char* LapStatus(const MirrorView& view, bool lapRecorded) {
+        switch (view.LapState()) {
+            case LapRecorder::State::kWaiting:
+                return "Drive to the line: leave the pits, and the lap records from the next crossing.";
+            case LapRecorder::State::kRecording:
+                return "Recording the lap: drive on to the line.";
+            case LapRecorder::State::kSaving:
+                return "Saving the lap.";
+            case LapRecorder::State::kSaved:
+                return "Lap saved. Start demo plays it.";
+            case LapRecorder::State::kFailed:
+                return "The lap wasn't recorded: the OBS log says why.";
+            default:
+                break;
+        }
+
+        if (view.RecordingLap()) {
+            return "The lap records once the game's frames come (the source shown, the demo stopped).";
+        }
+
+        return lapRecorded ? "A lap is recorded." : "No lap recorded yet.";
+    }
 
     // The source's core settings are the smoothing and the zoom; the drawn pose method is fixed here.
     // 1920x1080 a little above native at Render Quality 1.0 (README.md, "Recording at the source's native
@@ -107,7 +156,73 @@ namespace {
         });
     }
 
-    obs_properties_t* MakeProperties() {
+    // UI thread: records the next lap, or gives up the one asked for. The demo stops: a lap is the game's.
+    bool ToggleRecordLap(obs_properties_t*, obs_property_t*, void* data) {
+        return Guarded("record lap button", [&]() -> bool {
+            MirrorView& view = *static_cast<Source*>(data)->view;
+            const bool on = !view.RecordingLap();
+            view.SetRecordLap(on);
+
+            if (on) {
+                view.SetDemo(false);
+            }
+
+            return true;  // the properties again, with the buttons as they are now
+        });
+    }
+
+    // UI thread: plays the newest recorded lap, or goes back to the game.
+    bool ToggleDemo(obs_properties_t*, obs_property_t*, void* data) {
+        return Guarded("demo button", [&]() -> bool {
+            MirrorView& view = *static_cast<Source*>(data)->view;
+            const bool on = !view.DemoOn();
+            view.SetDemo(on);
+
+            if (on) {
+                view.SetRecordLap(false);
+            }
+
+            return true;
+        });
+    }
+
+    // The demo's buttons and status line, for source `s`.
+    void AddDemoProperties(obs_properties_t* p, Source* s) {
+        std::wstring stem;
+        const bool lapRecorded = NewestRecordedLap(&stem);
+        const bool recording = s->view->RecordingLap();
+        const bool demo = s->view->DemoOn();
+
+        obs_property_t* record = obs_properties_add_button2(
+            p,
+            "record_lap",
+            recording ? "Cancel lap recording" : "Record a lap",
+            ToggleRecordLap,
+            s
+        );
+
+        obs_property_set_long_description(
+            record,
+            "Drive one full lap in LMU, in practice.\n"
+            "It records from a crossing of the line to the next.\n"
+            "Going into the pits or to the menus throws the lap away."
+        );
+
+        obs_property_t*
+            play = obs_properties_add_button2(p, "demo", demo ? "Stop demo" : "Start demo", ToggleDemo, s);
+
+        obs_property_set_long_description(
+            play,
+            "Plays the newest recorded lap in a loop, in place of the game.\n"
+            "Smoothing and Zoom apply as it plays."
+        );
+
+        obs_property_set_enabled(play, demo || lapRecorded);
+        obs_properties_add_text(p, "lap_status", LapStatus(*s->view, lapRecorded), OBS_TEXT_INFO);
+    }
+
+    // `s`: the source, or null for OBS's defaults (no demo buttons then).
+    obs_properties_t* MakeProperties(Source* s) {
         obs_properties_t* p = obs_properties_create();
 
         // Look-ahead (vr_mirror\core\pipeline\4_smoothing\): the view runs half a second behind the game,
@@ -147,19 +262,25 @@ namespace {
         );
 
         obs_properties_add_bool(p, "debug", "Debug");
+
+        if (s) {
+            AddDemoProperties(p, s);
+        }
+
         return p;
     }
 
-    obs_properties_t* GetProperties(void*) {
-        return Guarded("properties", [] { return MakeProperties(); });
+    obs_properties_t* GetProperties(void* data) {
+        return Guarded("properties", [&] { return MakeProperties(static_cast<Source*>(data)); });
     }
 
     // A source on frame source `Frames` (PimaxSource, OpenXrSource).
     template <class Frames>
-    void* Create(obs_data_t* settings, obs_source_t*) {
+    void* Create(obs_data_t* settings, obs_source_t* source) {
         return Guarded("create", [&]() -> void* {
             SetCoreLog(LogToObs);
             auto s = std::make_unique<Source>();
+            s->weak = obs_source_get_weak_source(source);
             UpgradeSavedSmoothing(settings);
             bool debug = false;
             const MirrorSettings st = MirrorSettingsOf(settings, &debug);
@@ -173,6 +294,7 @@ namespace {
         Guarded("destroy", [&] {
             std::unique_ptr<Source> s(static_cast<Source*>(data));  // the one place that frees a Source
             FollowAutoRecord(s.get(), false);
+            obs_weak_source_release(s->weak);
         });
     }
 
@@ -207,7 +329,19 @@ namespace {
     }
 
     void VideoTick(void* data, float) {
-        Guarded("tick", [&] { ViewOf(data)->Tick(); });
+        Guarded("tick", [&] {
+            Source* s = static_cast<Source*>(data);
+            s->view->Tick();
+
+            // The lap recorder moves on by itself: its buttons and status follow in the properties, if open.
+            const int key = DemoKey(*s->view);
+
+            if (key != s->shownDemo && s->weak) {
+                s->shownDemo = key;
+                obs_weak_source_addref(s->weak);
+                obs_queue_task(OBS_TASK_UI, RefreshProperties, s->weak, false);
+            }
+        });
     }
 
     void VideoRender(void* data, gs_effect_t*) {

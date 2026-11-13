@@ -230,3 +230,43 @@ What OBS does with the plugin's `manifest.json`. All of it holds for Overlays' m
   `windows-x64` as a guess.
 - **Enabling and disabling** in the Plugin Manager is remembered by the DLL's name without its
   extension, not by `id`.
+
+## The demo: recording and playing a lap
+
+How Windows' own video encoder and decoder (Media Foundation) do with the eye images, and how the demo
+source plays a recorded lap. Measured with the build of the pull request that added the demo, on one
+graphics card.
+
+- **The encoder takes the images straight from video memory.** A throwaway probe wrote D3D11 BGRA
+  textures from Media Foundation's sample allocator to an HEVC `.mp4` with the sink writer (hardware
+  transforms on, throttling off), and read them back with the source reader (advanced video processing
+  to BGRA, on the GPU). On flat test images:
+
+  | Size | Encode | Decode |
+  |---|---|---|
+  | 2508×2084 | 450 fps | 1000 fps |
+  | 5084×4168 | 126 fps | 279 fps |
+
+  H.264 also took 5084×4168 on this graphics card, at 123 fps. HEVC was kept because its format goes
+  beyond 4096 pixels, where H.264's stops.
+- **`WriteSample` refused every sample (`E_INVALIDARG`) until each buffer's current length was set**
+  to its full size (`SetCurrentLength`). The allocator's samples come with a length of 0.
+- **Decoded images are padded** to whole blocks: 2528×2112 for 2508×2084, 5088×4192 for 5084×4168. The
+  demo copies the image's own size out of them.
+- **The parts together, without OBS or the game,** in a throwaway harness that ran the real code: 180
+  frames of a 2508×2084 test image (a gradient and a moving bar) recorded from a shared texture, as the
+  ring's, then played for 5 s and copied by a second device, as a host's.
+  - Recording took 0.1 ms per frame on the recorder's thread (draw into the encoder's texture, and
+    write). The 2 s video took 5.0 MB.
+  - Playing handed out 449 frames in 5 s (89.8 fps), and every copy succeeded.
+  - The frames' moments stayed one refresh apart to 0.001 ms, across the loop's join too.
+  - Every pose came back as recorded, within the angle measure's own float error (0.04°).
+  - The pixels came back 2.2 levels of 255 off on average. Only the very first frame after the demo
+    started was black. Each later loop's first frame was right.
+  - The first three frames after the demo started were handed out 8 to 28 ms after their moment. Every
+    later frame, and every loop's start, was within 8 ms.
+- **The lap finder** gave the right decision in nine made-up sessions: no start when the lap counter
+  moves at the pit exit, a start and an end at the two crossings, and a lap thrown away in the pits.
+  Where LMU's lap counter moves when the car leaves the pits was not checked in the game.
+- **Not measured:** the encoder's cost beside a running game, a real lap's size on disk, and the demo
+  in OBS. The game's images are harder to encode than the test images.

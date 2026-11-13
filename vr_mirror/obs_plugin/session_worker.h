@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SessionWorker: starts and stops a VR Mirror source's frame source (FrameSource: the Pimax session,
-// or the OpenXR layer's reader) and copy thread (FrameRing) on a thread of its own, so OBS's graphics
-// thread never waits for them.
-// Starting takes about a third of a second (the runtime, a session, and 300 ms for Pimax to create
-// its buffer); stopping waits for the poll and copy threads (which can be inside a reconnect's
-// 300 ms sleep). Done on the graphics thread, either stalled OBS's whole output meanwhile.
+// the OpenXR layer's reader, or the recorded lap) and copy thread (FrameRing) on a thread of its own, so
+// OBS's graphics thread never waits for them. Starting takes about a third of a second (the runtime, a
+// session, and 300 ms for Pimax to create its buffer); stopping waits for the poll and copy threads (which
+// can be inside a reconnect's 300 ms sleep). Done on the graphics thread, either stalled OBS's whole output
+// meanwhile.
 //
 // The graphics thread asks (Start, Stop) and reads State, and uses the FrameSource and FrameRing
 // only while it reads kRunning. Knows nothing about OBS: logging goes through CoreLog.
@@ -28,6 +28,8 @@ public:
     void Start();
     void Stop();
     State Get() const { return State(state_.load()); }
+    // The frame source the next Start starts (the game's, or the demo's). Graphics thread, while kStopped.
+    void SetSource(FrameSource* source) { source_ = source; }
     // True once after a start that failed (back at kStopped; the reason is logged).
     bool TakeFailure() { return failed_.exchange(false); }
 

@@ -21,7 +21,7 @@ project settings set `context.fileName` to `AGENTS.md`.
 | Term | Meaning |
 |---|---|
 | PVR | Pimax's own name for its client interface: the client library `libPVRClient64.dll` that Pimax Play installs, and the table of functions it hands out. The project's code that wraps it is named after it |
-| frame source | The code that delivers the game's frames and head poses to VR Mirror: the Pimax source or the OpenXR source (`vr_mirror\frame_sources\`) |
+| frame source | The code that delivers the game's frames and head poses to VR Mirror: the Pimax source, the OpenXR source or the demo source (`vr_mirror\frame_sources\`) |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
 | fake runtime | The stand-in for Pimax's client library that the e2e tests use in place of a headset and a game |

@@ -33,6 +33,7 @@ The two sources show the same view. They differ in where the game's image comes 
 | observer | The debugging code in VR Mirror that numbers the stamp and writes the frame trace |
 | stamp | The frame number drawn as 15 small squares in the top-left corner of the view, when Debug is on |
 | frame trace | The CSV file Debug writes, with one row per drawn frame: its poses and timing |
+| recorded lap | One full lap of the game that Record a lap saved: the raw left eye of each frame, and the head pose it was drawn with. Start demo plays it in place of the game |
 
 The G-meter comes from a separate plugin, Overlays (`overlays\README.md`). When both are installed,
 they share two things through memory that each opens on its own:
@@ -102,6 +103,9 @@ Both sources have the same four settings:
 | **Record races automatically** | OBS records each race by itself, from the start lights to 5 s after the car stops past the finish ("Recording races automatically", below). Off by default |
 | **Debug** | Stamps frame numbers on the view and writes a frame trace, for checking a recording frame by frame ("Debug: stamp and frame trace", below) |
 
+Below them, two buttons and a status line run the demo ("The demo", below): **Record a lap** and
+**Start demo**. They aren't saved, so both are off when OBS starts.
+
 The source is always the size of the OBS canvas (Settings → Video → Base resolution), so it fills the
 canvas at 1:1. When the canvas changes, the source follows at once.
 
@@ -167,6 +171,47 @@ straight ahead.
 - The source draws on OBS's clock, so each OBS frame shows a game frame drawn for a slightly later
   moment, or the previous one again. The smoothing keeps the view inside that frame's image and plans
   ahead for it.
+
+## The demo
+
+The demo plays a recorded lap of the game in place of the game, through the same stabilization. Moving
+Smoothing or Zoom while it plays shows what each setting does, without the game or the headset.
+
+**Record a lap** records the lap the demo plays:
+1. With the game running and the source shown, press **Record a lap** in the source's properties.
+2. In an LMU practice session, leave the pits and drive. The recording starts when the car crosses the
+   line, and stops when it crosses the line again. So it holds one full lap, which ends where it starts.
+3. The status line under the buttons says where it stands: waiting for the line, recording, saved, or
+   why it wasn't recorded. The OBS log has the same in lines that start "recorded lap:".
+
+The lap is thrown away if, before the line, the car goes into the pits, the player leaves the car, the
+game pauses or a new session starts. The recording then waits for the next crossing. **Cancel lap
+recording** gives it up.
+
+What a recorded lap holds:
+- the raw left eye of every game frame, at the size the source gets it from the game, encoded as HEVC
+  video on the graphics card by Windows' own encoder. The OpenXR source keeps its images at the game's
+  own size while a lap records, whatever the canvas.
+- each frame's moment in the lap, and the head pose the game drew it with. From the OpenXR source that
+  pose is exact. From the Pimax source it is the pose Pimax predicted for the display slot the frame
+  arrived for, which is right while the game keeps up.
+
+The video takes about 0.1 bit per pixel and frame, and at most 150 Mbit/s, so a two-minute lap takes
+up to 2.3 GB. Laps are kept in `%LOCALAPPDATA%\simoptix\recorded_laps`. The newest 3 are kept, and the
+oldest beyond them is deleted when a new one is saved.
+
+**Start demo** plays the newest lap in a loop, in place of the game:
+- The source stops reading the game and plays the lap's frames at their own moments, at the headset's
+  refresh rate the lap was recorded at. **Stop demo** goes back to the game.
+- The frames go through the same pipeline as the game's, with the source's settings. The view and the
+  output delay behave as with the game, and OBS's audio is shifted by the same delay. The G-meter and
+  race auto-record keep reading the game itself.
+- The lap ends on the line it started from, so it plays on into its start, with the smoothing carrying
+  on across the join.
+- Windows decodes the video on the graphics card. That needs Windows' HEVC Video Extension. Without it,
+  the OBS log says the video can't be decoded, and the source goes back to the game.
+- **Start demo** is greyed out until a lap is recorded. Starting the demo gives up a lap being recorded,
+  and recording a lap stops the demo.
 
 ## Recording races automatically
 
