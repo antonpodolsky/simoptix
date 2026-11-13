@@ -265,6 +265,20 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   | Most entries holding a frame | 81 | 86 |
 
   The 90 Hz runs and `stage_replay --golden` were unchanged, byte for byte.
+- **The copy delay the warm-up fixes can land far from its intended 95th percentile, not fixed.**
+  `WarmUp` rescans the whole store on every tick and pushes the delay of every still-copied frame
+  into its sample, not only new ones. A frame copied early in the warm-up and still held gets pushed
+  again on every later tick, so the sample's true size (the frames actually seen) is far smaller than
+  `delays_.size()` says. On the synthetic frames (a seeded 5% of frames take 5–30 ms to copy, the
+  rest 1–3 ms), a run's sample held 175 to 296 distinct frames while `delays_.size()` ran from 990 to
+  13,764. With that few distinct frames feeding a 95th percentile of a count that rare, a handful of
+  slow frames staying in the store longer (Look-ahead, or a faster headset, both mean a bigger store)
+  outweighs the rest: the fixed delay came out anywhere from 5.0 to 15.6 ms across otherwise
+  identical runs, including the 9.8 ms seen for a 144 Hz headset with OBS at 60 fps (`reference\
+  e2e_results.md`, runs 12–14). This is the warm-up's own measurement, not the frame picking, which
+  these runs leave unchanged. Not checked whether it matters with a real GPU's smoother copy times,
+  where the 95th percentile is less likely to sit near a steep jump in the distribution. The fix
+  (count each frame once) is a separate change from #27's.
 - **OBS's ticks can be predicted half a second ahead to within microseconds.** A picker that decides
   ahead which frame each coming tick shows predicts the ticks as the last tick plus whole OBS frame
   periods. Measured with `vr_mirror\recording_analysis\tick_regularity.py` on 8 frame traces of the
