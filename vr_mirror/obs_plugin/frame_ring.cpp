@@ -181,18 +181,16 @@ void FrameRing::Run() {
 // slot, or -1.
 int FrameRing::Copy(const GameFrame& f) {
     const int want = wantSlots_;
-    if (want != slotCount_) {
-        // Fewer slots: free the textures of the others (OBS's handles to them are closed by the
-        // graphics thread, which asked for this). More: made as they are first used.
-        std::lock_guard<std::mutex> lock(mutex_);
-        for (int i = want; i < slotCount_; i++) {
-            slots_[i].Reset();
-            info_[i] = {};
-            inFlight_[i] = false;
-        }
-
+    if (want > slotCount_) {
+        // More slots: made as they are first used.
         slotCount_ = want;
-        next_ %= slotCount_;
+        CoreLog(
+            "frame ring: %d slots, %.0f MB",
+            slotCount_,
+            slotCount_ * double(loggedWidth_) * loggedHeight_ * 4 / 1e6
+        );
+    } else if (want < slotCount_) {
+        ShrinkTo(want);
         CoreLog(
             "frame ring: %d slots, %.0f MB",
             slotCount_,
@@ -234,6 +232,52 @@ int FrameRing::Copy(const GameFrame& f) {
     inFlightFrame_[slot] = f;
     copied_ = true;
     return slot;
+}
+
+// Keeps the `want` most recently copied entries, compacted to indices [0, want), oldest kept at 0,
+// newest at the end, and frees the rest, wherever they physically were: the ring overwrites by
+// index, so once it has wrapped, the newest entry's index can be anywhere. Copy thread.
+void FrameRing::ShrinkTo(int want) {
+    FrameCopy keptSlots[kMaxSlots];
+    Microsoft::WRL::ComPtr<ID3D11Query> keptDone[kMaxSlots];
+    bool keptInFlight[kMaxSlots] = {};
+    GameFrame keptInFlightFrame[kMaxSlots];
+    SlotInfo keptInfo[kMaxSlots];
+
+    for (int k = 0; k < want; k++) {
+        const int oldIndex = (next_ + slotCount_ - want + k) % slotCount_;
+        keptSlots[k] = slots_[oldIndex];
+        keptDone[k] = done_[oldIndex];
+        keptInFlight[k] = inFlight_[oldIndex];
+        keptInFlightFrame[k] = inFlightFrame_[oldIndex];
+        keptInfo[k] = info_[oldIndex];
+    }
+
+    for (int k = 0; k < want; k++) {
+        slots_[k] = keptSlots[k];
+        done_[k] = keptDone[k];
+        inFlight_[k] = keptInFlight[k];
+        inFlightFrame_[k] = keptInFlightFrame[k];
+    }
+
+    for (int i = want; i < kMaxSlots; i++) {
+        slots_[i].Reset();
+        inFlight_[i] = false;
+    }
+
+    {
+        // info_ is read by the graphics thread (Snapshot): move it as one update.
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (int k = 0; k < want; k++) {
+            info_[k] = keptInfo[k];
+        }
+        for (int i = want; i < kMaxSlots; i++) {
+            info_[i] = {};
+        }
+    }
+
+    slotCount_ = want;
+    next_ = 0;  // the oldest kept, next to be overwritten
 }
 
 // Hands the finished images to the drawn pose. With Instant a frame is drawn ~4 ms after arrival

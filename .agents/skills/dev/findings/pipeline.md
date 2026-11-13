@@ -280,11 +280,15 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
     way can rely on the predicted ticks. Only OBS at 90 fps with the OpenXR source was traced. Other
     frame rates use the same scheduled times, and the Pimax source the same clock correction, but
     neither was measured.
-- **When the ring shrinks, it can drop the frame on screen, and the fixed delay steps back.**
-  Shrinking frees the ring's last entries whatever they hold, and a smaller ring soon writes a new
-  frame over the shown one. The picker then starts again at the newest due frame left, which can be
-  older: 1 frame back when the copy delay was fixed with Instant (90 Hz, OBS at 144 fps), 4 frames
-  back right after a switch to Instant (144 Hz, OBS at 60 fps). Not checked in a recording.
+- **Fixed: when the ring shrank, it could drop the frame on screen, and the fixed delay stepped
+  back.** Shrinking freed the ring's entries by raw index, past the new size, whatever they held.
+  Once the ring had wrapped, the newest entry's index could be anywhere, so this sometimes freed the
+  frame on screen, not the oldest one. `FrameRing::ShrinkTo` (and `FrameStore`'s matching change)
+  now keeps the entries most recently copied, compacted to the new size, wherever they physically
+  were. Measured with `stage_replay --stage frame_picker`, synthetic frames, Look-ahead, at a 144 Hz
+  headset with OBS at 60 fps: repeats with a newer frame due dropped from 3 to 0 (jittered ticks) and
+  2 to 0 (exact), out of about 10 repeats total. `stage_replay --golden` is unchanged. Not checked in
+  a recording.
 - **`stage_replay`'s store emptied itself when it grew,** where the plugin's ring keeps its frames,
   and it took a new size at once, where the ring takes it at the next copy. Now it does as the ring
   does. At the switch back to Look-ahead the frames already held can then be shown: 3 to 7 fewer

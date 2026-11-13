@@ -3,9 +3,9 @@
 // FrameStore: the OBS plugin's store of copied frames (FrameRing) as far as the frame picker sees
 // it: a ring of entries, each new frame written into the next one and ready once its copy
 // finished, resized as the picker asks, and whether it still holds a frame. As in FrameRing, a new
-// size applies at the next frame's copy: shrinking frees the entries past it, growing keeps every
-// frame and adds entries as they are first used. For stage_replay's runs; knows nothing about
-// textures.
+// size applies at the next frame's copy: shrinking keeps the newest entries, compacted to the new
+// size, and frees the rest; growing keeps every frame and adds entries as they are first used. For
+// stage_replay's runs; knows nothing about textures.
 #pragma once
 
 #include "pipeline/pipeline_types.h"
@@ -65,13 +65,38 @@ namespace stage_replay {
         }
 
     private:
+        // Shrinking by truncation can discard the newest entries, not the oldest: the ring overwrites
+        // in index order, so after it wraps, the newest entry's index can be anywhere. This keeps the
+        // `wantCount` most recently written entries (oldest kept at the new 0, newest at the end), and
+        // frees the rest, wherever they physically were.
         void ApplySize() {
-            for (int i = wantCount; i < count; i++) {
+            if (wantCount >= count) {
+                count = wantCount;  // growing: nothing moved, made as first used
+                return;
+            }
+
+            StoredFrame keptSlots[kMaxSlots], keptPending[kMaxSlots];
+            bool keptFlag[kMaxSlots] = {};
+
+            for (int k = 0; k < wantCount; k++) {
+                const int oldIndex = (next + count - wantCount + k) % count;
+                keptSlots[k] = slots[oldIndex];
+                keptPending[k] = pendingFrame[oldIndex];
+                keptFlag[k] = pending[oldIndex];
+            }
+
+            for (int k = 0; k < wantCount; k++) {
+                slots[k] = keptSlots[k];
+                pendingFrame[k] = keptPending[k];
+                pending[k] = keptFlag[k];
+            }
+
+            for (int i = wantCount; i < kMaxSlots; i++) {
                 slots[i] = {}, pending[i] = false;
             }
 
             count = wantCount;
-            next %= count;
+            next = 0;  // the oldest kept, next to be overwritten
         }
     };
 

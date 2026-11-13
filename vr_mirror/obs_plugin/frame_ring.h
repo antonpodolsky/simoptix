@@ -9,7 +9,9 @@
 // ready once the GPU has finished the copy (an event query read with DONOTFLUSH: it never waits on the
 // GPU), and feeds each frame's images to the pipeline's drawn pose (DrawnPoseFeed), which the
 // graphics thread then asks for the pose each frame was drawn with. OBS's graphics thread reads the
-// slots with Snapshot and opens their shared textures on OBS's device.
+// slots with Snapshot and opens their shared textures on OBS's device. Shrinking (SetSlotCount) keeps
+// the most recently copied entries, compacted to the new size, because the ring overwrites by index
+// and the newest entry's index can be anywhere once it has wrapped (ShrinkTo).
 //
 // Knows nothing about OBS (no libobs calls, no settings, no drawing), nor which frame source runs.
 #pragma once
@@ -88,6 +90,7 @@ public:
 private:
     void Run();
     int Copy(const GameFrame& f);
+    void ShrinkTo(int want);
     void Look();
     void TakeNewDrawnPose();
     bool CheckCopies();
