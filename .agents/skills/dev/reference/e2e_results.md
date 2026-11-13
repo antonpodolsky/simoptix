@@ -10,6 +10,13 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 14: the fixed delay's store counts the frames that can arrive before the host's next tick.**
+LMU, OBS and Pimax Play were closed. The pipeline's output is the same as before
+(`stage_replay --golden` byte for byte).
+- `openxr_black_borders` at Instant had one stall mid-turn, as in runs 9 and 11. A rerun at both
+  smoothings passed, with its comparison.
+- Otherwise, all 38 runs and all 19 comparisons passed.
+
 **Run 13: the fixed delay runs ahead for `WillShow`, the tick plan picker is dropped.** LMU, OBS and
 Pimax Play were closed. All 38 runs passed, and all 19 comparisons with Instant. The pipeline's
 output is the same as before (`stage_replay --golden` byte for byte).

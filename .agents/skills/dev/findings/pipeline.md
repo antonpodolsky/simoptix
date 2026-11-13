@@ -211,6 +211,27 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   entry can be ready but excluded would need it.
 - **The ring's size follows the delay:** the frames in the delay plus 3, at least 4
   (`vr_mirror\obs_plugin\README.md`).
+- **Fixed: the ring was too small when the host's ticks come slower than the headset.** Its size
+  counted only the frames inside the output delay, not how many could arrive before the next tick.
+  When more frames arrived between two ticks than the ring held, the frame shown at the previous
+  tick fell out of the ring. `FixedDelayStep` then took its branch for when the previous frame isn't
+  found, which has no 4 ms slack and always labels its pick `kNext`, however far it caught up. The
+  size now adds the frames that can arrive before the next tick (`ceil(tickPeriod / period)`), when
+  the host ticks slower than the display.
+
+  Measured with `stage_replay --stage frame_picker`, synthetic frames, Look-ahead, before and after:
+
+  | Headset, OBS | Entries | Ticks labelled `kNext` | Frames shown after a `WillShow` no |
+  |---|---|---|---|
+  | 144 Hz, 60 fps | 81 → 84 | 290 → 89 | 102 → 15 |
+  | 90 Hz, 60 fps | 52 → 54 | 951 → 952 | 6 → 6 |
+  | 90 Hz, 50 fps | 52 → 54 | 374 → 376 | 8 → 8 |
+
+  At 144 Hz, 2.4 headset frames arrive for every OBS tick, so most ticks should be `kJump` (catching
+  up over several frames) once the previous frame is found. With the ring too small, most were
+  mislabelled `kNext` instead. At 90 Hz the mismatch is smaller, so the fix only recovers a frame or
+  two over each run. `stage_replay --golden` and the two OpenXR traces (90 Hz headset, OBS at 90 fps, where
+  the ring's size doesn't change) are unchanged.
 - **The fixed delay stores every frame, and OBS shows only some of them.** Measured with
   `stage_replay --stage frame_picker` on the synthetic frames of a 90 Hz headset, with Look-ahead for
   most of each 30 s run. Shares are of the frames due before the run ends, about 2,550 per run:

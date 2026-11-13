@@ -5,8 +5,22 @@
 #include <algorithm>
 #include <cmath>
 
-int WarmupSlots(double smoothingDelayS, double period, int maxSlots) {
-    return std::clamp(int(std::ceil((0.045 + smoothingDelayS) / period)) + 3, 4, maxSlots);
+namespace {
+
+    // The frames of a display `period` that can arrive before the host's next tick, `tickPeriod`
+    // apart (0 if the host has no regular ticks, or ticks at least as often as the display).
+    int BetweenTicksSlots(double period, double tickPeriod) {
+        return tickPeriod > period ? int(std::ceil(tickPeriod / period)) : 0;
+    }
+
+}
+
+int WarmupSlots(double smoothingDelayS, double period, double tickPeriod, int maxSlots) {
+    return std::clamp(
+        int(std::ceil((0.045 + smoothingDelayS) / period)) + BetweenTicksSlots(period, tickPeriod) + 3,
+        4,
+        maxSlots
+    );
 }
 
 void FixedDelayPicker::Restart(double smoothingDelayS, double period, double tickPeriod, int maxSlots) {
@@ -18,9 +32,9 @@ void FixedDelayPicker::Restart(double smoothingDelayS, double period, double tic
     lastShown_ = 0;
     lastSlot_ = -1;
     lastTick_ = 0;
-    slots_ = WarmupSlots(smoothingDelayS, period, maxSlots_);
-    fixedPending_ = false;
     tickPeriod_ = tickPeriod;
+    slots_ = WarmupSlots(smoothingDelayS, period, tickPeriod, maxSlots_);
+    fixedPending_ = false;
     ahead_.Reset();
 }
 
@@ -50,7 +64,7 @@ void FixedDelayPicker::Report(StatsReport& r) {
 
 void FixedDelayPicker::WarmUp(double tick, double period, const StoredFrame* frames, int total) {
     // The OpenXR source learns the display's period from the layer, which can come after Restart.
-    slots_ = WarmupSlots(smoothingDelay_, period, maxSlots_);
+    slots_ = WarmupSlots(smoothingDelay_, period, tickPeriod_, maxSlots_);
 
     for (int i = 0; i < total; i++) {
         if (frames[i].valid) {
@@ -68,9 +82,15 @@ void FixedDelayPicker::WarmUp(double tick, double period, const StoredFrame* fra
         fixedP95_ = p95;
         fixedPending_ = true;
 
-        // The store only needs the frames inside the delay, plus room for a late copy:
-        // entries = frames in the delay + 3, at least 4.
-        slots_ = std::clamp(int(std::ceil((copyDelay_ + smoothingDelay_) / period)) + 3, 4, maxSlots_);
+        // The store needs the frames inside the delay, the frames that can arrive before the host's
+        // next tick, and room for a late copy: entries = frames in the delay + frames between ticks
+        // + 3, at least 4.
+        slots_ = std::clamp(
+            int(std::ceil((copyDelay_ + smoothingDelay_) / period)) + BetweenTicksSlots(period, tickPeriod_)
+                + 3,
+            4,
+            maxSlots_
+        );
         delays_.clear();
     }
 }

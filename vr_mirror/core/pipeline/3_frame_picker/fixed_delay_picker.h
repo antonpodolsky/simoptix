@@ -7,8 +7,10 @@
 // clearly not due yet (4 ms of slack: the clocks slipped, show the current one again), catching up
 // only when two are clearly overdue (FixedDelayStep); when nothing due is ready, the last image
 // again. Once the delay is fixed, the same rule run ahead on the host's ticks says whether a frame
-// will be shown (WillShow, FixedDelayAhead). Logic only; its warm-up buffer is reserved at Restart.
-// Knows nothing about textures or OBS.
+// will be shown (WillShow, FixedDelayAhead). The store needs the frames within the delay, plus the
+// frames that can arrive before the next tick (the host's tick period can be slower than the
+// display's), plus 3 for a late copy. Logic only; its warm-up buffer is reserved at Restart. Knows
+// nothing about textures or OBS.
 #pragma once
 
 #include <cstdint>
@@ -18,8 +20,9 @@
 #include "pipeline/3_frame_picker/frame_picker.h"
 
 // Store entries while the delay is being measured: the frames of a display `period` (s) inside
-// the smoothing's delay plus 45 ms for the copy, and 3 more.
-int WarmupSlots(double smoothingDelayS, double period, int maxSlots);
+// the smoothing's delay plus 45 ms for the copy, the frames that can arrive before the host's next
+// tick (`tickPeriod`, 0: none counted), and 3 more.
+int WarmupSlots(double smoothingDelayS, double period, double tickPeriod, int maxSlots);
 
 class FixedDelayPicker : public FramePicker {
 public:

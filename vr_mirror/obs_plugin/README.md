@@ -282,7 +282,9 @@ overwrites its image about a frame later. It shows the copy a fixed delay later 
 delay ... ms", about 4–5 ms measured). The frame picker (`vr_mirror\core\pipeline\3_frame_picker\`,
 `FixedDelayPicker`) decides which copy each tick shows, the delay, and the copies needed.
 - Until it has measured that delay, the ring keeps the frames of 45 ms plus 3: 8 copies with a 90 Hz
-  headset, 10 at 144 Hz. It then keeps only the frames inside the delay plus 3, and at least 4.
+  headset, 10 at 144 Hz. It then keeps only the frames inside the delay plus 3, and at least 4. When
+  OBS records slower than the headset, it keeps a few frames more, so a frame it hasn't shown yet
+  isn't overwritten before OBS's next tick.
 - From the OpenXR source each copy is the game's own size, or the size the canvas shows it (above).
   From the Pimax source each copy is the size of the game eye. A copy takes 4 bytes per pixel, so 4
   copies take half the memory of 8.
