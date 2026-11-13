@@ -33,6 +33,7 @@ The two sources show the same view. They differ in where the game's image comes 
 | observer | The debugging code in VR Mirror that numbers the stamp and writes the frame trace |
 | stamp | The frame number drawn as 15 small squares in the top-left corner of the view, when Debug is on |
 | frame trace | The CSV file Debug writes, with one row per drawn frame: its poses and timing |
+| frame ring | The store that keeps a copy of each game frame until OBS shows it. The OBS log names it this way |
 
 The G-meter comes from a separate plugin, Overlays (`overlays\README.md`). When both are installed,
 they share two things through memory that each opens on its own:
