@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // stage_replay --stage frame_picker: runs the frame picker (stage 3) the way the OBS plugin does,
 // over OBS frame traces (their ticks and frame arrivals) and synthetic frames (a 90 Hz headset with
-// OBS ticking at 50, 59.94, 60 and 144 fps, and a 144 Hz headset with OBS at 60 fps), with copies
+// OBS ticking at 50, 59.94, 60, 90 and 144 fps, and a 144 Hz headset with OBS at 60 fps), with copies
 // finishing after a seeded random time (now and then late) and a store that shrinks and grows as the
 // picker asks; prints the picks by kind, the delay it fixed, what the store held (the frames shown,
 // the frames still stored when due, the most entries holding a frame), and the picker's answers to
@@ -384,7 +384,7 @@ namespace stage_replay {
             }
         }
 
-        for (double hz : {50.0, 59.94, 60.0, 144.0}) {
+        for (double hz : {50.0, 59.94, 60.0, 90.0, 144.0}) {
             Run(Synthetic(90, hz, 30.0), 1, kind);
         }
 
