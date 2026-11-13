@@ -274,9 +274,35 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   at the median and the 99th percentile, over 615,148 and 520,199 ticks of two traces. 6 and 12
   ticks are off by more than 1 ms, all within a few frames of a new game session. Restarting the
   arrival timing at every pause over 1 s instead gave 1,129 and 1,462: the source doesn't.
-- **The tick plan (`TickPlanPicker`) knows a frame won't be shown once the next one arrives.**
-  `stage_replay --stage frame_picker --frame_picker tick_plan`, synthetic frames, the store keeping
-  every frame:
+- **The fixed delay, run ahead, says which frames no tick will show, and picks as before.** Its rule
+  (`FixedDelayStep`) runs over the coming ticks on OBS's grid (`FixedDelayAhead`). Whether it shows
+  frame N depends only on the frames up to N+1, so `WillShow` answers once N+1 has arrived. The picks
+  are the same as before, tick for tick, on the synthetic runs and two OpenXR traces, and
+  `stage_replay --golden` is unchanged. Synthetic runs with exact ticks, and the traces (90 Hz,
+  OBS at 90 fps), the store keeping every frame:
+
+  | Input | Said no | Shown after all |
+  |---|---|---|
+  | 90 Hz, OBS 60 fps | 633 of 2,548 | 6 |
+  | 90 Hz, OBS 59.94 fps | 643 of 2,564 | 9 |
+  | 90 Hz, OBS 50 fps | 867 of 2,557 | 8 |
+  | 90 Hz, OBS 90 or 144 fps | 0 | 0 |
+  | 144 Hz, OBS 60 fps | 1,854 of 4,104 | 102 |
+  | Traces, Look-ahead | 82 of 605,005 and 27 of 511,036 | 1 and 0 |
+  | Traces, Instant | 87 of 605,005 and 21 of 511,036 | 3 and 1 |
+
+  - At 60 fps it says no to about 3 of every 4 frames never shown. The rest come during the
+    warm-ups (2 s after each start and smoothing switch), when it can't decide yet.
+  - With all copies at 1–3 ms, the 90 Hz synthetic runs give 0 or 1 frames shown after a no: those
+    are late copies, which the run ahead assumes ready.
+  - At 144 Hz with Instant the ring holds 4 frames (the delay's frames plus 3), but 2.4 frames
+    arrive between two ticks at 60 fps, so frames are written over before a tick can show them.
+  - The grid follows every tick. Kept from the first tick on, it drifted over a trace of an hour or
+    two (the period rounded, the clocks' correction), and frames due near the 4 ms slack's border
+    went the other way: 19 of 45 and 16 of 35 shown after a no with Look-ahead.
+- **Tried and dropped: the tick plan (`TickPlanPicker`), issue #27's second way.** Each tick showed
+  the newest frame due by its grid time, with no slack. `stage_replay --stage frame_picker
+  --frame_picker tick_plan`, synthetic frames, the store keeping every frame:
 
   | Headset, OBS | Said no | Shown after all | Repeats, tick plan / fixed delay | Jumps |
   |---|---|---|---|---|

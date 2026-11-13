@@ -92,7 +92,7 @@ namespace stage_replay {
                   shown_(in.frames.size(), false) {}
 
             // Frame `next` arrived: asks about the frame before it.
-            void Ask(const FramePicker& picker, size_t next) {
+            void Ask(FramePicker& picker, size_t next) {
                 if (next == 0) {
                     return;
                 }

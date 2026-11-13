@@ -116,7 +116,7 @@ check) applies, with any stage replaced by its flag, named after the config's fi
 |---|---|
 | `--arrival_timing` | `grid`, `reported` |
 | `--drawn_pose` | `slot_check`, `arrival_slot`, `cockpit`, `reported` |
-| `--frame_picker` | `fixed_delay`, `newest_frame`, `held_frame`, `tick_plan` |
+| `--frame_picker` | `fixed_delay`, `newest_frame`, `held_frame` |
 | `--smoothing` | `instant`, `lookahead` |
 | `--warp` | `rotation` |
 | `--observer` | `none`, `stamp_trace` |

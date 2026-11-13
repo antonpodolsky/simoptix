@@ -9,7 +9,7 @@ int WarmupSlots(double smoothingDelayS, double period, int maxSlots) {
     return std::clamp(int(std::ceil((0.045 + smoothingDelayS) / period)) + 3, 4, maxSlots);
 }
 
-void FixedDelayPicker::Restart(double smoothingDelayS, double period, double /*tickPeriod*/, int maxSlots) {
+void FixedDelayPicker::Restart(double smoothingDelayS, double period, double tickPeriod, int maxSlots) {
     smoothingDelay_ = smoothingDelayS;
     maxSlots_ = std::min(maxSlots, kMaxOrder);
     copyDelay_ = warmStart_ = 0;
@@ -17,8 +17,25 @@ void FixedDelayPicker::Restart(double smoothingDelayS, double period, double /*t
     delays_.reserve(32768);  // 2 s of warm-up at up to 144 ticks/s over up to ~110 stored frames
     lastShown_ = 0;
     lastSlot_ = -1;
+    lastTick_ = 0;
     slots_ = WarmupSlots(smoothingDelayS, period, maxSlots_);
     fixedPending_ = false;
+    tickPeriod_ = tickPeriod;
+    ahead_.Reset();
+}
+
+bool FixedDelayPicker::WillShow(const StoredFrame& frame, const StoredFrame& next) {
+    ahead_.Add(frame.serial, frame.smoothTime);
+
+    if (copyDelay_ == 0 || tickPeriod_ <= 0 || lastTick_ == 0) {
+        return true;
+    }
+
+    if (!ahead_.Started() && !ahead_.Start(lastShown_, lastTick_, tickPeriod_, OutDelay())) {
+        return true;
+    }
+
+    return ahead_.WillShowNewest(next.smoothTime);
 }
 
 void FixedDelayPicker::Report(StatsReport& r) {
@@ -65,6 +82,8 @@ Pick FixedDelayPicker::Tick(double tick, double period, const StoredFrame* frame
         WarmUp(tick, period, frames, total);
     }
 
+    ahead_.Follow(tick);
+
     const double outDelay = (copyDelay_ > 0 ? copyDelay_ : 0.040) + smoothingDelay_;
 
     // Ready entries in game-frame order.
@@ -77,12 +96,10 @@ Pick FixedDelayPicker::Tick(double tick, double period, const StoredFrame* frame
 
     std::sort(order_, order_ + count, [&](int a, int b) { return frames[a].serial < frames[b].serial; });
 
-    // One game frame per tick, in order: advance to the next one unless it is clearly not due yet
-    // (the clocks slipped: show the current one again), catch up only when two are clearly overdue.
-    const double slack = 0.004;
     auto due = [&](int i) { return frames[i].smoothTime + outDelay; };
     int shown = -1;
     for (int k = 0; k < count; k++) {
+        due_[k] = due(order_[k]);
         if (frames[order_[k]].serial == lastShown_) {
             shown = k;
         }
@@ -93,13 +110,7 @@ Pick FixedDelayPicker::Tick(double tick, double period, const StoredFrame* frame
     int chosen = -1;  // entry
 
     if (shown >= 0) {
-        int pick = shown;
-        if (pick + 1 < count && due(order_[pick + 1]) <= tick + slack) {
-            pick++;
-        }
-        while (pick + 1 < count && due(order_[pick + 1]) <= tick - slack) {
-            pick++;
-        }
+        const int pick = FixedDelayStep(shown, due_, count, tick);
         p.kind = pick == shown ? PickKind::kRepeat : pick > shown + 1 ? PickKind::kJump : PickKind::kNext;
         chosen = order_[pick];
     } else {
@@ -127,6 +138,7 @@ Pick FixedDelayPicker::Tick(double tick, double period, const StoredFrame* frame
 
     lastShown_ = frames[chosen].serial;
     lastSlot_ = chosen;
+    lastTick_ = tick;
     p.index = chosen;
     p.due = due(chosen);
     return p;

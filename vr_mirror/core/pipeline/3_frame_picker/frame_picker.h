@@ -32,8 +32,9 @@ public:
     // learnt); a host resizes its store when it does.
     virtual int SlotsInUse() const = 0;
     // Whether any coming tick will show `frame`, asked once the frame after it (`next`) has arrived,
-    // before either is copied. A picker that can't tell says true.
-    virtual bool WillShow(const StoredFrame& /*frame*/, const StoredFrame& /*next*/) const { return true; }
+    // before either is copied: once for every frame, in arrival order. A picker that can't tell says
+    // true.
+    virtual bool WillShow(const StoredFrame& /*frame*/, const StoredFrame& /*next*/) { return true; }
     // Its numbers since the last Report, for the host's log.
     virtual void Report(StatsReport&) {}
 };

@@ -10,6 +10,13 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 13: the fixed delay runs ahead for `WillShow`, the tick plan picker is dropped.** LMU, OBS and
+Pimax Play were closed. All 38 runs passed, and all 19 comparisons with Instant. The pipeline's
+output is the same as before (`stage_replay --golden` byte for byte).
+- `replay_late_frame_same_slot` passed at both smoothings, with no frame from the wrong pose (#32).
+- `replay_queued_late_frames` 8.4 / 4.3% from the wrong pose, and `game_starts_late` 4.8 runtime
+  calls/s idle.
+
 **Run 12: the tick plan picker, and the frame pickers' `Restart` takes the output frame period.** LMU,
 OBS and Pimax Play were closed. 35 of 38 runs passed, and all 19 comparisons with Instant. The mirror
 app's pickers ignore the new period and keep every frame, and the pipeline's output is the same as
