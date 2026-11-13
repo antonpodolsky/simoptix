@@ -106,7 +106,7 @@ the same numbers.
 ### The whole pipeline: `--pipeline`
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --pipeline [--smoothing instant --drawn_pose cockpit ...] [--zoom 1.2] [--ticks 60] [--input NAME ...]
+vr_mirror\e2e\bin\stage_replay.exe --pipeline [--smoothing instant --drawn_pose cockpit ...] [--zoom 1.2] [--strength 1.5] [--ticks 60] [--input NAME ...]
 ```
 
 It runs the whole pipeline with any mix of stages. The settings' configuration (Look-ahead, the slot
@@ -121,7 +121,7 @@ check) applies, with any stage replaced by its flag, named after the config's fi
 | `--warp` | `rotation` |
 | `--observer` | `none`, `stamp_trace` |
 
-- `--zoom Z` sets the zoom.
+- `--zoom Z` sets the zoom, and `--strength S` the smoothing's strength (1 by default).
 - The run draws as the mirror app's window, or with `--ticks HZ` as the OBS plugin's ticks, with the
   frames picked by the frame picker.
 - It runs over the replays and motions. `--input NAME` picks some.

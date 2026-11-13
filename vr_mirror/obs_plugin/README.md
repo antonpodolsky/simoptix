@@ -94,11 +94,12 @@ its pose is exact and needs no slot check.
 
 ## Settings
 
-Both sources have the same four settings:
+Both sources have the same five settings:
 
 | Setting | What it does |
 |---|---|
 | **Smoothing** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). Look-ahead is the default |
+| **Strength** | A slider from 0.25 to 2, 1 by default: how strongly Instant and Look-ahead smooth. Higher is calmer, and the view follows the head less closely. Lower follows the head more closely ("Strength", below) |
 | **Zoom** | A slider from 1 to 3, 1.25 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
 | **Record races automatically** | OBS records each race by itself, from the start lights to 5 s after the car stops past the finish ("Recording races automatically", below). Off by default |
 | **Debug** | Stamps frame numbers on the view and writes a frame trace, for checking a recording frame by frame ("Debug: stamp and frame trace", below) |
@@ -116,7 +117,7 @@ core's own):
 - Each frame is warped from the pose the game drew it with.
 - The Pimax source runs the slot check while the game is behind ("When the game falls behind", below).
 - The OpenXR source takes the slot and the pose each frame reports.
-- Instant's filter has a 0.5 Hz cutoff, beta 2 and a 0.5° dead zone.
+- Instant's filter has a 0.5 Hz cutoff, beta 2 and a 0.5° dead zone, at Strength 1.
 
 ### Smoothing
 
@@ -132,6 +133,20 @@ core's own):
 On 4.3 h of real head poses, Look-ahead's view trails the head by 0.95° at most 99% of the time
 (Instant: 4.6°), and what tremor and tracking noise leave is under a tenth of a pixel. This was not
 checked in a recording.
+
+### Strength
+
+**Strength** sets how strongly the smoothing works. At 1, each smoothing has the tuning described here.
+- **Look-ahead** multiplies the time constants of its path by the strength. It still sees half a second
+  ahead at every strength.
+- **Instant** divides its filter's cutoff, and how fast the cutoff rises with the head's speed, by the
+  strength.
+
+The view trails the head more as the strength rises. On the e2e suite's racing motion at Zoom 1.25, with
+Look-ahead, it trails by 0.27° at most 99% of the time at 0.25, 1.68° at 1 and 4.4° at 2. Above 2,
+Look-ahead runs into the image's edges: at 3 it stopped the view at an edge on 2.8% of the frames of the
+same motion, and the view shook. Instant changes less, because its catch-up near the edges sets most of
+its lag. This was measured on recorded and made-up head motion, not checked in a recording.
 
 **The delay costs video memory,** because the source keeps a copy of every game frame within it. With
 the Pimax source that is about 1.1 GB at Render Quality 1.0, and about 1.7 GB at 1.25.

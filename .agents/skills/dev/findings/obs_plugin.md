@@ -286,3 +286,29 @@ graphics card.
     known. The harness scaled 5084×4168 test images into a 2560×2098 video at 0.2 ms per frame, 1.6
     levels of 255 off on average.
 - **Not measured:** the encoder's cost beside a running game since the change, and the demo in OBS.
+
+## Strength
+
+The Strength setting scales each smoothing's own tuning: Look-ahead's time constants are multiplied by
+it, Instant's cutoff and beta divided by it. Measured with `stage_replay --pipeline` at zoom 1.25, as the
+mirror app's window, with the build of the pull request that added it.
+
+- **At 1 nothing changed:** `stage_replay --golden` wrote the same 26 MB as the build before, byte for
+  byte, over all 52 runs.
+- **Look-ahead,** lag p99 and the view's jitter still, on the racing motion (`racing+heartbeat`) and the
+  edge test (`edge_test+heartbeat`, turns up to 315°/s):
+
+  | Strength | Racing: lag p99 | Racing: jitter still | Racing: edge stops | Edge test: edge stops |
+  |---|---|---|---|---|
+  | 0.25 | 0.27° | 0.0020° | 0% | 0% |
+  | 0.5 | 0.55° | 0.0007° | 0% | 0% |
+  | 1 | 1.68° | 0.0012° | 0% | 0% |
+  | 1.5 | 2.98° | 0.0012° | 0% | 0.6% |
+  | 2 | 4.44° | 0.0014° | 0% | 4.0% |
+  | 3 | 5.73° | 0.3250° | 2.8% | 12.7% |
+
+  Above 2 the path's time constant outgrows the half second it sees ahead, so it runs into the edges and
+  stops there, and the view shakes. The slider stops at 2.
+- **Instant** changes less: on the racing motion lag p99 3.03° at 0.25, 4.40° at 1 and 4.87° at 2. Its
+  catch-up near the edges, which the strength leaves alone, sets most of its lag.
+- **Not checked:** in a recording, or on the demo's recorded lap.

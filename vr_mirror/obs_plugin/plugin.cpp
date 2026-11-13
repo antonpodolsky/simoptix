@@ -99,10 +99,14 @@ namespace {
         return lapRecorded ? "A lap is recorded." : "No lap recorded yet.";
     }
 
-    // The source's core settings are the smoothing and the zoom; the drawn pose method is fixed here.
-    // 1920x1080 a little above native at Render Quality 1.0 (README.md, "Recording at the source's native
-    // resolution")
+    // The source's core settings are the smoothing, its strength and the zoom; the drawn pose method is
+    // fixed here. 1920x1080 a little above native at Render Quality 1.0 (README.md, "Recording at the
+    // source's native resolution")
     constexpr float kDefaultZoom = 1.25f;
+    // Strength: 1 is each smoothing's own tuning. Measured with stage_replay at zoom 1.25: at 2 Look-ahead
+    // still never stopped at an edge on the racing motion; at 3 it did on 2.8% of its frames, and its jitter
+    // rose from 0.001 to 0.33 deg, because it sees only half a second ahead (findings\obs_plugin.md).
+    constexpr float kMinStrength = 0.25f, kMaxStrength = 2.0f;
     constexpr int kDrawnPose = 2;  // the slot check plus the cockpit correction below 90 fps
 
     // Race auto-record is on while at least one VR Mirror source has it ticked. UI thread.
@@ -134,6 +138,12 @@ namespace {
             MirrorSettings::kSmoothingOff,
             MirrorSettings::kSmoothingLookahead
         );
+        st.strength = std::clamp(
+            static_cast<float>(obs_data_get_double(s, "smoothing_strength")),
+            kMinStrength,
+            kMaxStrength
+        );
+
         st.zoom = std::clamp(float(obs_data_get_double(s, "zoom")), 1.0f, 3.0f);
         st.drawnPose = Stabilizes(st) ? kDrawnPose : 0;  // off: no slot check, no thumbnails
         *debug = obs_data_get_bool(s, "debug");
@@ -150,6 +160,7 @@ namespace {
     void GetDefaults(obs_data_t* s) {
         Guarded("defaults", [&] {
             obs_data_set_default_int(s, "smoothing", MirrorSettings::kSmoothingLookahead);
+            obs_data_set_default_double(s, "smoothing_strength", 1.0);
             obs_data_set_default_double(s, "zoom", kDefaultZoom);
             obs_data_set_default_bool(s, "auto_record", false);
             obs_data_set_default_bool(s, "debug", false);
@@ -248,6 +259,22 @@ namespace {
             "Instant: no delay, for live streaming.\n"
             "Look-ahead: half a second behind the game, for recording.\n"
             "The G-meter and the sound follow the same delay."
+        );
+
+        obs_property_t* strength = obs_properties_add_float_slider(
+            p,
+            "smoothing_strength",
+            "Strength",
+            kMinStrength,
+            kMaxStrength,
+            0.05
+        );
+
+        obs_property_set_long_description(
+            strength,
+            "How strongly Instant and Look-ahead smooth. 1 is the tuned default.\n"
+            "Higher: calmer, the view follows the head less closely.\n"
+            "Lower: the view follows the head more closely."
         );
 
         obs_properties_add_float_slider(p, "zoom", "Zoom", 1.0, 3.0, 0.01);
