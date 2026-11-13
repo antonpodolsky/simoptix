@@ -243,7 +243,7 @@ namespace stage_replay {
 
                 const Pick pick = picker.Tick(tick, kPeriod, store->slots, FrameStore::kMaxSlots);
 
-                if (picker.SlotsInUse() != store->count) {
+                if (picker.SlotsInUse() != store->wantCount) {
                     store->Resize(picker.SlotsInUse());
                 }
 

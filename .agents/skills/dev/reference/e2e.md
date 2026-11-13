@@ -189,7 +189,8 @@ It runs the frame picker as the OBS plugin does: the fixed delay, unless `--fram
   way, a stress test, and on the exact grid, as OBS schedules them. The two runs of a pair have the
   same frames. The traces are in the data folder's late frames after drops (its trace folder).
 - **In the synthetic runs** the smoothing changes mid-run, copies finish after a seeded random 1–3 ms
-  (5% of them after 5–30 ms), and the store is resized as the picker asks.
+  (5% of them after 5–30 ms), and the store is resized as the picker asks, as the plugin's ring is:
+  at the next copy, keeping its frames when it grows.
 - **It prints** the picks by kind per run and the delay it fixed, how far each tick's moment trails the
   shown image's slot (median), and the largest jump of the moments apart from the ticks' own step
   (without a smoothing change).

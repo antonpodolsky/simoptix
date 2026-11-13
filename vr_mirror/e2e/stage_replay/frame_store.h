@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // FrameStore: the OBS plugin's store of copied frames (FrameRing) as far as the frame picker sees
 // it: a ring of entries, each new frame written into the next one and ready once its copy
-// finished, resized as the picker asks (shrinking frees the entries past the new size, growing
-// starts over), and whether it still holds a frame. For stage_replay's runs; knows nothing about
+// finished, resized as the picker asks, and whether it still holds a frame. As in FrameRing, a new
+// size applies at the next frame's copy: shrinking frees the entries past it, growing keeps every
+// frame and adds entries as they are first used. For stage_replay's runs; knows nothing about
 // textures.
 #pragma once
 
@@ -17,25 +18,13 @@ namespace stage_replay {
         StoredFrame pendingFrame[kMaxSlots];
         bool pending[kMaxSlots] = {};
         int count = kMaxSlots, next = 0;
+        int wantCount = kMaxSlots;  // Resize's, applied at the next Add
 
-        void Resize(int want) {
-            if (want < count) {
-                for (int i = want; i < count; i++) {
-                    slots[i] = {}, pending[i] = false;
-                }
-                count = want;
-                next %= count;
-            } else if (want > count) {
-                for (int i = 0; i < kMaxSlots; i++) {
-                    slots[i] = {}, pending[i] = false;
-                }
-                count = want;
-                next = 0;
-            }
-        }
+        void Resize(int want) { wantCount = want; }
 
         // A frame arrived; its copy is seen complete at `ready`.
         void Add(uint64_t serial, double arrival, double smoothTime, double slotTime, double ready) {
+            ApplySize();
             const int i = next;
             next = (next + 1) % count;
             slots[i].valid = false;  // being rewritten
@@ -73,6 +62,16 @@ namespace stage_replay {
             }
 
             return holding;
+        }
+
+    private:
+        void ApplySize() {
+            for (int i = wantCount; i < count; i++) {
+                slots[i] = {}, pending[i] = false;
+            }
+
+            count = wantCount;
+            next %= count;
         }
     };
 

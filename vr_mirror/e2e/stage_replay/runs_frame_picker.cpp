@@ -308,7 +308,7 @@ namespace stage_replay {
                     fixedTick = int(t);
                 }
 
-                if (picker->SlotsInUse() != store->count) {
+                if (picker->SlotsInUse() != store->wantCount) {
                     store->Resize(picker->SlotsInUse());
                 }
 

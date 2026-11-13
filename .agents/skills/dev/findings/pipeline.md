@@ -264,6 +264,11 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   frame over the shown one. The picker then starts again at the newest due frame left, which can be
   older: 1 frame back when the copy delay was fixed with Instant (90 Hz, OBS at 144 fps), 4 frames
   back right after a switch to Instant (144 Hz, OBS at 60 fps). Not checked in a recording.
+- **`stage_replay`'s store emptied itself when it grew,** where the plugin's ring keeps its frames,
+  and it took a new size at once, where the ring takes it at the next copy. Now it does as the ring
+  does. At the switch back to Look-ahead the frames already held can then be shown: 3 to 7 fewer
+  ticks with nothing to show per synthetic run, and the other counts move by 4 or less. The numbers
+  in this file from before were measured with the old store. `stage_replay --golden` is unchanged.
 - **The tick plan (`TickPlanPicker`) knows a frame won't be shown once the next one arrives.**
   `stage_replay --stage frame_picker --frame_picker tick_plan`, synthetic frames, the store keeping
   every frame:
