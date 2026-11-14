@@ -13,7 +13,12 @@
 
 namespace {
 
-    constexpr double kDecodeAhead = 0.003;  // s before a frame's moment: decoding takes 1 to 4 ms
+    // A frame is handed over this long before its moment, as a game hands it to the headset ahead of the
+    // display slot it was drawn for (the OpenXR layer's frames: 17 ms, median of one session). The head pose
+    // at an output's own moment is then known, not extrapolated: handed over 1.4 ms ahead, Instant's view was
+    // pinned to the image's edge on nearly every frame.
+    constexpr double kLeadS = 0.017;
+    constexpr double kDecodeAhead = 0.003;  // s before that: decoding takes 1 to 4 ms
     constexpr double kFallenBehind = 0.25;  // s late: play on from now (the PC stalled)
 
     int64_t Counter() {
@@ -148,7 +153,7 @@ void DemoSource::Run() {
             fps_ = report.fps;
         }
 
-        const double due = lapStart_ + lap_.frames[next_].t - kDecodeAhead;
+        const double due = lapStart_ + lap_.frames[next_].t - kLeadS - kDecodeAhead;
         const double waitS = decoding_ ? 0.001 : std::clamp(due - Now(), 0.001, 0.05);
         WaitForSingleObject(stop_.Get(), static_cast<DWORD>(std::lround(waitS * 1000)));
     }
@@ -160,13 +165,13 @@ void DemoSource::Run() {
 bool DemoSource::Decode(double now) {
     double due = lapStart_ + lap_.frames[next_].t;
 
-    if (now < due - kDecodeAhead) {
+    if (now < due - kLeadS - kDecodeAhead) {
         return true;
     }
 
     if (now > due + kFallenBehind) {
-        lapStart_ += now - due;
-        due = now;
+        lapStart_ += now + kLeadS - due;
+        due = now + kLeadS;
     }
 
     const int texture = nextTexture_;

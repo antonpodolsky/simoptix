@@ -312,3 +312,19 @@ mirror app's window, with the build of the pull request that added it.
 - **Instant** changes less: on the racing motion lag p99 3.03° at 0.25, 4.40° at 1 and 4.87° at 2. Its
   catch-up near the edges, which the strength leaves alone, sets most of its lag.
 - **Not checked:** in a recording, or on the demo's recorded lap.
+
+## The demo in OBS
+
+What the recorded lap's playback did in OBS, with the build of the pull request that added the demo.
+
+- **Instant pinned to the raw image in the demo.** In a session playing the recorded lap, Instant's last
+  resort stopped the view at an edge on 415, 144, 109 and 514 of the 900 ticks in four 10 s stretches. Each
+  stop moved the view by the head's roll (4.1° in the stretch looked at), onto the image's own pose, so
+  only the horizon changed with the setting. Instant alone on the lap's own poses and eye stopped on none of
+  its frames. The difference was the timing: the demo handed each frame over 1.4 ms before its moment
+  (median), the OpenXR layer's frames in the same session 17.2 ms before. The head pose at each tick's own
+  moment then lay past the newest known pose and was extrapolated. The demo now hands each frame over 17 ms
+  ahead. Not checked in OBS since.
+- **The recorded lap's images and poses match.** Its images' frame-to-frame shift (a central patch, from
+  the demo's own decoder) correlated with the head's recorded yaw turns at 0.994 with no offset between
+  them, and fell off on both sides (0.979 one frame off, 0.785 ten frames off).

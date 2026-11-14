@@ -31,10 +31,12 @@ one name in `%LOCALAPPDATA%\simoptix\recorded_laps`, `recorded_lap_<date>_<time>
 
 ## How it plays
 
-- **A thread of its own** hands out each frame at its moment in the lap, on the performance counter. It
-  decodes the frame's image 3 ms before. It hands the frame over once the image is ready, with its
-  drawn slot (the moment) and its drawn pose, as the OpenXR source does. The head path between frames is
-  interpolated between their poses.
+- **A thread of its own** plays the lap on the performance counter. It hands each frame over 17 ms before
+  the frame's moment in the lap, as a game hands a frame to the headset ahead of the display slot it was
+  drawn for, so the head pose at an output's own moment is already known. It decodes the frame's image
+  3 ms before that, and hands the frame over once the image is ready, with its drawn slot (the moment) and
+  its drawn pose, as the OpenXR source does. The head path between frames is interpolated between their
+  poses.
 - **The images** are decoded on the graphics card by Windows' Media Foundation, on a device of its own.
   They go into 8 textures that the host's device opens through their shared handles. A host copies an
   image within a frame or two, and a texture is written again eight frames later.
