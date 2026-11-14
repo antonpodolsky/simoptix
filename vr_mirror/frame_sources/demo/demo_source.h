@@ -5,11 +5,12 @@
 // from a game: the pipeline stabilizes its frames with the host's settings, so changing Smoothing or Zoom
 // shows at once.
 //
-// A thread of its own hands out each frame at its moment in the lap, on the performance counter: it decodes
-// the frame's image (DemoVideo) a moment before, and hands the frame over once the image is ready, with the
-// moment it was drawn for and the head pose it was drawn with, exactly (FrameReport::kSlotAndPose, as the
-// OpenXR layer's frames). The head path between frames is interpolated between their poses. The lap ends
-// where it starts, on the line, so it plays on into its start with the clock running on.
+// A thread of its own hands out each frame a little before its moment in the lap, on the performance counter,
+// with the moment it was drawn for, the head pose it was drawn with, exactly (FrameReport::kSlotAndPose, as
+// the OpenXR layer's frames), and its index in the lap. The head path between frames is interpolated between
+// their poses. A frame's image is decoded when the host copies it (CopyImage), on the host's own device, by
+// its index in the lap: no texture passes between devices, and no image can belong to another frame. The lap
+// ends where it starts, on the line, so it plays on into its start with the clock running on.
 //
 // Source time is the performance counter, in seconds. Knows nothing about OBS, the game or video files
 // beyond DemoVideo.
@@ -43,7 +44,7 @@ public:
     bool Start(std::string* error) override;
     void Stop() override;
 
-    LUID AdapterLuid() const override { return video_.Adapter(); }
+    LUID AdapterLuid() const override { return adapter_; }
     EyeInfo Eye() const override;
     double Now() const override;
     double Period() const override { return period_.load(); }
@@ -81,18 +82,30 @@ public:
     uint64_t TakeStats(double seconds, void (*line)(const char*)) override;
 
 private:
-    // A frame being decoded, then handed out.
+    // A frame handed out: its record, and its index in the lap.
     struct Playing {
         GameFrame frame;
-        int texture = -1;
+        int index = -1;
+    };
+
+    // A frame decoded, waiting to be copied.
+    struct Decoded {
+        int index = -1;
+        Microsoft::WRL::ComPtr<IMFSample> sample;
     };
 
     static constexpr int kFinished = 16;
+    // Frames decoded after a frame before its image is copied: the decoder finishes writing a surface after
+    // it hands it out.
+    static constexpr int kAhead = 2;
+    static constexpr int kQueue = kAhead + 2;
 
     void Run();
-    bool Decode(double now);
-    void Publish(double now);
+    bool HandOut(double now);
     bool FindFinished(uint64_t serial, Playing* out);
+    bool OpenVideo(ID3D11Device* device);
+    bool Ready(int index);
+    void Forget();
 
     struct Recorded : PoseLookup {
         explicit Recorded(DemoSource* s) : source(s) {}
@@ -100,18 +113,17 @@ private:
         DemoSource* source;
     } recorded_{this};
 
-    // Set by Start, then read by the demo thread (and the lap's eye by any thread, under the lock).
+    // Set by Start, then read by the demo thread and the host's device thread (and the lap's eye by any
+    // thread, under the lock).
     RecordedLap lap_;
-    DemoVideo video_;
+    std::wstring videoPath_;
+    LUID adapter_ = {};
 
     // The demo thread's.
     std::unique_ptr<ArrivalTiming> arrival_;
     ArrivalStats stats_;
     double lapStart_ = 0;  // when the lap now playing started (source seconds)
-    size_t next_ = 0;      // the lap's next frame to decode
-    int nextTexture_ = 0;
-    bool decoding_ = false;
-    Playing decoded_;  // decoding_: the frame whose image is being copied
+    size_t next_ = 0;      // the lap's next frame to hand out
     uint64_t serial_ = 0;
     std::atomic<uint64_t> wakeups_{0}, laps_{0};
     uint64_t statArrived_ = 0;  // the hosts' control thread: FramesArrived at the last TakeStats
@@ -122,11 +134,14 @@ private:
     EyeInfo eye_;
     Playing finished_[kFinished];  // a ring of the newest, oldest at finishedHead_
     int finishedHead_ = 0, finishedCount_ = 0;
-    std::atomic<uint64_t> textureSerial_[DemoVideo::kTextures] = {};  // the frame each texture holds
 
-    // The host's device thread: the textures opened on its device.
-    ID3D11Device* hostDevice_ = nullptr;  // not held
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> hostTextures_[DemoVideo::kTextures];
+    // The host's device thread: the video, decoded on its device, and the frames decoded and not yet copied,
+    // in the lap's order.
+    DemoVideo video_;
+    ID3D11Device* failedDevice_ = nullptr;  // not held: the video can't be decoded on it (logged once)
+    Decoded queue_[kQueue];
+    int queued_ = 0;
+    int decodeNext_ = 0;  // the lap index of the frame the decoder hands out next
 
     std::atomic<double> period_{1.0 / 90};
     std::atomic<double> fps_{0};

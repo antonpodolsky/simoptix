@@ -35,18 +35,31 @@ bool FrameRing::Start(FrameSource* source) {
         }
     }
 
-    if (FAILED(D3D11CreateDevice(
+    // With video support: the demo decodes its images on this device (DemoSource). Without it if the adapter
+    // has none, for the game's sources.
+    bool made = false;
+
+    for (const UINT flags : {static_cast<UINT>(D3D11_CREATE_DEVICE_VIDEO_SUPPORT), 0u}) {
+        const HRESULT hr = D3D11CreateDevice(
             found.Get(),
             found ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,
             nullptr,
-            0,
+            flags,
             nullptr,
             0,
             D3D11_SDK_VERSION,
             &device_,
             nullptr,
             &context_
-        ))) {
+        );
+
+        if (SUCCEEDED(hr)) {
+            made = true;
+            break;
+        }
+    }
+
+    if (!made) {
         return false;
     }
 

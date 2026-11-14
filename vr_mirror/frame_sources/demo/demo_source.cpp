@@ -18,7 +18,6 @@ namespace {
     // at an output's own moment is then known, not extrapolated: handed over 1.4 ms ahead, Instant's view was
     // pinned to the image's edge on nearly every frame.
     constexpr double kLeadS = 0.017;
-    constexpr double kDecodeAhead = 0.003;  // s before that: decoding takes 1 to 4 ms
     constexpr double kFallenBehind = 0.25;  // s late: play on from now (the PC stalled)
 
     int64_t Counter() {
@@ -58,12 +57,14 @@ bool DemoSource::Start(std::string* error) {
 
     RecordedLap lap;
 
-    if (!ReadRecordedLap(stem, &lap, error) || !video_.Open(stem + L".mp4", lap.width, lap.height, error)) {
+    if (!ReadRecordedLap(stem, &lap, error) || !DemoVideo::Check(stem + L".mp4", error)) {
         *error = "demo: " + *error;
         return false;
     }
 
     lap_ = std::move(lap);
+    videoPath_ = stem + L".mp4";
+    adapter_ = DemoVideo::DefaultAdapter();
     period_ = lap_.period;
 
     {
@@ -73,16 +74,10 @@ bool DemoSource::Start(std::string* error) {
         finishedCount_ = finishedHead_ = 0;
     }
 
-    for (std::atomic<uint64_t>& s : textureSerial_) {
-        s = 0;
-    }
-
     arrival_->Reset();
     stats_.Reset();
     lapStart_ = Now() + 0.05 - lap_.frames.front().t;  // its first frame in 50 ms
     next_ = 0;
-    nextTexture_ = 0;
-    decoding_ = false;
 
     CoreLog(
         "demo: playing the newest recorded lap, %.1f s, %zu frames at %dx%d",
@@ -114,8 +109,6 @@ void DemoSource::Stop() {
     if (thread_.joinable()) {
         thread_.join();
     }
-
-    video_.Close();
 }
 
 EyeInfo DemoSource::Eye() const {
@@ -129,8 +122,7 @@ double DemoSource::Now() const {
 
 // ---- The demo thread. ----
 
-// Wakes a few milliseconds before each frame's moment to decode it, then every millisecond until its image
-// is ready, and otherwise sleeps.
+// Wakes when each frame is due to be handed out, and otherwise sleeps.
 void DemoSource::Run() {
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
     timeBeginPeriod(1);
@@ -139,12 +131,7 @@ void DemoSource::Run() {
         wakeups_++;
         const double now = Now();
 
-        if (decoding_ && video_.Done(decoded_.texture)) {
-            Publish(now);
-        }
-
-        if (!decoding_ && !Decode(now)) {
-            break;
+        while (HandOut(now)) {
         }
 
         const ArrivalStats::Report report = stats_.Tick(now);
@@ -153,89 +140,47 @@ void DemoSource::Run() {
             fps_ = report.fps;
         }
 
-        const double due = lapStart_ + lap_.frames[next_].t - kLeadS - kDecodeAhead;
-        const double waitS = decoding_ ? 0.001 : std::clamp(due - Now(), 0.001, 0.05);
+        const double due = lapStart_ + lap_.frames[next_].t - kLeadS;
+        const double waitS = std::clamp(due - Now(), 0.001, 0.05);
         WaitForSingleObject(stop_.Get(), static_cast<DWORD>(std::lround(waitS * 1000)));
     }
 
     timeEndPeriod(1);
 }
 
-// Decodes the lap's next frame once its moment is near. False if the video can't be decoded.
-bool DemoSource::Decode(double now) {
-    double due = lapStart_ + lap_.frames[next_].t;
+// Hands the lap's next frame to the hosts once it is due, kLeadS before its moment. True if it did.
+bool DemoSource::HandOut(double now) {
+    double moment = lapStart_ + lap_.frames[next_].t;
 
-    if (now < due - kLeadS - kDecodeAhead) {
-        return true;
+    if (now < moment - kLeadS) {
+        return false;
     }
 
-    if (now > due + kFallenBehind) {
-        lapStart_ += now + kLeadS - due;
-        due = now + kLeadS;
+    if (now > moment + kFallenBehind) {
+        lapStart_ += now + kLeadS - moment;
+        moment = now + kLeadS;
     }
 
-    const int texture = nextTexture_;
-    textureSerial_[texture] = 0;  // being written: no host copies it now
-    bool end = false;
-
-    if (!video_.DecodeNext(texture, &end)) {
-        if (!end) {
-            CoreLog("demo: the lap's video could not be decoded");
-            return false;
-        }
-
-        // The video ended before the poses: start the next lap.
-        next_ = lap_.frames.size() - 1;
-    } else {
-        const Quat pose = lap_.frames[next_].pose;
-
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            poses_.AddPose(due, pose);
-            poses_.AddPrediction(due, pose);  // what the frame for this moment was drawn with
-        }
-
-        decoded_ = {};
-        decoded_.frame.buffer = texture;
-        decoded_.frame.drawnSlot = due;
-        decoded_.texture = texture;
-        decoding_ = true;
-        nextTexture_ = (nextTexture_ + 1) % DemoVideo::kTextures;
-    }
-
-    if (++next_ == lap_.frames.size()) {
-        // The lap ends on the line it started from: the next one plays on from its start.
-        lapStart_ += lap_.length;
-        next_ = 0;
-        laps_++;
-
-        if (!video_.Rewind()) {
-            CoreLog("demo: the lap's video could not be played again from its start");
-            return false;
-        }
-    }
-
-    return true;
-}
-
-// Hands the decoded frame to the hosts: its image is ready.
-void DemoSource::Publish(double now) {
-    decoding_ = false;
+    const Quat pose = lap_.frames[next_].pose;
     const double period = period_.load();
-    const ArrivalResult a = arrival_->Add({now, 0, decoded_.frame.drawnSlot, period});
+    const ArrivalResult a = arrival_->Add({now, 0, moment, period});
 
-    GameFrame& f = decoded_.frame;
-    f.serial = ++serial_;
-    f.time = now;
-    f.smoothTime = a.smooth;
-    f.synced = true;
-    f.slotLead = a.slot - now;
-    f.slotTime = a.slot;
-    textureSerial_[decoded_.texture] = f.serial;
+    Playing p;
+    p.index = static_cast<int>(next_);
+    p.frame.buffer = 0;
+    p.frame.serial = ++serial_;
+    p.frame.time = now;
+    p.frame.smoothTime = a.smooth;
+    p.frame.synced = true;
+    p.frame.slotLead = a.slot - now;
+    p.frame.slotTime = a.slot;
+    p.frame.drawnSlot = moment;
 
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        finished_[(finishedHead_ + finishedCount_) % kFinished] = decoded_;
+        poses_.AddPose(moment, pose);
+        poses_.AddPrediction(moment, pose);  // what the frame for this moment was drawn with
+        finished_[(finishedHead_ + finishedCount_) % kFinished] = p;
 
         if (finishedCount_ < kFinished) {
             finishedCount_++;
@@ -248,6 +193,15 @@ void DemoSource::Publish(double now) {
     stats_.Frame();
     stats_.Removed(now - a.smooth);
     SetEvent(frameEvent_.Get());
+
+    if (++next_ == lap_.frames.size()) {
+        // The lap ends on the line it started from: the next one plays on from its start.
+        lapStart_ += lap_.length;
+        next_ = 0;
+        laps_++;
+    }
+
+    return true;
 }
 
 // ---- The hosts' side. ----
@@ -330,19 +284,86 @@ void DemoSource::PredictedHeadsBetween(const double* t, int n, Quat* out) {
     poses_.PredictionsBetween(t, n, 1.5 * period_.load(), out);
 }
 
-void DemoSource::OpenImages(ID3D11Device* device) {
-    if (device == hostDevice_ && hostTextures_[0]) {
-        return;
+// Opens the video on the host's device, once per device. False if it can't be decoded (logged once).
+bool DemoSource::OpenVideo(ID3D11Device* device) {
+    if (video_.IsOpen() && video_.Device() == device) {
+        return true;
     }
 
-    ReleaseImages();
-    hostDevice_ = device;
+    if (device == failedDevice_) {
+        return false;  // logged once
+    }
 
-    for (int i = 0; i < DemoVideo::kTextures; i++) {
-        if (const HANDLE shared = video_.Shared(i)) {
-            device->OpenSharedResource(shared, IID_PPV_ARGS(&hostTextures_[i]));
+    Forget();
+    std::string error;
+
+    if (!video_.Open(videoPath_, lap_.width, lap_.height, device, &error)) {
+        CoreLog("demo: %s", error.c_str());
+        failedDevice_ = device;
+        return false;
+    }
+
+    decodeNext_ = 0;
+    return true;
+}
+
+// Lets go of the frames decoded and not copied.
+void DemoSource::Forget() {
+    for (int i = 0; i < queued_; i++) {
+        queue_[i] = {};
+    }
+
+    queued_ = 0;
+}
+
+// Makes lap frame `index`'s image ready to copy: decoded, with kAhead frames decoded after it, and first in
+// the queue. Frames the host never asked for are decoded and dropped; an earlier index (the lap started
+// again) rewinds the video. False if the frame can't be decoded.
+bool DemoSource::Ready(int index) {
+    const int first = queued_ > 0 ? queue_[0].index : decodeNext_;
+
+    if (index < first) {
+        Forget();
+
+        if (!video_.Rewind()) {
+            CoreLog("demo: the lap's video could not be played again from its start");
+            return false;
         }
+
+        decodeNext_ = 0;
     }
+
+    while (queued_ > 0 && queue_[0].index < index) {
+        std::move(queue_ + 1, queue_ + queued_, queue_);
+        queue_[--queued_] = {};
+    }
+
+    const int last = std::min(index + kAhead, static_cast<int>(lap_.frames.size()) - 1);
+
+    while (decodeNext_ <= last) {
+        Microsoft::WRL::ComPtr<IMFSample> sample;
+        bool end = false;
+
+        if (!video_.Next(&sample, &end)) {
+            if (!end) {
+                CoreLog("demo: the lap's video could not be decoded");
+            }
+
+            break;
+        }
+
+        if (decodeNext_ >= index && queued_ < kQueue) {
+            queue_[queued_++] = {decodeNext_, std::move(sample)};
+        }
+
+        decodeNext_++;
+    }
+
+    return queued_ > 0 && queue_[0].index == index;
+}
+
+void DemoSource::OpenImages(ID3D11Device* device) {
+    OpenVideo(device);
 }
 
 bool DemoSource::CopyImage(
@@ -354,14 +375,7 @@ bool DemoSource::CopyImage(
 ) {
     Playing e;
 
-    if (!FindFinished(f.serial, &e) || textureSerial_[e.texture] != f.serial) {
-        return false;
-    }
-
-    OpenImages(device);
-    ID3D11Texture2D* image = hostTextures_[e.texture].Get();
-
-    if (!image) {
+    if (!FindFinished(f.serial, &e) || !OpenVideo(device) || !Ready(e.index)) {
         return false;
     }
 
@@ -371,22 +385,13 @@ bool DemoSource::CopyImage(
     shape.shared = shared;
     into->Fit(device, shape);
 
-    if (!into->Texture()) {
-        return false;
-    }
-
-    context->CopyResource(into->Texture(), image);
-
-    // Decoded over meanwhile (eight frames later): the copy may hold a later image.
-    return textureSerial_[e.texture] == f.serial;
+    return into->Texture() && video_.CopyInto(queue_[0].sample.Get(), context, into->Texture());
 }
 
 void DemoSource::ReleaseImages() {
-    for (Microsoft::WRL::ComPtr<ID3D11Texture2D>& t : hostTextures_) {
-        t.Reset();
-    }
-
-    hostDevice_ = nullptr;
+    Forget();
+    video_.Close();
+    failedDevice_ = nullptr;
 }
 
 uint64_t DemoSource::ThreadCycles() {

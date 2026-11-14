@@ -328,3 +328,14 @@ What the recorded lap's playback did in OBS, with the build of the pull request 
 - **The recorded lap's images and poses match.** Its images' frame-to-frame shift (a central patch, from
   the demo's own decoder) correlated with the head's recorded yaw turns at 0.994 with no offset between
   them, and fell off on both sides (0.979 one frame off, 0.785 ten frames off).
+- **The demo's images 17 frames away from their poses in OBS.** On Look-ahead at Strength 2, the picture
+  OBS drew looked like the raw headset view, the same as with Smoothing Off apart from the levelled
+  horizon. Measured from 12 s of OBS's preview captured off the screen, each frame matched to its trace row
+  by the stamp: a patch of the fixed cockpit moved on screen with the head's turns 16 to 17 ticks earlier
+  (correlation 0.73 to 0.78), and with the computed view only at 0.46 to 0.53. The view the pipeline
+  computed was 10 to 30 times calmer than the head, in that trace as in the game's. Every consecutive frame
+  showed a new image, so no image was repeated. The recorded lap pairs each image with its own pose
+  (correlation 0.994 to 0.997 at no offset), decoded back to back and at the demo's pace. Not checked after a
+  rewind. The demo then decoded on a device of its own into 8 textures, which the host's device opened and
+  copied from. Its images are now decoded on the host's own device, by frame number. Not checked in OBS
+  since.
