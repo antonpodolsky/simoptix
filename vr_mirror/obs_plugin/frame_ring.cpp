@@ -5,12 +5,22 @@
 #include <dxgi1_2.h>
 #include <timeapi.h>
 
+#include <cmath>
 #include <cstring>
 
 #include "shared/log.h"
 #include "shared/thread_cpu.h"
 
 using Microsoft::WRL::ComPtr;
+
+namespace {
+
+    // A frame as the forecast sees it: it is asked before any copy.
+    StoredFrame Stored(const GameFrame& f) {
+        return {true, f.serial, f.time, f.smoothTime, f.slotTime, 0, f.synced};
+    }
+
+}
 
 FrameRing::~FrameRing() {
     Stop();
@@ -66,6 +76,7 @@ bool FrameRing::Start(FrameSource* source) {
     }
     slotCount_ = wantSlots_;  // as the graphics thread asked before starting (SetSlotCount)
     next_ = 0;
+    hasPrevious_ = held_ = false;
 
     running_ = true;
     thread_ = std::thread([this] {
@@ -114,9 +125,26 @@ void FrameRing::Snapshot(SlotInfo out[kMaxSlots]) {
     std::copy(info_, info_ + kMaxSlots, out);
 }
 
-// Copies each new image as soon as it exists and otherwise sleeps: it wakes for a new game
-// frame (FrameSource::FrameEvent), Stop, or, while copies or thumbnails are still on the GPU,
-// every millisecond.
+void FrameRing::SetForecast(std::unique_ptr<ShowForecast> forecast, const TickRecord& record) {
+    std::lock_guard<std::mutex> lock(recordMutex_);
+    nextForecast_ = std::move(forecast);
+    hasNextForecast_ = true;
+    nextRecord_ = record;
+}
+
+void FrameRing::SetTickRecord(const TickRecord& record) {
+    std::unique_lock<std::mutex> lock(recordMutex_, std::try_to_lock);
+
+    if (!lock.owns_lock()) {
+        return;
+    }
+
+    nextRecord_ = record;
+}
+
+// Copies each new image as soon as it exists, or once the next one has, and otherwise sleeps: it
+// wakes for a new game frame (FrameSource::FrameEvent), Stop, when a held frame has waited two display
+// periods, or, while copies or thumbnails are still on the GPU, every millisecond.
 void FrameRing::Run() {
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
     timeBeginPeriod(1);  // 1 ms waits while GPU work is in flight
@@ -138,23 +166,10 @@ void FrameRing::Run() {
         GameFrame f;
         while (source_->NextFrame(lastSerial, &f)) {
             lastSerial = f.serial;
-
-            // Also the images the drawn pose looks at (a thumbnail, to tell if the game has
-            // frames queued).
-            const int slot = Copy(f);
-            const float whole[4] = {0, 0, 1, 1};
-            if (slot >= 0 && slots_[slot].View()) {
-                feed_.Submit(
-                    context_.Get(),
-                    slots_[slot].View(),
-                    whole,
-                    f,
-                    source_->RecordedPredictions(),
-                    source_->Eye(),
-                    source_->Period()
-                );
-            }
+            Arrived(f);
         }
+
+        CopyHeldIfLate();
 
         if (copied_) {
             context_->Flush();  // one submission for this pass's copies (and thumbnails)
@@ -169,10 +184,96 @@ void FrameRing::Run() {
         if (source_->FrameEvent()) {
             wait[n++] = source_->FrameEvent();
         }
-        WaitForMultipleObjects(n, wait, FALSE, copying || feed_.Busy() ? 1 : 50);
+        WaitForMultipleObjects(n, wait, FALSE, WaitMs(copying || feed_.Busy()));
     }
 
     timeEndPeriod(1);
+}
+
+// A new frame: asks the forecast about the frame before it, which is copied now if it was held and a
+// tick will show it, and then copies this one, or holds it if the picker asks for the frames shown
+// only and the source keeps its image that long. Without the newest record (the graphics thread was
+// writing it) the forecast is still told of the frame, and a held frame is copied. Copy thread.
+void FrameRing::Arrived(const GameFrame& f) {
+    const bool fresh = TakeTickRecord();
+    const bool show = !forecast_ || !hasPrevious_
+                      || forecast_->WillShow(record_, Stored(previous_), Stored(f));
+
+    if (held_ && (show || !fresh)) {
+        CopyAndFeed(previous_);
+    } else if (held_) {
+        skipped_++;
+    }
+
+    held_ = forecast_ && record_.copiesShownOnly && source_->CanCopyAfterNextFrame();
+
+    if (!held_) {
+        CopyAndFeed(f);
+    }
+
+    previous_ = f;
+    hasPrevious_ = true;
+}
+
+// A held frame with no next one within two display periods (the game paused) is copied then: its
+// image may be needed, and the source still has it. Copy thread.
+void FrameRing::CopyHeldIfLate() {
+    if (held_ && source_->Now() >= previous_.time + 2 * source_->Period()) {
+        CopyAndFeed(previous_);
+        held_ = false;
+    }
+}
+
+// How long the copy thread sleeps when nothing wakes it: 1 ms while GPU work is in flight (`busy`),
+// until a held frame has waited two display periods, else 50 ms. Copy thread.
+DWORD FrameRing::WaitMs(bool busy) {
+    if (busy) {
+        return 1;
+    }
+
+    if (held_) {
+        const double leftS = previous_.time + 2 * source_->Period() - source_->Now();
+        return static_cast<DWORD>(std::clamp(std::ceil(leftS * 1000), 1.0, 50.0));
+    }
+
+    return 50;
+}
+
+// Takes the forecast and the record SetForecast and SetTickRecord left; false while the graphics
+// thread is writing them (record_ stays as it was). Never waits. Copy thread.
+bool FrameRing::TakeTickRecord() {
+    std::unique_lock<std::mutex> lock(recordMutex_, std::try_to_lock);
+
+    if (!lock.owns_lock()) {
+        return false;
+    }
+
+    if (hasNextForecast_) {
+        forecast_ = std::move(nextForecast_);
+        hasNextForecast_ = false;
+    }
+
+    record_ = nextRecord_;
+    return true;
+}
+
+// Copies frame `f`'s image, and hands it to the drawn pose with the images it looks at (a thumbnail,
+// to tell if the game has frames queued). Copy thread.
+void FrameRing::CopyAndFeed(const GameFrame& f) {
+    const int slot = Copy(f);
+    const float whole[4] = {0, 0, 1, 1};
+
+    if (slot >= 0 && slots_[slot].View()) {
+        feed_.Submit(
+            context_.Get(),
+            slots_[slot].View(),
+            whole,
+            f,
+            source_->RecordedPredictions(),
+            source_->Eye(),
+            source_->Period()
+        );
+    }
 }
 
 // Queues one copy of frame `f`'s image into the next slot (the slot's shared texture is made or

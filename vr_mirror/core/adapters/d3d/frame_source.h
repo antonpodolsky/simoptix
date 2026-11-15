@@ -75,6 +75,11 @@ public:
     // The host's device and context (the thread that owns the context).
     // Opens the source's images on `device` (again, if the source re-created them): call every 2 s.
     virtual void OpenImages(ID3D11Device* device) = 0;
+    // Whether a frame's image can still be copied once the next frame has arrived. Then a host can
+    // wait for the next frame to learn whether the frame will be shown before copying it. False by
+    // default: the image may be gone by then (Pimax's client mirror is one image the game overwrites
+    // about a frame later), so copy each frame as it arrives.
+    virtual bool CanCopyAfterNextFrame() const { return false; }
     // Copies frame `f`'s image into `into` (made or re-made for it), on `context`; false if it can't
     // (no image, or it is gone). `shared`: `into` is to be opened by another device (FrameCopy).
     virtual bool CopyImage(

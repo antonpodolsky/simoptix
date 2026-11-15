@@ -70,6 +70,9 @@ public:
 
     void SetImageNeed(float width, double maxBytes) override { images_.SetNeed(width, maxBytes); }
     void OpenImages(ID3D11Device* device) override;
+    // The layer's three textures take turns, so a frame's image is written over only when the third
+    // frame after it is copied, and its newest finished frames are kept (kFinished).
+    bool CanCopyAfterNextFrame() const override { return true; }
     bool CopyImage(
         ID3D11Device* device,
         ID3D11DeviceContext* context,

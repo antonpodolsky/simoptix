@@ -106,6 +106,19 @@ This file holds what was measured on the plugin, and what was tried.
   while driving.
 - **LMU restarts to take a new Render Quality.** It picks its render size at start.
 
+## Copying only the frames OBS shows
+
+- **The OpenXR source with Look-ahead holds each frame for the next and copies only those shown**
+  (`findings\pipeline.md`, "Copying only the frames shown"). Measured once in the local files test's
+  private OBS (60 fps) with the fake OpenXR game (90 Hz) and Look-ahead set for that run:
+  - The copy delay was fixed at 15.6 ms (copies ready at 13.6 ms, 95th percentile), where copying
+    each frame as it arrives fixes 4.0 ms there: the wait for the next frame.
+  - The ring went from 55 entries (466 MB) when the delay was fixed to 37 (313 MB) 0.6 s later.
+  - Over the 119 ticks after that, the frame shown moved on by one and by two in turn (59 each), the
+    90 Hz to 60 fps pattern: no repeat and no bigger jump.
+  - Not checked: a real headset and game, OBS's 10 s stats over a long run, and Pimax, which copies
+    every frame as before.
+
 ## Native canvases on a Pimax Dream Air in LMU
 
 The root `README.md` ("Headsets and games") suggests one canvas per source from these.

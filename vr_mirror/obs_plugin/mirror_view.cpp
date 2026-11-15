@@ -195,10 +195,15 @@ void MirrorView::RestartDelay() {
         frameSource_->Period(),
         ObsFramePeriod(),
         FrameRing::kMaxSlots,
-        false
+        frameSource_->CanCopyAfterNextFrame()
     );
     outDelay_ = picker.OutDelay();
     ring_.SetSlotCount(picker.SlotsInUse());
+    // Only a source whose images last until the next frame can skip a copy (Pimax's can't).
+    ring_.SetForecast(
+        frameSource_->CanCopyAfterNextFrame() ? picker.MakeForecast() : nullptr,
+        picker.Record()
+    );
     SetImageNeed();
 }
 
@@ -288,6 +293,7 @@ void MirrorView::Prepare(uint64_t tickNs) {
 
     FramePicker& picker = *pipeline_.Picker();
     const Pick pick = picker.Tick(tick, frameSource_->Period(), stored_, FrameRing::kMaxSlots);
+    ring_.SetTickRecord(picker.Record());
 
     if (picker.OutDelay() != outDelay_) {
         ApplyFixedDelay(picker);
@@ -478,14 +484,16 @@ void MirrorView::LogStats(uint64_t tickNs) {
             LOG_INFO,
             "[simoptix_vr_mirror] %d ticks in %.0f s: %d showed the same game frame again, %d skipped "
             "ahead, "
-            "%d held the last image (copy late), %d without a frame; game at %.1f fps",
+            "%d held the last image (copy late), %d without a frame; game at %.1f fps, %d frames not "
+            "copied (no tick shows them)",
             statTicks_,
             tick - statStart_,
             statRepeats_,
             statJumps_,
             statHeld_,
             statNoFrame_,
-            double(frames - statFrames_) / (tick - statStart_)
+            double(frames - statFrames_) / (tick - statStart_),
+            ring_.TakeSkippedCopies()
         );
 
         LogFootprint(tick - statStart_);

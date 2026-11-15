@@ -246,6 +246,8 @@ mirrors, so Render Quality is the only way to a larger game eye.
 
 Every 10 s while a source is shown, also while no game runs, the OBS log (Help → Log Files) shows:
 - how many output ticks showed a new game frame, a repeat, or held the last image
+- how many game frames weren't copied because no tick would show them (the OpenXR source with
+  Look-ahead, below)
 - the game's frame rate over the same 10 s. When OBS's frame rate is the headset's refresh rate, the
   repeats match the frames the game never rendered.
 - the footprint ("footprint: ..."):
@@ -286,6 +288,14 @@ delay ... ms", about 4–5 ms measured). The frame picker (`vr_mirror\core\pipel
   headset, 10 at 144 Hz. It then keeps only the frames inside the delay plus 3, and at least 4. When
   OBS records slower than the headset, it keeps a few frames more, so a frame it hasn't shown yet
   isn't overwritten before OBS's next tick.
+- **The OpenXR source with Look-ahead copies only the frames OBS will show.** The layer keeps each
+  image until the third frame after it, so the source can wait for the next frame, work out whether
+  any tick will show this one, and copy it or not. When OBS records slower than the headset, the
+  ring then holds only the frames shown: at most one per OBS tick. At 90 Hz with OBS at 60 fps that
+  is about 38 copies instead of 56. The wait makes the output run about one headset frame later (the
+  "output delay" line, which the sound follows). With Instant every frame is copied as it arrives:
+  its frames are due too soon after they arrive to be sure, and holding them would only delay them.
+  The Pimax source copies every frame as it arrives, because its image is gone by the next frame.
 - From the OpenXR source each copy is the game's own size, or the size the canvas shows it (above).
   From the Pimax source each copy is the size of the game eye. A copy takes 4 bytes per pixel, so 4
   copies take half the memory of 8.
