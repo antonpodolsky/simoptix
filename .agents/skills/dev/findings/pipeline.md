@@ -342,6 +342,44 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   - The grid follows every tick. Kept from the first tick on, it drifted over a trace of an hour or
     two (the period rounded, the clocks' correction), and frames due near the 4 ms slack's border
     went the other way: 19 of 45 and 16 of 35 shown after a no with Look-ahead.
+- **Copying only the frames shown, with Look-ahead, shows the same frames in less memory.** The
+  OpenXR source can hold each frame until the next one arrives, ask the forecast, and copy it or
+  not. The store then needs room for the frames shown only. `stage_replay --stage frame_picker` runs
+  each input three ways: copied as they arrive (today), each held for the next and all copied, and
+  held with only those shown copied. Synthetic runs with exact ticks, Look-ahead with an Instant
+  third in the middle:
+
+  | Headset, OBS | Store entries, all copied / only those shown | Copies made | Repeats with a newer frame due, held and all copied / only those shown |
+  |---|---|---|---|
+  | 90 Hz, 60 fps | 56 / 38 | 2,165 of 2,592 | 0 / 0 |
+  | 90 Hz, 59.94 fps | 55 / 37 | 2,183 of 2,606 | 0 / 0 |
+  | 90 Hz, 50 fps | 56 / 32 | 2,011 of 2,603 | 1 / 0 |
+  | 144 Hz, 60 fps | 86 / 37 | 2,925 of 4,179 | 0 / 0 |
+  | 90 Hz, 90 fps | 54 / 54 | all | 13 / 12 |
+  | 90 Hz, 144 fps | 53 / 53 | all | 16 / 13 |
+
+  - On an OpenXR trace of 766,094 frames (90 Hz, OBS faster than the headset), Look-ahead copied
+    766,041 and repeated exactly as when all were copied, with none of its repeats with a newer
+    frame due. At the headset's rate or faster nearly every frame is shown, so nothing is saved.
+  - **Instant copies every frame as it arrives.** Its frames are due 5–25 ms after they arrive, and a
+    copy running late (5% of the runs' copies take 5–30 ms) made the picker show a frame the forecast
+    had passed over: 6 to 33 extra repeats with a newer frame due per run. So the forecast passes
+    over a frame only 0.1 s after the next one's arrival (`kFixedDelayCopyDoneS`: two display periods
+    of holding and the 45 ms longest copy delay), which only Look-ahead's delay reaches, and the
+    picker asks for the frames to be held only then (`TickRecord::copiesShownOnly`). Holding them at
+    Instant would only have delayed them: 5.0 to 19.7 ms on the trace.
+  - Holding a frame for the next one adds about a display period to the copy delay: 9.7 to 21.5 ms
+    with Look-ahead on the trace.
+  - The frames copied before the forecast started are past only once they were due, so the store
+    takes its smaller size three of the longer periods (display or tick) after the delay is fixed.
+  - A smoothing switch can show a skipped frame's place as a repeat: the 50 fps run's one frame shown
+    after a no arrived just before its switch to Instant, under the old delay. The view jumps by the
+    smoothing's delay there anyway.
+  - With the ticks jittered by ±0.25 ms, more than real OBS (above), the 59.94 fps run repeated 7
+    times with a newer frame due, the others as with exact ticks.
+  - The extra repeats at 90 and 144 fps, both ways, come in the Instant third: its warm-up still
+    samples the held copies left from Look-ahead, and fixes a longer delay (15.5 against 12.6 ms),
+    whose phase against the exact ticks lets late copies show as repeats (#33).
 - **Tried and dropped: the tick plan (`TickPlanPicker`), issue #27's second way.** Each tick showed
   the newest frame due by its grid time, with no slack. `stage_replay --stage frame_picker
   --frame_picker tick_plan`, synthetic frames, the store keeping every frame:

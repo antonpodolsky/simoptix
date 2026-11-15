@@ -25,7 +25,10 @@ struct TickRecord {
     double tickPeriod = 0;      // the host's output frame period (0: no regular ticks)
     double outDelay = 0;        // as OutDelay
     bool delaySettled = false;  // the output delay stays as it is until a restart
-    uint32_t restarts = 0;      // changes at every Restart
+    // The host is to copy only the frames the forecast says a tick shows: it holds each frame until
+    // the next one arrives and asks. False: it copies each frame as it arrives.
+    bool copiesShownOnly = false;
+    uint32_t restarts = 0;  // changes at every Restart
 };
 
 // Whether any coming tick will show a frame, told from the frames as they arrive and the picker's
@@ -47,7 +50,11 @@ public:
     // SmoothingDelayS, plus any presentation delay the host adds), `period` the display's as the
     // frame source knows it now, `tickPeriod` the host's output frame period (OBS's video settings; 0
     // for a host without regular ticks), `maxSlots` the most store entries the host has.
-    virtual void Restart(double delayS, double period, double tickPeriod, int maxSlots) = 0;
+    // `copiesShownOnly`: the host can copy only the frames the forecast says a tick will show (its
+    // frame source keeps an image until the next frame has arrived); the record says whether it
+    // should, and the store then needs room for fewer.
+    virtual void
+    Restart(double delayS, double period, double tickPeriod, int maxSlots, bool copiesShownOnly) = 0;
     // One output tick at source time `tick`; `frames`: the host's store, `total` entries (the first
     // SlotsInUse are in use); `period` the display's.
     virtual Pick Tick(double tick, double period, const StoredFrame* frames, int total) = 0;

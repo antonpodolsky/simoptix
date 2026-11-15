@@ -198,12 +198,18 @@ It runs the frame picker as the OBS plugin does: the fixed delay, unless `--fram
 - **In the synthetic runs** the smoothing changes mid-run, copies finish after a seeded random 1–3 ms
   (5% of them after 5–30 ms), and the store is resized as the picker asks, as the plugin's ring is:
   at the next copy, keeping its frames when it grows.
+- **Each input runs three ways:** the frames copied as they arrive (the Pimax source), each held
+  until the next one arrives and then copied (a reference for what holding costs), and held with
+  only the frames the forecast says a tick shows copied, while the picker's record asks for that
+  (the OpenXR source). A held frame with no next one within two display periods is copied then. The
+  first line of a run names the second and third ways.
 - **It prints** the picks by kind per run and the delay it fixed, how far each tick's moment trails the
   shown image's slot (median), and the largest jump of the moments apart from the ticks' own step
   (without a smoothing change).
 - **Of the repeats, it counts those with a newer frame due** by the tick: a late copy, or the picker
   behind. The other repeats are the game's: after a dropped game frame, no new frame is due.
-- **A second line per run shows what the store held:** the frames stored, the share that a tick
+- **A second line per run shows what the store held** (the third way also counts the frames
+  arrived and copied, and the share not copied): the frames stored, the share that a tick
   showed, the share still in the store when they were due, and the most entries holding a frame at
   once. These measure how much video memory a picker needs.
 - **A third line holds the answers of the picker's forecast,** asked for each frame when the next one

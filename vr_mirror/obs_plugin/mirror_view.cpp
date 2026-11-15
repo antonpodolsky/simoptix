@@ -194,7 +194,8 @@ void MirrorView::RestartDelay() {
         SmoothingDelayS(config.smoothing),
         frameSource_->Period(),
         ObsFramePeriod(),
-        FrameRing::kMaxSlots
+        FrameRing::kMaxSlots,
+        false
     );
     outDelay_ = picker.OutDelay();
     ring_.SetSlotCount(picker.SlotsInUse());

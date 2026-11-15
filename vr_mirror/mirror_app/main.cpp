@@ -579,7 +579,7 @@ int wmain() {
     }
 
     const int held = loop.lookahead ? app.hold.Capacity() : 1;
-    app.pipeline.Picker()->Restart(holdDelay, app.source->Period(), 0, held);  // no regular ticks
+    app.pipeline.Picker()->Restart(holdDelay, app.source->Period(), 0, held, false);  // no regular ticks
     loop.stored.resize(size_t(app.hold.Capacity()) + 1);
 
     RunFrames(app, loop);

@@ -9,8 +9,10 @@
 // again. Once the delay is fixed, the same rule run ahead on the host's ticks says whether a frame
 // will be shown (its forecast, FixedDelayAhead, fed with Record). The store needs the frames within
 // the delay, plus the frames that can arrive before the next tick (the host's tick period can be
-// slower than the display's), plus 3 for a late copy. Logic only; its warm-up buffer is reserved at
-// Restart. Knows nothing about textures or OBS.
+// slower than the display's), plus 3 for a late copy. A host that copies only the frames the forecast
+// says a tick shows needs room only for those, at most one a tick, once the frames copied before the
+// forecast began are past. Logic only; its warm-up buffer is reserved at Restart. Knows nothing about
+// textures or OBS.
 #pragma once
 
 #include <cstdint>
@@ -26,7 +28,13 @@ int WarmupSlots(double smoothingDelayS, double period, double tickPeriod, int ma
 
 class FixedDelayPicker : public FramePicker {
 public:
-    void Restart(double smoothingDelayS, double period, double tickPeriod, int maxSlots) override;
+    void Restart(
+        double smoothingDelayS,
+        double period,
+        double tickPeriod,
+        int maxSlots,
+        bool copiesShownOnly
+    ) override;
     Pick Tick(double tick, double period, const StoredFrame* frames, int total) override;
     double OutDelay() const override { return (copyDelay_ > 0 ? copyDelay_ : 0.040) + smoothingDelay_; }
     int SlotsInUse() const override { return slots_; }
@@ -55,6 +63,8 @@ private:
     double fixedP95_ = 0;
     double tickPeriod_ = 0;  // the host's (0: no regular ticks, nothing run ahead)
     uint32_t restarts_ = 0;
-    int order_[kMaxOrder] = {};   // scratch: entries in use, in frame order
-    double due_[kMaxOrder] = {};  // scratch: ...and their due times
+    bool copiesShownOnly_ = false;  // the host copies only the frames the forecast says a tick shows
+    double shownOnlyFrom_ = 0;      // the tick from which the store holds only those (0: not set)
+    int order_[kMaxOrder] = {};     // scratch: entries in use, in frame order
+    double due_[kMaxOrder] = {};    // scratch: ...and their due times
 };

@@ -104,13 +104,27 @@ bool FixedDelayAhead::WillShowNewest(double nextSmoothTime) {
     }
 
     // Beyond them, the rule runs on with these frames until it reaches the newest frame or passes it:
-    // until then it looks at no frame after the next one.
+    // until then it looks at no frame after the next one. Passing it relies on the next frame's copy
+    // being ready, so a pass sooner than its copy is certainly done counts as a show.
     int64_t pick = pick_;
-    for (int64_t k = k_ + 1; pick < newest && k <= k_ + kMostTicksAhead; k++) {
-        pick = Step(pick, newest, nextDue, k);
+
+    if (pick == newest) {
+        return true;
     }
 
-    return pick == newest;
+    for (int64_t k = k_ + 1; k <= k_ + kMostTicksAhead; k++) {
+        pick = Step(pick, newest, nextDue, k);
+
+        if (pick == newest) {
+            return true;
+        }
+
+        if (pick > newest) {
+            return TickAt(k) < nextSmoothTime + kFixedDelayCopyDoneS;
+        }
+    }
+
+    return true;
 }
 
 int64_t FixedDelayAhead::Step(int64_t shown, int64_t last, double afterDue, int64_t k) {

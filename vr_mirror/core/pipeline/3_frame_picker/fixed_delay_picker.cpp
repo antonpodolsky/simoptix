@@ -15,6 +15,13 @@ namespace {
         return tickPeriod > period ? int(std::ceil(tickPeriod / period)) : 0;
     }
 
+    // The store's entries when the host copies only the frames the forecast says a tick shows: the
+    // frames shown within the output delay `outDelay` and one tick more (at most one a tick, and one
+    // a display period), and 3 more for a late copy or a frame copied but never shown.
+    int ShownOnlySlots(double outDelay, double period, double tickPeriod) {
+        return int(std::ceil((outDelay + tickPeriod) / std::max(period, tickPeriod))) + 3;
+    }
+
 }
 
 int WarmupSlots(double smoothingDelayS, double period, double tickPeriod, int maxSlots) {
@@ -25,7 +32,13 @@ int WarmupSlots(double smoothingDelayS, double period, double tickPeriod, int ma
     );
 }
 
-void FixedDelayPicker::Restart(double smoothingDelayS, double period, double tickPeriod, int maxSlots) {
+void FixedDelayPicker::Restart(
+    double smoothingDelayS,
+    double period,
+    double tickPeriod,
+    int maxSlots,
+    bool copiesShownOnly
+) {
     smoothingDelay_ = smoothingDelayS;
     maxSlots_ = std::min(maxSlots, kMaxOrder);
     copyDelay_ = warmStart_ = 0;
@@ -36,6 +49,10 @@ void FixedDelayPicker::Restart(double smoothingDelayS, double period, double tic
     lastTick_ = 0;
     tickPeriod_ = tickPeriod;
     slots_ = WarmupSlots(smoothingDelayS, period, tickPeriod, maxSlots_);
+    // Without ticks the forecast says yes, and with a delay shorter than a copy certainly takes
+    // (Instant) it says yes too: holding frames for it would only delay them.
+    copiesShownOnly_ = copiesShownOnly && tickPeriod > 0 && smoothingDelayS >= kFixedDelayCopyDoneS;
+    shownOnlyFrom_ = 0;
     fixedPending_ = false;
     restarts_++;
 }
@@ -51,6 +68,7 @@ TickRecord FixedDelayPicker::Record() const {
     r.tickPeriod = tickPeriod_;
     r.outDelay = OutDelay();
     r.delaySettled = copyDelay_ > 0;
+    r.copiesShownOnly = copiesShownOnly_;
     r.restarts = restarts_;
     return r;
 }
@@ -95,6 +113,14 @@ void FixedDelayPicker::WarmUp(double tick, double period, const StoredFrame* fra
             maxSlots_
         );
         delays_.clear();
+
+        // The forecast starts at the first frame after this tick (the host's copy thread sees the
+        // settled record then). The frames copied before it are all past once each was due and the
+        // next frame and tick came: the next frame arrives within about a display period, so three of
+        // the longer period leave room.
+        if (copiesShownOnly_) {
+            shownOnlyFrom_ = tick + OutDelay() + 3 * std::max(period, tickPeriod_);
+        }
     }
 }
 
@@ -103,6 +129,11 @@ Pick FixedDelayPicker::Tick(double tick, double period, const StoredFrame* frame
     // change would show a frame twice or skip one), long enough that the copy is nearly always done.
     if (copyDelay_ == 0) {
         WarmUp(tick, period, frames, total);
+    }
+
+    if (shownOnlyFrom_ > 0 && tick >= shownOnlyFrom_) {
+        slots_ = std::clamp(ShownOnlySlots(OutDelay(), period, tickPeriod_), 4, maxSlots_);
+        shownOnlyFrom_ = 0;
     }
 
     const double outDelay = (copyDelay_ > 0 ? copyDelay_ : 0.040) + smoothingDelay_;
