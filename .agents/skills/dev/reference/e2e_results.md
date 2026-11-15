@@ -10,6 +10,13 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 15: the frame picker's forecast and tick record, the store sized for the frames shown, and
+the warm-up counting each copy once (#33).** LMU, OBS and Pimax Play were closed. All 38 runs passed,
+and all 19 comparisons with Instant. `stage_replay --golden` is unchanged.
+- `replay_late_frame_same_slot` passed at both smoothings, with no frame from the wrong pose (#32).
+- `replay_queued_late_frames` 8.8 / 5.1% from the wrong pose (limits 12 / 7%), and
+  `game_starts_late` 4.8 runtime calls/s idle.
+
 **Run 14: the fixed delay's store counts the frames that can arrive before the host's next tick.**
 LMU, OBS and Pimax Play were closed. The pipeline's output is the same as before
 (`stage_replay --golden` byte for byte).
