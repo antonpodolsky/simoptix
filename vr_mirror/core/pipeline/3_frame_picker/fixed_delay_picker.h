@@ -7,16 +7,16 @@
 // clearly not due yet (4 ms of slack: the clocks slipped, show the current one again), catching up
 // only when two are clearly overdue (FixedDelayStep); when nothing due is ready, the last image
 // again. Once the delay is fixed, the same rule run ahead on the host's ticks says whether a frame
-// will be shown (WillShow, FixedDelayAhead). The store needs the frames within the delay, plus the
-// frames that can arrive before the next tick (the host's tick period can be slower than the
-// display's), plus 3 for a late copy. Logic only; its warm-up buffer is reserved at Restart. Knows
-// nothing about textures or OBS.
+// will be shown (its forecast, FixedDelayAhead, fed with Record). The store needs the frames within
+// the delay, plus the frames that can arrive before the next tick (the host's tick period can be
+// slower than the display's), plus 3 for a late copy. Logic only; its warm-up buffer is reserved at
+// Restart. Knows nothing about textures or OBS.
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
-#include "pipeline/3_frame_picker/fixed_delay_picker_ahead.h"
 #include "pipeline/3_frame_picker/frame_picker.h"
 
 // Store entries while the delay is being measured: the frames of a display `period` (s) inside
@@ -30,8 +30,8 @@ public:
     Pick Tick(double tick, double period, const StoredFrame* frames, int total) override;
     double OutDelay() const override { return (copyDelay_ > 0 ? copyDelay_ : 0.040) + smoothingDelay_; }
     int SlotsInUse() const override { return slots_; }
-    // Yes until the delay is fixed and a tick has shown a frame; then the rule run ahead decides.
-    bool WillShow(const StoredFrame& frame, const StoredFrame& next) override;
+    std::unique_ptr<ShowForecast> MakeForecast() const override;
+    TickRecord Record() const override;
     // Once, after the delay is fixed: "copy delay fixed", the copy delay chosen and the copy times'
     // 95th percentile it was chosen from.
     void Report(StatsReport& r) override;
@@ -54,7 +54,7 @@ private:
     bool fixedPending_ = false;
     double fixedP95_ = 0;
     double tickPeriod_ = 0;  // the host's (0: no regular ticks, nothing run ahead)
-    FixedDelayAhead ahead_;
+    uint32_t restarts_ = 0;
     int order_[kMaxOrder] = {};   // scratch: entries in use, in frame order
     double due_[kMaxOrder] = {};  // scratch: ...and their due times
 };

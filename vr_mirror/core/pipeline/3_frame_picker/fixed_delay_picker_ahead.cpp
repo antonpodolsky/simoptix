@@ -24,6 +24,27 @@ int FixedDelayStep(int shown, const double* due, int count, double tick) {
     return pick;
 }
 
+bool FixedDelayAhead::WillShow(const TickRecord& record, const StoredFrame& frame, const StoredFrame& next) {
+    if (record.restarts != restarts_) {
+        Reset();
+        restarts_ = record.restarts;
+    }
+
+    Add(frame.serial, frame.smoothTime);
+
+    if (!record.delaySettled || record.tickPeriod <= 0 || record.tick == 0) {
+        return true;
+    }
+
+    Follow(record.tick);
+
+    if (!started_ && !Start(record.shown, record.tick, record.tickPeriod, record.outDelay)) {
+        return true;
+    }
+
+    return WillShowNewest(next.smoothTime);
+}
+
 void FixedDelayAhead::Reset() {
     count_ = 0;
     started_ = false;

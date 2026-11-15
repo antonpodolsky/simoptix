@@ -6,7 +6,7 @@
 // with jittered and with exact ticks), with copies finishing after a seeded random time (now and then
 // late) and a store that shrinks and grows as the picker asks; prints the picks by kind, the delay it
 // fixed, what the store held (the frames shown, the frames still stored when due, the most entries
-// holding a frame), and the picker's answers to WillShow against what was shown. Checked identical to
+// holding a frame), and the picker's forecast's answers against what was shown. Checked identical to
 // the plugin's picking before the stage (vr_mirror\e2e\README.md, "Stage replay"). Knows nothing
 // about textures or OBS.
 
@@ -80,9 +80,9 @@ namespace stage_replay {
             return shown + 1 < in.frames.size() && in.frames[shown + 1].smooth + outDelay <= tick;
         }
 
-        // The picker's answers to WillShow, asked for each frame once the next one has arrived, held
-        // against what the ticks then showed. A frame it said no tick shows, shown after all, is an
-        // error: a host that skips its copy would have nothing to show.
+        // The picker's forecast's answers, asked for each frame once the next one has arrived with the
+        // picker's newest record, held against what the ticks then showed. A frame it said no tick
+        // shows, shown after all, is an error: a host that skips its copy would have nothing to show.
         class WillShowCheck {
         public:
             WillShowCheck(const TraceInput& in, const std::unordered_map<uint64_t, size_t>& indexOf)
@@ -91,13 +91,19 @@ namespace stage_replay {
                   answer_(in.frames.size(), kNotAsked),
                   shown_(in.frames.size(), false) {}
 
-            // Frame `next` arrived: asks about the frame before it.
-            void Ask(FramePicker& picker, size_t next) {
+            // Frame `next` arrived: asks about the frame before it (no forecast: yes).
+            void Ask(ShowForecast* forecast, const TickRecord& record, size_t next) {
                 if (next == 0) {
                     return;
                 }
 
-                const bool yes = picker.WillShow(Stored(in_.frames[next - 1]), Stored(in_.frames[next]));
+                const bool yes = !forecast
+                                 || forecast->WillShow(
+                                     record,
+                                     Stored(in_.frames[next - 1]),
+                                     Stored(in_.frames[next])
+                                 );
+
                 answer_[next - 1] = yes ? kYes : kNo;
             }
 
@@ -391,6 +397,7 @@ namespace stage_replay {
             double outDelay = picker->OutDelay();  // as last seen: a change is the delay fixed
             const std::unordered_map<uint64_t, size_t> indexOf = IndexBySerial(in);
             WillShowCheck willShow(in, indexOf);
+            const std::unique_ptr<ShowForecast> forecast = picker->MakeForecast();
 
             uint32_t seed = 4242;
             auto next = [&] {
@@ -422,7 +429,7 @@ namespace stage_replay {
                     const double copy = next() < 0.05 ? 0.005 + 0.025 * next() : 0.001 + 0.002 * next();
                     const TraceFrame& f = in.frames[frame];
                     store->Add(f.serial, f.arrival, f.smooth, f.slot, f.arrival + copy);
-                    willShow.Ask(*picker, frame);
+                    willShow.Ask(forecast.get(), picker->Record(), frame);
                 }
 
                 store->Finish(tick);

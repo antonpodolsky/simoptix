@@ -4,13 +4,40 @@
 // moment on the timeline that tick stands for. A host stores the frames it copied and asks the
 // picker every time it could draw (the OBS plugin on each of OBS's ticks, the mirror app whenever its
 // loop wakes); the picker also says how long the output runs behind the game (the delay the host's
-// sound follows), how many stored frames it needs, and whether a new frame will be shown at all.
-// Interface only; implementations beside it. Knows nothing about textures, OBS, PVR or threads:
-// the store's entries come in as plain data (StoredFrame), times as source seconds.
+// sound follows) and how many stored frames it needs. It can also hand out a forecast of its picks
+// (ShowForecast), which tells from the frames as they arrive whether any tick will show one, so a
+// host need not copy a frame no tick shows. Interface only; implementations beside it. Knows nothing
+// about textures, OBS, PVR or threads: the store's entries come in as plain data (StoredFrame), times
+// as source seconds.
 #pragma once
+
+#include <cstdint>
+#include <memory>
 
 #include "pipeline/pipeline_types.h"
 #include "pipeline/stage_stats.h"
+
+// Where the picker stands after its last tick: what its forecast needs. Plain data, so a host can hand
+// a copy of it to another thread.
+struct TickRecord {
+    uint64_t shown = 0;         // the frame the last tick showed (serial)
+    double tick = 0;            // that tick (source time; 0: no tick since the restart)
+    double tickPeriod = 0;      // the host's output frame period (0: no regular ticks)
+    double outDelay = 0;        // as OutDelay
+    bool delaySettled = false;  // the output delay stays as it is until a restart
+    uint32_t restarts = 0;      // changes at every Restart
+};
+
+// Whether any coming tick will show a frame, told from the frames as they arrive and the picker's
+// newest TickRecord. One per host, on the thread that sees the frames arrive. Logic only.
+class ShowForecast {
+public:
+    virtual ~ShowForecast() = default;
+    // Asked once the frame after `frame` (`next`) has arrived, before either is copied: once for every
+    // frame, in arrival order. `record`: the newest one the picker wrote. A forecast that can't tell
+    // says true.
+    virtual bool WillShow(const TickRecord& record, const StoredFrame& frame, const StoredFrame& next) = 0;
+};
 
 class FramePicker {
 public:
@@ -31,10 +58,11 @@ public:
     // Store entries in use. It can change at any tick (the delay fixed, the display's period
     // learnt); a host resizes its store when it does.
     virtual int SlotsInUse() const = 0;
-    // Whether any coming tick will show `frame`, asked once the frame after it (`next`) has arrived,
-    // before either is copied: once for every frame, in arrival order. A picker that can't tell says
-    // true.
-    virtual bool WillShow(const StoredFrame& /*frame*/, const StoredFrame& /*next*/) { return true; }
+    // A forecast of its picks (ShowForecast), fed with Record after every tick; null if it can't
+    // forecast them, and then every frame is copied.
+    virtual std::unique_ptr<ShowForecast> MakeForecast() const { return nullptr; }
+    // Where it stands after its last Tick.
+    virtual TickRecord Record() const { return {}; }
     // Its numbers since the last Report, for the host's log.
     virtual void Report(StatsReport&) {}
 };

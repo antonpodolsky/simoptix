@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "pipeline/3_frame_picker/fixed_delay_picker_ahead.h"
+
 namespace {
 
     // The frames of a display `period` that can arrive before the host's next tick, `tickPeriod`
@@ -35,21 +37,22 @@ void FixedDelayPicker::Restart(double smoothingDelayS, double period, double tic
     tickPeriod_ = tickPeriod;
     slots_ = WarmupSlots(smoothingDelayS, period, tickPeriod, maxSlots_);
     fixedPending_ = false;
-    ahead_.Reset();
+    restarts_++;
 }
 
-bool FixedDelayPicker::WillShow(const StoredFrame& frame, const StoredFrame& next) {
-    ahead_.Add(frame.serial, frame.smoothTime);
+std::unique_ptr<ShowForecast> FixedDelayPicker::MakeForecast() const {
+    return std::make_unique<FixedDelayAhead>();
+}
 
-    if (copyDelay_ == 0 || tickPeriod_ <= 0 || lastTick_ == 0) {
-        return true;
-    }
-
-    if (!ahead_.Started() && !ahead_.Start(lastShown_, lastTick_, tickPeriod_, OutDelay())) {
-        return true;
-    }
-
-    return ahead_.WillShowNewest(next.smoothTime);
+TickRecord FixedDelayPicker::Record() const {
+    TickRecord r;
+    r.shown = lastShown_;
+    r.tick = lastTick_;
+    r.tickPeriod = tickPeriod_;
+    r.outDelay = OutDelay();
+    r.delaySettled = copyDelay_ > 0;
+    r.restarts = restarts_;
+    return r;
 }
 
 void FixedDelayPicker::Report(StatsReport& r) {
@@ -101,8 +104,6 @@ Pick FixedDelayPicker::Tick(double tick, double period, const StoredFrame* frame
     if (copyDelay_ == 0) {
         WarmUp(tick, period, frames, total);
     }
-
-    ahead_.Follow(tick);
 
     const double outDelay = (copyDelay_ > 0 ? copyDelay_ : 0.040) + smoothingDelay_;
 

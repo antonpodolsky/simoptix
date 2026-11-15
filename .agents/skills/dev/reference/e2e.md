@@ -206,9 +206,9 @@ It runs the frame picker as the OBS plugin does: the fixed delay, unless `--fram
 - **A second line per run shows what the store held:** the frames stored, the share that a tick
   showed, the share still in the store when they were due, and the most entries holding a frame at
   once. These measure how much video memory a picker needs.
-- **A third line holds the picker's answers to `WillShow`,** asked for each frame when the next one
-  arrives: how many frames due by the end it said no tick will show, how many of those were shown
-  after all, and how many it said yes to that were never shown. A host that skips the copies of
+- **A third line holds the answers of the picker's forecast,** asked for each frame when the next one
+  arrives, with the picker's newest record: how many frames due by the end it said no tick will
+  show, how many of those were shown after all, and how many it said yes to that were never shown. A host that skips the copies of
   the frames it says no to would have nothing to show for the second count.
 - When the plugin's picking became this stage, it was checked identical tick by tick against a verbatim
   copy of the plugin's earlier code: the entry shown, the kind of pick, the output delay, the moment,
