@@ -50,11 +50,15 @@ private:
     void WarmUp(double tick, double period, const StoredFrame* frames, int total);
 
     static constexpr int kMaxOrder = 256;  // store entries ordered per tick (FrameRing has 128)
+    // The copies measured, by serial: over the frames a store can span (half a second at 400 Hz).
+    static constexpr int kMeasured = 512;
 
     double smoothingDelay_ = 0;
     int maxSlots_ = 128;
     double copyDelay_ = 0, warmStart_ = 0;  // the copy delay (0 until fixed), when the warm-up began
     std::vector<double> delays_;            // copy ready minus arrival, during warm-up
+    uint64_t firstSerial_ = 0;              // the first frame the warm-up measures
+    uint64_t measured_[kMeasured] = {};     // each copy measured, at its serial % kMeasured
     int slots_ = 128;
     uint64_t lastShown_ = 0;  // the frame shown at the previous tick
     int lastSlot_ = -1;       // ...and its store entry

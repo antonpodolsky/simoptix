@@ -22,6 +22,17 @@ namespace {
         return int(std::ceil((outDelay + tickPeriod) / std::max(period, tickPeriod))) + 3;
     }
 
+    // The newest frame among the store's `total` entries, copied or not (0: none).
+    uint64_t NewestSerial(const StoredFrame* frames, int total) {
+        uint64_t newest = 0;
+
+        for (int i = 0; i < total; i++) {
+            newest = std::max(newest, frames[i].serial);
+        }
+
+        return newest;
+    }
+
 }
 
 int WarmupSlots(double smoothingDelayS, double period, double tickPeriod, int maxSlots) {
@@ -43,7 +54,9 @@ void FixedDelayPicker::Restart(
     maxSlots_ = std::min(maxSlots, kMaxOrder);
     copyDelay_ = warmStart_ = 0;
     delays_.clear();
-    delays_.reserve(32768);  // 2 s of warm-up at up to 144 ticks/s over up to ~110 stored frames
+    delays_.reserve(1024);  // a value a copy: 2 s of warm-up at up to 400 Hz, and room to spare
+    firstSerial_ = 0;
+    std::fill(std::begin(measured_), std::end(measured_), 0);
     lastShown_ = 0;
     lastSlot_ = -1;
     lastTick_ = 0;
@@ -87,15 +100,25 @@ void FixedDelayPicker::WarmUp(double tick, double period, const StoredFrame* fra
     // The OpenXR source learns the display's period from the layer, which can come after Restart.
     slots_ = WarmupSlots(smoothingDelay_, period, tickPeriod_, maxSlots_);
 
+    // The copies made before the restart were made another way (held for the next frame, say), so
+    // they aren't measured.
+    if (warmStart_ == 0) {
+        warmStart_ = tick;
+        firstSerial_ = NewestSerial(frames, total) + 1;
+    }
+
+    // Each copy once: it stays in the store for many ticks, and counting it at each of them gave the
+    // ones kept longest too much weight (#33).
     for (int i = 0; i < total; i++) {
-        if (frames[i].valid) {
-            delays_.push_back(frames[i].ready - frames[i].arrival);
+        const StoredFrame& f = frames[i];
+        uint64_t& measured = measured_[f.serial % kMeasured];
+
+        if (f.valid && f.serial >= firstSerial_ && measured != f.serial) {
+            delays_.push_back(f.ready - f.arrival);
+            measured = f.serial;
         }
     }
 
-    if (warmStart_ == 0) {
-        warmStart_ = tick;
-    }
     if (tick - warmStart_ > 2.0 && delays_.size() > 50) {
         std::sort(delays_.begin(), delays_.end());
         const double p95 = delays_[size_t(delays_.size() * 0.95)];
