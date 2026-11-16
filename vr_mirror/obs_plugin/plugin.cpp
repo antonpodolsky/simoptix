@@ -158,7 +158,7 @@ namespace {
             smoothing,
             "Instant: no delay, for live streaming.\n"
             "Look-ahead: half a second behind the game, for recording.\n"
-            "The G-meter and the sound follow the same delay."
+            "The sound follows the same delay."
         );
 
         // What the source's store of copied frames takes in video memory with these settings (the
