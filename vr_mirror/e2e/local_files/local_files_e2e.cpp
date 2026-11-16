@@ -285,8 +285,10 @@ namespace {
         const fs::path scenario = c.dir / "fake_openxr.cfg";
         const std::wstring stopEvent = L"Local\\SimOptix.LocalFilesE2E.Stop."
                                        + std::to_wstring(GetCurrentProcessId());
+        // A quarter of the default image's sides: the test checks files, not speed, and on a machine
+        // with no graphics card the full-size image left the layer's copies pending (at about 4 fps).
         const std::string text = "log=" + (c.dir / "fake_openxr.log").string()
-                                 + "\nstop_event=" + Narrow(stopEvent) + "\n";
+                                 + "\nstop_event=" + Narrow(stopEvent) + "\nwidth=1271\nheight=1042\n";
         Touch(scenario, text.c_str());
         FakeGameProcess game;
 

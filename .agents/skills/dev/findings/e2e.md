@@ -621,6 +621,12 @@ Basic Render Driver for D3D11).
   load. Opening the OpenXR layer's textures (5084×4168, 254 MB) took 2 s, and the first frame came
   later than the 5 s OBS used to stay open, so the OpenXR source wrote no trace. The cases that expect a
   trace now wait for OBS's log to name one, 60 s at most.
+- **The full-size OpenXR image stalls the layer there.** The fake game drew its 5084×4168 eye at about
+  4 fps (190 frames in 48 s). After the first 3, every frame found all three of the layer's shared
+  textures still waiting for their copy, and was dropped ("90 frames, 3 copied, 42 (copy pending)",
+  then "27 frames, 0 copied, 27 (copy pending)"). VR Mirror saw no frame for 40 s, and the trace had 17
+  rows. The fake game flushes after each frame, so the copies were queued, not held back. The local
+  files test checks files, not speed, so it runs the fake game at 1271×1042, a quarter of each side.
 - **OBS 33.0.1 loaded no plugin from the test's folder** (`OBS_PLUGINS_PATH`): its log lists no
   SimOptix module, and "Source ID 'simoptix_pimax_mirror' not found". The test runs OBS 32.2.2. Whether
   OBS 33 loads the plugins from OBS's own plugin folder wasn't checked.
