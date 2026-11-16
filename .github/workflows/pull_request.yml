@@ -39,7 +39,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Verify the label and the Changelog section, as a release reads them
+      - name: Verify changelog
         run: python -I .agents\skills\dev\release.py --check-pr $env:PR
 
   description:
@@ -54,5 +54,5 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Verify the public text of the description
+      - name: Verify description
         run: python -I .agents\skills\public-text\check_public_text.py --pr $env:PR
