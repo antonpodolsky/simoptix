@@ -61,7 +61,7 @@ project settings set `context.fileName` to `AGENTS.md`.
 | For | Needs |
 |---|---|
 | Every build | 64-bit Windows. Visual Studio 2019 or later, or its Build Tools, with "Desktop development with C++". The builds find it with `shared\build\vs_env.bat`. Only 2019 has been tried |
-| Reading LMU's telemetry | LMU installed through Steam, or `LMU_SDK` set to the game's `Support\SharedMemoryInterface` folder. The build finds that folder in any Steam library. Without it, both plugins build, the build says so, and they read no game |
+| Reading LMU's telemetry | LMU installed through Steam, or `LMU_SDK` set to the game's `Support\SharedMemoryInterface` folder. The build finds that folder in any Steam library. Without it, both plugins build, the build says so, and they read no game. The fake LMU isn't built |
 | Trying the plugins | OBS Studio 32.2.2. For VR Mirror's Pimax source, a Pimax headset with Pimax Play running |
 | The layout check of `pvr_interface.h` | Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`, or `PVR_SDK` naming its `Include` folder. Nothing else needs it |
 | Signing the OpenXR layer | A code signing certificate of your own that Windows trusts, and `signtool`, which comes with the Visual Studio C++ workload. The repo builds the layer unsigned. Sign `bin\XR_APILAYER_SIMOPTIX_frame_source.dll` with SHA-256 and a timestamp, then install it with `install.ps1` |
@@ -73,7 +73,9 @@ project settings set `context.fileName` to `AGENTS.md`.
 
 Each part has a `build.bat`. Run it from a command prompt or PowerShell with its full path, for example
 `cmd /c "<repo>\vr_mirror\obs_plugin\build.bat"`. Build output stays beside the script (`obj\`, `bin\`)
-and is ignored by git. Builds must finish with no new warnings at `/W3`.
+and is ignored by git. Builds must finish with no new warnings at `/W3`. To build every part at once,
+and fail on any warning, run
+`powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1`.
 
 | Changed | Build | e2e tests at the end |
 |---|---|---|

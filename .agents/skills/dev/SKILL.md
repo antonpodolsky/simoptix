@@ -489,6 +489,16 @@ committed.
 - Run the build scripts through `cmd /c "<full path>\build.bat"` from PowerShell. A bare `build.bat`
   isn't found from another folder.
 - A build must finish with no new warnings.
+- `shared\build\build_all.ps1` builds every part in the table's order, the layer before setup, and
+  fails when a build fails or prints a warning of the compiler, the linker or the resource compiler.
+  The checks on GitHub run it (step 7). Each build's output goes to `shared\build\obj\logs\`.
+
+  ```
+  powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1
+  ```
+
+  It builds the layer and setup unsigned, so run it before signing, never after. Without LMU's
+  headers, the plugins build without LMU and the fake LMU isn't built. Each says so in its log.
 - Before committing code, run the formatters on the files the change touched, as the code-style skill
   says ("The formatters").
 
