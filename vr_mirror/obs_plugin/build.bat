@@ -13,7 +13,7 @@ rem delay the plugins share, the crash dump, the files kept in %%LOCALAPPDATA%%\
 rem telemetry listed by
 rem ..\..\shared\telemetry\sources.bat, which also finds LMU's headers: LMU_SDK; without them the plugin
 rem builds without LMU, and race auto-record reads no game).
-rem Its version comes from ..\..\shared\build\version.bat (VERSION at the repo's root, and git),
+rem Its version comes from ..\..\shared\build\version.bat (version.txt at the repo's root, and git),
 rem and goes into the DLL's version resource (version.rc).
 rem Writes bin\manifest.json from manifest.json with the version filled in, for OBS 32 and later.
 rem Optional argument "install": copies the DLL and manifest.json to OBS's per-machine plugin folder

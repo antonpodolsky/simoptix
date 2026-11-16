@@ -6,7 +6,7 @@ it, how a pull request feeds the changelog, and the steps of a release.
 
 ## What carries the version
 
-`VERSION` at the repo's root holds the version as major.minor.patch (SemVer), starting at 0.1.0.
+`version.txt` at the repo's root holds the version as major.minor.patch (SemVer), starting at 0.1.0.
 `shared\build\version.bat` reads it for every build that makes a shipped file.
 
 | Build | Version |
@@ -18,7 +18,7 @@ it, how a pull request feeds the changelog, and the steps of a release.
 | A copy of the repo without git | `0.2.0+unknown` |
 
 The build stops when the commit carries the release tag of another version, such as `v0.1.0` on a
-commit whose `VERSION` says 0.2.0.
+commit whose `version.txt` says 0.2.0.
 
 | Where | What it shows |
 |---|---|
@@ -86,7 +86,7 @@ It refuses and changes nothing when:
 - a user-facing pull request has no Changelog lines, more than three, or a line that isn't a bullet
 - an `internal` pull request has Changelog lines
 - no pull request has a change for users
-- `CHANGELOG.md` already has a section for the version in `VERSION`, or `VERSION` isn't after the
+- `CHANGELOG.md` already has a section for the version in `version.txt`, or `version.txt` isn't after the
   newest release tag
 
 It lists the commits that came from no pull request and leaves them out.
@@ -97,8 +97,9 @@ It lists the commits that came from no pull request and leaves them out.
 | `--since <tag>` | Start after another release, for notes that cover several releases |
 | `--date YYYY-MM-DD` | The release's date, today without it |
 | `--prs <file>` | Read the pull requests from a file that `gh pr list --state merged --json number,title,body,labels,mergeCommit,url` wrote |
-| `--notes` | Print the notes of the version in `VERSION` from `CHANGELOG.md` again, and change nothing |
+| `--notes` | Print the notes of the version in `version.txt` from `CHANGELOG.md` again, and change nothing |
 | `--notes-file <file>` | Also write the notes to a file, in UTF-8. PowerShell's `>` would write UTF-16 |
+| `--check-pr <number>` | Check one pull request's label and Changelog section as a release would, print the lines a release takes from it, and change nothing. The checks on GitHub run it on each pull request, each time its description or label changes |
 
 ## Making a release
 
@@ -107,9 +108,9 @@ Work in a worktree from `main` (`SKILL.md`, step 0), named `release_v<version>`.
 1. Check the pull requests since the last release:
    `python -I .agents\skills\dev\release.py --dry-run`. Fix each one it lists on GitHub: its label,
    or the Changelog section of its description. Then choose the bump ("When to bump").
-2. Write the new version into `VERSION`. Run `python -I .agents\skills\dev\release.py`, and read the
+2. Write the new version into `version.txt`. Run `python -I .agents\skills\dev\release.py`, and read the
    section it wrote.
-3. Commit `VERSION` and `CHANGELOG.md` as `Release: v<version>`, and open the pull request with the
+3. Commit `version.txt` and `CHANGELOG.md` as `Release: v<version>`, and open the pull request with the
    same title and the label `internal`. Merge it after its checks.
 4. Tag the merged commit on GitHub's `main`, annotated, and push the tag:
 
@@ -125,7 +126,7 @@ Work in a worktree from `main` (`SKILL.md`, step 0), named `release_v<version>`.
    git push origin v<version>
    ```
 
-   Check first that the newest commit of `main` on GitHub is the release's, with the new `VERSION`.
+   Check first that the newest commit of `main` on GitHub is the release's, with the new `version.txt`.
 5. Build the layer from the tag in a new worktree, so the version is exactly the release's
    (`git worktree add .claude/worktrees/build_v<version> v<version>`, then
    `vr_mirror\frame_sources\openxr\build.bat`). Each build prints `SimOptix <version>`, with no `+`.
@@ -160,6 +161,6 @@ Work in a worktree from `main` (`SKILL.md`, step 0), named `release_v<version>`.
    merged pull requests under the notes, without the `internal` ones.
 
 The first release, 0.1.0, is the exception to steps 1 and 2. The pull requests before it carry no
-labels, and `VERSION` already says 0.1.0. Label them first, or write its section of `CHANGELOG.md` by
+labels, and `version.txt` already says 0.1.0. Label them first, or write its section of `CHANGELOG.md` by
 hand in step 2, saying what SimOptix 0.1.0 is. A section written by hand has the script's form,
 with its link line at the end of the file, and `check_docs.py` checks it.

@@ -1,0 +1,212 @@
+# Copyright (C) 2026 Anton Podolsky
+# SPDX-License-Identifier: GPL-2.0-or-later
+# The checks GitHub runs on each pull request and each push to main. Each is a job, and a pull request
+# passes only when every one passes:
+#   Build            every part, with no warnings (shared\build\build_all.ps1)
+#   Format           clang-format and ruff
+#   Docs             check_docs.py
+#   Public text      check_public_text.py on every file and on the pull request's commits
+#   Pipeline output  stage_replay's golden file against vr_mirror\e2e\stage_replay\golden_expected.txt.
+#                    Any change fails it. A change that is meant commits a new golden_expected.txt
+#   Logs e2e         the local files test
+# Build builds once, and uploads what it built. Pipeline output and Logs e2e wait for it, and run those
+# files, so they test what Build built, and are skipped when it fails.
+# The e2e suite isn't here: on GitHub's runners, with no graphics card, the mirror app drew 9.5 to 28.5
+# fps against the 75 to 85 its scenarios ask for (findings\e2e.md). It runs by hand (dev skill, step 5).
+# pull_request.yml checks the description and the label. Nothing here signs, and no job has a secret.
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build:
+    name: Build
+    runs-on: windows-latest
+    steps:
+      # The whole history and the tags, for the version (shared\build\version.bat).
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Every build's output is in this step's log.
+      - name: Build
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1
+          exit $LASTEXITCODE
+
+      # At their paths in the repo, for the jobs that test them.
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: built
+          if-no-files-found: error
+          path: |
+            vr_mirror/obs_plugin/bin/
+            overlays/obs_plugin/bin/
+            vr_mirror/frame_sources/openxr/bin/
+            vr_mirror/e2e/bin/
+            setup/bin/
+
+  format:
+    name: Format
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install formatters
+        run: python -m pip install clang-format==23.1.5 ruff==0.17.4
+
+      - name: Verify C++ and HLSL
+        run: |
+          $files = git ls-files -- '*.cpp' '*.h' '*.hlsli' ':!third_party'
+          clang-format --dry-run --Werror $files
+          exit $LASTEXITCODE
+
+      - name: Verify Python
+        if: always()
+        run: ruff format --check
+
+  docs:
+    name: Docs
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Verify docs
+        run: python -I .agents\skills\docs\check_docs.py
+
+  public_text:
+    name: Public text
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Verify files
+        run: python -I .agents\skills\public-text\check_public_text.py --repo
+
+      # The description is verified by pull_request.yml, each time it changes.
+      - name: Verify commits
+        if: always() && github.event_name == 'pull_request'
+        env:
+          COMMITS: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+        run: python -I .agents\skills\public-text\check_public_text.py --commits $env:COMMITS
+
+  pipeline_output:
+    name: Pipeline output
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: built
+
+      - name: Write golden file
+        run: |
+          vr_mirror\e2e\bin\stage_replay.exe --golden "$env:RUNNER_TEMP\golden.txt"
+          exit $LASTEXITCODE
+
+      - name: Compare with expected
+        run: |
+          python -I vr_mirror\e2e\stage_replay\golden_compare.py --expected "$env:RUNNER_TEMP\golden.txt" --markdown $env:GITHUB_STEP_SUMMARY
+          exit $LASTEXITCODE
+
+      # What changed, to read, and the golden_expected.txt of this output, to commit if it is meant.
+      - name: Write expected
+        if: failure()
+        run: |
+          python -I vr_mirror\e2e\stage_replay\golden_compare.py --write-expected "$env:RUNNER_TEMP\golden.txt"
+          exit $LASTEXITCODE
+
+      - name: Upload golden file
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline_output
+          path: |
+            ${{ runner.temp }}/golden.txt
+            vr_mirror/e2e/stage_replay/golden_expected.txt
+
+  logs_e2e:
+    name: Logs e2e
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      # The local files test runs both plugins, the OpenXR layer and the e2e builds.
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: built
+
+      # The OBS the plugins are tested with (CONTRIBUTING.md), from OBS's own release, checked against
+      # its SHA-256. OBS 33.0.1 loaded no plugin from the test's folder (OBS_PLUGINS_PATH).
+      - name: Download OBS
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OBS_ZIP: OBS-Studio-32.2.2-Windows-x64.zip
+          OBS_SHA256: 4d6e40e3ab155f56b30de517380566a206d74b63cdf5ad49aa596924768f97e1
+        run: |
+          gh release download 32.2.2 -R obsproject/obs-studio -p $env:OBS_ZIP -D $env:RUNNER_TEMP
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $hash = (Get-FileHash "$env:RUNNER_TEMP\$env:OBS_ZIP" -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne $env:OBS_SHA256) { "SHA-256 $hash, expected $env:OBS_SHA256"; exit 1 }
+          Expand-Archive "$env:RUNNER_TEMP\$env:OBS_ZIP" "$env:RUNNER_TEMP\obs"
+          if (-not (Test-Path "$env:RUNNER_TEMP\obs\bin\64bit\obs64.exe")) { "no bin\64bit\obs64.exe in the zip"; exit 1 }
+
+      - name: Test
+        env:
+          OBS_DIR: ${{ runner.temp }}\obs
+        run: |
+          vr_mirror\e2e\bin\local_files_e2e.exe
+          exit $LASTEXITCODE
+
+      - name: Upload output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs_e2e_out
+          path: |
+            vr_mirror/e2e/out/
+            !vr_mirror/e2e/out/obs_portable/

@@ -15,4 +15,5 @@ checked by hand, with numbers. Say what wasn't checked. -->
 them in plain words for a VR sim racer, with no code names. Then add one label: added, changed, fixed,
 removed or security.
 A change only contributors notice (tests, refactors, contributors' docs, the skills, the build): leave
-this section empty and add the label internal. -->
+this section empty and add the label internal.
+Nothing goes after this section: a release reads every line below the heading as a Changelog line. -->

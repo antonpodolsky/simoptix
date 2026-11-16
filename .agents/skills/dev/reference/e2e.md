@@ -21,13 +21,15 @@ vr_mirror\e2e\bin\e2e_runner.exe
 ```
 
 It runs every scenario. Name some to run only those (`e2e_runner.exe stabilization black_borders`), or
-list them with `--list`.
+list them with `--list`. A name that matches no scenario stops the run with exit code 2.
 
 - Each scenario opens a small window (320×180) on top of everything, for about 15 s.
 - With every scenario at both smoothings, that is 38 runs. They took 558 s (about 9 minutes) in
   run 8 (`reference\e2e_results.md`).
 - Don't use the PC meanwhile. For consistent timing, close LMU, the mirror app, Pimax Play and other
   heavy apps first.
+- A run stopped midway (Ctrl+C, or its window closed) ends the mirror app and the fake game it started
+  too. The local files test ends its OBS and fake games the same way.
 - Run one test of the OpenXR layer at a time on the PC. The fake OpenXR games of two runs, from two
   worktrees say, write the same shared memory, and each breaks the other's frames
   (`reference\e2e_results.md`, run 7).
@@ -163,8 +165,32 @@ That is 52 runs and about 26 MB.
 
 **Refactor guard.** A change that must not change behaviour (moving code, splitting the pipeline into
 stages) must reproduce the build before it byte for byte. Write `golden_main.txt` with that build, then
-compare with `fc /b` or `cmp`. A difference is a behaviour change until shown otherwise. The e2e suite
-still decides at the end.
+compare the two golden files:
+
+```
+python -I vr_mirror\e2e\stage_replay\golden_compare.py out\stage_replay\golden_main.txt out\stage_replay\golden_new.txt
+```
+
+It names each run that changed, is new or is gone, and exits with 1 when the files differ. A difference
+is a behaviour change until shown otherwise. The e2e suite still decides at the end.
+
+**The expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the SHA-256 of each run
+of the golden file, as GitHub's runners build `stage_replay`. The Pipeline output check on GitHub
+compares with it:
+
+```
+python -I vr_mirror\e2e\stage_replay\golden_compare.py --expected <golden file>
+```
+
+A golden file built with another compiler can differ from it in the last bits of some values with
+nothing changed (`SKILL.md`, "Tests", "The pipeline's expected output"). Locally, compare with the
+build before instead, as above.
+
+When Pipeline output fails, its run uploads the golden file it wrote and the `golden_expected.txt` of
+that output (`--write-expected`). When the change is meant, commit that `golden_expected.txt` with it.
+To read what changed, compare a local build's golden file with the build before it's, as above. The
+uploaded golden file comes from another compiler than a local one, so a comparison of the two also
+shows the rounding.
 
 ### Stage 1 and stage 3 over OBS traces
 

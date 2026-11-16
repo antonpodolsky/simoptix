@@ -1,0 +1,6 @@
+# Copyright (C) 2026 Anton Podolsky
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Every text file is checked out with LF line endings, as the repo stores it, on Windows too, where
+# git's installer turns core.autocrlf on. clang-format's settings ask for LF (.clang-format), and its
+# check fails on every line of a file checked out with CRLF. Git tells binary files by their content.
+* text=auto eol=lf
