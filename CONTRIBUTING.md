@@ -189,6 +189,11 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   builds, the e2e results if `vr_mirror\core\` or the mirror app changed, and what you checked by hand.
   The description covers that change only. How the work went and details of your own PC stay out.
   Plans, next steps and work on other branches go in an issue.
+- GitHub checks each pull request (`.github\workflows\checks.yml`): every build with no warnings,
+  clang-format and ruff, the docs and public-text checks, and whether the stage replay's output changed.
+  It also runs the e2e suite and the local files test, whose results don't fail the pull request. Its
+  runners have no LMU, no Pimax SDK and no headset. So say in the pull request what you checked by
+  hand.
 - Give the pull request one label, which decides whether it goes into `CHANGELOG.md`:
   - If users notice the change, label it `added`, `changed`, `fixed`, `removed` or `security`. Then
     write one to three lines in the Changelog section of its description. Write them for a VR sim

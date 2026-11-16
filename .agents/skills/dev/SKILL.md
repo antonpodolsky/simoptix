@@ -745,6 +745,20 @@ Record what each start of the game showed in `findings\openxr.md`.
 - **Every change goes through a pull request on GitHub,** once the repo has its GitHub remote. Push the
   worktree's branch, open a pull request against `main`, and merge it on GitHub after its checks.
   Nothing is pushed to `main` directly.
+- **The checks on GitHub** (`.github\workflows\checks.yml`) run on each pull request and each push to
+  `main`, on GitHub's Windows runners. A pull request is merged when they pass. They are:
+  - every build, with no warnings (`shared\build\build_all.ps1`, step 3)
+  - clang-format and ruff, at the versions step 3 names
+  - `check_docs.py`, and `check_public_text.py` on every file, the pull request's description and its
+    commits. Those fail only on what the scripts fail on, and their lines to review show in the run
+  - `stage_replay --golden` against the build before, compared run by run. A change shows in the run's
+    summary and fails nothing, because many pull requests change the output on purpose
+  - the e2e suite and the local files test, on trial: their results show in the run, and fail nothing
+
+  GitHub's runners have no LMU, no Pimax SDK and no headset, and the checks never sign. So on GitHub
+  the plugins build without LMU, the fake LMU and the PVR layout check are skipped, and the layer and
+  setup are unsigned. Those, the checks in OBS and in the headset, and the e2e numbers compared with
+  `reference\e2e_results.md` are still done by hand, as steps 3 to 5 say.
 - **Write the pull request by the pull-requests skill** (`.agents\skills\pull-requests\SKILL.md`): its
   title, its description from the template, which covers this change only, and its one type label,
   which feeds the changelog. The release script refuses a release while a pull request since the last
