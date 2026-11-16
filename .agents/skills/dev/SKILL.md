@@ -767,6 +767,7 @@ Record what each start of the game showed in `findings\openxr.md`.
 
   | Check | What it runs |
   |---|---|
+  | Changes | Lists the files the pull request changes, and says whether Build runs |
   | Build | Every part, with no warnings (`shared\build\build_all.ps1`, step 3) |
   | Format | clang-format and ruff, at the versions step 3 names |
   | Docs | `check_docs.py` |
@@ -775,9 +776,15 @@ Record what each start of the game showed in `findings\openxr.md`.
   | Changelog | The type label and the Changelog section as a release reads them (`release.py --check-pr`) |
   | Description | `check_public_text.py` on the description |
 
-  `.github\workflows\checks.yml` holds the first five, which also run on each push to `main`. Build
+  `.github\workflows\checks.yml` holds the first six, which also run on each push to `main`. Build
   builds once and uploads what it built. Pipeline output waits for it and runs those files, so it
-  tests what Build built, and is skipped when it fails.
+  tests what Build built, and is skipped when Build fails or is skipped.
+
+  On a pull request that changes only Markdown files (`*.md`, anywhere in the repo), Build and Pipeline
+  output are skipped, because no build reads those files. Any other changed file runs both, the
+  workflows and the scripts in `.agents\skills\` included. Format, Docs and Public text run on every
+  pull request, and a push to `main` runs every check. GitHub counts a skipped check as passed.
+
   `.github\workflows\pull_request.yml` holds Changelog and Description, which also run each time the
   description or the label changes. The docs and public-text checks fail only on what their scripts
   fail on, and their lines to review show in the run.
