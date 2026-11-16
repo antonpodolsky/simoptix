@@ -113,7 +113,7 @@ namespace {
     // the properties without a source (`s` null).
     std::string VideoMemoryOf(Source* s, obs_data_t* settings) {
         if (!s || !settings) {
-            return "Video memory: shown once the game runs with this source shown.";
+            return "Actual VRAM usage: shown once the game runs with this source shown.";
         }
 
         bool debug = false;
@@ -143,10 +143,14 @@ namespace {
         );
 
         obs_property_list_add_int(smoothing, "Off", MirrorSettings::kSmoothingOff);
-        obs_property_list_add_int(smoothing, "Instant (no delay)", MirrorSettings::kSmoothingInstant);
         obs_property_list_add_int(
             smoothing,
-            "Look-ahead (0.5 s behind)",
+            "Instant (no delay, low VRAM usage)",
+            MirrorSettings::kSmoothingInstant
+        );
+        obs_property_list_add_int(
+            smoothing,
+            "Look-ahead (0.5s delay, higher VRAM usage)",
             MirrorSettings::kSmoothingLookahead
         );
 
