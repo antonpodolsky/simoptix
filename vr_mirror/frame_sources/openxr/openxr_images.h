@@ -23,6 +23,17 @@
 #include "openxr_share.h"
 #include "shared/unique_handle.h"
 
+// The size (pixels) a `width` x `height` image is stored at for a host that needs it `needWidth`
+// wide, at most `maxBytes` (OpenXrImages::SetNeed's).
+void OpenXrStoredSize(
+    int width,
+    int height,
+    float needWidth,
+    double maxBytes,
+    uint32_t* storedWidth,
+    uint32_t* storedHeight
+);
+
 class OpenXrImages {
 public:
     ~OpenXrImages() { Release(); }

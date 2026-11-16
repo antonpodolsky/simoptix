@@ -113,8 +113,11 @@ def Decode(video, grid, stamps_path):
 
 
 def HasStamps(stamps):
-    """Whether the recording carries the frame-number stamp: most frames step by one tick."""
-    return len(stamps) > 100 and np.mean(np.diff(stamps) == 1) > 0.5
+    """Whether the recording carries the frame-number stamp: nearly every frame steps forward by a few
+    ticks at most. Not by one: when OBS's encoder lags, it repeats frames (a step of 0) and drops
+    others (seen: 70% repeated at 4K and 120 fps), where noise read as a stamp steps anywhere."""
+    steps = np.diff(stamps.astype(np.int64))
+    return len(stamps) > 100 and np.mean((steps >= 0) & (steps <= 30)) > 0.9
 
 
 def main():
@@ -217,7 +220,9 @@ def main():
 
         if Need("traced.txt", "traced_frames.npz"):
             trace = trace or trace_ticks.Load(rec["trace"])
-            if int(trace["columns"]) >= 26:
+            if not len(trace["S"]):
+                Say("the trace holds no slot predictions (OpenXR): no per-jump causes")
+            elif int(trace["columns"]) >= 26:
                 Say("each jump against the trace")
                 Report(
                     F("traced.txt"),

@@ -157,3 +157,24 @@ void Close(ToolProcess& p) {
     CloseHandle(p.pi.hProcess);
     CloseHandle(p.pi.hThread);
 }
+
+bool EndChildrenWithThisProcess() {
+    // Never closed: this process is in the job too, so closing it would end this process with
+    // another exit code. Windows closes it after this process has exited, and then ends the rest.
+    const HANDLE job = CreateJobObjectW(nullptr, nullptr);
+
+    if (!job) {
+        return false;
+    }
+
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = {};
+    limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+
+    if (!SetInformationJobObject(job, JobObjectExtendedLimitInformation, &limits, sizeof(limits))
+        || !AssignProcessToJobObject(job, GetCurrentProcess())) {
+        CloseHandle(job);  // this process isn't in it yet
+        return false;
+    }
+
+    return true;
+}

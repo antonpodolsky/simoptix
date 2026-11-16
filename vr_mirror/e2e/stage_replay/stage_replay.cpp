@@ -20,7 +20,7 @@
 //     [--drawn_pose K]: the drawn pose alone on a replay's real thumbnails, its poses scored
 // against the true ones as each host asks for them (runs_drawn_pose.cpp; the findings call it lag_sim, its
 // old name).
-//   --stage frame_picker [--frame_picker K] [--trace TICKS PIMAX ...]: the frame picker alone
+//   --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]: the frame picker alone
 //     (runs_frame_picker.cpp).
 //   --stage arrival_timing [--arrival_timing K] [--trace TICKS PIMAX ...]: the arrival timing alone
 //     over the traces' frame arrivals (runs_arrival.cpp).
@@ -303,7 +303,7 @@ namespace {
             "[--input NAME ...]\n"
             "       stage_replay.exe --stage drawn_pose <replay .csv> [--show FIRST-LAST] [--dump FILE] "
             "[--delays A,B,...] [--drawn_pose K]\n"
-            "       stage_replay.exe --stage frame_picker [--trace TICKS PIMAX ...]\n"
+            "       stage_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]\n"
             "       stage_replay.exe --stage arrival_timing [--arrival_timing K] [--trace TICKS PIMAX ...]\n"
         );
     }

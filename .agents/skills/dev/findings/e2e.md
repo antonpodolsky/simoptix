@@ -601,9 +601,48 @@ session's timing from the trace.
   `vr_mirror\e2e\README.md`.
 - **Run the suite with LMU and the mirror app closed.** With LMU running, results varied up to 2–3×
   between runs (fast turns 0.16° against 0.30°), and wrongly suggested that beta 2 adds jitter.
+- **`replay_late_frame_same_slot` fails now and then, with the same build.** The replay's frame
+  arrives 7.4 ms late, right where the arrival timing's rounding could line it up with either slot
+  (its own header). LMU, OBS and Pimax Play closed, counting every run seen on this PC: 1 of 3 at
+  Instant failed (0.100%, limit 0), and 4 of 13 at Look-ahead (0.105%), on a build of `main` and on
+  one with #27's changes, which don't touch the arrival timing. The 4 Look-ahead failures came one
+  after another in one stretch. The other 9 Look-ahead runs, before and after it, all passed. That
+  fits the PC's own timing deciding this borderline case at the time, not a fault in either build.
+  The limit stays (dev skill, "Thresholds"): the replay still catches the bug it was made for.
 - **Windows' window capture of the mirror app delivers about 55 fps** (a 164 Hz monitor divided by 3),
   not the mirror app's 90. A 60 fps OBS recording through Window Capture repeats about 10% of frames
   during head motion. That is a capture limit, not the mirror app's.
+
+## The tests on GitHub's runners
+
+GitHub's `windows-latest` runner has 4 logical processors (an AMD EPYC 9V45) and no graphics card:
+Windows draws on its software renderer (the adapter is "Microsoft Hyper-V Video", the Microsoft
+Basic Render Driver for D3D11).
+
+- **Dropped: the e2e suite on GitHub's runners.** Windows' window capture worked (decodable captures
+  100%), but the mirror app drew 9.5 to 28.5 fps in the 15 scenarios that ran, against limits of 75 to
+  85 fps. It missed 79 to 84% of the game's frames, and every measure built on them failed with it
+  (image/pose mismatch 31.6° and 35.1° RMS against 1.5°). The limits measure the mirror app's speed and
+  aren't loosened, so the suite runs by hand on a PC with a graphics card. A GitHub runner with a
+  graphics card wasn't tried.
+- **Dropped for now: the local files test on GitHub's runners** (#41). Its `openxr_game` case passed
+  or failed by chance there: in three runs at 90 Hz and 1271×1042, the OpenXR source got 0 frames with
+  their image in 60 s once, and 2 frames 16 s in once. The layer lost 18 to 27 frames per 10 s, whose
+  copies hadn't finished when a later frame took their shared texture. The other cases passed in all
+  three runs.
+- **OBS and the plugins run there.** OBS 32.2.2 starts on the software renderer, and the plugins
+  load. Opening the OpenXR layer's textures (5084×4168, 254 MB) took 2 s, and the first frame came
+  later than the 5 s OBS used to stay open, so the OpenXR source wrote no trace. The cases that expect a
+  trace now wait for OBS's log to name one, 60 s at most.
+- **The full-size OpenXR image stalls the layer there.** The fake game drew its 5084×4168 eye at about
+  4 fps (190 frames in 48 s). After the first 3, every frame found all three of the layer's shared
+  textures still waiting for their copy, and was dropped ("90 frames, 3 copied, 42 (copy pending)",
+  then "27 frames, 0 copied, 27 (copy pending)"). VR Mirror saw no frame for 40 s, and the trace had 17
+  rows. The fake game flushes after each frame, so the copies were queued, not held back. The local
+  files test checks files, not speed, so it runs the fake game at 1271×1042, a quarter of each side.
+- **OBS 33.0.1 loaded no plugin from the test's folder** (`OBS_PLUGINS_PATH`): its log lists no
+  SimOptix module, and "Source ID 'simoptix_pimax_mirror' not found". The test runs OBS 32.2.2. Whether
+  OBS 33 loads the plugins from OBS's own plugin folder wasn't checked.
 
 ## The first mirror app
 

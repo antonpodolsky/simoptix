@@ -36,8 +36,10 @@ F_SERIAL, F_ARRIVAL, F_SMOOTH, F_SLOT, F_CURRENT = range(5)
 
 
 def SourceTrace(prefix):
-    """The frame source's half of the frame trace at `prefix`."""
-    return prefix + "_pimax.csv"
+    """The frame source's half of the frame trace at `prefix`: the Pimax source's, else the OpenXR
+    source's (its layer frames and arrivals: no head poses or slot predictions)."""
+    pimax = prefix + "_pimax.csv"
+    return pimax if os.path.exists(pimax) else prefix + "_openxr.csv"
 
 
 def Seconds(text):

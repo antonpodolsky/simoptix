@@ -4,11 +4,15 @@ rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds lmu_fake.exe: publishes a made-up lap (and with --race a race's start and finish) on LMU's
 rem telemetry interface, for checking the G-meter and race auto-record without the game. The lap is
 rem the G-meter's demo lap (..\..\..\demo_lap.cpp). Needs LMU's telemetry headers (..\..\..\sources.bat
-rem finds them, or LMU_SDK names their folder).
+rem finds them, or LMU_SDK names their folder). Without them, says so and stops, like the PVR layout
+rem check, so that a build of every part (..\..\..\..\build\build_all.ps1) goes on.
 setlocal
 cd /d "%~dp0"
 call ..\..\..\sources.bat
-if not defined LMU_SDK exit /b 1
+if not defined LMU_SDK (
+   echo lmu_fake.exe needs LMU's telemetry headers: not built.
+   exit /b 0
+)
 call "%~dp0..\..\..\..\build\vs_env.bat" || exit /b 1
 cd /d "%~dp0"
 if not exist obj mkdir obj

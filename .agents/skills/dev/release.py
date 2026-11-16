@@ -3,7 +3,7 @@
 r"""Writes the next release's section of CHANGELOG.md from the merged pull requests, and prints it as the
 GitHub Release's notes. reference\release.md, beside this script, has the whole release.
 
-The release is the version in VERSION. Its changes are the pull requests merged into the commits since
+The release is the version in version.txt. Its changes are the pull requests merged into the commits since
 the newest release tag (v<version>) before HEAD, on the first-parent line, so a patch branch gets only
 its own. Each pull request carries exactly one type label:
   added, changed, fixed, removed, security   a change users notice. The lines of its description's
@@ -18,6 +18,7 @@ Usage, from anywhere inside the repo:
   python -I .agents\skills\dev\release.py [--dry-run] [--since <tag>] [--date YYYY-MM-DD]
                                           [--prs <file>] [--notes-file <file>]
   python -I .agents\skills\dev\release.py --notes [--notes-file <file>]
+  python -I .agents\skills\dev\release.py --check-pr <number>
 
   --dry-run      print the section without changing CHANGELOG.md
   --since        the release to start after (default: the newest release tag before HEAD, or the
@@ -25,8 +26,11 @@ Usage, from anywhere inside the repo:
   --date         the release's date (default: today)
   --prs          read the pull requests from a file that `gh pr list --state merged --json
                  number,title,body,labels,mergeCommit,url` wrote, instead of asking GitHub
-  --notes        print the notes of the version in VERSION from CHANGELOG.md again, changing nothing
+  --notes        print the notes of the version in version.txt from CHANGELOG.md again, changing nothing
   --notes-file   also write the notes to this file, in UTF-8 (for `gh release create --notes-file`)
+  --check-pr     check one pull request's label and Changelog section as a release would, and print
+                 the lines a release takes from it, changing nothing. The checks on GitHub run it on
+                 each pull request
 
 Asking GitHub needs the GitHub CLI (gh), signed in.
 """
@@ -41,7 +45,7 @@ import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 CHANGELOG = os.path.join(ROOT, "CHANGELOG.md")
-VERSION_FILE = os.path.join(ROOT, "VERSION")
+VERSION_FILE = os.path.join(ROOT, "version.txt")
 
 # The headings of a release's section, in this order, by the label that puts a pull request there.
 TYPES = {
@@ -87,7 +91,7 @@ def read_version():
         version = f.read().strip()
 
     if not VERSION_FORM.match(version):
-        raise ReleaseError(f"VERSION must hold one version, three numbers like 0.1.0, not {version!r}.")
+        raise ReleaseError(f"version.txt must hold one version, three numbers like 0.1.0, not {version!r}.")
 
     return version
 
@@ -307,13 +311,15 @@ def make_release(args):
     changelog = read_changelog()
 
     if any(line.startswith(f"## [{version}]") for line in changelog.split("\n")):
-        raise ReleaseError(f"CHANGELOG.md already has a section for {version}. Bump VERSION first.")
+        raise ReleaseError(f"CHANGELOG.md already has a section for {version}. Bump version.txt first.")
 
     since = args.since or newest_release_tag()
 
     if since and since.startswith("v") and VERSION_FORM.match(since[1:]):
         if version_key(version) <= version_key(since[1:]):
-            raise ReleaseError(f"VERSION says {version}, which isn't after {since}. Bump VERSION first.")
+            raise ReleaseError(
+                f"version.txt says {version}, which isn't after {since}. Bump version.txt first."
+            )
 
     commits = first_parent_commits(since)
     prs, direct = sort_pull_requests(commits, merged_pull_requests(args.prs, since))
@@ -342,6 +348,21 @@ def make_release(args):
     print(f"## [{version}] - {args.date}\n\n{notes}", end="")
 
 
+def check_pull_request(number):
+    """Checks one pull request's label and Changelog section the way a release will."""
+    pr = json.loads(run(["gh", "pr", "view", str(number), "--json", "number,title,body,labels"]))
+    entries, problems = collect_entries([pr])
+
+    if problems:
+        raise ReleaseError("A release would refuse this pull request:\n  " + "\n  ".join(problems))
+
+    found = [entry for label in TYPES for entry in entries[label]]
+    print(f"#{number}: a release takes {len(found)} Changelog line(s) from it.")
+
+    for entry in found:
+        print(f"- {entry}")
+
+
 def print_notes(args):
     notes = section_notes(read_changelog(), read_version())
     write_notes(notes, args.notes_file)
@@ -356,13 +377,16 @@ def main():
     parser.add_argument("--prs")
     parser.add_argument("--notes", action="store_true")
     parser.add_argument("--notes-file")
+    parser.add_argument("--check-pr", type=int)
     args = parser.parse_args()
 
     # The notes go to a console that may not be UTF-8 (Windows' code page), and they hold × and –.
     sys.stdout.reconfigure(encoding="utf-8")
 
     try:
-        if args.notes:
+        if args.check_pr is not None:
+            check_pull_request(args.check_pr)
+        elif args.notes:
             print_notes(args)
         else:
             make_release(args)

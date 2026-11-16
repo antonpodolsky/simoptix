@@ -5,11 +5,17 @@
 // for the VR Mirror sources (MirrorView, mirror_view.h).
 //
 // A copy thread copies each new frame as soon as it can (the mirror is a single buffer the game
-// overwrites about a frame later; the OpenXR layer reuses its textures two frames later), marks a slot
-// ready once the GPU has finished the copy (an event query read with DONOTFLUSH: it never waits on the
-// GPU), and feeds each frame's images to the pipeline's drawn pose (DrawnPoseFeed), which the
+// overwrites about a frame later; the OpenXR layer's three textures take turns). When the frame
+// picker asks for the frames shown only, and the source keeps a frame's image until the next frame
+// has arrived, it copies at once only a frame the picker's forecast says a tick shows even with the
+// next one on time; it holds the others, asks the forecast once the next one comes, and copies one
+// only if a tick will show it (or after two display periods without a next one). It marks
+// a slot ready once the GPU has finished the copy (an event query read with DONOTFLUSH: it never waits
+// on the GPU), and feeds each frame's images to the pipeline's drawn pose (DrawnPoseFeed), which the
 // graphics thread then asks for the pose each frame was drawn with. OBS's graphics thread reads the
-// slots with Snapshot and opens their shared textures on OBS's device.
+// slots with Snapshot and opens their shared textures on OBS's device. Shrinking (SetSlotCount) keeps
+// the most recently copied entries, compacted to the new size, because the ring overwrites by index
+// and the newest entry's index can be anywhere once it has wrapped (ShrinkTo).
 //
 // Knows nothing about OBS (no libobs calls, no settings, no drawing), nor which frame source runs.
 #pragma once
@@ -29,6 +35,7 @@
 #include "adapters/d3d/drawn_pose_feed.h"
 #include "adapters/d3d/frame_copy.h"
 #include "adapters/d3d/frame_source.h"
+#include "pipeline/3_frame_picker/frame_picker.h"
 #include "shared/unique_handle.h"
 
 class FrameRing {
@@ -56,6 +63,16 @@ public:
         nextDrawnPose_ = std::move(drawnPose);
         hasNext_ = true;
     }
+
+    // The frame picker's forecast (MakeForecast), with the picker's record as it is now. The copy
+    // thread takes both over at its next pass, the forecast with no frames, and asks it about each
+    // frame. Any thread, any time; kept across Stop and Start. Null: every frame is copied.
+    void SetForecast(std::unique_ptr<ShowForecast> forecast, const TickRecord& record);
+    // Graphics thread, after each tick: the picker's newest record, for the forecast. Skipped while
+    // the copy thread is reading the last one (the next tick's comes soon).
+    void SetTickRecord(const TickRecord& record);
+    // Frames not copied since the last call: the forecast said no tick will show them.
+    int TakeSkippedCopies() { return skipped_.exchange(0); }
 
     // Creates the copy device on the game's adapter and starts the copy thread.
     bool Start(FrameSource* source);
@@ -90,7 +107,13 @@ public:
 
 private:
     void Run();
+    void Arrived(const GameFrame& f);
+    void CopyHeldIfLate();
+    DWORD WaitMs(bool busy);
+    bool TakeTickRecord();
+    void CopyAndFeed(const GameFrame& f);
     int Copy(const GameFrame& f);
+    void ShrinkTo(int want);
     void Look();
     void TakeNewDrawnPose();
     bool CheckCopies();
@@ -117,6 +140,18 @@ private:
     std::shared_ptr<DrawnPose> nextDrawnPose_;  // SetDrawnPose's, until the copy thread takes it
     bool hasNext_ = false;
     SlotInfo info_[kMaxSlots];
+
+    std::unique_ptr<ShowForecast> forecast_;  // copy thread
+    TickRecord record_;                       // copy thread: the newest record taken
+    GameFrame previous_;                      // copy thread: the frame that arrived last
+    bool hasPrevious_ = false;                // copy thread
+    bool held_ = false;                       // copy thread: previous_ is held, not copied yet
+    std::atomic<int> skipped_{0};             // TakeSkippedCopies
+    std::mutex recordMutex_;
+    std::unique_ptr<ShowForecast> nextForecast_;  // SetForecast's, until the copy thread takes it
+    bool hasNextForecast_ = false;                // recordMutex_
+    TickRecord nextRecord_;                       // the newest record set (recordMutex_)
+
     std::thread thread_;
     std::atomic<bool> running_{false};
 };

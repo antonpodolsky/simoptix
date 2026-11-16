@@ -106,6 +106,47 @@ This file holds what was measured on the plugin, and what was tried.
   while driving.
 - **LMU restarts to take a new Render Quality.** It picks its render size at start.
 
+## Copying only the frames OBS shows
+
+- **The OpenXR source with Look-ahead holds each frame for the next and copies only those shown**
+  (`findings\pipeline.md`, "Copying only the frames shown"). Measured once in the local files test's
+  private OBS (60 fps) with the fake OpenXR game (90 Hz) and Look-ahead set for that run:
+  - The copy delay was fixed at 15.6 ms (copies ready at 13.6 ms, 95th percentile), where copying
+    each frame as it arrives fixes 4.0 ms there: the wait for the next frame.
+  - The ring went from 55 entries (466 MB) when the delay was fixed to 37 (313 MB) 0.6 s later.
+  - Over the 119 ticks after that, the frame shown moved on by one and by two in turn (59 each), the
+    90 Hz to 60 fps pattern: no repeat and no bigger jump.
+  - Not checked: a real headset and game, OBS's 10 s stats over a long run, and Pimax, which copies
+    every frame as before.
+- **Tried and dropped: holding every frame for the next one.** In LMU, the OBS log's "images gone
+  before they were copied" counted 21 of VR Mirror's in about 31,000 frames, against 0 in 766,093
+  frames of the build before (which copied each frame as it arrived). The layer writes frame N's
+  texture again with frame N+3, as the game ends that frame, and VR Mirror sees a frame arrive only
+  once the layer's copy has finished on the GPU. So holding left a median of 11 ms (one display
+  period) before the image was written over, against 22 ms when copying at arrival. Each loss came
+  where the PC was busy: the game starting, a recording starting or stopping (switching between OBS
+  and the game), a game hitch. One showed as a frame repeated for 0.12 s, then a jump.
+  - On the OpenXR traces, a copy made after the frame's texture was written over, by the F rows'
+    end times (`stage_replay --stage frame_picker`): holding every frame loses 60, 3, 12 and 13
+    images in four traces (766,094, 15,176, 7,350 and 9,746 frames), copying at arrival none.
+  - So a frame the forecast can tell is shown even with the next frame on time is copied at once,
+    and only the others wait. That loses none in the four traces, and repeats as copying at arrival
+    does. From where OBS ran at 60 fps in the last trace, with Look-ahead: 417 repeats (0 with a
+    newer frame due) like copying at arrival, 30% of the frames not copied, a store of 37 entries
+    instead of 54, and the copy delay back to 4.9 ms (16.5 ms when holding every frame).
+- **In LMU with that build: the frames shown as when every frame was copied, a third of the copies
+  skipped.** One session with the OpenXR source, Look-ahead, OBS at 60 fps (NVENC AV1, 4K), with a
+  recording of 3,323 frames:
+  - The log: the copy delay fixed at 6.5 ms, and the ring at 37 entries (3,136 MB) from 0.6 s after
+    that, against 54 (4,577 MB) before. About 300 frames of 900 were not copied per 10 s, and no
+    copy was late. One image was lost before it was copied, in the 10 s after the game started (at
+    38 fps), and none in the rest of the session or the recording.
+  - The recording, lined up with its trace: no game frame shown twice, none given a slot two or
+    more on, no OBS tick shown twice or dropped, no cockpit jump over 2 px. 1,661 game frames never
+    shown, a third, as at that rate.
+  - The session's trace in `stage_replay`: 8,217 of 11,825 frames copied, 1,062 repeats (none with
+    a newer frame due) and no image lost, as copying at arrival. Holding every frame there loses 5.
+
 ## Native canvases on a Pimax Dream Air in LMU
 
 The root `README.md` ("Headsets and games") suggests one canvas per source from these.

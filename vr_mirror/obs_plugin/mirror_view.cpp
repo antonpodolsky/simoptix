@@ -40,7 +40,7 @@ MirrorView::MirrorView(std::unique_ptr<FrameSource> game, const MirrorSettings& 
     : gameSource_(std::move(game)),
       demoSource_(std::make_unique<DemoSource>()),
       frameSource_(gameSource_.get()) {
-    FollowCanvas();
+    FollowVideoSettings();
     SetSettings(settings, debug);
     session_.SetSource(frameSource_);
 
@@ -103,9 +103,9 @@ void MirrorView::DestroyTextures() {
     }
 }
 
-// Takes the canvas size from OBS's video settings (a plain copy, no lock): a change there applies
-// at the next tick.
-void MirrorView::FollowCanvas() {
+// Takes the canvas size and the frame rate from OBS's video settings (a plain copy, no lock): a
+// change there applies at the next tick.
+void MirrorView::FollowVideoSettings() {
     obs_video_info ovi = {};
     if (!obs_get_video_info(&ovi) || !ovi.base_width || !ovi.base_height) {
         return;
@@ -116,6 +116,7 @@ void MirrorView::FollowCanvas() {
 
     width_ = ovi.base_width;
     height_ = ovi.base_height;
+    obsFramePeriod_ = ovi.fps_num && ovi.fps_den ? static_cast<double>(ovi.fps_den) / ovi.fps_num : 0;
 }
 
 // Debug frame trace, for matching a recording (with the frame-number stamp) to the poses the
@@ -199,24 +200,42 @@ void MirrorView::FeedDrawnPose() {
 void MirrorView::RestartDelay() {
     const PipelineConfig config = ConfigOf();
     delaySmoothing_ = int(config.smoothing);
+    delayTickPeriod_ = obsFramePeriod_;
     BuildPipeline(config, &pipeline_);
     FeedDrawnPose();
     FramePicker& picker = *pipeline_.Picker();
-    picker.Restart(SmoothingDelayS(config.smoothing), FrameRing::kMaxSlots);
+    picker.Restart(
+        SmoothingDelayS(config.smoothing),
+        frameSource_->Period(),
+        obsFramePeriod_,
+        FrameRing::kMaxSlots,
+        frameSource_->CanCopyAfterNextFrame()
+    );
     outDelay_ = picker.OutDelay();
     SizeRing();
+    // Only a source whose images last until the next frame can skip a copy (Pimax's can't).
+    ring_.SetForecast(
+        frameSource_->CanCopyAfterNextFrame() ? picker.MakeForecast() : nullptr,
+        picker.Record()
+    );
     SetImageNeed();
 }
 
-// The ring keeps the frames the frame picker needs, and while a lap is asked for at least the lap recorder's
+// The ring as large as the frame picker needs (it changes when the delay is fixed, or when the display's
+// period is learnt during the warm-up), and while a lap is asked for at least the lap recorder's
 // (LapRecorder::kRingFrames): the recorder takes the lap's frames from the ring once a crossing is known, so
 // it copies nothing before the lap. Closes OBS's handles to the slots the ring frees. Graphics thread.
 void MirrorView::SizeRing() {
     const int picked = pipeline_.Picker()->SlotsInUse();
-    ring_.SetSlotCount(lapWanted_ ? std::max(picked, LapRecorder::kRingFrames) : picked);
-    ringForLap_ = lapWanted_;
+    const int slots = lapWanted_ ? std::max(picked, LapRecorder::kRingFrames) : picked;
 
-    for (int i = ring_.SlotCount(); i < FrameRing::kMaxSlots; i++) {
+    if (slots == ring_.SlotCount()) {
+        return;
+    }
+
+    ring_.SetSlotCount(slots);
+
+    for (int i = slots; i < FrameRing::kMaxSlots; i++) {
         if (textures_[i]) {
             gs_texture_destroy(textures_[i]);
         }
@@ -288,6 +307,11 @@ void MirrorView::StopSession(const char* why) {
         obs_leave_graphics();
     }
 
+    {
+        std::lock_guard<std::mutex> lock(factsMutex_);
+        facts_ = {};
+    }
+
     session_.Stop();
     SetProgramDelay(0);
     blog(
@@ -302,10 +326,6 @@ void MirrorView::StopSession(const char* why) {
 // failed, the request is done. Graphics thread, every tick.
 void MirrorView::FollowLap() {
     const bool want = lapWanted_ && started_ && frameSource_ == gameSource_.get();
-
-    if (started_ && ringForLap_ != lapWanted_) {
-        SizeRing();
-    }
 
     if (want && !lapStarted_) {
         recorder_.Start(&ring_, frameSource_);
@@ -325,8 +345,44 @@ void MirrorView::FollowLap() {
     }
 }
 
+std::string MirrorView::VideoMemory(const MirrorSettings& settings) {
+    MemoryFacts facts;
+
+    {
+        std::lock_guard<std::mutex> lock(factsMutex_);
+        facts = facts_;
+    }
+
+    return VideoMemoryText(facts, settings, *gameSource_);
+}
+
+// The facts the video memory line needs, as of this tick: the store's settled size for each
+// smoothing, which the frame picker knows once it has measured its copy delay. Only the game's: the line
+// is about the game, and the demo's images are its own size. Skipped while the UI thread reads them: the
+// next tick's come soon. Graphics thread.
+void MirrorView::KeepMemoryFacts(const FramePicker& picker) {
+    if (frameSource_ != gameSource_.get()) {
+        return;
+    }
+
+    const bool canHold = frameSource_->CanCopyAfterNextFrame();
+    MemoryFacts facts;
+    facts.running = true;
+    facts.slots[0] = picker.SlotsFor(SmoothingDelayS(SmoothingKind::kInstant), canHold);
+    facts.slots[1] = picker.SlotsFor(SmoothingDelayS(SmoothingKind::kLookahead), canHold);
+    facts.eye = frameSource_->Eye();
+    facts.canvasWidth = width_;
+    facts.canvasHeight = height_;
+
+    std::unique_lock<std::mutex> lock(factsMutex_, std::try_to_lock);
+
+    if (lock.owns_lock()) {
+        facts_ = facts;
+    }
+}
+
 void MirrorView::Tick() {
-    FollowCanvas();  // also while hidden: OBS lays the source out by its size
+    FollowVideoSettings();  // also while hidden: OBS lays the source out by its size
     StartStop();
     FollowLap();
     if (!started_) {
@@ -370,11 +426,14 @@ void MirrorView::Prepare(uint64_t tickNs) {
 
     FramePicker& picker = *pipeline_.Picker();
     const Pick pick = picker.Tick(tick, frameSource_->Period(), stored_, FrameRing::kMaxSlots);
+    ring_.SetTickRecord(picker.Record());
+    KeepMemoryFacts(picker);
 
     if (picker.OutDelay() != outDelay_) {
         ApplyFixedDelay(picker);
     }
 
+    SizeRing();
     SetProgramDelay(picker.OutDelay());
     switch (pick.kind) {
         case PickKind::kRepeat:
@@ -423,6 +482,17 @@ void MirrorView::ApplySettingChanges(const PipelineConfig& config) {
         );
     }
 
+    // OBS's frame rate changed while the source ran (its video settings reset): the frame picker
+    // plans its ticks and sizes the ring from it.
+    if (obsFramePeriod_ != delayTickPeriod_) {
+        RestartDelay();
+        blog(
+            LOG_INFO,
+            "[simoptix_vr_mirror] OBS at %.2f fps: the output delay is measured again",
+            obsFramePeriod_ > 0 ? 1 / obsFramePeriod_ : 0.0
+        );
+    }
+
     if (Stabilizes(settings_) != loggedStabilize_) {
         // Off and Instant share the smoothing: it starts afresh, so Instant doesn't glide on from where
         // it was before Off.
@@ -449,9 +519,6 @@ void MirrorView::ApplyFixedDelay(FramePicker& picker) {
 
     LineStatsReport<void (*)(const char*)> log(LogLine);
     picker.Report(log);
-
-    // The ring only needs the frames inside the delay, plus room for a late copy.
-    SizeRing();
 }
 
 void MirrorView::OpenSlotTexture(const FrameRing::SlotInfo& slot) {
@@ -549,14 +616,16 @@ void MirrorView::LogStats(uint64_t tickNs) {
             LOG_INFO,
             "[simoptix_vr_mirror] %d ticks in %.0f s: %d showed the same game frame again, %d skipped "
             "ahead, "
-            "%d held the last image (copy late), %d without a frame; game at %.1f fps",
+            "%d held the last image (copy late), %d without a frame; game at %.1f fps, %d frames not "
+            "copied (no tick shows them)",
             statTicks_,
             tick - statStart_,
             statRepeats_,
             statJumps_,
             statHeld_,
             statNoFrame_,
-            double(frames - statFrames_) / (tick - statStart_)
+            double(frames - statFrames_) / (tick - statStart_),
+            ring_.TakeSkippedCopies()
         );
 
         LogFootprint(tick - statStart_);

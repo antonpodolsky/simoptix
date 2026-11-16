@@ -10,7 +10,7 @@ rem reads), listed by its sources.bat, which also finds LMU's headers (without t
 rem without LMU and reads no game). The G-meter's demo lap is ..\..\shared\telemetry\demo_lap.cpp.
 rem Plus the rest of ..\..\shared (logging, the view's delay the plugins share, the crash dump, the
 rem files kept in %%LOCALAPPDATA%%\simoptix).
-rem Its version comes from ..\..\shared\build\version.bat (VERSION at the repo's root, and git),
+rem Its version comes from ..\..\shared\build\version.bat (version.txt at the repo's root, and git),
 rem and goes into the DLL's version resource (version.rc).
 rem Writes bin\manifest.json from manifest.json with the version filled in, for OBS 32 and later.
 rem Optional argument "install": copies the DLL and manifest.json to OBS's per-machine plugin folder
@@ -45,12 +45,19 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_S
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\..\shared\build\fill_version.ps1 ^
    manifest.json bin\manifest.json || exit /b 1
 rem A line continued with ^ inside the block below runs as a command named " ", so each command
-rem there stays on one line.
+rem there stays on one line. An "exit /b 1" there reaches "cmd /c" as exit code 0, so a failed step
+rem leaves the block by goto.
 set "PLUGIN_FOLDER=C:\ProgramData\obs-studio\plugins\%NAME%"
 if /i "%~1"=="install" (
-   if not exist "%PLUGIN_FOLDER%\bin\64bit" mkdir "%PLUGIN_FOLDER%\bin\64bit" || exit /b 1
-   if not exist "%PLUGIN_FOLDER%\data" mkdir "%PLUGIN_FOLDER%\data" || exit /b 1
-   copy /y bin\%NAME%.dll "%PLUGIN_FOLDER%\bin\64bit\" >nul || exit /b 1
-   copy /y bin\manifest.json "%PLUGIN_FOLDER%\data\" >nul || exit /b 1
+   if not exist "%PLUGIN_FOLDER%\bin\64bit" mkdir "%PLUGIN_FOLDER%\bin\64bit" || goto :install_failed
+   if not exist "%PLUGIN_FOLDER%\data" mkdir "%PLUGIN_FOLDER%\data" || goto :install_failed
+   copy /y bin\%NAME%.dll "%PLUGIN_FOLDER%\bin\64bit\" >nul || goto :install_failed
+   copy /y bin\manifest.json "%PLUGIN_FOLDER%\data\" >nul || goto :install_failed
    echo installed to %PLUGIN_FOLDER%
 )
+exit /b 0
+
+:install_failed
+echo cannot install to %PLUGIN_FOLDER%: close OBS, which holds the DLL. If SimOptix Setup
+echo installed the plugin, its files belong to the administrators: run this as administrator.
+exit /b 1

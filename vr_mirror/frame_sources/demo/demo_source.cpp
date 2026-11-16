@@ -63,6 +63,8 @@ bool DemoSource::Start(std::string* error) {
     }
 
     lap_ = std::move(lap);
+    imageWidth_ = static_cast<uint32_t>(lap_.width);
+    imageHeight_ = static_cast<uint32_t>(lap_.height);
     videoPath_ = stem + L".mp4";
     adapter_ = DemoVideo::DefaultAdapter();
     period_ = lap_.period;

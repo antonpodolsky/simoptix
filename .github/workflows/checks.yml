@@ -1,0 +1,166 @@
+# Copyright (C) 2026 Anton Podolsky
+# SPDX-License-Identifier: GPL-2.0-or-later
+# The checks GitHub runs on each pull request and each push to main. Each is a job, and a pull request
+# passes only when every one passes:
+#   Build            every part, with no warnings (shared\build\build_all.ps1)
+#   Format           clang-format and ruff
+#   Docs             check_docs.py
+#   Public text      check_public_text.py on every file and on the pull request's commits
+#   Pipeline output  stage_replay's golden file against vr_mirror\e2e\stage_replay\golden_expected.txt.
+#                    Any change fails it. A change that is meant commits a new golden_expected.txt
+# Build builds once, and uploads what it built. Pipeline output waits for it, and runs those files, so
+# it tests what Build built, and is skipped when it fails.
+# The e2e suite isn't here: on GitHub's runners, with no graphics card, the mirror app drew 9.5 to 28.5
+# fps against the 75 to 85 its scenarios ask for (findings\e2e.md). It runs by hand (dev skill, step 5).
+# Nor is the local files test: its OpenXR case gets almost no game frames on the runners (issue #41).
+# pull_request.yml checks the description and the label. Nothing here signs, and no job has a secret.
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build:
+    name: Build
+    runs-on: windows-latest
+    steps:
+      # The whole history and the tags, for the version (shared\build\version.bat).
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Every build's output is in this step's log.
+      - name: Build
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1
+          exit $LASTEXITCODE
+
+      # At their paths in the repo, for the jobs that test them.
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: built
+          if-no-files-found: error
+          path: |
+            vr_mirror/obs_plugin/bin/
+            overlays/obs_plugin/bin/
+            vr_mirror/frame_sources/openxr/bin/
+            vr_mirror/e2e/bin/
+            setup/bin/
+
+  format:
+    name: Format
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install formatters
+        run: python -m pip install clang-format==23.1.5 ruff==0.17.4
+
+      - name: Verify C++ and HLSL
+        run: |
+          $files = git ls-files -- '*.cpp' '*.h' '*.hlsli' ':!third_party'
+          clang-format --dry-run --Werror $files
+          exit $LASTEXITCODE
+
+      - name: Verify Python
+        if: always()
+        run: ruff format --check
+
+  docs:
+    name: Docs
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Verify docs
+        run: python -I .agents\skills\docs\check_docs.py
+
+  public_text:
+    name: Public text
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Verify files
+        run: python -I .agents\skills\public-text\check_public_text.py --repo
+
+      # The description is verified by pull_request.yml, each time it changes.
+      - name: Verify commits
+        if: always() && github.event_name == 'pull_request'
+        env:
+          COMMITS: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+        run: python -I .agents\skills\public-text\check_public_text.py --commits $env:COMMITS
+
+  pipeline_output:
+    name: Pipeline output
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: built
+
+      - name: Write golden file
+        run: |
+          vr_mirror\e2e\bin\stage_replay.exe --golden "$env:RUNNER_TEMP\golden.txt"
+          exit $LASTEXITCODE
+
+      - name: Compare with expected
+        run: |
+          python -I vr_mirror\e2e\stage_replay\golden_compare.py --expected "$env:RUNNER_TEMP\golden.txt" --markdown $env:GITHUB_STEP_SUMMARY
+          exit $LASTEXITCODE
+
+      # What changed, to read, and the golden_expected.txt of this output, to commit if it is meant.
+      - name: Write expected
+        if: failure()
+        run: |
+          python -I vr_mirror\e2e\stage_replay\golden_compare.py --write-expected "$env:RUNNER_TEMP\golden.txt"
+          exit $LASTEXITCODE
+
+      - name: Upload golden file
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline_output
+          path: |
+            ${{ runner.temp }}/golden.txt
+            vr_mirror/e2e/stage_replay/golden_expected.txt

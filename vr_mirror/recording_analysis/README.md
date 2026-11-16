@@ -40,10 +40,11 @@ closer at one moment. They need the trace that the Pimax source's **Debug** sett
 | `grid_shift.cpp` | The frame-to-frame shift of a grid of 88 patches over a whole recording, read from ffmpeg (`build.bat`) |
 | `shake.py` | The cockpit's rotation per frame from those shifts, its path and its jumps |
 | `shake_causes.py` | The jumps by kind of frame and against the log's 10 s stats (no trace needed) |
-| `trace_ticks.py` | A whole trace read into one layout, whatever its format (cached) |
+| `trace_ticks.py` | A whole trace read into one layout, whatever its format (cached). An OpenXR source's trace has no slot predictions, so `analyse_recording.py` skips the per-jump causes for it |
 | `lineup.py` | Which trace row each video frame shows. It chooses the stamp's occurrence by the repeated frames |
 | `shake_traced.py` | Each jump's cause from the trace: the view's own motion, an edge stop, or an image lined up from the wrong pose |
 | `cadence.py` | Ticks, game frames and display slots step by step, to find where the scenery's steps go uneven |
+| `tick_regularity.py` | How regular OBS's ticks are, from a trace's tick times alone: how far a tick predicted 0.1, 0.5 and 0.6 s ahead lands from the real one, and the ticks OBS skipped, for each frame rate OBS ran at in the trace |
 | `events.py` | Repeated game frames, missed slots, two frames on one slot, and frames never shown, with the cockpit's jump at each |
 | `moment.py` | One moment frame by frame: the trace's rows and the runtime's arrival rows |
 | `aligned_diff.py` | The road's change between frames with the cockpit lined up (frozen or skipped game frames) |

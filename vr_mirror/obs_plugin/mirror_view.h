@@ -18,8 +18,9 @@
 //
 // It runs only while shown anywhere (program, preview, a projector): otherwise no frame source running and
 // no threads. Knows nothing about OBS's settings or properties (plugin.cpp reads them). Threads: the
-// constructor, the destructor, SetSettings, SetDemo and SetRecordLap on OBS's UI thread; Show and Hide on
-// any; Tick and Render on OBS's graphics thread; Width, Height and the demo's and lap's states on any.
+// constructor, the destructor, SetSettings, VideoMemory, SetDemo and SetRecordLap on OBS's UI thread; Show
+// and Hide on any; Tick and Render on OBS's graphics thread; Width, Height and the demo's and lap's states
+// on any.
 //
 // The demo: the view plays the newest recorded lap (DemoSource) in place of the game, through the same
 // pipeline. Switching stops one frame source and starts the other, as hiding and showing the source does.
@@ -31,6 +32,8 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <mutex>
+#include <string>
 
 #include "adapters/system/trace_writer.h"
 #include "common/clock_sync.h"
@@ -40,6 +43,7 @@
 #include "lap_recorder/lap_recorder.h"
 #include "pipeline/pipeline.h"
 #include "session_worker.h"
+#include "video_memory.h"
 
 class MirrorView {
 public:
@@ -70,12 +74,15 @@ public:
     void Tick();
     void Render();
 
+    // The properties' video memory line, for `settings` (the dialog's, maybe not applied yet).
+    std::string VideoMemory(const MirrorSettings& settings);
+
 private:
-    void FollowCanvas();
+    void FollowVideoSettings();
     bool FollowSource(SessionWorker::State state);
     void FollowLap();
-    void SizeRing();
     void StopSession(const char* why);
+    void KeepMemoryFacts(const FramePicker& picker);
     void ToggleTrace(bool on);
     PipelineConfig ConfigOf() const;
     void FeedDrawnPose();
@@ -84,6 +91,7 @@ private:
     void Prepare(uint64_t tickNs);
     void ApplySettingChanges(const PipelineConfig& config);
     void ApplyFixedDelay(FramePicker& picker);
+    void SizeRing();
     void OpenSlotTexture(const FrameRing::SlotInfo& slot);
     void SetImageNeed();
     void StartFootprint();
@@ -104,16 +112,20 @@ private:
     std::atomic<bool> telemetryHeld_{false};  // for the lap recorder (Telemetry::Acquire)
     LapRecorder recorder_;
     bool lapStarted_ = false;     // graphics thread: the recorder was started for this run of the source
-    bool ringForLap_ = false;     // graphics thread: the ring was last sized with the lap recorder's frames
     bool started_ = false;        // graphics thread: the session runs and its per-start state is set up
     uint64_t framesAtStart_ = 0;  // graphics thread: FrameSource::FramesArrived() when it started
 
     MirrorSettings settings_;
-    // The OBS canvas's base size: written each tick on the graphics thread (FollowCanvas), read by OBS
-    // from any thread (Width, Height).
+    // The OBS canvas's base size: written each tick on the graphics thread (FollowVideoSettings), read
+    // by OBS from any thread (Width, Height).
     std::atomic<uint32_t> width_{2560}, height_{1440};
+    double obsFramePeriod_ = 0;  // graphics thread: OBS's video frame period (s; 0: unknown), likewise
     bool stamp_ = false;
     bool trace_ = false;  // debug: write a frame trace (see ToggleTrace)
+    // What the video memory line needs, written by the graphics thread at each tick (KeepMemoryFacts)
+    // and cleared when the source stops, read by the UI thread (VideoMemory).
+    std::mutex factsMutex_;
+    MemoryFacts facts_;
 
     // Graphics thread only.
     // stages 2-6 (vr_mirror\core\pipeline), built for the settings (RestartDelay, Prepare)
@@ -126,6 +138,7 @@ private:
     WarpParams warp_ = {};
     int warpSlot_ = -1;
     int delaySmoothing_ = -1;      // the SmoothingKind the frame picker and ring are set for
+    double delayTickPeriod_ = -1;  // ...and OBS's frame period
     bool loggedStabilize_ = true;  // Stabilizes(settings) as last logged (a change is logged once)
     const DrawnPose* fedDrawnPose_ = nullptr;  // the pipeline's drawn pose the ring was handed last
     double outDelay_ = 0;                      // the frame picker's output delay as last logged (s)

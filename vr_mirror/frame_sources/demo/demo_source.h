@@ -64,6 +64,12 @@ public:
     void PredictedHeadsBetween(const double* t, int n, Quat* out) override;
 
     void SetImageNeed(float, double) override {}  // its images are the lap's own size
+    // The lap's images' size, whatever the needs; false until Start has read a lap.
+    bool CopySize(float, double, uint32_t* copyWidth, uint32_t* copyHeight) override {
+        *copyWidth = imageWidth_;
+        *copyHeight = imageHeight_;
+        return *copyWidth > 0 && *copyHeight > 0;
+    }
     void OpenImages(ID3D11Device* device) override;
     bool CopyImage(
         ID3D11Device* device,
@@ -118,6 +124,7 @@ private:
     RecordedLap lap_;
     std::wstring videoPath_;
     LUID adapter_ = {};
+    std::atomic<uint32_t> imageWidth_{0}, imageHeight_{0};  // the lap's, for any thread (CopySize)
 
     // The demo thread's.
     std::unique_ptr<ArrivalTiming> arrival_;

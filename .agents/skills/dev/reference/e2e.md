@@ -21,16 +21,21 @@ vr_mirror\e2e\bin\e2e_runner.exe
 ```
 
 It runs every scenario. Name some to run only those (`e2e_runner.exe stabilization black_borders`), or
-list them with `--list`.
+list them with `--list`. A name that matches no scenario stops the run with exit code 2.
 
 - Each scenario opens a small window (320×180) on top of everything, for about 15 s.
 - With every scenario at both smoothings, that is 38 runs. They took 558 s (about 9 minutes) in
   run 8 (`reference\e2e_results.md`).
 - Don't use the PC meanwhile. For consistent timing, close LMU, the mirror app, Pimax Play and other
   heavy apps first.
+- A run stopped midway (Ctrl+C, or its window closed) ends the mirror app and the fake game it started
+  too. The local files test ends its OBS and fake games the same way.
 - Run one test of the OpenXR layer at a time on the PC. The fake OpenXR games of two runs, from two
   worktrees say, write the same shared memory, and each breaks the other's frames
   (`reference\e2e_results.md`, run 7).
+- The runner warns, at the start, if OBS or the mirror app is running: either one's OpenXR source
+  would read the OpenXR scenarios' fake frames too and miss some (`reference\e2e_results.md`, run
+  10). Close them if it does, before running the OpenXR scenarios.
 
 | Option | What it does |
 |---|---|
@@ -160,8 +165,32 @@ That is 52 runs and about 26 MB.
 
 **Refactor guard.** A change that must not change behaviour (moving code, splitting the pipeline into
 stages) must reproduce the build before it byte for byte. Write `golden_main.txt` with that build, then
-compare with `fc /b` or `cmp`. A difference is a behaviour change until shown otherwise. The e2e suite
-still decides at the end.
+compare the two golden files:
+
+```
+python -I vr_mirror\e2e\stage_replay\golden_compare.py out\stage_replay\golden_main.txt out\stage_replay\golden_new.txt
+```
+
+It names each run that changed, is new or is gone, and exits with 1 when the files differ. A difference
+is a behaviour change until shown otherwise. The e2e suite still decides at the end.
+
+**The expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the SHA-256 of each run
+of the golden file, as GitHub's runners build `stage_replay`. The Pipeline output check on GitHub
+compares with it:
+
+```
+python -I vr_mirror\e2e\stage_replay\golden_compare.py --expected <golden file>
+```
+
+A golden file built with another compiler can differ from it in the last bits of some values with
+nothing changed (`SKILL.md`, "Tests", "The pipeline's expected output"). Locally, compare with the
+build before instead, as above.
+
+When Pipeline output fails, its run uploads the golden file it wrote and the `golden_expected.txt` of
+that output (`--write-expected`). When the change is meant, commit that `golden_expected.txt` with it.
+To read what changed, compare a local build's golden file with the build before it's, as above. The
+uploaded golden file comes from another compiler than a local one, so a comparison of the two also
+shows the rounding.
 
 ### Stage 1 and stage 3 over OBS traces
 
@@ -178,18 +207,43 @@ one the plugin recorded.
 - The small differences come from the plugin's session restarts, which the run doesn't see.
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS PIMAX ...]
+vr_mirror\e2e\bin\stage_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]
 ```
 
 It runs the frame picker as the OBS plugin does: the fixed delay, unless `--frame_picker` names another.
-- **Its inputs:** OBS frame traces, each an `_ticks.csv` with its `_pimax.csv` (the ticks and the frame
-  arrivals), and synthetic ticks at 50, 59.94, 60 and 144 Hz. The traces are in the data folder's
-  late frames after drops (its trace folder).
+- **Its inputs:** OBS frame traces, each an `_ticks.csv` with its `_pimax.csv` or `_openxr.csv` (the
+  ticks and the frame arrivals), synthetic frames from a 90 Hz headset with OBS at 50, 59.94, 60, 90 and 144 fps, and
+  from a 144 Hz headset with OBS at 60 fps. So OBS ticks slower than the headset in four runs, at its
+  rate in one and faster in one. Each set runs twice: with the ticks moved by up to 0.25 ms either
+  way, a stress test, and on the exact grid, as OBS schedules them. The two runs of a pair have the
+  same frames. The traces are in the data folder's late frames after drops (its trace folder).
+- **An OpenXR trace** holds no de-jittered arrivals, so the source's arrival timing runs again over
+  its frames, restarting where the layer's frame numbers start again (a new game session). A first
+  line per trace says how far that lands from the plugin's own, over the frames its ticks showed.
+  The traces hold no copy times: copies take the synthetic runs' times.
 - **In the synthetic runs** the smoothing changes mid-run, copies finish after a seeded random 1–3 ms
-  (5% of them after 5–30 ms), and the store is resized as the picker asks.
+  (5% of them after 5–30 ms), and the store is resized as the picker asks, as the plugin's ring is:
+  at the next copy, keeping its frames when it grows.
+- **Each input runs three ways:** the frames copied as they arrive (the Pimax source), each held
+  until the next one arrives and then copied (a reference for what holding costs), and only the
+  frames the forecast says a tick shows copied, while the picker's record asks for that (the OpenXR
+  source): those it can tell as they arrive at once, the others held until the next one. A held frame
+  with no next one within two display periods is copied then. The first line of a run names the
+  second and third ways. With an OpenXR trace, a copy begun after the layer wrote the frame's image
+  over (its texture's frame three on ended, by the F rows) fails, and the second line counts those.
 - **It prints** the picks by kind per run and the delay it fixed, how far each tick's moment trails the
   shown image's slot (median), and the largest jump of the moments apart from the ticks' own step
   (without a smoothing change).
+- **Of the repeats, it counts those with a newer frame due** by the tick: a late copy, or the picker
+  behind. The other repeats are the game's: after a dropped game frame, no new frame is due.
+- **A second line per run shows what the store held** (the third way also counts the frames
+  arrived and copied, and the share not copied): the frames stored, the share that a tick
+  showed, the share still in the store when they were due, and the most entries holding a frame at
+  once. These measure how much video memory a picker needs.
+- **A third line holds the answers of the picker's forecast,** asked for each frame when the next one
+  arrives, with the picker's newest record: how many frames due by the end it said no tick will
+  show, how many of those were shown after all, and how many it said yes to that were never shown. A host that skips the copies of
+  the frames it says no to would have nothing to show for the second count.
 - When the plugin's picking became this stage, it was checked identical tick by tick against a verbatim
   copy of the plugin's earlier code: the entry shown, the kind of pick, the output delay, the moment,
   the tick the delay is fixed, and the entries in use. There were 0 differences on those two traces
