@@ -191,13 +191,14 @@ void FrameRing::Run() {
 }
 
 // A new frame: asks the forecast about the frame before it, which is copied now if it was held and a
-// tick will show it, and then copies this one, or holds it if the picker asks for the frames shown
-// only and the source keeps its image that long. Without the newest record (the graphics thread was
-// writing it) the forecast is still told of the frame, and a held frame is copied. Copy thread.
+// tick will show it. Then copies this one, unless the picker asks for the frames shown only, the
+// source keeps its image that long, and the forecast can't tell yet that a tick shows it: then it is
+// held until the next one. Copying at once whatever is sure keeps the source's whole margin before it
+// reuses an image (findings\obs_plugin.md). Without the newest record (the graphics thread was
+// writing it) the forecast is still told of the frame, and nothing is held or skipped. Copy thread.
 void FrameRing::Arrived(const GameFrame& f) {
     const bool fresh = TakeTickRecord();
-    const bool show = !forecast_ || !hasPrevious_
-                      || forecast_->WillShow(record_, Stored(previous_), Stored(f));
+    const bool show = !forecast_ || !hasPrevious_ || forecast_->WillShow(record_, Stored(f));
 
     if (held_ && (show || !fresh)) {
         CopyAndFeed(previous_);
@@ -205,7 +206,8 @@ void FrameRing::Arrived(const GameFrame& f) {
         skipped_++;
     }
 
-    held_ = forecast_ && record_.copiesShownOnly && source_->CanCopyAfterNextFrame();
+    const bool sure = !forecast_ || forecast_->Arrived(record_, Stored(f));
+    held_ = !sure && fresh && record_.copiesShownOnly && source_->CanCopyAfterNextFrame();
 
     if (!held_) {
         CopyAndFeed(f);

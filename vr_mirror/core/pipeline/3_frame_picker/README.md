@@ -35,14 +35,15 @@ next frame has arrived (through the OpenXR layer, not Pimax's single mirror imag
   they do. The fixed delay changes them when it fixes its delay, and during the warm-up when the
   display period changes.
 - A forecast of its picks (`MakeForecast`, a `ShowForecast`), for the host to run where it sees the
-  frames arrive. It says whether any coming tick will show a frame (`WillShow`), asked once the frame
-  after it has arrived, before either is copied, for every frame in arrival order. The picker's
-  `Record` after each tick tells it where the picker stands: the frame shown, the tick, the tick
-  period, the output delay, whether that delay is settled, whether the host is to copy only the
-  frames shown, and a count of restarts. It is plain data, so the host can hand a copy to the thread
-  that copies frames. To copy only the frames shown, the host holds each frame until the next one
-  arrives, asks, and copies it or not. A picker without a forecast gives none, and the host copies
-  every frame. A forecast that can't tell says yes.
+  frames arrive. It is told of every frame as it arrives (`Arrived`), and says whether a tick will
+  show it even with the next frame on time. Once the next frame has arrived, it says whether any tick
+  will show the frame before (`WillShow`). The picker's `Record` after each tick tells it where the
+  picker stands: the frame shown, the tick, the tick period, the display period, the output delay,
+  whether that delay is settled, whether the host is to copy only the frames shown, and a count of
+  restarts. It is plain data, so the host can hand a copy to the thread that copies frames. To copy
+  only the frames shown, the host copies at once a frame `Arrived` says is shown, holds the others
+  until the next one arrives, and copies one only if `WillShow` says so. A picker without a forecast
+  gives none, and the host copies every frame. A forecast that can't tell says yes.
 - Through the shared report, once, the tick at which the delay was fixed (`TakeDelayFixed`, for the
   host's log line).
 

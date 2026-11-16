@@ -118,6 +118,22 @@ This file holds what was measured on the plugin, and what was tried.
     90 Hz to 60 fps pattern: no repeat and no bigger jump.
   - Not checked: a real headset and game, OBS's 10 s stats over a long run, and Pimax, which copies
     every frame as before.
+- **Tried and dropped: holding every frame for the next one.** In LMU, the OBS log's "images gone
+  before they were copied" counted 21 of VR Mirror's in about 31,000 frames, against 0 in 766,093
+  frames of the build before (which copied each frame as it arrived). The layer writes frame N's
+  texture again with frame N+3, as the game ends that frame, and VR Mirror sees a frame arrive only
+  once the layer's copy has finished on the GPU. So holding left a median of 11 ms (one display
+  period) before the image was written over, against 22 ms when copying at arrival. Each loss came
+  where the PC was busy: the game starting, a recording starting or stopping (switching between OBS
+  and the game), a game hitch. One showed as a frame repeated for 0.12 s, then a jump.
+  - On the OpenXR traces, a copy made after the frame's texture was written over, by the F rows'
+    end times (`stage_replay --stage frame_picker`): holding every frame loses 60, 3, 12 and 13
+    images in four traces (766,094, 15,176, 7,350 and 9,746 frames), copying at arrival none.
+  - So a frame the forecast can tell is shown even with the next frame on time is copied at once,
+    and only the others wait. That loses none in the four traces, and repeats as copying at arrival
+    does. From where OBS ran at 60 fps in the last trace, with Look-ahead: 417 repeats (0 with a
+    newer frame due) like copying at arrival, 30% of the frames not copied, a store of 37 entries
+    instead of 54, and the copy delay back to 4.9 ms (16.5 ms when holding every frame).
 
 ## Native canvases on a Pimax Dream Air in LMU
 

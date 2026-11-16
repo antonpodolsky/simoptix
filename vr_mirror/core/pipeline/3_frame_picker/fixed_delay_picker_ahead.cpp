@@ -24,25 +24,34 @@ int FixedDelayStep(int shown, const double* due, int count, double tick) {
     return pick;
 }
 
-bool FixedDelayAhead::WillShow(const TickRecord& record, const StoredFrame& frame, const StoredFrame& next) {
+bool FixedDelayAhead::Arrived(const TickRecord& record, const StoredFrame& frame) {
+    FollowRestarts(record);
+    Add(frame.serial, frame.smoothTime);
+
+    // As if the next frame came on time, a display period later. A next frame later than that only
+    // keeps this one longer; one sooner (rare) means a copy no tick shows, never a frame missing.
+    return !RunsAhead(record) || WillShowNewest(frame.smoothTime + record.period, false);
+}
+
+bool FixedDelayAhead::WillShow(const TickRecord& record, const StoredFrame& next) {
+    FollowRestarts(record);
+    return count_ == 0 || !RunsAhead(record) || WillShowNewest(next.smoothTime, true);
+}
+
+void FixedDelayAhead::FollowRestarts(const TickRecord& record) {
     if (record.restarts != restarts_) {
         Reset();
         restarts_ = record.restarts;
     }
+}
 
-    Add(frame.serial, frame.smoothTime);
-
+bool FixedDelayAhead::RunsAhead(const TickRecord& record) {
     if (!record.delaySettled || record.tickPeriod <= 0 || record.tick == 0) {
-        return true;
+        return false;
     }
 
     Follow(record.tick);
-
-    if (!started_ && !Start(record.shown, record.tick, record.tickPeriod, record.outDelay)) {
-        return true;
-    }
-
-    return WillShowNewest(next.smoothTime);
+    return started_ || Start(record.shown, record.tick, record.tickPeriod, record.outDelay);
 }
 
 void FixedDelayAhead::Reset() {
@@ -88,7 +97,7 @@ void FixedDelayAhead::Follow(double tick) {
     k_ -= periods;
 }
 
-bool FixedDelayAhead::WillShowNewest(double nextSmoothTime) {
+bool FixedDelayAhead::WillShowNewest(double nextSmoothTime, bool keep) {
     const int64_t newest = count_ - 1;
 
     if (!started_ || newest < pick_) {
@@ -96,23 +105,29 @@ bool FixedDelayAhead::WillShowNewest(double nextSmoothTime) {
     }
 
     // The ticks before the next frame can be due: every frame that matters to them is known, because
-    // the frames after the next one are due later still. The run ahead keeps these ticks.
+    // the frames after the next one are due later still. With the next frame's real arrival (`keep`),
+    // the run ahead keeps these ticks.
     const double nextDue = nextSmoothTime + outDelay_;
-    while (TickAt(k_ + 1) + kSlackS < nextDue) {
-        pick_ = Step(pick_, newest, nextDue, k_ + 1);
-        k_++;
+    int64_t pick = pick_, last = k_;
+
+    while (TickAt(last + 1) + kSlackS < nextDue) {
+        pick = Step(pick, newest, nextDue, last + 1);
+        last++;
+    }
+
+    if (keep) {
+        pick_ = pick;
+        k_ = last;
     }
 
     // Beyond them, the rule runs on with these frames until it reaches the newest frame or passes it:
     // until then it looks at no frame after the next one. Passing it relies on the next frame's copy
     // being ready, so a pass sooner than its copy is certainly done counts as a show.
-    int64_t pick = pick_;
-
     if (pick == newest) {
         return true;
     }
 
-    for (int64_t k = k_ + 1; k <= k_ + kMostTicksAhead; k++) {
+    for (int64_t k = last + 1; k <= last + kMostTicksAhead; k++) {
         pick = Step(pick, newest, nextDue, k);
 
         if (pick == newest) {

@@ -7,8 +7,10 @@
 // microseconds (findings\pipeline.md). So from the picker's last tick and frame shown (its
 // TickRecord), the rule can be run over the coming ticks. Whether it shows frame N depends only on the
 // frames up to N+1: it moves onto N, or past N only while N+1 is overdue. So once N+1 has arrived, the
-// run ahead decides N. It keeps the frames it was asked about from the frame shown on, so it needs
-// nothing of the picker but the record. It assumes every copy is ready by the time the frame is due.
+// run ahead decides N. When N arrives it can already tell the frames shown even with N+1 on time,
+// whose copy then needn't wait. It keeps the frames it was told of from the frame shown on, so it
+// needs nothing of the picker but the record. It assumes every copy is ready by the time the frame is
+// due.
 // Logic only; nothing allocated after construction. Knows nothing about textures, threads or OBS.
 #pragma once
 
@@ -31,13 +33,19 @@ constexpr double kFixedDelayCopyDoneS = 0.1;
 
 class FixedDelayAhead : public ShowForecast {
 public:
-    // Yes until the picker's delay is settled and a tick has shown a frame; then the rule run ahead
-    // decides.
-    bool WillShow(const TickRecord& record, const StoredFrame& frame, const StoredFrame& next) override;
+    // Both say yes until the picker's delay is settled and a tick has shown a frame; then the rule run
+    // ahead decides.
+    bool Arrived(const TickRecord& record, const StoredFrame& frame) override;
+    bool WillShow(const TickRecord& record, const StoredFrame& next) override;
 
 private:
     static constexpr int kFrames = 256;  // the frames from the one shown on: over half a second at 400 Hz
 
+    // Forgets every frame when the picker restarted.
+    void FollowRestarts(const TickRecord& record);
+    // Whether the rule can run ahead from the record (the delay settled, a tick shown, that frame
+    // known), following the record's tick.
+    bool RunsAhead(const TickRecord& record);
     // Forgets every frame and the run (the picker restarted).
     void Reset();
     // Each new frame, in arrival order.
@@ -49,8 +57,9 @@ private:
     // run (the period rounded, the clocks' correction). Nothing changes for the tick it is on.
     void Follow(double tick);
     // Whether a tick will show the newest frame Added, given that the frame after it arrived with the
-    // de-jittered arrival `nextSmoothTime`.
-    bool WillShowNewest(double nextSmoothTime);
+    // de-jittered arrival `nextSmoothTime`. `keep`: that is the next frame's real arrival, and the run
+    // ahead keeps the ticks it settled; false for a guess, which leaves the run as it was.
+    bool WillShowNewest(double nextSmoothTime, bool keep);
 
     double Due(int64_t frame) const { return smooth_[frame % kFrames] + outDelay_; }
     double TickAt(int64_t k) const { return start_ + static_cast<double>(k) * tickPeriod_; }

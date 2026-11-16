@@ -79,6 +79,7 @@ TickRecord FixedDelayPicker::Record() const {
     r.shown = lastShown_;
     r.tick = lastTick_;
     r.tickPeriod = tickPeriod_;
+    r.period = period_;
     r.outDelay = OutDelay();
     r.delaySettled = copyDelay_ > 0;
     r.copiesShownOnly = copiesShownOnly_;
@@ -148,6 +149,8 @@ void FixedDelayPicker::WarmUp(double tick, double period, const StoredFrame* fra
 }
 
 Pick FixedDelayPicker::Tick(double tick, double period, const StoredFrame* frames, int total) {
+    period_ = period;
+
     // The delay from a game frame's arrival to its output: fixed after a short warm-up (every
     // change would show a frame twice or skip one), long enough that the copy is nearly always done.
     if (copyDelay_ == 0) {

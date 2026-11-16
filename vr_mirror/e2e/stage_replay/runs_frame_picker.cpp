@@ -33,7 +33,12 @@ namespace stage_replay {
         struct TraceFrame {
             uint64_t serial = 0;
             double arrival = 0, smooth = 0, slot = 0;
+            double reuse = 0;  // when the source wrote its image over (an OpenXR trace's; 0: unknown)
         };
+
+        StoredFrame Stored(const TraceFrame& f) {
+            return {true, f.serial, f.arrival, f.smooth, f.slot, 0, true};
+        }
 
         struct TraceInput {
             std::string name;
@@ -50,7 +55,6 @@ namespace stage_replay {
         struct FrameUse {
             size_t stored = 0, shown = 0, keptUntilDue = 0, goneBeforeDue = 0;
             size_t skipped = 0;   // of the frames due: not copied, the forecast said no tick shows them
-            size_t copies = 0;    // copies made
             int mostHolding = 0;  // entries holding a frame at once
             uint64_t lastShown = 0;
             size_t nextDue = 0;  // the first stored frame not yet due
@@ -99,13 +103,7 @@ namespace stage_replay {
                     return true;
                 }
 
-                const bool yes = !forecast
-                                 || forecast->WillShow(
-                                     record,
-                                     Stored(in_.frames[next - 1]),
-                                     Stored(in_.frames[next])
-                                 );
-
+                const bool yes = !forecast || forecast->WillShow(record, Stored(in_.frames[next]));
                 answer_[next - 1] = yes ? kYes : kNo;
                 return yes;
             }
@@ -145,10 +143,6 @@ namespace stage_replay {
 
         private:
             enum Answer : char { kNotAsked, kNo, kYes };
-
-            static StoredFrame Stored(const TraceFrame& f) {
-                return {true, f.serial, f.arrival, f.smooth, f.slot, 0, true};
-            }
 
             const TraceInput& in_;
             const std::unordered_map<uint64_t, size_t>& indexOf_;
@@ -225,6 +219,8 @@ namespace stage_replay {
             }
 
             std::unordered_map<unsigned long long, double> drawnSlot;  // by layer frame
+            std::unordered_map<unsigned long long, double> ended;      // ...and when it ended
+            std::vector<unsigned long long> layerFrames;               // per frame of `in`
             std::vector<double> slotSteps;
             std::vector<bool> startsSession;  // per frame of `in`
             double lastSlot = 0;
@@ -233,10 +229,11 @@ namespace stage_replay {
 
             while (fgets(line, sizeof(line), f)) {
                 unsigned long long layerFrame = 0, serial = 0;
-                double slot = 0, arrival = 0;
+                double slot = 0, arrival = 0, end = 0;
 
-                if (line[0] == 'F' && sscanf_s(line, "F,%llu,%*lf,%lf", &layerFrame, &slot) == 2) {
+                if (line[0] == 'F' && sscanf_s(line, "F,%llu,%lf,%lf", &layerFrame, &end, &slot) == 3) {
                     drawnSlot[layerFrame] = slot;
+                    ended[layerFrame] = end;
                     if (lastSlot > 0 && slot > lastSlot && slot - lastSlot < 0.05) {
                         slotSteps.push_back(slot - lastSlot);
                     }
@@ -250,6 +247,7 @@ namespace stage_replay {
                     fr.arrival = arrival;
                     fr.slot = drawn != drawnSlot.end() ? drawn->second : 0;  // re-timed below
                     in->frames.push_back(fr);
+                    layerFrames.push_back(layerFrame);
                     startsSession.push_back(layerFrame < lastLayerFrame);
                     lastLayerFrame = layerFrame;
                 }
@@ -274,6 +272,10 @@ namespace stage_replay {
                 const ArrivalResult r = timing->Add({fr.arrival, 0, fr.slot, in->period});
                 fr.smooth = r.smooth;
                 fr.slot = r.slot;
+
+                // The layer's three textures take turns: the third frame after writes this one's.
+                const auto reused = ended.find(layerFrames[i] + 3);
+                fr.reuse = reused != ended.end() ? reused->second : 0;
             }
 
             return true;
@@ -366,8 +368,9 @@ namespace stage_replay {
         }
 
         // How a run copies the frames into the store: each as it arrives (the Pimax source), each once
-        // the next one has arrived (the OpenXR source, which holds a frame to ask the forecast about
-        // it), or, held so, only the frames the forecast says a tick shows.
+        // the next one has arrived (a reference: holding every frame), or only the frames the forecast
+        // says a tick shows (the OpenXR source): those it is sure of as they arrive, the others once
+        // the next one has.
         enum class Copying { kAtArrival, kHeld, kShownOnly };
         constexpr Copying kCopyings[] = {Copying::kAtArrival, Copying::kHeld, Copying::kShownOnly};
 
@@ -377,74 +380,74 @@ namespace stage_replay {
                 case Copying::kHeld:
                     return ", each held for the next";
                 case Copying::kShownOnly:
-                    return ", held, only those shown";
+                    return ", only those shown";
                 default:
                     return "";
             }
         }
 
-        // The OpenXR source's copying: each frame held until the next one arrives, or for two display
-        // periods if none does (the game paused), and then copied, or not if the caller says so.
-        class HeldCopy {
+        // The frames' copies into the store, as a host makes them: at once, or held until the next frame
+        // arrives (or for two display periods if none does: the game paused) and then made or not. A copy
+        // begun after the source wrote the image over (a trace's `reuse`) fails, as the plugin's does.
+        class Copier {
         public:
-            HeldCopy(const TraceInput& in, FrameStore* store)
+            Copier(const TraceInput& in, FrameStore* store)
                 : in_(in),
                   store_(store),
                   skipped_(in.frames.size(), false) {}
 
-            // Copies the held frame if no next one came within two display periods by `now`.
-            void CopyIfLate(double now) {
-                const double late = in_.frames[frame_].arrival + 2 * in_.period;
+            // Copies frame `frame` from `start`, the copy taking `copy`.
+            void CopyNow(size_t frame, double start, double copy) {
+                const TraceFrame& f = in_.frames[frame];
 
-                if (Holding() && late <= now) {
-                    Copy(late);
+                if (f.reuse > 0 && start > f.reuse) {
+                    gone_++;
+                    return;
                 }
+
+                store_->Add(f.serial, f.arrival, f.smooth, f.slot, start + copy);
+                copies_++;
             }
 
-            // Frame `frame` arrived, its copy to take `copy`: copies the held frame now if `copyHeld`,
-            // and holds the new one.
-            void Next(size_t frame, double copy, bool copyHeld) {
-                if (Holding() && copyHeld) {
-                    Copy(in_.frames[frame].arrival);
-                } else if (Holding()) {
-                    skipped_[frame_] = true;
-                }
-
+            // Holds frame `frame`, its copy to take `copy`, until Resolve.
+            void Hold(size_t frame, double copy) {
                 holding_ = true;
-                copied_ = false;
                 frame_ = frame;
                 copy_ = copy;
             }
 
-            // Stops holding: a frame still held is copied at `now`.
-            void Release(double now) {
-                if (Holding()) {
-                    Copy(now);
+            // The held frame, if any, is copied from `start` if `copy`, else never.
+            void Resolve(double start, bool copy) {
+                if (holding_ && copy) {
+                    CopyNow(frame_, start, copy_);
+                } else if (holding_) {
+                    skipped_[frame_] = true;
                 }
 
                 holding_ = false;
             }
 
-            bool Skipped(size_t frame) const { return skipped_[frame]; }
-            size_t Copies() const { return copies_; }
+            // Copies the held frame if no next one came within two display periods by `now`.
+            void CopyIfLate(double now) {
+                const double late = in_.frames[frame_].arrival + 2 * in_.period;
 
-        private:
-            bool Holding() const { return holding_ && !copied_; }
-
-            void Copy(double start) {
-                const TraceFrame& f = in_.frames[frame_];
-                store_->Add(f.serial, f.arrival, f.smooth, f.slot, start + copy_);
-                copied_ = true;
-                copies_++;
+                if (holding_ && late <= now) {
+                    Resolve(late, true);
+                }
             }
 
+            bool Skipped(size_t frame) const { return skipped_[frame]; }
+            size_t Copies() const { return copies_; }
+            size_t Gone() const { return gone_; }
+
+        private:
             const TraceInput& in_;
             FrameStore* store_;
             std::vector<bool> skipped_;  // per frame of `in_`
-            bool holding_ = false, copied_ = false;
+            bool holding_ = false;
             size_t frame_ = 0;  // the frame held
             double copy_ = 0;   // ...and how long its copy takes
-            size_t copies_ = 0;
+            size_t copies_ = 0, gone_ = 0;
         };
 
         // Counts the frames due by `tick` (the output delay after their de-jittered arrival) and
@@ -454,7 +457,7 @@ namespace stage_replay {
             double tick,
             double outDelay,
             const FrameStore& store,
-            const HeldCopy& held,
+            const Copier& copier,
             FrameUse* use
         ) {
             for (; use->nextDue < use->stored; use->nextDue++) {
@@ -464,7 +467,7 @@ namespace stage_replay {
                     break;
                 }
 
-                if (held.Skipped(use->nextDue)) {
+                if (copier.Skipped(use->nextDue)) {
                     use->skipped++;
                 } else if (store.Holds(f.serial)) {
                     use->keptUntilDue++;
@@ -498,7 +501,7 @@ namespace stage_replay {
             const std::unordered_map<uint64_t, size_t> indexOf = IndexBySerial(in);
             WillShowCheck willShow(in, indexOf);
             const std::unique_ptr<ShowForecast> forecast = picker->MakeForecast();
-            HeldCopy held(in, store.get());
+            Copier copier(in, store.get());
 
             uint32_t seed = 4242;
             auto next = [&] {
@@ -531,29 +534,27 @@ namespace stage_replay {
                     const TraceFrame& f = in.frames[frame];
                     const TickRecord record = picker->Record();
 
-                    // Copied as it arrives: the plugin's copying today, and the OpenXR source's while
-                    // the picker doesn't ask it to copy only the frames shown (Instant).
-                    if (copying == Copying::kAtArrival || (shownOnly && !record.copiesShownOnly)) {
-                        held.Release(f.arrival);
-                        store->Add(f.serial, f.arrival, f.smooth, f.slot, f.arrival + copy);
-                        use.copies++;
-                        willShow.Ask(forecast.get(), record, frame);
-                        continue;
+                    copier.CopyIfLate(f.arrival);
+                    const bool show = willShow.Ask(forecast.get(), record, frame);
+                    const bool sure = !forecast || forecast->Arrived(record, Stored(f));
+                    copier.Resolve(f.arrival, show || !shownOnly);
+
+                    // Held until the next frame: every frame in the reference run, and with only those
+                    // shown copied, a frame the forecast can't tell yet (the picker asking for it).
+                    // Copied at once: the plugin's copying today, and the others.
+                    if (copying == Copying::kHeld || (shownOnly && record.copiesShownOnly && !sure)) {
+                        copier.Hold(frame, copy);
+                    } else {
+                        copier.CopyNow(frame, f.arrival, copy);
                     }
-
-                    held.CopyIfLate(f.arrival);
-                    const bool yes = willShow.Ask(forecast.get(), record, frame);
-                    held.Next(frame, copy, yes || !shownOnly);
                 }
 
-                if (copying != Copying::kAtArrival) {
-                    held.CopyIfLate(tick);
-                }
+                copier.CopyIfLate(tick);
 
                 store->Finish(tick);
                 use.stored = frame;
                 use.mostHolding = std::max(use.mostHolding, store->Holding());
-                CountDue(in, tick, picker->OutDelay(), *store, held, &use);
+                CountDue(in, tick, picker->OutDelay(), *store, copier, &use);
                 const Pick p = picker->Tick(tick, in.period, store->slots, kMaxSlots);
                 if (picker->OutDelay() != outDelay) {  // the delay fixed
                     outDelay = picker->OutDelay();
@@ -617,29 +618,30 @@ namespace stage_replay {
             if (copying == Copying::kShownOnly) {
                 printf(
                     "%-60s frames: %zu arrived, %zu copied, %zu due by the end; of those %.0f%% shown, "
-                    "%.0f%% "
-                    "not copied, %.0f%% of the copied still stored when due; up to %d entries holding a "
-                    "frame\n",
+                    "%.0f%% not copied, %.0f%% of the copied still stored when due; up to %d entries "
+                    "holding a frame; %zu copies too late (the image written over)\n",
                     "",
                     use.stored,
-                    use.copies + held.Copies(),
+                    copier.Copies(),
                     use.nextDue,
                     Percent(use.shown, use.nextDue),
                     Percent(use.skipped, use.nextDue),
                     Percent(use.keptUntilDue, use.nextDue - use.skipped),
-                    use.mostHolding
+                    use.mostHolding,
+                    copier.Gone()
                 );
             } else {
                 printf(
                     "%-60s frames: %zu stored, %zu due by the end; of those %.0f%% shown, %.0f%% still "
-                    "stored "
-                    "when due; up to %d entries holding a frame\n",
+                    "stored when due; up to %d entries holding a frame; %zu copies too late (the image "
+                    "written over)\n",
                     "",
                     use.stored,
                     use.nextDue,
                     Percent(use.shown, use.nextDue),
                     Percent(use.keptUntilDue, use.nextDue),
-                    use.mostHolding
+                    use.mostHolding,
+                    copier.Gone()
                 );
             }
 

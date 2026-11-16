@@ -199,10 +199,12 @@ It runs the frame picker as the OBS plugin does: the fixed delay, unless `--fram
   (5% of them after 5–30 ms), and the store is resized as the picker asks, as the plugin's ring is:
   at the next copy, keeping its frames when it grows.
 - **Each input runs three ways:** the frames copied as they arrive (the Pimax source), each held
-  until the next one arrives and then copied (a reference for what holding costs), and held with
-  only the frames the forecast says a tick shows copied, while the picker's record asks for that
-  (the OpenXR source). A held frame with no next one within two display periods is copied then. The
-  first line of a run names the second and third ways.
+  until the next one arrives and then copied (a reference for what holding costs), and only the
+  frames the forecast says a tick shows copied, while the picker's record asks for that (the OpenXR
+  source): those it can tell as they arrive at once, the others held until the next one. A held frame
+  with no next one within two display periods is copied then. The first line of a run names the
+  second and third ways. With an OpenXR trace, a copy begun after the layer wrote the frame's image
+  over (its texture's frame three on ended, by the F rows) fails, and the second line counts those.
 - **It prints** the picks by kind per run and the delay it fixed, how far each tick's moment trails the
   shown image's slot (median), and the largest jump of the moments apart from the ticks' own step
   (without a smoothing change).

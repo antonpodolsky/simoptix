@@ -7,8 +7,9 @@
 // A copy thread copies each new frame as soon as it can (the mirror is a single buffer the game
 // overwrites about a frame later; the OpenXR layer's three textures take turns). When the frame
 // picker asks for the frames shown only, and the source keeps a frame's image until the next frame
-// has arrived, it holds each frame instead, asks the picker's forecast once the next one comes, and
-// copies it only if a tick will show it (or after two display periods without a next one). It marks
+// has arrived, it copies at once only a frame the picker's forecast says a tick shows even with the
+// next one on time; it holds the others, asks the forecast once the next one comes, and copies one
+// only if a tick will show it (or after two display periods without a next one). It marks
 // a slot ready once the GPU has finished the copy (an event query read with DONOTFLUSH: it never waits
 // on the GPU), and feeds each frame's images to the pipeline's drawn pose (DrawnPoseFeed), which the
 // graphics thread then asks for the pose each frame was drawn with. OBS's graphics thread reads the

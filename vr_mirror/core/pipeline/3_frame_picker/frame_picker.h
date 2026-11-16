@@ -23,23 +23,29 @@ struct TickRecord {
     uint64_t shown = 0;         // the frame the last tick showed (serial)
     double tick = 0;            // that tick (source time; 0: no tick since the restart)
     double tickPeriod = 0;      // the host's output frame period (0: no regular ticks)
+    double period = 0;          // the display's, at that tick
     double outDelay = 0;        // as OutDelay
     bool delaySettled = false;  // the output delay stays as it is until a restart
-    // The host is to copy only the frames the forecast says a tick shows: it holds each frame until
-    // the next one arrives and asks. False: it copies each frame as it arrives.
+    // The host is to copy only the frames the forecast says a tick shows: it copies a frame Arrived
+    // says is shown at once, and holds the others until the next one arrives and WillShow tells.
+    // False: it copies each frame as it arrives.
     bool copiesShownOnly = false;
     uint32_t restarts = 0;  // changes at every Restart
 };
 
 // Whether any coming tick will show a frame, told from the frames as they arrive and the picker's
-// newest TickRecord. One per host, on the thread that sees the frames arrive. Logic only.
+// newest TickRecord (`record`, the newest one the picker wrote). One per host, on the thread that sees
+// the frames arrive. Logic only.
 class ShowForecast {
 public:
     virtual ~ShowForecast() = default;
-    // Asked once the frame after `frame` (`next`) has arrived, before either is copied: once for every
-    // frame, in arrival order. `record`: the newest one the picker wrote. A forecast that can't tell
-    // says true.
-    virtual bool WillShow(const TickRecord& record, const StoredFrame& frame, const StoredFrame& next) = 0;
+    // A new frame, before it is copied: every frame, in arrival order. True if a tick will show it even
+    // with the next frame on time; false if that depends on when the next one comes. A forecast that
+    // can't tell says true.
+    virtual bool Arrived(const TickRecord& record, const StoredFrame& frame) = 0;
+    // The frame after the newest one Arrived has come (`next`, before its own Arrived): whether a tick
+    // will show the newest one. A forecast that can't tell says true.
+    virtual bool WillShow(const TickRecord& record, const StoredFrame& next) = 0;
 };
 
 class FramePicker {

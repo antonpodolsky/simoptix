@@ -288,13 +288,14 @@ delay ... ms", about 4–5 ms measured). The frame picker (`vr_mirror\core\pipel
   headset, 10 at 144 Hz. It then keeps only the frames inside the delay plus 3, and at least 4. When
   OBS records slower than the headset, it keeps a few frames more, so a frame it hasn't shown yet
   isn't overwritten before OBS's next tick.
-- **The OpenXR source with Look-ahead copies only the frames OBS will show.** The layer keeps each
-  image until the third frame after it, so the source can wait for the next frame, work out whether
-  any tick will show this one, and copy it or not. When OBS records slower than the headset, the
-  ring then holds only the frames shown: at most one per OBS tick. At 90 Hz with OBS at 60 fps that
-  is about 38 copies instead of 56. The wait makes the output run about one headset frame later (the
-  "output delay" line, which the sound follows). With Instant every frame is copied as it arrives:
-  its frames are due too soon after they arrive to be sure, and holding them would only delay them.
+- **The OpenXR source with Look-ahead copies only the frames OBS will show.** When a frame arrives,
+  the source works out whether a tick will show it even if the next frame comes on time. Such a
+  frame is copied at once. The others wait for the next frame, which settles whether a tick shows
+  them, and are copied or not. The layer keeps each image until the third frame after it, so a
+  waiting frame is still there. When OBS records slower than the headset, the ring then holds only
+  the frames shown: at most one per OBS tick. At 90 Hz with OBS at 60 fps that is about 37 copies
+  instead of 54, and about a third of the frames are never copied. With Instant every frame is
+  copied as it arrives: its frames are due too soon after they arrive to be sure.
   The Pimax source copies every frame as it arrives, because its image is gone by the next frame.
   When OBS's frame rate changes while the source runs, it measures its output delay again ("OBS at
   ... fps" in the log), so the ring follows the new rate.

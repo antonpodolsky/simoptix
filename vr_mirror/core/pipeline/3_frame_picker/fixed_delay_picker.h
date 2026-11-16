@@ -63,6 +63,7 @@ private:
     uint64_t lastShown_ = 0;  // the frame shown at the previous tick
     int lastSlot_ = -1;       // ...and its store entry
     double lastTick_ = 0;     // ...and that tick (0: none since Restart)
+    double period_ = 0;       // the display's, at the last tick
     bool fixedPending_ = false;
     double fixedP95_ = 0;
     double tickPeriod_ = 0;  // the host's (0: no regular ticks, nothing run ahead)

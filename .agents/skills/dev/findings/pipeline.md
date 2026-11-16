@@ -384,6 +384,13 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
     exact ticks' phase. Before the warm-up counted each copy once (above), the Instant third after
     Look-ahead counted the held copies too and fixed a longer delay (15.5 against 12.6 ms), and only
     the held runs repeated there.
+  - Holding every frame lost images in LMU: the layer writes a frame's texture over sooner than
+    holding allows when the PC is busy (`findings\obs_plugin.md`, "Copying only the frames OBS
+    shows"). Since, the forecast says as each frame arrives whether a tick shows it even with the
+    next frame on time (`ShowForecast::Arrived`, run ahead without keeping its ticks), and only the
+    others are held. The synthetic runs then copy 2,169 of 2,592 frames at 60 fps and 2,927 of 4,179
+    at 144 Hz with OBS at 60 fps, with the repeats of copying at arrival and its 5.0 and 9.8 ms copy
+    delay.
 - **Tried and dropped: the tick plan (`TickPlanPicker`), issue #27's second way.** Each tick showed
   the newest frame due by its grid time, with no slack. `stage_replay --stage frame_picker
   --frame_picker tick_plan`, synthetic frames, the store keeping every frame:
