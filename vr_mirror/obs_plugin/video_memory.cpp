@@ -10,7 +10,7 @@
 
 std::string VideoMemoryText(const MemoryFacts& facts, const MirrorSettings& settings, FrameSource& source) {
     if (!facts.running) {
-        return "Actual VRAM usage: shown once the game runs with this source shown.";
+        return "Actual VRAM usage: not available yet (start the game with this source shown)";
     }
 
     const PipelineConfig config = ConfigFor(settings, OutputClock::kTicks, source.Report());
@@ -22,11 +22,11 @@ std::string VideoMemoryText(const MemoryFacts& facts, const MirrorSettings& sett
     uint32_t width = 0, height = 0;
 
     if (!source.CopySize(needWidth, kImageMemory / std::max(1, slots), &width, &height)) {
-        return "Actual VRAM usage: shown once the game's first frame has arrived.";
+        return "Actual VRAM usage: not available yet (waiting for the game's first frame)";
     }
 
     if (slots == 0) {
-        return "Actual VRAM usage: measuring the copies (2 s after the game's first frame).";
+        return "Actual VRAM usage: not available yet (measuring for 2 s)";
     }
 
     const double bytes = static_cast<double>(slots) * width * height * 4;
