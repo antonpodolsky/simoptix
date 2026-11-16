@@ -273,6 +273,19 @@ for the agents that read those files. Change the rules here, never in those file
     `overlays\gmeter\design\README.md` hold the same numbers. Change both together.
 - **Thresholds.** Never loosen a scenario's limits or remove a scenario to get a pass without asking.
   Report failures with their numbers.
+- **The pipeline's expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the
+  SHA-256 of each run of `stage_replay --golden`. The Pipeline output check fails on any run that
+  differs from it, so no change in the pipeline's output passes unseen.
+  - The file holds the output of `stage_replay` as GitHub's runners build it. Another compiler rounds
+    some values in the last bits differently: Visual Studio 2019's build differs in 18 of the 52 runs,
+    by at most 8.6e-7, with nothing changed. So compare a local build with the build before it, as
+    the refactor guard does (`reference\e2e.md`), and not with this file.
+  - A change that is meant to change the output takes the `golden_expected.txt` that its failed
+    Pipeline output run uploads, and commits it in the same pull request. The commit message and the
+    pull request name the runs that changed and why.
+  - When GitHub's compiler changes, Pipeline output fails with nothing changed in the code. The new
+    file is committed on its own, saying so.
+  - A change that must not change the output leaves the file as it is.
 - **Before calling work done:**
   - Build every target that includes the changed files. `vr_mirror\core\` and
     `vr_mirror\frame_sources\pimax\` are used by `vr_mirror\obs_plugin`, `vr_mirror\mirror_app` and
@@ -433,7 +446,8 @@ One convention, everywhere. Check every new name against it, and rename what bre
   PowerShell 5.1 adds a byte-order mark and garbles non-ASCII text (an en dash comes out as `â€“`).
 - **Don't put code containing backslashes in bash heredocs or `python -c`.** The escapes get mangled.
   Write a script file with a file-editing tool and run that instead.
-- Files in the working copy use LF line endings. Keep them that way.
+- Files in the working copy use LF line endings. `.gitattributes` checks every text file out with LF,
+  on Windows too. Keep them that way.
 
 ## 3. Build (every change)
 
@@ -457,7 +471,7 @@ The automated tests are the e2e suite (step 5).
 
 The plugin builds make OBS's import library from `shared\obs_lib\obs.def`.
 
-**The version.** `VERSION` at the repo's root holds SimOptix's version, one number for every part
+**The version.** `version.txt` at the repo's root holds SimOptix's version, one number for every part
 (`0.1.0`). `shared\build\version.bat` reads it and adds the commits since the release tag and the
 commit, the way `git describe --tags` gives them (`0.1.0+12.gabc1234`). A build exactly on the release
 tag gets the plain number. Every `build.bat` that makes a shipped file calls it: both plugins and the
@@ -488,6 +502,16 @@ committed.
 - Run the build scripts through `cmd /c "<full path>\build.bat"` from PowerShell. A bare `build.bat`
   isn't found from another folder.
 - A build must finish with no new warnings.
+- `shared\build\build_all.ps1` builds every part in the table's order, the layer before setup, and
+  fails when a build fails or prints a warning of the compiler, the linker or the resource compiler.
+  The checks on GitHub run it (step 7). Each build's output goes to `shared\build\obj\logs\`.
+
+  ```
+  powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1
+  ```
+
+  It builds the layer and setup unsigned, so run it before signing, never after. Without LMU's
+  headers, the plugins build without LMU and the fake LMU isn't built. Each says so in its log.
 - Before committing code, run the formatters on the files the change touched, as the code-style skill
   says ("The formatters").
 
@@ -734,6 +758,32 @@ Record what each start of the game showed in `findings\openxr.md`.
 - **Every change goes through a pull request on GitHub,** once the repo has its GitHub remote. Push the
   worktree's branch, open a pull request against `main`, and merge it on GitHub after its checks.
   Nothing is pushed to `main` directly.
+- **The checks on GitHub** run on each pull request, on GitHub's Windows runners. A pull request is
+  merged when every one passes. A failing check fails the pull request.
+
+  | Check | What it runs |
+  |---|---|
+  | Build | Every part, with no warnings (`shared\build\build_all.ps1`, step 3) |
+  | Format | clang-format and ruff, at the versions step 3 names |
+  | Docs | `check_docs.py` |
+  | Public text | `check_public_text.py` on every file and on the pull request's commits |
+  | Pipeline output | `stage_replay --golden` against the expected output in `vr_mirror\e2e\stage_replay\golden_expected.txt`, run by run. Any change fails it, and the run uploads the new golden file and its `golden_expected.txt` ("Tests", "The pipeline's expected output") |
+  | Logs e2e | The local files test (`vr_mirror\e2e\bin\local_files_e2e.exe`), in OBS 32.2.2 from OBS's own release, checked against its SHA-256 |
+  | Changelog | The type label and the Changelog section as a release reads them (`release.py --check-pr`) |
+  | Description | `check_public_text.py` on the description |
+
+  `.github\workflows\checks.yml` holds the first six, which also run on each push to `main`. Build
+  builds once and uploads what it built. Pipeline output and Logs e2e wait for it and run those
+  files, so they test what Build built, and are skipped when it fails.
+  `.github\workflows\pull_request.yml` holds Changelog and Description, which also run each time the
+  description or the label changes. The docs and public-text checks fail only on what their scripts
+  fail on, and their lines to review show in the run.
+
+  GitHub's runners have no LMU, no Pimax SDK, no headset and no graphics card, and the checks never
+  sign. So on GitHub the plugins build without LMU, the fake LMU and the PVR layout check are skipped,
+  and the layer and setup are unsigned. The e2e suite isn't among the checks: the mirror app draws far
+  below its scenarios' frame rates there (`findings\e2e.md`, "The tests on GitHub's runners"). Those,
+  the e2e suite, and the checks in OBS and in the headset are still done by hand, as steps 3 to 5 say.
 - **Write the pull request by the pull-requests skill** (`.agents\skills\pull-requests\SKILL.md`): its
   title, its description from the template, which covers this change only, and its one type label,
   which feeds the changelog. The release script refuses a release while a pull request since the last

@@ -6,7 +6,7 @@ rem and the check program bin\check\Le Mans Ultimate.exe (check\openxr_check.cpp
 rem carries the game's file name because the layer only wakes up in a program of that name; it is
 rem not the game.
 rem The DLL links the C runtime in (/MT), so it needs nothing else to load.
-rem Its version comes from ..\..\..\shared\build\version.bat (VERSION at the repo's root, and git),
+rem Its version comes from ..\..\..\shared\build\version.bat (version.txt at the repo's root, and git),
 rem and goes into the DLL's version resource (openxr_layer_version.rc) and into the manifest in bin\
 rem as implementation_version: one decimal number, as the OpenXR loader reads it (0.1.0 is 1000).
 rem Installing it for the game: install.bat (install.ps1 as administrator; README.md).

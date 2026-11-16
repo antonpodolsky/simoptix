@@ -235,6 +235,10 @@ def findings(name, lines, kinds):
 
 
 def main():
+    # The lines it prints are public text. Before Python 3.15, output to a pipe or a file is in the
+    # Windows code page, which can't hold every character that text uses, such as "−".
+    sys.stdout.reconfigure(encoding="utf-8")
+
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )

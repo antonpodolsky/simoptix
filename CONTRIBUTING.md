@@ -61,7 +61,7 @@ project settings set `context.fileName` to `AGENTS.md`.
 | For | Needs |
 |---|---|
 | Every build | 64-bit Windows. Visual Studio 2019 or later, or its Build Tools, with "Desktop development with C++". The builds find it with `shared\build\vs_env.bat`. Only 2019 has been tried |
-| Reading LMU's telemetry | LMU installed through Steam, or `LMU_SDK` set to the game's `Support\SharedMemoryInterface` folder. The build finds that folder in any Steam library. Without it, both plugins build, the build says so, and they read no game |
+| Reading LMU's telemetry | LMU installed through Steam, or `LMU_SDK` set to the game's `Support\SharedMemoryInterface` folder. The build finds that folder in any Steam library. Without it, both plugins build, the build says so, and they read no game. The fake LMU isn't built |
 | Trying the plugins | OBS Studio 32.2.2. For VR Mirror's Pimax source, a Pimax headset with Pimax Play running |
 | The layout check of `pvr_interface.h` | Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`, or `PVR_SDK` naming its `Include` folder. Nothing else needs it |
 | Signing the OpenXR layer | A code signing certificate of your own that Windows trusts, and `signtool`, which comes with the Visual Studio C++ workload. The repo builds the layer unsigned. Sign `bin\XR_APILAYER_SIMOPTIX_frame_source.dll` with SHA-256 and a timestamp, then install it with `install.ps1` |
@@ -73,7 +73,9 @@ project settings set `context.fileName` to `AGENTS.md`.
 
 Each part has a `build.bat`. Run it from a command prompt or PowerShell with its full path, for example
 `cmd /c "<repo>\vr_mirror\obs_plugin\build.bat"`. Build output stays beside the script (`obj\`, `bin\`)
-and is ignored by git. Builds must finish with no new warnings at `/W3`.
+and is ignored by git. Builds must finish with no new warnings at `/W3`. To build every part at once,
+and fail on any warning, run
+`powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1`.
 
 | Changed | Build | e2e tests at the end |
 |---|---|---|
@@ -117,6 +119,10 @@ a minute, and its first run copies OBS (466 MB).
 
 The stage replay (`vr_mirror\e2e\bin\stage_replay.exe`) runs in about a second. Use it to find out why
 a scenario fails, and to check that a refactor changes nothing (`.agents\skills\dev\reference\e2e.md`).
+`vr_mirror\e2e\stage_replay\golden_expected.txt` holds its expected output, as GitHub builds it, and the
+Pipeline output check fails on any change to it. When your change is meant to change the output, the
+failed check uploads the new `golden_expected.txt`. Commit it with your change. A build with another
+compiler can differ from the file in the last bits with nothing changed.
 
 - New behaviour in the pipeline gets a scenario, or a new measure in an existing one.
 - A pipeline bug gets a scenario that fails before the fix, when the fake runtime can produce the
@@ -187,6 +193,14 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   builds, the e2e results if `vr_mirror\core\` or the mirror app changed, and what you checked by hand.
   The description covers that change only. How the work went and details of your own PC stay out.
   Plans, next steps and work on other branches go in an issue.
+- GitHub checks each pull request, and a failing check fails it: Build (every part, with no warnings),
+  Format (clang-format and ruff), Docs, Public text, Pipeline output (the stage replay's output against
+  `vr_mirror\e2e\stage_replay\golden_expected.txt`) and Logs e2e (the local files test), in
+  `.github\workflows\checks.yml`. Changelog checks the label and the Changelog section the way a
+  release reads them, and Description the description's public text, each time either changes
+  (`.github\workflows\pull_request.yml`). The Changelog section ends the description, so nothing goes
+  after it. GitHub's runners have no LMU, no Pimax SDK, no headset and no graphics card, so the e2e
+  suite runs only by hand (Test, above). Say in the pull request what you checked by hand.
 - Give the pull request one label, which decides whether it goes into `CHANGELOG.md`:
   - If users notice the change, label it `added`, `changed`, `fixed`, `removed` or `security`. Then
     write one to three lines in the Changelog section of its description. Write them for a VR sim
@@ -202,11 +216,11 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 
 ## Releases
 
-SimOptix has one version for all its parts, in `VERSION` at the repo's root, such as 0.1.0. Every
+SimOptix has one version for all its parts, in `version.txt` at the repo's root, such as 0.1.0. Every
 build carries it, and a build that isn't a release adds the commits since the last one
 (`0.1.0+12.gabc1234`). The maintainer makes the releases.
 
-1. In a "Release: v<version>" pull request, bump `VERSION` and run
+1. In a "Release: v<version>" pull request, bump `version.txt` and run
    `python -I .agents\skills\dev\release.py`. It writes the release's section of `CHANGELOG.md` from
    the labels and Changelog sections of the pull requests since the last release.
 2. After it merges, tag the merge commit on `main` as `v<version>`, annotated.

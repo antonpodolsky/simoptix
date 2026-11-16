@@ -2,10 +2,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Starting a private copy of simoptix_vr_mirror.exe against the fake runtime, finding its window, and
 // closing it; and the fake game with the OpenXR layer's frames (fake_openxr.exe), which runs beside it.
+// Also ending every process a test starts when the test ends, however it ends.
 #pragma once
 
 #include "common.h"
 #include "shared/unique_handle.h"
+
+// Puts this process in a job that Windows ends, with every process it starts afterwards, when this
+// process ends: a test stopped midway (Ctrl+C, or a cancelled run on GitHub) leaves no mirror app, fake
+// game or OBS running, holding its files. Call it first in wmain. False if Windows refused.
+bool EndChildrenWithThisProcess();
 
 struct ToolProcess {
     PROCESS_INFORMATION pi = {};

@@ -27,7 +27,14 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /Fo:obj\fake_openxr\ ^
    ..\..\shared\log.cpp /Fe:bin\fake_openxr.exe ^
    /link d3d11.lib dxgi.lib d3dcompiler.lib winmm.lib || exit /b 1
 
-cl /nologo /std:c++17 /EHsc /O2 /Zi /W3 /DNOMINMAX /DUNICODE /D_UNICODE /Fo:obj\ /Fd:obj\ ^
+rem The runner captures windows with the Windows SDK's C++/WinRT. A C++/WinRT that includes C++20's
+rem <coroutine> gets C++20, because under C++17 it includes <experimental/coroutine>, which MSVC 14.51
+rem and later refuse (STL1011). An older one includes only <experimental/coroutine>, and gets C++17.
+set "RUNNER_STD=/std:c++17"
+set "CPPWINRT_BASE=%WindowsSdkDir%Include\%WindowsSDKVersion%cppwinrt\winrt\base.h"
+findstr /c:"#include <coroutine>" "%CPPWINRT_BASE%" >nul 2>&1 && set "RUNNER_STD=/std:c++20"
+echo e2e_runner: %RUNNER_STD%, for the C++/WinRT of Windows SDK %WindowsSDKVersion:\=%
+cl /nologo %RUNNER_STD% /EHsc /O2 /Zi /W3 /DNOMINMAX /DUNICODE /D_UNICODE /Fo:obj\ /Fd:obj\ ^
    /I..\.. /I..\core ^
    runner\runner.cpp runner\scenarios.cpp runner\analysis.cpp runner\compare.cpp runner\tool_process.cpp ^
    /Fe:bin\e2e_runner.exe ^

@@ -16,6 +16,7 @@ namespace {
 
     constexpr const char* kName = "SimOptixE2E";  // the profile and the scene collection
     constexpr DWORD kStartMs = 30000;
+    constexpr DWORD kLoggedMs = 60000;
     constexpr DWORD kCloseMs = 30000;
 
     // What OBS shows for each source id, as the plugins name them.
@@ -309,6 +310,16 @@ bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string
     for (DWORD waited = 0; waited < kStartMs && !sourcesStarted; waited += 250) {
         Sleep(250);
         sourcesStarted = Count(NewestLog(obs.dir), "started (source shown)") >= run.sources.size();
+    }
+
+    if (sourcesStarted && !run.holdUntilLogged.empty()) {
+        for (DWORD waited = 0; waited < kLoggedMs; waited += 250) {
+            if (Count(NewestLog(obs.dir), run.holdUntilLogged.c_str()) > 0) {
+                break;
+            }
+
+            Sleep(250);
+        }
     }
 
     if (sourcesStarted) {

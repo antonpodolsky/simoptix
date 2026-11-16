@@ -37,7 +37,8 @@ namespace {
 
     constexpr int kKept = 10;  // of each kind, as shared\local_files.cpp keeps
     constexpr int kOlder = 12;
-    constexpr DWORD kNewSecondMs = 1100;  // apart, so two runs' files never share a second
+    constexpr DWORD kNewSecondMs = 1100;                   // apart, so two runs' files never share a second
+    constexpr const char* kTraceLogged = "frame trace: ";  // OBS's log, as a trace starts
 
     int g_failures = 0;
 
@@ -70,10 +71,10 @@ namespace {
     // The trace each "frame trace: <stem>_ticks.csv" line of OBS's log names, as a file name stem.
     std::vector<std::wstring> TracesLogged(const std::string& log) {
         std::vector<std::wstring> stems;
-        const char* const marker = "frame trace: ";
 
-        for (size_t at = log.find(marker); at != std::string::npos; at = log.find(marker, at + 1)) {
-            const size_t start = at + strlen(marker);
+        for (size_t at = log.find(kTraceLogged); at != std::string::npos;
+             at = log.find(kTraceLogged, at + 1)) {
+            const size_t start = at + strlen(kTraceLogged);
             const size_t end = log.find("_ticks.csv", start);
 
             if (end != std::string::npos) {
@@ -264,6 +265,7 @@ namespace {
         run.sources = {"simoptix_pimax_mirror"};
         run.localAppData = c.appData;
         run.fakePvrScenario = FakePvrScenario(c, 0);
+        run.holdUntilLogged = kTraceLogged;
         std::string log;
 
         if (!RunObsCase(obs, c, run, &log)) {
@@ -283,8 +285,10 @@ namespace {
         const fs::path scenario = c.dir / "fake_openxr.cfg";
         const std::wstring stopEvent = L"Local\\SimOptix.LocalFilesE2E.Stop."
                                        + std::to_wstring(GetCurrentProcessId());
+        // A quarter of the default image's sides: the test checks files, not speed, and on a machine
+        // with no graphics card the full-size image left the layer's copies pending (at about 4 fps).
         const std::string text = "log=" + (c.dir / "fake_openxr.log").string()
-                                 + "\nstop_event=" + Narrow(stopEvent) + "\n";
+                                 + "\nstop_event=" + Narrow(stopEvent) + "\nwidth=1271\nheight=1042\n";
         Touch(scenario, text.c_str());
         FakeGameProcess game;
 
@@ -304,6 +308,7 @@ namespace {
         run.sources = {"simoptix_openxr_mirror"};
         run.localAppData = c.appData;
         run.fakePvrScenario = FakePvrScenario(c, 1e6);
+        run.holdUntilLogged = kTraceLogged;
         std::string log;
         const bool ran = RunObsCase(obs, c, run, &log);
         StopFakeGame(game);
@@ -432,6 +437,10 @@ namespace {
 }
 
 int wmain() {
+    if (!EndChildrenWithThisProcess()) {
+        printf("warning: a run stopped midway may leave OBS or the fake game running\n");
+    }
+
     wchar_t self[MAX_PATH];
     GetModuleFileNameW(nullptr, self, MAX_PATH);
     const fs::path repo = fs::path(self).parent_path().parent_path().parent_path().parent_path();
