@@ -56,7 +56,7 @@ public:
     void Render();
 
 private:
-    void FollowCanvas();
+    void FollowVideoSettings();
     void ToggleTrace(bool on);
     PipelineConfig ConfigOf() const;
     void FeedDrawnPose();
@@ -84,9 +84,10 @@ private:
     uint64_t framesAtStart_ = 0;  // graphics thread: FrameSource::FramesArrived() when it started
 
     MirrorSettings settings_;
-    // The OBS canvas's base size: written each tick on the graphics thread (FollowCanvas), read by OBS
-    // from any thread (Width, Height).
+    // The OBS canvas's base size: written each tick on the graphics thread (FollowVideoSettings), read
+    // by OBS from any thread (Width, Height).
     std::atomic<uint32_t> width_{2560}, height_{1440};
+    double obsFramePeriod_ = 0;  // graphics thread: OBS's video frame period (s; 0: unknown), likewise
     bool stamp_ = false;
     bool trace_ = false;  // debug: write a frame trace (see ToggleTrace)
 
@@ -101,6 +102,7 @@ private:
     WarpParams warp_ = {};
     int warpSlot_ = -1;
     int delaySmoothing_ = -1;      // the SmoothingKind the frame picker and ring are set for
+    double delayTickPeriod_ = -1;  // ...and OBS's frame period
     bool loggedStabilize_ = true;  // Stabilizes(settings) as last logged (a change is logged once)
     const DrawnPose* fedDrawnPose_ = nullptr;  // the pipeline's drawn pose the ring was handed last
     double outDelay_ = 0;                      // the frame picker's output delay as last logged (s)

@@ -21,17 +21,6 @@ namespace {
         return double(ns) * 1e-9;
     }
 
-    // OBS's video frame period from its video settings (s); 0 if they can't be read.
-    double ObsFramePeriod() {
-        obs_video_info ovi = {};
-
-        if (!obs_get_video_info(&ovi) || !ovi.fps_num || !ovi.fps_den) {
-            return 0;
-        }
-
-        return static_cast<double>(ovi.fps_den) / ovi.fps_num;
-    }
-
     // A line of the stages' shared report (StatsReport), in OBS's log.
     void LogLine(const char* line) {
         blog(LOG_INFO, "[simoptix_vr_mirror] %s", line);
@@ -47,7 +36,7 @@ namespace {
 
 MirrorView::MirrorView(std::unique_ptr<FrameSource> frames, const MirrorSettings& settings, bool debug)
     : frameSource_(std::move(frames)) {
-    FollowCanvas();
+    FollowVideoSettings();
     SetSettings(settings, debug);
     frameSource_->SetArrivalTiming(  // before any Start
         MakeArrivalTiming(ConfigFor(settings_, OutputClock::kTicks, frameSource_->Report()).arrivalTiming)
@@ -91,9 +80,9 @@ void MirrorView::DestroyTextures() {
     }
 }
 
-// Takes the canvas size from OBS's video settings (a plain copy, no lock): a change there applies
-// at the next tick.
-void MirrorView::FollowCanvas() {
+// Takes the canvas size and the frame rate from OBS's video settings (a plain copy, no lock): a
+// change there applies at the next tick.
+void MirrorView::FollowVideoSettings() {
     obs_video_info ovi = {};
     if (!obs_get_video_info(&ovi) || !ovi.base_width || !ovi.base_height) {
         return;
@@ -104,6 +93,7 @@ void MirrorView::FollowCanvas() {
 
     width_ = ovi.base_width;
     height_ = ovi.base_height;
+    obsFramePeriod_ = ovi.fps_num && ovi.fps_den ? static_cast<double>(ovi.fps_den) / ovi.fps_num : 0;
 }
 
 // Debug frame trace, for matching a recording (with the frame-number stamp) to the poses the
@@ -187,13 +177,14 @@ void MirrorView::FeedDrawnPose() {
 void MirrorView::RestartDelay() {
     const PipelineConfig config = ConfigOf();
     delaySmoothing_ = int(config.smoothing);
+    delayTickPeriod_ = obsFramePeriod_;
     BuildPipeline(config, &pipeline_);
     FeedDrawnPose();
     FramePicker& picker = *pipeline_.Picker();
     picker.Restart(
         SmoothingDelayS(config.smoothing),
         frameSource_->Period(),
-        ObsFramePeriod(),
+        obsFramePeriod_,
         FrameRing::kMaxSlots,
         frameSource_->CanCopyAfterNextFrame()
     );
@@ -250,7 +241,7 @@ void MirrorView::StartStop() {
 }
 
 void MirrorView::Tick() {
-    FollowCanvas();  // also while hidden: OBS lays the source out by its size
+    FollowVideoSettings();  // also while hidden: OBS lays the source out by its size
     StartStop();
     if (!started_) {
         return;
@@ -345,6 +336,17 @@ void MirrorView::ApplySettingChanges(const PipelineConfig& config) {
             LOG_INFO,
             "[simoptix_vr_mirror] smoothing: %s",
             config.smoothing == SmoothingKind::kLookahead ? "Look-ahead" : "Instant"
+        );
+    }
+
+    // OBS's frame rate changed while the source ran (its video settings reset): the frame picker
+    // plans its ticks and sizes the ring from it.
+    if (obsFramePeriod_ != delayTickPeriod_) {
+        RestartDelay();
+        blog(
+            LOG_INFO,
+            "[simoptix_vr_mirror] OBS at %.2f fps: the output delay is measured again",
+            obsFramePeriod_ > 0 ? 1 / obsFramePeriod_ : 0.0
         );
     }
 

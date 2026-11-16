@@ -296,6 +296,8 @@ delay ... ms", about 4–5 ms measured). The frame picker (`vr_mirror\core\pipel
   "output delay" line, which the sound follows). With Instant every frame is copied as it arrives:
   its frames are due too soon after they arrive to be sure, and holding them would only delay them.
   The Pimax source copies every frame as it arrives, because its image is gone by the next frame.
+  When OBS's frame rate changes while the source runs, it measures its output delay again ("OBS at
+  ... fps" in the log), so the ring follows the new rate.
 - From the OpenXR source each copy is the game's own size, or the size the canvas shows it (above).
   From the Pimax source each copy is the size of the game eye. A copy takes 4 bytes per pixel, so 4
   copies take half the memory of 8.
