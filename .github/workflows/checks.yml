@@ -42,17 +42,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Every build's output is in this step's log.
       - name: Build
         run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1 -LogDir "$env:RUNNER_TEMP\build_logs"
+          powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1
           exit $LASTEXITCODE
-
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build_logs
-          path: ${{ runner.temp }}/build_logs
 
       # At their paths in the repo, for the jobs that test them.
       - name: Upload build
