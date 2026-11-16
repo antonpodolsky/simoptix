@@ -111,14 +111,27 @@ jobs:
       - name: Check out the build before
         run: git worktree add --detach "$env:RUNNER_TEMP\before" HEAD^1
 
-      - name: Build stage_replay, after and before
+      - name: Build stage_replay
         run: |
           cmd /c "vr_mirror\e2e\build.bat"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          exit $LASTEXITCODE
+
+      # A build before that doesn't build on GitHub leaves nothing to compare. It is said in the
+      # summary, and fails nothing.
+      - name: Build stage_replay before
+        id: before
+        continue-on-error: true
+        run: |
           cmd /c "$env:RUNNER_TEMP\before\vr_mirror\e2e\build.bat"
           exit $LASTEXITCODE
 
+      - name: No build before
+        if: steps.before.outcome == 'failure'
+        run: |
+          "stage_replay --golden: the build before didn't build here, so there is nothing to compare." >> $env:GITHUB_STEP_SUMMARY
+
       - name: Compare the golden dumps
+        if: steps.before.outcome == 'success'
         run: |
           vr_mirror\e2e\bin\stage_replay.exe --golden "$env:RUNNER_TEMP\after.txt"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
