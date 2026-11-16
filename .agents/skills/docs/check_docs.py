@@ -317,6 +317,10 @@ def CheckChangelog(lines):
 
 
 def main():
+    # The lines it prints are the repo's text. Before Python 3.15, output to a pipe or a file is in the
+    # Windows code page, which can't hold every character the docs use, such as "−".
+    sys.stdout.reconfigure(encoding="utf-8")
+
     args = sys.argv[1:]
     terms = Terms("Terms coined in this repo")
     outside = Terms("Outside terms")
