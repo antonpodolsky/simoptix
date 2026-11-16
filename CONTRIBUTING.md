@@ -119,6 +119,9 @@ a minute, and its first run copies OBS (466 MB).
 
 The stage replay (`vr_mirror\e2e\bin\stage_replay.exe`) runs in about a second. Use it to find out why
 a scenario fails, and to check that a refactor changes nothing (`.agents\skills\dev\reference\e2e.md`).
+`vr_mirror\e2e\stage_replay\golden_expected.txt` holds its expected output, and the Pipeline output
+check fails on any change to it. A change that is meant to change the output writes the file again
+with `golden_compare.py --write-expected` and commits it with the change.
 
 - New behaviour in the pipeline gets a scenario, or a new measure in an existing one.
 - A pipeline bug gets a scenario that fails before the fix, when the fake runtime can produce the
@@ -190,8 +193,8 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   The description covers that change only. How the work went and details of your own PC stay out.
   Plans, next steps and work on other branches go in an issue.
 - GitHub checks each pull request, and a failing check fails it: Build (every part, with no warnings),
-  Format (clang-format and ruff), Docs, Public text, Pipeline output (whether the stage replay's output
-  changed, shown in the run), Pipeline e2e (the e2e suite) and Logs e2e (the local files test), in
+  Format (clang-format and ruff), Docs, Public text, Pipeline output (the stage replay's output against
+  `vr_mirror\e2e\stage_replay\golden_expected.txt`), Pipeline e2e (the e2e suite) and Logs e2e (the local files test), in
   `.github\workflows\checks.yml`. Changelog checks the label and the Changelog section the way a
   release reads them, and Description the description's public text, each time either changes
   (`.github\workflows\pull_request.yml`). The Changelog section ends the description, so nothing goes

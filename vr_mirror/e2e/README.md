@@ -289,5 +289,5 @@ in `out\local_files\<case>\`.
 | `local_files\` | `local_files_e2e.exe`: the local files test. Its cases (`local_files_e2e.cpp`), its copy of OBS (`local_files_obs.*`), and the older files it makes and the files it reads (`local_files_folder.*`) |
 | `fake_pvr\` | `libPVRClient64.dll`: the fake PVR runtime and game, with replays of real sessions (`fake_pvr_replay.h`) and their real thumbnails (`fake_pvr_thumbs.h`) |
 | `runner\` | `e2e_runner.exe`: the scenarios (`scenarios.*`), running the mirror app (`tool_process.*`), capturing its window (`capture.h`, `patches.h`), the measures (`analysis.*`), and the comparison with Instant (`compare.*`) |
-| `stage_replay\` | `stage_replay.exe`: one run per stage (`runs_*.cpp`), the whole pipeline (`runs_pipeline.cpp`), its scores (`scores.*`), the golden file (`golden.*`), and `golden_compare.py`, which compares two golden files run by run |
+| `stage_replay\` | `stage_replay.exe`: one run per stage (`runs_*.cpp`), the whole pipeline (`runs_pipeline.cpp`), its scores (`scores.*`), the golden file (`golden.*`), `golden_compare.py`, which compares golden files run by run, and `golden_expected.txt`, the SHA-256 of each run of the expected golden file |
 | `replay\` | The replays of real sessions (`<name>.csv`, each a scenario `replay_<name>`) and their real thumbnails (`<name>.thumbs.png`) |

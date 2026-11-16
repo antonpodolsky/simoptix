@@ -6,8 +6,8 @@
 #   Format           clang-format and ruff
 #   Docs             check_docs.py
 #   Public text      check_public_text.py on every file and on the pull request's commits
-#   Pipeline output  stage_replay's golden file against the build before. A change is shown in the
-#                    summary, and fails nothing, because many pull requests change it on purpose
+#   Pipeline output  stage_replay's golden file against vr_mirror\e2e\stage_replay\golden_expected.txt.
+#                    Any change fails it. A change that is meant commits a new golden_expected.txt
 #   Pipeline e2e     the e2e suite
 #   Logs e2e         the local files test
 # pull_request.yml checks the description and the label. Nothing here signs, and no job has a secret.
@@ -120,16 +120,11 @@ jobs:
     name: Pipeline output
     runs-on: windows-latest
     steps:
+      # The whole history and the tags, for the version (shared\build\version.bat).
       - name: Check out
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      # The build before: the first parent of the commit checked out. For a pull request that is
-      # GitHub's merge commit, whose first parent is the base branch, and for a push to main the
-      # main it was merged into.
-      - name: Check out the build before
-        run: git worktree add --detach "$env:RUNNER_TEMP\before" HEAD^1
 
       - name: Build stage_replay
         run: |
@@ -138,31 +133,29 @@ jobs:
 
       - name: Write the golden file
         run: |
-          vr_mirror\e2e\bin\stage_replay.exe --golden "$env:RUNNER_TEMP\after.txt"
+          vr_mirror\e2e\bin\stage_replay.exe --golden "$env:RUNNER_TEMP\golden.txt"
           exit $LASTEXITCODE
 
-      # A build before that doesn't build on GitHub leaves nothing to compare. It is said in the
-      # summary, and fails nothing.
-      - name: Build stage_replay of the build before
-        id: before
-        continue-on-error: true
+      - name: Compare the golden file with golden_expected.txt
         run: |
-          cmd /c "$env:RUNNER_TEMP\before\vr_mirror\e2e\build.bat"
+          python -I vr_mirror\e2e\stage_replay\golden_compare.py --expected "$env:RUNNER_TEMP\golden.txt" --markdown $env:GITHUB_STEP_SUMMARY
           exit $LASTEXITCODE
 
-      - name: Report that the build before didn't build
-        if: steps.before.outcome == 'failure'
+      # What changed, to read, and the golden_expected.txt of this output, to commit if it is meant.
+      - name: Write golden_expected.txt from this output
+        if: failure()
         run: |
-          "stage_replay --golden: the build before didn't build here, so there is nothing to compare." >> $env:GITHUB_STEP_SUMMARY
+          python -I vr_mirror\e2e\stage_replay\golden_compare.py --write-expected "$env:RUNNER_TEMP\golden.txt"
+          exit $LASTEXITCODE
 
-      - name: Compare the golden file with the build before's
-        if: steps.before.outcome == 'success'
-        run: |
-          & "$env:RUNNER_TEMP\before\vr_mirror\e2e\bin\stage_replay.exe" --golden "$env:RUNNER_TEMP\before.txt"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python -I vr_mirror\e2e\stage_replay\golden_compare.py "$env:RUNNER_TEMP\before.txt" "$env:RUNNER_TEMP\after.txt" --markdown $env:GITHUB_STEP_SUMMARY
-          if ($LASTEXITCODE -eq 2) { exit 2 }
-          exit 0
+      - name: Upload the golden file and its golden_expected.txt
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline_output
+          path: |
+            ${{ runner.temp }}/golden.txt
+            vr_mirror/e2e/stage_replay/golden_expected.txt
 
   pipeline_e2e:
     name: Pipeline e2e

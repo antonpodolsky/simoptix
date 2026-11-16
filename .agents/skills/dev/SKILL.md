@@ -273,6 +273,18 @@ for the agents that read those files. Change the rules here, never in those file
     `overlays\gmeter\design\README.md` hold the same numbers. Change both together.
 - **Thresholds.** Never loosen a scenario's limits or remove a scenario to get a pass without asking.
   Report failures with their numbers.
+- **The pipeline's expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the
+  SHA-256 of each run of `stage_replay --golden`. The Pipeline output check fails on any run that
+  differs from it, so no change in the pipeline's output passes unseen. A change that is meant to
+  change the output writes the file again in the same commit, and its commit message and pull
+  request name the runs that changed and why:
+
+  ```
+  python -I vr_mirror\e2e\stage_replay\golden_compare.py --write-expected out\stage_replay\golden_new.txt
+  ```
+
+  A change that must not change the output leaves the file as it is (`reference\e2e.md`, "Refactor
+  guard").
 - **Before calling work done:**
   - Build every target that includes the changed files. `vr_mirror\core\` and
     `vr_mirror\frame_sources\pimax\` are used by `vr_mirror\obs_plugin`, `vr_mirror\mirror_app` and
@@ -754,7 +766,7 @@ Record what each start of the game showed in `findings\openxr.md`.
   | Format | clang-format and ruff, at the versions step 3 names |
   | Docs | `check_docs.py` |
   | Public text | `check_public_text.py` on every file and on the pull request's commits |
-  | Pipeline output | `stage_replay --golden` against the build before, compared run by run. It fails when `stage_replay` can't be built or run. A change in the output shows in the run's summary and fails nothing, because many pull requests change it on purpose |
+  | Pipeline output | `stage_replay --golden` against the expected output in `vr_mirror\e2e\stage_replay\golden_expected.txt`, run by run. Any change fails it, and the run uploads the new golden file and its `golden_expected.txt` ("Tests", "The pipeline's expected output") |
   | Pipeline e2e | The e2e suite (`vr_mirror\e2e\bin\e2e_runner.exe`) |
   | Logs e2e | The local files test (`vr_mirror\e2e\bin\local_files_e2e.exe`), in an OBS installed on the runner |
   | Changelog | The type label and the Changelog section as a release reads them (`release.py --check-pr`) |

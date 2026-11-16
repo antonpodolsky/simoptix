@@ -167,9 +167,23 @@ python -I vr_mirror\e2e\stage_replay\golden_compare.py out\stage_replay\golden_m
 ```
 
 It names each run that changed, is new or is gone, and exits with 1 when the files differ. A difference
-is a behaviour change until shown otherwise. The e2e suite still decides at the end. The checks on
-GitHub run the same comparison on each pull request against the build before it, and show the result
-in the run's summary without failing.
+is a behaviour change until shown otherwise. The e2e suite still decides at the end.
+
+**The expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the SHA-256 of each run
+of the golden file. Compare a golden file with it, as the Pipeline output check on GitHub does:
+
+```
+python -I vr_mirror\e2e\stage_replay\golden_compare.py --expected out\stage_replay\golden_new.txt
+```
+
+When a change is meant to change the output, write the file again and commit it with the change:
+
+```
+python -I vr_mirror\e2e\stage_replay\golden_compare.py --write-expected out\stage_replay\golden_new.txt
+```
+
+When Pipeline output fails on GitHub, its run uploads the golden file it wrote and the
+`golden_expected.txt` of that output, to compare with a local one.
 
 ### Stage 1 and stage 3 over OBS traces
 

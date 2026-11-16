@@ -1,21 +1,31 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Compares two golden dumps of stage_replay (--golden), run by run.
+"""Compares stage_replay's golden file (--golden) run by run, with another golden file or with the
+expected output in golden_expected.txt.
 
-The refactor guard of .agents\\skills\\dev\\reference\\e2e.md: a change that must not change behaviour
-reproduces the build before it byte for byte. This says which runs changed, which are new and which
-are gone, where `fc /b` says only that the files differ. A run starts at its `# <input> <settings>`
-line. The checks on GitHub run it on each pull request against the build before it.
+A golden file holds every output of the pipeline over a fixed set of runs. A run starts at its
+`# <input> <settings>` line. golden_expected.txt, beside this script, holds each run's SHA-256 and
+label, so that a change in any run's output is caught without keeping the 26 MB file in the repo. A
+change that is meant writes it again (--write-expected) and commits it with the change.
 
 Usage:
   python -I vr_mirror\\e2e\\stage_replay\\golden_compare.py <before> <after> [--markdown FILE]
+  python -I vr_mirror\\e2e\\stage_replay\\golden_compare.py --expected <golden> [--markdown FILE]
+  python -I vr_mirror\\e2e\\stage_replay\\golden_compare.py --write-expected <golden>
 
---markdown also appends the result to FILE as Markdown (GitHub's job summary). The exit code is 0
-when the dumps are identical, 1 when they differ, and 2 when a file can't be read.
+The first compares two golden files, as the refactor guard of .agents\\skills\\dev\\reference\\e2e.md
+does. The second compares a golden file with golden_expected.txt, as the Pipeline output check on
+GitHub does. The third writes golden_expected.txt from a golden file. --markdown also appends the
+result to FILE as Markdown (GitHub's job summary). The exit code is 0 when the outputs are the same,
+1 when they differ, and 2 when a file can't be read.
 """
 
 import argparse
+import hashlib
+import os
 import sys
+
+EXPECTED = os.path.join(os.path.dirname(os.path.abspath(__file__)), "golden_expected.txt")
 
 
 def read_runs(path):
@@ -36,6 +46,40 @@ def read_runs(path):
     return runs, order
 
 
+def fingerprint(lines):
+    return hashlib.sha256("".join(lines).encode("utf-8")).hexdigest()
+
+
+def read_expected(path):
+    """Returns {run label: its SHA-256} and the labels in the file's order."""
+    expected = {}
+    order = []
+
+    with open(path, encoding="utf-8") as file:
+        for line in file:
+            if line.startswith("#") or not line.strip():
+                continue
+
+            digest, label = line.rstrip("\n").split(" ", 1)
+            expected[label] = digest
+            order.append(label)
+
+    return expected, order
+
+
+def write_expected(golden_path):
+    runs, order = read_runs(golden_path)
+
+    with open(EXPECTED, "w", encoding="utf-8", newline="\n") as file:
+        file.write("# The SHA-256 of each run of `stage_replay --golden`, and its label. Written by\n")
+        file.write("# golden_compare.py --write-expected. The Pipeline output check compares with it.\n")
+
+        for label in order:
+            file.write(f"{fingerprint(runs[label])} {label}\n")
+
+    print(f"{len(order)} runs written to {EXPECTED}")
+
+
 def first_difference(before, after):
     """The number of the first line of a run (1 = the line after its label) that differs."""
     for number, (old, new) in enumerate(zip(before, after), start=1):
@@ -45,44 +89,83 @@ def first_difference(before, after):
     return min(len(before), len(after)) + 1
 
 
-def compare(before_path, after_path):
-    """Returns the report's lines, and whether the dumps are identical."""
-    before, before_order = read_runs(before_path)
-    after, after_order = read_runs(after_path)
-
-    changed = [label for label in after_order if label in before and before[label] != after[label]]
-    added = [label for label in after_order if label not in before]
-    removed = [label for label in before_order if label not in after]
-    total = len(after_order)
-
+def report(changed, added, removed, total, what):
+    """The report's lines, and whether nothing changed. `changed` holds (label, detail) pairs."""
     if not changed and not added and not removed:
-        return [f"stage_replay --golden: identical, all {total} runs."], True
+        return [f"stage_replay --golden: identical to {what}, all {total} runs."], True
 
     lines = [
-        f"stage_replay --golden: {len(changed)} of {total} runs changed, "
+        f"stage_replay --golden: {len(changed)} of {total} runs changed against {what}, "
         f"{len(added)} new, {len(removed)} gone."
     ]
-
-    for label in changed:
-        line = first_difference(before[label], after[label])
-        lines.append(f"- changed: `{label}`, from its line {line}")
-
+    lines += [f"- changed: `{label}`{detail}" for label, detail in changed]
     lines += [f"- new: `{label}`" for label in added]
     lines += [f"- gone: `{label}`" for label in removed]
     return lines, False
 
 
+def compare_files(before_path, after_path):
+    before, before_order = read_runs(before_path)
+    after, after_order = read_runs(after_path)
+
+    changed = [
+        (label, f", from its line {first_difference(before[label], after[label])}")
+        for label in after_order
+        if label in before and before[label] != after[label]
+    ]
+    added = [label for label in after_order if label not in before]
+    removed = [label for label in before_order if label not in after]
+    return report(changed, added, removed, len(after_order), "the other file")
+
+
+def compare_expected(golden_path):
+    expected, expected_order = read_expected(EXPECTED)
+    runs, order = read_runs(golden_path)
+
+    changed = [
+        (label, "") for label in order if label in expected and expected[label] != fingerprint(runs[label])
+    ]
+    added = [label for label in order if label not in expected]
+    removed = [label for label in expected_order if label not in runs]
+    lines, same = report(changed, added, removed, len(order), "golden_expected.txt")
+
+    if not same:
+        lines.append(
+            "If the change is meant, write golden_expected.txt again with "
+            "`golden_compare.py --write-expected <golden>` and commit it with the change."
+        )
+
+    return lines, same
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Compares two stage_replay golden dumps, run by run.")
-    parser.add_argument("before")
-    parser.add_argument("after")
+    parser = argparse.ArgumentParser(description="Compares stage_replay golden files, run by run.")
+    parser.add_argument("files", nargs="*")
+    parser.add_argument(
+        "--expected", action="store_true", help="compare one golden file with golden_expected.txt"
+    )
+    parser.add_argument(
+        "--write-expected", action="store_true", help="write golden_expected.txt from one golden file"
+    )
     parser.add_argument("--markdown", help="also append the result to this file")
     args = parser.parse_args()
 
+    wanted = 1 if args.expected or args.write_expected else 2
+
+    if len(args.files) != wanted:
+        parser.error(f"give {wanted} golden file(s)")
+
     try:
-        lines, identical = compare(args.before, args.after)
+        if args.write_expected:
+            write_expected(args.files[0])
+            return 0
+
+        if args.expected:
+            lines, same = compare_expected(args.files[0])
+        else:
+            lines, same = compare_files(args.files[0], args.files[1])
     except OSError as error:
-        print(f"cannot read a dump: {error}")
+        print(f"cannot read a file: {error}")
         return 2
 
     print("\n".join(lines))
@@ -91,7 +174,7 @@ def main():
         with open(args.markdown, "a", encoding="utf-8") as summary:
             summary.write("\n".join(lines) + "\n")
 
-    return 0 if identical else 1
+    return 0 if same else 1
 
 
 if __name__ == "__main__":
