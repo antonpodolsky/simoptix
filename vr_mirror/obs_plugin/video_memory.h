@@ -23,5 +23,5 @@ struct MemoryFacts {
     uint32_t canvasWidth = 0, canvasHeight = 0;
 };
 
-// "Actual VRAM usage: 3.1 GB (37 copies of 5084 x 4168)", or what is still missing.
+// "Expected VRAM usage: 3.1 GB (37 copies of 5084 x 4168)", or what is still missing.
 std::string VideoMemoryText(const MemoryFacts& facts, const MirrorSettings& settings, FrameSource& source);

@@ -113,7 +113,7 @@ namespace {
     // the properties without a source (`s` null).
     std::string VideoMemoryOf(Source* s, obs_data_t* settings) {
         if (!s || !settings) {
-            return "Actual VRAM usage: not available yet (start the game with this source shown)";
+            return "Expected VRAM usage: <not measured yet (start the game with this source shown)>";
         }
 
         bool debug = false;
