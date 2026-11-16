@@ -25,6 +25,7 @@
 #include "shared/log.h"
 #include "shared/telemetry/telemetry.h"
 #include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
+#include "video_memory.h"
 #include "vr_mirror/frame_sources/openxr/openxr_source.h"
 #include "vr_mirror/frame_sources/pimax/pimax_source.h"
 
@@ -113,7 +114,7 @@ namespace {
     // the properties without a source (`s` null).
     std::string VideoMemoryOf(Source* s, obs_data_t* settings) {
         if (!s || !settings) {
-            return "Expected VRAM usage: <not measured yet (start the game with this source shown)>";
+            return kVideoMemoryNotMeasured;
         }
 
         bool debug = false;
@@ -165,7 +166,8 @@ namespace {
         obs_data_t* settings = s ? obs_source_get_settings(s->source) : nullptr;
         const std::string memory = VideoMemoryOf(s, settings);
         obs_data_release(settings);
-        obs_properties_add_text(p, "video_memory", memory.c_str(), OBS_TEXT_INFO);
+        obs_property_t* line = obs_properties_add_text(p, "video_memory", memory.c_str(), OBS_TEXT_INFO);
+        obs_property_text_set_info_type(line, OBS_TEXT_INFO_WARNING);
         obs_property_set_modified_callback2(smoothing, RefreshVideoMemory, s);
 
         obs_property_t* zoom = obs_properties_add_float_slider(p, "zoom", "Zoom", 1.0, 3.0, 0.01);

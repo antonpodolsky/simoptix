@@ -10,7 +10,7 @@
 
 std::string VideoMemoryText(const MemoryFacts& facts, const MirrorSettings& settings, FrameSource& source) {
     if (!facts.running) {
-        return "Expected VRAM usage: <not measured yet (start the game with this source shown)>";
+        return kVideoMemoryNotMeasured;
     }
 
     const PipelineConfig config = ConfigFor(settings, OutputClock::kTicks, source.Report());
@@ -22,11 +22,11 @@ std::string VideoMemoryText(const MemoryFacts& facts, const MirrorSettings& sett
     uint32_t width = 0, height = 0;
 
     if (!source.CopySize(needWidth, kImageMemory / std::max(1, slots), &width, &height)) {
-        return "Expected VRAM usage: <not measured yet (waiting for the game's first frame)>";
+        return kVideoMemoryNotMeasured;
     }
 
     if (slots == 0) {
-        return "Expected VRAM usage: <not measured yet (measuring for 2 s)>";
+        return kVideoMemoryNotMeasured;
     }
 
     const double bytes = static_cast<double>(slots) * width * height * 4;
