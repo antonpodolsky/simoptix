@@ -160,8 +160,16 @@ That is 52 runs and about 26 MB.
 
 **Refactor guard.** A change that must not change behaviour (moving code, splitting the pipeline into
 stages) must reproduce the build before it byte for byte. Write `golden_main.txt` with that build, then
-compare with `fc /b` or `cmp`. A difference is a behaviour change until shown otherwise. The e2e suite
-still decides at the end.
+compare the two golden files:
+
+```
+python -I vr_mirror\e2e\stage_replay\golden_compare.py out\stage_replay\golden_main.txt out\stage_replay\golden_new.txt
+```
+
+It names each run that changed, is new or is gone, and exits with 1 when the files differ. A difference
+is a behaviour change until shown otherwise. The e2e suite still decides at the end. The checks on
+GitHub run the same comparison on each pull request against the build before it, and show the result
+in the run's summary without failing.
 
 ### Stage 1 and stage 3 over OBS traces
 
