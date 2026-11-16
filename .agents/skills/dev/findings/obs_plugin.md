@@ -137,15 +137,15 @@ This file holds what was measured on the plugin, and what was tried.
 - **In LMU with that build: the frames shown as when every frame was copied, a third of the copies
   skipped.** One session with the OpenXR source, Look-ahead, OBS at 60 fps (NVENC AV1, 4K), with a
   recording of 3,323 frames:
-  - The log: the copy delay fixed at 6.5 ms, the ring at 37 entries (3,136 MB) from 0.6 s after
-    that, against 54 (4,577 MB) before; about 300 frames of 900 not copied per 10 s; no late copy.
-    One image lost before it was copied, in the 10 s after the game started (at 38 fps), none in the
-    rest of the session or the recording.
+  - The log: the copy delay fixed at 6.5 ms, and the ring at 37 entries (3,136 MB) from 0.6 s after
+    that, against 54 (4,577 MB) before. About 300 frames of 900 were not copied per 10 s, and no
+    copy was late. One image was lost before it was copied, in the 10 s after the game started (at
+    38 fps), and none in the rest of the session or the recording.
   - The recording, lined up with its trace: no game frame shown twice, none given a slot two or
     more on, no OBS tick shown twice or dropped, no cockpit jump over 2 px. 1,661 game frames never
     shown, a third, as at that rate.
   - The session's trace in `stage_replay`: 8,217 of 11,825 frames copied, 1,062 repeats (none with
-    a newer frame due) and no image lost, as copying at arrival; holding every frame there loses 5.
+    a newer frame due) and no image lost, as copying at arrival. Holding every frame there loses 5.
 
 ## Native canvases on a Pimax Dream Air in LMU
 
