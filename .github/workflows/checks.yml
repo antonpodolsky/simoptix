@@ -1,11 +1,16 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
-# The checks GitHub runs on each pull request and each push to main: every part built with no
-# warnings (shared\build\build_all.ps1), the formatters, the docs and public-text checks of the files
-# and commits, and whether stage_replay's golden output changed against the build before. The e2e
-# suite and the local files test run on trial: their results show in the run, but don't fail the
-# checks, until they are known to work on GitHub's runners. pull_request.yml checks the description
-# and the label. Nothing here signs, and no job has a secret.
+# The checks GitHub runs on each pull request and each push to main. Each is a job, and a pull request
+# passes only when every one passes:
+#   Build            every part, with no warnings (shared\build\build_all.ps1)
+#   Format           clang-format and ruff
+#   Docs             check_docs.py
+#   Public text      check_public_text.py on every file and on the pull request's commits
+#   Pipeline output  stage_replay's golden file against the build before. A change is shown in the
+#                    summary, and fails nothing, because many pull requests change it on purpose
+#   Pipeline e2e     the e2e suite
+#   Logs e2e         the local files test
+# pull_request.yml checks the description and the label. Nothing here signs, and no job has a secret.
 name: Checks
 
 on:
@@ -47,8 +52,8 @@ jobs:
           name: build_logs
           path: ${{ runner.temp }}/build_logs
 
-  verify_formatting:
-    name: Verify formatting
+  format:
+    name: Format
     runs-on: windows-latest
     steps:
       - name: Check out
@@ -69,10 +74,26 @@ jobs:
           exit $LASTEXITCODE
 
       - name: Verify the Python layout (ruff)
+        if: always()
         run: ruff format --check
 
-  verify_docs_and_public_text:
-    name: Verify docs and public text
+  docs:
+    name: Docs
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Verify the docs
+        run: python -I .agents\skills\docs\check_docs.py
+
+  public_text:
+    name: Public text
     runs-on: windows-latest
     steps:
       - name: Check out
@@ -85,21 +106,18 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Verify the docs
-        run: python -I .agents\skills\docs\check_docs.py
-
       - name: Verify the public text of every file
         run: python -I .agents\skills\public-text\check_public_text.py --repo
 
-      # The description and the label are verified by pull_request.yml, each time they change.
+      # The description is verified by pull_request.yml, each time it changes.
       - name: Verify the public text of the pull request's commits
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         env:
           COMMITS: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
         run: python -I .agents\skills\public-text\check_public_text.py --commits $env:COMMITS
 
-  compare_stage_replay:
-    name: Compare stage_replay with the build before
+  pipeline_output:
+    name: Pipeline output
     runs-on: windows-latest
     steps:
       - name: Check out
@@ -118,6 +136,11 @@ jobs:
           cmd /c "vr_mirror\e2e\build.bat"
           exit $LASTEXITCODE
 
+      - name: Write the golden file
+        run: |
+          vr_mirror\e2e\bin\stage_replay.exe --golden "$env:RUNNER_TEMP\after.txt"
+          exit $LASTEXITCODE
+
       # A build before that doesn't build on GitHub leaves nothing to compare. It is said in the
       # summary, and fails nothing.
       - name: Build stage_replay of the build before
@@ -132,22 +155,18 @@ jobs:
         run: |
           "stage_replay --golden: the build before didn't build here, so there is nothing to compare." >> $env:GITHUB_STEP_SUMMARY
 
-      - name: Compare the golden files
+      - name: Compare the golden file with the build before's
         if: steps.before.outcome == 'success'
         run: |
-          vr_mirror\e2e\bin\stage_replay.exe --golden "$env:RUNNER_TEMP\after.txt"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & "$env:RUNNER_TEMP\before\vr_mirror\e2e\bin\stage_replay.exe" --golden "$env:RUNNER_TEMP\before.txt"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -I vr_mirror\e2e\stage_replay\golden_compare.py "$env:RUNNER_TEMP\before.txt" "$env:RUNNER_TEMP\after.txt" --markdown $env:GITHUB_STEP_SUMMARY
           if ($LASTEXITCODE -eq 2) { exit 2 }
-          # A change in the output is shown, and fails nothing: many pull requests change it on purpose.
           exit 0
 
-  test_trial:
-    name: Test e2e and local files (trial)
+  pipeline_e2e:
+    name: Pipeline e2e
     runs-on: windows-latest
-    continue-on-error: true
     timeout-minutes: 45
     steps:
       - name: Check out
@@ -162,34 +181,56 @@ jobs:
           query session
           exit 0
 
+      - name: Build the mirror app and the e2e suite
+        run: |
+          cmd /c "vr_mirror\mirror_app\build.bat"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmd /c "vr_mirror\e2e\build.bat"
+          exit $LASTEXITCODE
+
+      - name: Test the e2e suite
+        run: |
+          vr_mirror\e2e\bin\e2e_runner.exe
+          exit $LASTEXITCODE
+
+      - name: Upload the e2e suite's output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline_e2e_out
+          path: vr_mirror/e2e/out/
+
+  logs_e2e:
+    name: Logs e2e
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The local files test runs both plugins, the OpenXR layer and the e2e builds.
       - name: Build every part
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1 -LogDir "$env:RUNNER_TEMP\build_logs"
           exit $LASTEXITCODE
 
-      - name: Test the e2e suite
-        id: e2e
-        run: |
-          vr_mirror\e2e\bin\e2e_runner.exe
-          exit $LASTEXITCODE
-
-      - name: Install OBS for the local files test
-        if: always() && steps.e2e.outcome != 'skipped'
+      - name: Install OBS
         run: |
           choco install obs-studio --no-progress -y
           exit $LASTEXITCODE
 
       - name: Test the local files
-        if: always() && steps.e2e.outcome != 'skipped'
         run: |
           vr_mirror\e2e\bin\local_files_e2e.exe
           exit $LASTEXITCODE
 
-      - name: Upload the tests' output
+      - name: Upload the local files test's output
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tests_out
+          name: logs_e2e_out
           path: |
             vr_mirror/e2e/out/
             !vr_mirror/e2e/out/obs_portable/

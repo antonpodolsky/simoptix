@@ -745,18 +745,25 @@ Record what each start of the game showed in `findings\openxr.md`.
 - **Every change goes through a pull request on GitHub,** once the repo has its GitHub remote. Push the
   worktree's branch, open a pull request against `main`, and merge it on GitHub after its checks.
   Nothing is pushed to `main` directly.
-- **The checks on GitHub** (`.github\workflows\checks.yml`) run on each pull request and each push to
-  `main`, on GitHub's Windows runners. A pull request is merged when they pass. They are:
-  - every build, with no warnings (`shared\build\build_all.ps1`, step 3)
-  - clang-format and ruff, at the versions step 3 names
-  - `check_docs.py`, and `check_public_text.py` on every file and the pull request's commits. Those
-    fail only on what the scripts fail on, and their lines to review show in the run
-  - in `.github\workflows\pull_request.yml`, each time the description or the label changes too: the
-    type label and the Changelog section as a release reads them (`release.py --check-pr`), and
-    `check_public_text.py` on the description
-  - `stage_replay --golden` against the build before, compared run by run. A change shows in the run's
-    summary and fails nothing, because many pull requests change the output on purpose
-  - the e2e suite and the local files test, on trial: their results show in the run, and fail nothing
+- **The checks on GitHub** run on each pull request, on GitHub's Windows runners. A pull request is
+  merged when every one passes. A failing check fails the pull request.
+
+  | Check | What it runs |
+  |---|---|
+  | Build | Every part, with no warnings (`shared\build\build_all.ps1`, step 3) |
+  | Format | clang-format and ruff, at the versions step 3 names |
+  | Docs | `check_docs.py` |
+  | Public text | `check_public_text.py` on every file and on the pull request's commits |
+  | Pipeline output | `stage_replay --golden` against the build before, compared run by run. It fails when `stage_replay` can't be built or run. A change in the output shows in the run's summary and fails nothing, because many pull requests change it on purpose |
+  | Pipeline e2e | The e2e suite (`vr_mirror\e2e\bin\e2e_runner.exe`) |
+  | Logs e2e | The local files test (`vr_mirror\e2e\bin\local_files_e2e.exe`), in an OBS installed on the runner |
+  | Changelog | The type label and the Changelog section as a release reads them (`release.py --check-pr`) |
+  | Description | `check_public_text.py` on the description |
+
+  `.github\workflows\checks.yml` holds the first seven, which also run on each push to `main`.
+  `.github\workflows\pull_request.yml` holds Changelog and Description, which also run each time the
+  description or the label changes. The docs and public-text checks fail only on what their scripts
+  fail on, and their lines to review show in the run.
 
   GitHub's runners have no LMU, no Pimax SDK and no headset, and the checks never sign. So on GitHub
   the plugins build without LMU, the fake LMU and the PVR layout check are skipped, and the layer and

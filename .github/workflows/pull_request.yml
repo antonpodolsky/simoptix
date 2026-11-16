@@ -1,9 +1,9 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Checks a pull request's description and label each time they change, not only when its code does:
-# the type label and the Changelog section as a release reads them (release.py --check-pr), and the
-# description's public text (check_public_text.py --pr). The builds and the other checks are in
-# checks.yml. No job has a secret.
+#   Changelog    the type label and the Changelog section as a release reads them (release.py --check-pr)
+#   Description  check_public_text.py on the description
+# The builds and the other checks are in checks.yml. No job has a secret.
 name: Pull request
 
 on:
@@ -22,13 +22,14 @@ defaults:
   run:
     shell: pwsh
 
+env:
+  GH_TOKEN: ${{ github.token }}
+  PR: ${{ github.event.pull_request.number }}
+
 jobs:
-  verify_description:
-    name: Verify the description and the label
+  changelog:
+    name: Changelog
     runs-on: windows-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
-      PR: ${{ github.event.pull_request.number }}
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -41,6 +42,17 @@ jobs:
       - name: Verify the label and the Changelog section, as a release reads them
         run: python -I .agents\skills\dev\release.py --check-pr $env:PR
 
+  description:
+    name: Description
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
       - name: Verify the public text of the description
-        if: always()
         run: python -I .agents\skills\public-text\check_public_text.py --pr $env:PR

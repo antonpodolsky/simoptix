@@ -189,13 +189,14 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   builds, the e2e results if `vr_mirror\core\` or the mirror app changed, and what you checked by hand.
   The description covers that change only. How the work went and details of your own PC stay out.
   Plans, next steps and work on other branches go in an issue.
-- GitHub checks each pull request (`.github\workflows\checks.yml`): every build with no warnings,
-  clang-format and ruff, the docs and public-text checks, and whether the stage replay's output changed.
-  Each time the description or the label changes, it checks the label and the Changelog section the way
-  a release reads them (`.github\workflows\pull_request.yml`). The Changelog section ends the
-  description, so nothing goes after it. It also runs the e2e suite and the local files test, whose results don't fail the pull request. Its
-  runners have no LMU, no Pimax SDK and no headset. So say in the pull request what you checked by
-  hand.
+- GitHub checks each pull request, and a failing check fails it: Build (every part, with no warnings),
+  Format (clang-format and ruff), Docs, Public text, Pipeline output (whether the stage replay's output
+  changed, shown in the run), Pipeline e2e (the e2e suite) and Logs e2e (the local files test), in
+  `.github\workflows\checks.yml`. Changelog checks the label and the Changelog section the way a
+  release reads them, and Description the description's public text, each time either changes
+  (`.github\workflows\pull_request.yml`). The Changelog section ends the description, so nothing goes
+  after it. GitHub's runners have no LMU, no Pimax SDK and no headset. So say in the pull request what
+  you checked by hand.
 - Give the pull request one label, which decides whether it goes into `CHANGELOG.md`:
   - If users notice the change, label it `added`, `changed`, `fixed`, `removed` or `security`. Then
     write one to three lines in the Changelog section of its description. Write them for a VR sim
