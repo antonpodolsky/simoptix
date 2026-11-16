@@ -8,10 +8,11 @@
 #   Public text      check_public_text.py on every file and on the pull request's commits
 #   Pipeline output  stage_replay's golden file against vr_mirror\e2e\stage_replay\golden_expected.txt.
 #                    Any change fails it. A change that is meant commits a new golden_expected.txt
-#   Pipeline e2e     the e2e suite
 #   Logs e2e         the local files test
-# Build builds once, and uploads what it built. Pipeline output, Pipeline e2e and Logs e2e wait for it,
-# and run those files, so they test what Build built, and are skipped when it fails.
+# Build builds once, and uploads what it built. Pipeline output and Logs e2e wait for it, and run those
+# files, so they test what Build built, and are skipped when it fails.
+# The e2e suite isn't here: on GitHub's runners, with no graphics card, the mirror app drew 9.5 to 28.5
+# fps against the 75 to 85 its scenarios ask for (findings\e2e.md). It runs by hand (dev skill, step 5).
 # pull_request.yml checks the description and the label. Nothing here signs, and no job has a secret.
 name: Checks
 
@@ -58,7 +59,6 @@ jobs:
             vr_mirror/obs_plugin/bin/
             overlays/obs_plugin/bin/
             vr_mirror/frame_sources/openxr/bin/
-            vr_mirror/mirror_app/simoptix_vr_mirror.exe
             vr_mirror/e2e/bin/
             setup/bin/
 
@@ -164,39 +164,6 @@ jobs:
           path: |
             ${{ runner.temp }}/golden.txt
             vr_mirror/e2e/stage_replay/golden_expected.txt
-
-  pipeline_e2e:
-    name: Pipeline e2e
-    needs: build
-    runs-on: windows-latest
-    timeout-minutes: 45
-    steps:
-      - name: Check out
-        uses: actions/checkout@v4
-
-      - name: Report runner
-        run: |
-          Get-CimInstance Win32_VideoController | Format-Table Name, DriverVersion, VideoModeDescription
-          Get-CimInstance Win32_Processor | Format-Table Name, NumberOfLogicalProcessors
-          query session
-          exit 0
-
-      - name: Download build
-        uses: actions/download-artifact@v4
-        with:
-          name: built
-
-      - name: Test
-        run: |
-          vr_mirror\e2e\bin\e2e_runner.exe
-          exit $LASTEXITCODE
-
-      - name: Upload output
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pipeline_e2e_out
-          path: vr_mirror/e2e/out/
 
   logs_e2e:
     name: Logs e2e

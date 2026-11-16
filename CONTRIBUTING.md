@@ -195,12 +195,12 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   Plans, next steps and work on other branches go in an issue.
 - GitHub checks each pull request, and a failing check fails it: Build (every part, with no warnings),
   Format (clang-format and ruff), Docs, Public text, Pipeline output (the stage replay's output against
-  `vr_mirror\e2e\stage_replay\golden_expected.txt`), Pipeline e2e (the e2e suite) and Logs e2e (the local files test), in
+  `vr_mirror\e2e\stage_replay\golden_expected.txt`) and Logs e2e (the local files test), in
   `.github\workflows\checks.yml`. Changelog checks the label and the Changelog section the way a
   release reads them, and Description the description's public text, each time either changes
   (`.github\workflows\pull_request.yml`). The Changelog section ends the description, so nothing goes
-  after it. GitHub's runners have no LMU, no Pimax SDK and no headset. So say in the pull request what
-  you checked by hand.
+  after it. GitHub's runners have no LMU, no Pimax SDK, no headset and no graphics card, so the e2e
+  suite runs only by hand (Test, above). Say in the pull request what you checked by hand.
 - Give the pull request one label, which decides whether it goes into `CHANGELOG.md`:
   - If users notice the change, label it `added`, `changed`, `fixed`, `removed` or `security`. Then
     write one to three lines in the Changelog section of its description. Write them for a VR sim
