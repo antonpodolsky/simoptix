@@ -4,11 +4,12 @@
 #   Changelog    the type label and the Changelog section as a release reads them (release.py --check-pr)
 #   Description  check_public_text.py on the description
 # The builds and the other checks are in checks.yml. No job has a secret.
-# Every run finishes, with no concurrency group to cancel one. A new description or label leaves the
-# commit as it is, so each run's jobs stay on the pull request's latest commit. GitHub counts a
-# cancelled job there as not passed, and shows the pull request red. Opening a pull request with its
-# label starts two runs at once (opened, labeled). Each run reads the description and the label from
-# GitHub (gh pr view) when it runs.
+# A push to the pull request cancels the run of the commit it replaces. Every other run finishes, in a
+# concurrency group of its own. A new description or label leaves the commit as it is, so a cancelled
+# run's jobs would stay on the pull request's latest commit. GitHub counts a cancelled job there as not
+# passed, and shows the pull request red. Opening a pull request with its label starts two runs at once
+# (opened, labeled). Each run reads the description and the label from GitHub (gh pr view) when it
+# runs, so a run that finishes checks the latest text.
 name: Pull request
 
 on:
@@ -18,6 +19,10 @@ on:
 permissions:
   contents: read
   pull-requests: read
+
+concurrency:
+  group: pull-request-${{ github.event.pull_request.number }}-${{ github.event.action == 'synchronize' && 'push' || github.run_id }}
+  cancel-in-progress: true
 
 defaults:
   run:
