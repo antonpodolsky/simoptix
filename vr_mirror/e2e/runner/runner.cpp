@@ -646,6 +646,22 @@ namespace {
         return -1;
     }
 
+    // A misspelt name would otherwise run nothing and pass.
+    bool AllKnown(const std::vector<std::string>& wanted, const std::vector<Scenario>& scenarios) {
+        bool known = true;
+
+        for (const std::string& name : wanted) {
+            const auto byName = [&name](const Scenario& s) { return s.name == name; };
+
+            if (std::none_of(scenarios.begin(), scenarios.end(), byName)) {
+                printf("no scenario named %s (--list lists them)\n", name.c_str());
+                known = false;
+            }
+        }
+
+        return known;
+    }
+
     // Prints Look-ahead against Instant, for every scenario that ran at both, and the totals.
     // Returns the exit code.
     int
@@ -700,6 +716,10 @@ int wmain(int argc, wchar_t** argv) {
     const int exitCode = ParseArguments(argc, argv, scenarios, &wanted);
     if (exitCode >= 0) {
         return exitCode;
+    }
+
+    if (!AllKnown(wanted, scenarios)) {
+        return 2;
     }
 
     int failed = 0, ran = 0;

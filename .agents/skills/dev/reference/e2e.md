@@ -21,7 +21,7 @@ vr_mirror\e2e\bin\e2e_runner.exe
 ```
 
 It runs every scenario. Name some to run only those (`e2e_runner.exe stabilization black_borders`), or
-list them with `--list`.
+list them with `--list`. A name that matches no scenario stops the run with exit code 2.
 
 - Each scenario opens a small window (320×180) on top of everything, for about 15 s.
 - With every scenario at both smoothings, that is 38 runs. They took 558 s (about 9 minutes) in
