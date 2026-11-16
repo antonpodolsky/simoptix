@@ -8,11 +8,11 @@
 #   Public text      check_public_text.py on every file and on the pull request's commits
 #   Pipeline output  stage_replay's golden file against vr_mirror\e2e\stage_replay\golden_expected.txt.
 #                    Any change fails it. A change that is meant commits a new golden_expected.txt
-#   Logs e2e         the local files test
-# Build builds once, and uploads what it built. Pipeline output and Logs e2e wait for it, and run those
-# files, so they test what Build built, and are skipped when it fails.
+# Build builds once, and uploads what it built. Pipeline output waits for it, and runs those files, so
+# it tests what Build built, and is skipped when it fails.
 # The e2e suite isn't here: on GitHub's runners, with no graphics card, the mirror app drew 9.5 to 28.5
 # fps against the 75 to 85 its scenarios ask for (findings\e2e.md). It runs by hand (dev skill, step 5).
+# Nor is the local files test: its OpenXR case gets almost no game frames on the runners (issue #41).
 # pull_request.yml checks the description and the label. Nothing here signs, and no job has a secret.
 name: Checks
 
@@ -164,49 +164,3 @@ jobs:
           path: |
             ${{ runner.temp }}/golden.txt
             vr_mirror/e2e/stage_replay/golden_expected.txt
-
-  logs_e2e:
-    name: Logs e2e
-    needs: build
-    runs-on: windows-latest
-    timeout-minutes: 30
-    steps:
-      - name: Check out
-        uses: actions/checkout@v4
-
-      # The local files test runs both plugins, the OpenXR layer and the e2e builds.
-      - name: Download build
-        uses: actions/download-artifact@v4
-        with:
-          name: built
-
-      # The OBS the plugins are tested with (CONTRIBUTING.md), from OBS's own release, checked against
-      # its SHA-256. OBS 33.0.1 loaded no plugin from the test's folder (OBS_PLUGINS_PATH).
-      - name: Download OBS
-        env:
-          GH_TOKEN: ${{ github.token }}
-          OBS_ZIP: OBS-Studio-32.2.2-Windows-x64.zip
-          OBS_SHA256: 4d6e40e3ab155f56b30de517380566a206d74b63cdf5ad49aa596924768f97e1
-        run: |
-          gh release download 32.2.2 -R obsproject/obs-studio -p $env:OBS_ZIP -D $env:RUNNER_TEMP
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $hash = (Get-FileHash "$env:RUNNER_TEMP\$env:OBS_ZIP" -Algorithm SHA256).Hash.ToLower()
-          if ($hash -ne $env:OBS_SHA256) { "SHA-256 $hash, expected $env:OBS_SHA256"; exit 1 }
-          Expand-Archive "$env:RUNNER_TEMP\$env:OBS_ZIP" "$env:RUNNER_TEMP\obs"
-          if (-not (Test-Path "$env:RUNNER_TEMP\obs\bin\64bit\obs64.exe")) { "no bin\64bit\obs64.exe in the zip"; exit 1 }
-
-      - name: Test
-        env:
-          OBS_DIR: ${{ runner.temp }}\obs
-        run: |
-          vr_mirror\e2e\bin\local_files_e2e.exe
-          exit $LASTEXITCODE
-
-      - name: Upload output
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs_e2e_out
-          path: |
-            vr_mirror/e2e/out/
-            !vr_mirror/e2e/out/obs_portable/

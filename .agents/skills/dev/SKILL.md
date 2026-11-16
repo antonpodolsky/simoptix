@@ -768,13 +768,12 @@ Record what each start of the game showed in `findings\openxr.md`.
   | Docs | `check_docs.py` |
   | Public text | `check_public_text.py` on every file and on the pull request's commits |
   | Pipeline output | `stage_replay --golden` against the expected output in `vr_mirror\e2e\stage_replay\golden_expected.txt`, run by run. Any change fails it, and the run uploads the new golden file and its `golden_expected.txt` ("Tests", "The pipeline's expected output") |
-  | Logs e2e | The local files test (`vr_mirror\e2e\bin\local_files_e2e.exe`), in OBS 32.2.2 from OBS's own release, checked against its SHA-256 |
   | Changelog | The type label and the Changelog section as a release reads them (`release.py --check-pr`) |
   | Description | `check_public_text.py` on the description |
 
-  `.github\workflows\checks.yml` holds the first six, which also run on each push to `main`. Build
-  builds once and uploads what it built. Pipeline output and Logs e2e wait for it and run those
-  files, so they test what Build built, and are skipped when it fails.
+  `.github\workflows\checks.yml` holds the first five, which also run on each push to `main`. Build
+  builds once and uploads what it built. Pipeline output waits for it and runs those files, so it
+  tests what Build built, and is skipped when it fails.
   `.github\workflows\pull_request.yml` holds Changelog and Description, which also run each time the
   description or the label changes. The docs and public-text checks fail only on what their scripts
   fail on, and their lines to review show in the run.
@@ -782,8 +781,10 @@ Record what each start of the game showed in `findings\openxr.md`.
   GitHub's runners have no LMU, no Pimax SDK, no headset and no graphics card, and the checks never
   sign. So on GitHub the plugins build without LMU, the fake LMU and the PVR layout check are skipped,
   and the layer and setup are unsigned. The e2e suite isn't among the checks: the mirror app draws far
-  below its scenarios' frame rates there (`findings\e2e.md`, "The tests on GitHub's runners"). Those,
-  the e2e suite, and the checks in OBS and in the headset are still done by hand, as steps 3 to 5 say.
+  below its scenarios' frame rates there (`findings\e2e.md`, "The tests on GitHub's runners"). Nor is
+  the local files test: its OpenXR case gets almost no game frames there (#41). Those, the e2e suite,
+  the local files test, and the checks in OBS and in the headset are still done by hand, as steps 3 to
+  5 say.
 - **Write the pull request by the pull-requests skill** (`.agents\skills\pull-requests\SKILL.md`): its
   title, its description from the template, which covers this change only, and its one type label,
   which feeds the changelog. The release script refuses a release while a pull request since the last

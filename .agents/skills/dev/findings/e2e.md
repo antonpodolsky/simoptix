@@ -617,7 +617,12 @@ Basic Render Driver for D3D11).
   (image/pose mismatch 31.6° and 35.1° RMS against 1.5°). The limits measure the mirror app's speed and
   aren't loosened, so the suite runs by hand on a PC with a graphics card. A GitHub runner with a
   graphics card wasn't tried.
-- **The local files test runs there.** OBS 32.2.2 starts on the software renderer, and the plugins
+- **Dropped for now: the local files test on GitHub's runners** (#41). Its `openxr_game` case passed
+  or failed by chance there: in three runs at 90 Hz and 1271×1042, the OpenXR source got 0 frames with
+  their image in 60 s once, and 2 frames 16 s in once. The layer lost 18 to 27 frames per 10 s, whose
+  copies hadn't finished when a later frame took their shared texture. The other cases passed in all
+  three runs.
+- **OBS and the plugins run there.** OBS 32.2.2 starts on the software renderer, and the plugins
   load. Opening the OpenXR layer's textures (5084×4168, 254 MB) took 2 s, and the first frame came
   later than the 5 s OBS used to stay open, so the OpenXR source wrote no trace. The cases that expect a
   trace now wait for OBS's log to name one, 60 s at most.
