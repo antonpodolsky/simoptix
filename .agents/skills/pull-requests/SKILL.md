@@ -93,6 +93,10 @@ the branch changes against `main`, why, what was verified and what wasn't. These
    ```
 
 5. Check what was posted: `check_public_text.py --pr <number>`.
+6. An agent in Claude Code's desktop app turns on Auto-fix for the pull request. The app then wakes
+   the agent when a check fails, the branch conflicts with `main`, or a review comment arrives. The
+   agent fixes the branch, checks the fix and pushes it. A review comment's request waits for the
+   maintainer.
 
 ## Editing a pull request
 
