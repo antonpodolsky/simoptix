@@ -293,9 +293,11 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   - OBS skipped ticks in 4 places, 1 to 10 ticks in a row. The ticks after a skip were still on the
     same grid.
   - So the margin for the clocks' noise in issue #27's first way can be far below 1 ms, and its second
-    way can rely on the predicted ticks. Only OBS at 90 fps with the OpenXR source was traced. Other
-    frame rates use the same scheduled times, and the Pimax source the same clock correction, but
-    neither was measured.
+    way can rely on the predicted ticks.
+  - At 60 and 120 fps too: one trace with the OpenXR source and OBS's frame rate changed while it ran
+    (90, 60 and 120 fps: 30,678, 2,125 and 9,269 ticks). At each rate no tick was off the prediction
+    by more than 0.001 ms, 0.1 to 0.6 s ahead, and OBS skipped none. The script splits a trace where
+    the rate changes. The Pimax source, on the same clock correction, wasn't measured.
 - **Fixed: when the ring shrank, it could drop the frame on screen, and the fixed delay stepped
   back.** Shrinking freed the ring's entries by raw index, past the new size, whatever they held.
   Once the ring had wrapped, the newest entry's index could be anywhere, so this sometimes freed the
