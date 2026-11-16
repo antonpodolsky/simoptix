@@ -5,8 +5,12 @@ expected output in golden_expected.txt.
 
 A golden file holds every output of the pipeline over a fixed set of runs. A run starts at its
 `# <input> <settings>` line. golden_expected.txt, beside this script, holds each run's SHA-256 and
-label, so that a change in any run's output is caught without keeping the 26 MB file in the repo. A
-change that is meant writes it again (--write-expected) and commits it with the change.
+label, so that a change in any run's output is caught without keeping the 26 MB file in the repo.
+
+golden_expected.txt is the output of stage_replay as GitHub's runners build it. Another compiler
+rounds some values in the last bits differently, so a golden file built elsewhere can differ from it
+with nothing changed. A change that is meant takes the golden_expected.txt that the failed Pipeline
+output run uploads, and commits it with the change.
 
 Usage:
   python -I vr_mirror\\e2e\\stage_replay\\golden_compare.py <before> <after> [--markdown FILE]
@@ -15,9 +19,9 @@ Usage:
 
 The first compares two golden files, as the refactor guard of .agents\\skills\\dev\\reference\\e2e.md
 does. The second compares a golden file with golden_expected.txt, as the Pipeline output check on
-GitHub does. The third writes golden_expected.txt from a golden file. --markdown also appends the
-result to FILE as Markdown (GitHub's job summary). The exit code is 0 when the outputs are the same,
-1 when they differ, and 2 when a file can't be read.
+GitHub does. The third writes golden_expected.txt from a golden file, as that check does for its
+upload. --markdown also appends the result to FILE as Markdown (GitHub's job summary). The exit code
+is 0 when the outputs are the same, 1 when they differ, and 2 when a file can't be read.
 """
 
 import argparse
@@ -131,8 +135,9 @@ def compare_expected(golden_path):
 
     if not same:
         lines.append(
-            "If the change is meant, write golden_expected.txt again with "
-            "`golden_compare.py --write-expected <golden>` and commit it with the change."
+            "If the change is meant, commit the golden_expected.txt that the Pipeline output check "
+            "uploads with the change. golden_expected.txt comes from GitHub's build: a golden file "
+            "built with another compiler can differ in the last bits with nothing changed."
         )
 
     return lines, same

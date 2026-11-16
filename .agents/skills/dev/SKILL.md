@@ -275,16 +275,17 @@ for the agents that read those files. Change the rules here, never in those file
   Report failures with their numbers.
 - **The pipeline's expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the
   SHA-256 of each run of `stage_replay --golden`. The Pipeline output check fails on any run that
-  differs from it, so no change in the pipeline's output passes unseen. A change that is meant to
-  change the output writes the file again in the same commit, and its commit message and pull
-  request name the runs that changed and why:
-
-  ```
-  python -I vr_mirror\e2e\stage_replay\golden_compare.py --write-expected out\stage_replay\golden_new.txt
-  ```
-
-  A change that must not change the output leaves the file as it is (`reference\e2e.md`, "Refactor
-  guard").
+  differs from it, so no change in the pipeline's output passes unseen.
+  - The file holds the output of `stage_replay` as GitHub's runners build it. Another compiler rounds
+    some values in the last bits differently: Visual Studio 2019's build differs in 18 of the 52 runs,
+    by at most 8.6e-7, with nothing changed. So compare a local build with the build before it, as
+    the refactor guard does (`reference\e2e.md`), and not with this file.
+  - A change that is meant to change the output takes the `golden_expected.txt` that its failed
+    Pipeline output run uploads, and commits it in the same pull request. The commit message and the
+    pull request name the runs that changed and why.
+  - When GitHub's compiler changes, Pipeline output fails with nothing changed in the code. The new
+    file is committed on its own, saying so.
+  - A change that must not change the output leaves the file as it is.
 - **Before calling work done:**
   - Build every target that includes the changed files. `vr_mirror\core\` and
     `vr_mirror\frame_sources\pimax\` are used by `vr_mirror\obs_plugin`, `vr_mirror\mirror_app` and

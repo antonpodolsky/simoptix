@@ -170,20 +170,20 @@ It names each run that changed, is new or is gone, and exits with 1 when the fil
 is a behaviour change until shown otherwise. The e2e suite still decides at the end.
 
 **The expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the SHA-256 of each run
-of the golden file. Compare a golden file with it, as the Pipeline output check on GitHub does:
+of the golden file, as GitHub's runners build `stage_replay`. The Pipeline output check on GitHub
+compares with it:
 
 ```
-python -I vr_mirror\e2e\stage_replay\golden_compare.py --expected out\stage_replay\golden_new.txt
+python -I vr_mirror\e2e\stage_replay\golden_compare.py --expected <golden file>
 ```
 
-When a change is meant to change the output, write the file again and commit it with the change:
+A golden file built with another compiler can differ from it in the last bits of some values with
+nothing changed (`SKILL.md`, "Tests", "The pipeline's expected output"). Locally, compare with the
+build before instead, as above.
 
-```
-python -I vr_mirror\e2e\stage_replay\golden_compare.py --write-expected out\stage_replay\golden_new.txt
-```
-
-When Pipeline output fails on GitHub, its run uploads the golden file it wrote and the
-`golden_expected.txt` of that output, to compare with a local one.
+When Pipeline output fails, its run uploads the golden file it wrote and the `golden_expected.txt` of
+that output (`--write-expected`). When the change is meant, commit that `golden_expected.txt` with it.
+To read what changed, compare the uploaded golden file with a local one.
 
 ### Stage 1 and stage 3 over OBS traces
 

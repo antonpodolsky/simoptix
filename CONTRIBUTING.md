@@ -119,9 +119,10 @@ a minute, and its first run copies OBS (466 MB).
 
 The stage replay (`vr_mirror\e2e\bin\stage_replay.exe`) runs in about a second. Use it to find out why
 a scenario fails, and to check that a refactor changes nothing (`.agents\skills\dev\reference\e2e.md`).
-`vr_mirror\e2e\stage_replay\golden_expected.txt` holds its expected output, and the Pipeline output
-check fails on any change to it. A change that is meant to change the output writes the file again
-with `golden_compare.py --write-expected` and commits it with the change.
+`vr_mirror\e2e\stage_replay\golden_expected.txt` holds its expected output, as GitHub builds it, and the
+Pipeline output check fails on any change to it. When your change is meant to change the output, the
+failed check uploads the new `golden_expected.txt`. Commit it with your change. A build with another
+compiler can differ from the file in the last bits with nothing changed.
 
 - New behaviour in the pipeline gets a scenario, or a new measure in an existing one.
 - A pipeline bug gets a scenario that fails before the fix, when the fake runtime can produce the
