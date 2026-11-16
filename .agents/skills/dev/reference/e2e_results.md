@@ -10,6 +10,15 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 16: the forecast told of each frame as it arrives, so only the frames it can't tell yet are
+held.** LMU, OBS and Pimax Play were closed. All 38 runs passed, and 18 of 19 comparisons with
+Instant. `stage_replay --golden` is unchanged. The mirror app, which e2e runs, uses neither the fixed
+delay's forecast nor the plugin's copying.
+- `replay_queued_late_frames` failed its comparison on the worst horizon tilt: 0.141° at Instant,
+  0.257° with Look-ahead (allowed 0.191°). The pair was run again five times, and the comparison
+  passed each time, with 6.8–9.7 / 4.3–5.5% from the wrong pose. The standalone runs didn't print the
+  horizon tilt line.
+
 **Run 15: the frame picker's forecast and tick record, the store sized for the frames shown, and
 the warm-up counting each copy once (#33).** LMU, OBS and Pimax Play were closed. All 38 runs passed,
 and all 19 comparisons with Instant. `stage_replay --golden` is unchanged.
