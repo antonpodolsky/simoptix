@@ -32,6 +32,9 @@ struct ObsRun {
     fs::path localAppData;             // %LOCALAPPDATA% for OBS and the plugins
     fs::path fakePvrScenario;          // the fake runtime's settings (SIMOPTIX_FAKE_PVR_SCENARIO)
     DWORD holdMs = 5000;               // how long OBS runs once every source has started
+    // When set, OBS first runs until its log has this text (60 s at most), then holdMs more: the time
+    // a frame takes to arrive is the machine's, and isn't what the test checks.
+    std::string holdUntilLogged;
 };
 
 // Runs OBS once with fresh settings and a scene that shows `run.sources`, then closes it as its close

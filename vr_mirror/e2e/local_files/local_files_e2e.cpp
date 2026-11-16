@@ -37,7 +37,8 @@ namespace {
 
     constexpr int kKept = 10;  // of each kind, as shared\local_files.cpp keeps
     constexpr int kOlder = 12;
-    constexpr DWORD kNewSecondMs = 1100;  // apart, so two runs' files never share a second
+    constexpr DWORD kNewSecondMs = 1100;                   // apart, so two runs' files never share a second
+    constexpr const char* kTraceLogged = "frame trace: ";  // OBS's log, as a trace starts
 
     int g_failures = 0;
 
@@ -70,10 +71,10 @@ namespace {
     // The trace each "frame trace: <stem>_ticks.csv" line of OBS's log names, as a file name stem.
     std::vector<std::wstring> TracesLogged(const std::string& log) {
         std::vector<std::wstring> stems;
-        const char* const marker = "frame trace: ";
 
-        for (size_t at = log.find(marker); at != std::string::npos; at = log.find(marker, at + 1)) {
-            const size_t start = at + strlen(marker);
+        for (size_t at = log.find(kTraceLogged); at != std::string::npos;
+             at = log.find(kTraceLogged, at + 1)) {
+            const size_t start = at + strlen(kTraceLogged);
             const size_t end = log.find("_ticks.csv", start);
 
             if (end != std::string::npos) {
@@ -264,6 +265,7 @@ namespace {
         run.sources = {"simoptix_pimax_mirror"};
         run.localAppData = c.appData;
         run.fakePvrScenario = FakePvrScenario(c, 0);
+        run.holdUntilLogged = kTraceLogged;
         std::string log;
 
         if (!RunObsCase(obs, c, run, &log)) {
@@ -304,6 +306,7 @@ namespace {
         run.sources = {"simoptix_openxr_mirror"};
         run.localAppData = c.appData;
         run.fakePvrScenario = FakePvrScenario(c, 1e6);
+        run.holdUntilLogged = kTraceLogged;
         std::string log;
         const bool ran = RunObsCase(obs, c, run, &log);
         StopFakeGame(game);
