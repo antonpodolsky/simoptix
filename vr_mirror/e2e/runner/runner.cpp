@@ -681,6 +681,10 @@ namespace {
 }
 
 int wmain(int argc, wchar_t** argv) {
+    if (!EndChildrenWithThisProcess()) {
+        printf("warning: a run stopped midway may leave the mirror app or the fake game running\n");
+    }
+
     winrt::init_apartment(winrt::apartment_type::multi_threaded);
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     fs::path root = FindRoot();

@@ -28,6 +28,8 @@ list them with `--list`.
   run 8 (`reference\e2e_results.md`).
 - Don't use the PC meanwhile. For consistent timing, close LMU, the mirror app, Pimax Play and other
   heavy apps first.
+- A run stopped midway (Ctrl+C, or its window closed) ends the mirror app and the fake game it started
+  too. The local files test ends its OBS and fake games the same way.
 - Run one test of the OpenXR layer at a time on the PC. The fake OpenXR games of two runs, from two
   worktrees say, write the same shared memory, and each breaks the other's frames
   (`reference\e2e_results.md`, run 7).

@@ -432,6 +432,10 @@ namespace {
 }
 
 int wmain() {
+    if (!EndChildrenWithThisProcess()) {
+        printf("warning: a run stopped midway may leave OBS or the fake game running\n");
+    }
+
     wchar_t self[MAX_PATH];
     GetModuleFileNameW(nullptr, self, MAX_PATH);
     const fs::path repo = fs::path(self).parent_path().parent_path().parent_path().parent_path();
