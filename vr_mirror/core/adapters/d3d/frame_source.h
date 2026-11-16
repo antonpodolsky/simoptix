@@ -25,9 +25,9 @@
 #include "pipeline/2_drawn_pose/drawn_pose.h"
 #include "pipeline/pipeline_config.h"
 
-// The most memory one host's stored images may take (bytes): Look-ahead holds at most 55 frames (its
-// half second, the copy delay up to 45 ms, and 3 more: FixedDelayPicker), 4.66 GB at the OpenXR layer's
-// full 5084x4168.
+// The most memory one host's stored images may take (bytes): with a 90 Hz headset Look-ahead holds at
+// most 55 frames (its half second, the copy delay up to 45 ms, and 3 more: FixedDelayPicker), 4.66 GB
+// at the OpenXR layer's full 5084x4168.
 constexpr double kImageMemory = 4.7e9;
 
 class FrameSource : public PoseSource {
@@ -72,9 +72,17 @@ public:
     // that size, or its own when that is near it, never above its own; one that can't ignores it. Any
     // thread, before Start too.
     virtual void SetImageNeed(float width, double maxBytes) = 0;
+    // The size (pixels) a copy of the newest frame's image takes with the needs SetImageNeed would get;
+    // false until the source has had an image. Any thread.
+    virtual bool CopySize(float width, double maxBytes, uint32_t* copyWidth, uint32_t* copyHeight) = 0;
     // The host's device and context (the thread that owns the context).
     // Opens the source's images on `device` (again, if the source re-created them): call every 2 s.
     virtual void OpenImages(ID3D11Device* device) = 0;
+    // Whether a frame's image can still be copied once the next frame has arrived. Then a host can
+    // wait for the next frame to learn whether the frame will be shown before copying it. False by
+    // default: the image may be gone by then (Pimax's client mirror is one image the game overwrites
+    // about a frame later), so copy each frame as it arrives.
+    virtual bool CanCopyAfterNextFrame() const { return false; }
     // Copies frame `f`'s image into `into` (made or re-made for it), on `context`; false if it can't
     // (no image, or it is gone). `shared`: `into` is to be opened by another device (FrameCopy).
     virtual bool CopyImage(

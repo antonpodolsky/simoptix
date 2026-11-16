@@ -578,7 +578,8 @@ int wmain() {
         app.hold.Resize(int(std::ceil(holdDelay / app.source->Period())) + 6);
     }
 
-    app.pipeline.Picker()->Restart(holdDelay, loop.lookahead ? app.hold.Capacity() : 1);
+    const int held = loop.lookahead ? app.hold.Capacity() : 1;
+    app.pipeline.Picker()->Restart(holdDelay, app.source->Period(), 0, held, false);  // no regular ticks
     loop.stored.resize(size_t(app.hold.Capacity()) + 1);
 
     RunFrames(app, loop);

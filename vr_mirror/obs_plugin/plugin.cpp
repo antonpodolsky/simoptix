@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <string>
 
 #include "audio_sync.h"
 #include "common/settings.h"
@@ -24,6 +25,7 @@
 #include "shared/log.h"
 #include "shared/telemetry/telemetry.h"
 #include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
+#include "video_memory.h"
 #include "vr_mirror/frame_sources/openxr/openxr_source.h"
 #include "vr_mirror/frame_sources/pimax/pimax_source.h"
 
@@ -46,6 +48,7 @@ namespace {
 
     // One source as OBS holds it: its view, and its race auto-record switch.
     struct Source {
+        obs_source_t* source = nullptr;  // OBS's own (not held), for its settings in the properties
         std::unique_ptr<MirrorView> view;
         bool autoRecord = false;  // "Record races automatically" (race_auto_record\auto_record.h); UI thread
     };
@@ -107,7 +110,27 @@ namespace {
         });
     }
 
-    obs_properties_t* MakeProperties() {
+    // The video memory line for the settings in the dialog (`settings`), or for none when OBS asks for
+    // the properties without a source (`s` null).
+    std::string VideoMemoryOf(Source* s, obs_data_t* settings) {
+        if (!s || !settings) {
+            return kVideoMemoryNotMeasured;
+        }
+
+        bool debug = false;
+        return s->view->VideoMemory(MirrorSettingsOf(settings, &debug));
+    }
+
+    // Smoothing or Zoom changed in the dialog: the line follows at once.
+    bool RefreshVideoMemory(void* data, obs_properties_t* props, obs_property_t*, obs_data_t* settings) {
+        return Guarded("video memory", [&] {
+            const std::string text = VideoMemoryOf(static_cast<Source*>(data), settings);
+            obs_property_set_description(obs_properties_get(props, "video_memory"), text.c_str());
+            return true;
+        });
+    }
+
+    obs_properties_t* MakeProperties(Source* s) {
         obs_properties_t* p = obs_properties_create();
 
         // Look-ahead (vr_mirror\core\pipeline\4_smoothing\): the view runs half a second behind the game,
@@ -121,21 +144,34 @@ namespace {
         );
 
         obs_property_list_add_int(smoothing, "Off", MirrorSettings::kSmoothingOff);
-        obs_property_list_add_int(smoothing, "Instant (no delay)", MirrorSettings::kSmoothingInstant);
         obs_property_list_add_int(
             smoothing,
-            "Look-ahead (0.5 s behind)",
+            "Instant (no delay, low VRAM usage)",
+            MirrorSettings::kSmoothingInstant
+        );
+        obs_property_list_add_int(
+            smoothing,
+            "Look-ahead (0.5s delay, higher VRAM usage)",
             MirrorSettings::kSmoothingLookahead
         );
 
         obs_property_set_long_description(
             smoothing,
             "Instant: no delay, for live streaming.\n"
-            "Look-ahead: half a second behind the game, for recording.\n"
-            "The G-meter and the sound follow the same delay."
+            "Look-ahead: half a second behind the game, for recording."
         );
 
-        obs_properties_add_float_slider(p, "zoom", "Zoom", 1.0, 3.0, 0.01);
+        // What the source's store of copied frames takes in video memory with these settings (the
+        // line is the property's description; it has no value of its own).
+        obs_data_t* settings = s ? obs_source_get_settings(s->source) : nullptr;
+        const std::string memory = VideoMemoryOf(s, settings);
+        obs_data_release(settings);
+        obs_property_t* line = obs_properties_add_text(p, "video_memory", memory.c_str(), OBS_TEXT_INFO);
+        obs_property_text_set_info_type(line, OBS_TEXT_INFO_WARNING);
+        obs_property_set_modified_callback2(smoothing, RefreshVideoMemory, s);
+
+        obs_property_t* zoom = obs_properties_add_float_slider(p, "zoom", "Zoom", 1.0, 3.0, 0.01);
+        obs_property_set_modified_callback2(zoom, RefreshVideoMemory, s);
         obs_property_t* record = obs_properties_add_bool(p, "auto_record", "Record races automatically");
 
         // The hint, one short line per point (OBS shows it as a plain-text tooltip, which doesn't wrap).
@@ -150,16 +186,17 @@ namespace {
         return p;
     }
 
-    obs_properties_t* GetProperties(void*) {
-        return Guarded("properties", [] { return MakeProperties(); });
+    obs_properties_t* GetProperties(void* data) {
+        return Guarded("properties", [&] { return MakeProperties(static_cast<Source*>(data)); });
     }
 
     // A source on frame source `Frames` (PimaxSource, OpenXrSource).
     template <class Frames>
-    void* Create(obs_data_t* settings, obs_source_t*) {
+    void* Create(obs_data_t* settings, obs_source_t* source) {
         return Guarded("create", [&]() -> void* {
             SetCoreLog(LogToObs);
             auto s = std::make_unique<Source>();
+            s->source = source;
             UpgradeSavedSmoothing(settings);
             bool debug = false;
             const MirrorSettings st = MirrorSettingsOf(settings, &debug);

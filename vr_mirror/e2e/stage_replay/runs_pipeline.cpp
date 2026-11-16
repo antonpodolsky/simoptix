@@ -209,7 +209,7 @@ namespace stage_replay {
         void HostDriver::DrawPicked() {
             FramePicker& picker = *pipeline_.Picker();
             auto store = std::make_unique<FrameStore>();
-            picker.Restart(lookahead_, FrameStore::kMaxSlots);
+            picker.Restart(lookahead_, kPeriod, 1 / run_.tickHz, FrameStore::kMaxSlots, false);
             store->Resize(picker.SlotsInUse());
 
             std::unordered_map<uint64_t, size_t> bySerial;
@@ -243,8 +243,8 @@ namespace stage_replay {
 
                 const Pick pick = picker.Tick(tick, kPeriod, store->slots, FrameStore::kMaxSlots);
 
-                if (picker.SlotsInUse() != store->count) {
-                    store->Resize(picker.SlotsInUse());  // the delay fixed
+                if (picker.SlotsInUse() != store->wantCount) {
+                    store->Resize(picker.SlotsInUse());
                 }
 
                 if (pick.kind == PickKind::kNone) {

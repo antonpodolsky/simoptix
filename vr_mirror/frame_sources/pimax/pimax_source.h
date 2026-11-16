@@ -108,6 +108,12 @@ public:
 
     // The host's images: the mirror is copied whole, as it is (it can't be scaled on the way).
     void SetImageNeed(float, double) override {}
+    // The mirror's size as last copied, whatever the needs.
+    bool CopySize(float, double, uint32_t* copyWidth, uint32_t* copyHeight) override {
+        *copyWidth = mirrorWidth_;
+        *copyHeight = mirrorHeight_;
+        return *copyWidth > 0 && *copyHeight > 0;
+    }
     void OpenImages(ID3D11Device* device) override { OpenTextures(device); }
     bool CopyImage(
         ID3D11Device* device,
@@ -205,7 +211,8 @@ private:
     GameFrame frame_;
     mutable PvrFootprint footprint_;  // mutable: Now() counts its call too
     std::atomic<double> fps_{0};
-    std::atomic<uint64_t> framesArrived_{0};  // written by the poll thread
+    std::atomic<uint32_t> mirrorWidth_{0}, mirrorHeight_{0};  // the mirror as last copied (CopyImage)
+    std::atomic<uint64_t> framesArrived_{0};                  // written by the poll thread
     // source time = performance counter + offset, measured by the poll thread (see Now()).
     ClockSync clock_;
     std::atomic<double> clockOffset_{0};

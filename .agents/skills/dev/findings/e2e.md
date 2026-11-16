@@ -601,6 +601,14 @@ session's timing from the trace.
   `vr_mirror\e2e\README.md`.
 - **Run the suite with LMU and the mirror app closed.** With LMU running, results varied up to 2–3×
   between runs (fast turns 0.16° against 0.30°), and wrongly suggested that beta 2 adds jitter.
+- **`replay_late_frame_same_slot` fails now and then, with the same build.** The replay's frame
+  arrives 7.4 ms late, right where the arrival timing's rounding could line it up with either slot
+  (its own header). LMU, OBS and Pimax Play closed, counting every run seen on this PC: 1 of 3 at
+  Instant failed (0.100%, limit 0), and 4 of 13 at Look-ahead (0.105%), on a build of `main` and on
+  one with #27's changes, which don't touch the arrival timing. The 4 Look-ahead failures came one
+  after another in one stretch. The other 9 Look-ahead runs, before and after it, all passed. That
+  fits the PC's own timing deciding this borderline case at the time, not a fault in either build.
+  The limit stays (dev skill, "Thresholds"): the replay still catches the bug it was made for.
 - **Windows' window capture of the mirror app delivers about 55 fps** (a 164 Hz monitor divided by 3),
   not the mirror app's 90. A 60 fps OBS recording through Window Capture repeats about 10% of frames
   during head motion. That is a capture limit, not the mirror app's.

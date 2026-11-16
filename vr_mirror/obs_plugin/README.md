@@ -33,6 +33,7 @@ The two sources show the same view. They differ in where the game's image comes 
 | observer | The debugging code in VR Mirror that numbers the stamp and writes the frame trace |
 | stamp | The frame number drawn as 15 small squares in the top-left corner of the view, when Debug is on |
 | frame trace | The CSV file Debug writes, with one row per drawn frame: its poses and timing |
+| frame ring | The store that keeps a copy of each game frame until OBS shows it. The OBS log names it this way |
 
 The G-meter comes from a separate plugin, Overlays (`overlays\README.md`). When both are installed,
 they share two things through memory that each opens on its own:
@@ -93,11 +94,12 @@ its pose is exact and needs no slot check.
 
 ## Settings
 
-Both sources have the same four settings:
+Both sources have the same four settings, and a line of information:
 
 | Setting | What it does |
 |---|---|
-| **Smoothing** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). Look-ahead is the default |
+| **Smoothing** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). The list says each one's delay and how much video memory it takes ("no delay, low VRAM usage", "0.5s delay, higher VRAM usage"). Look-ahead is the default |
+| Expected VRAM usage (a line under Smoothing) | How much video memory the source's store of copied game frames takes with the Smoothing and Zoom set in the dialog, for example "3.1 GB (37 copies of 5084 x 4168)". It follows Smoothing and Zoom as you change them, and the canvas and OBS's frame rate. It needs what the source learns while it runs: the game's image size, the headset's refresh rate and the time a copy takes. Until then it reads "<will be measured after the game starts>". OBS shows the line in its warning color. The line is worked out when the dialog opens, so open it again to see a game started since |
 | **Zoom** | A slider from 1 to 3, 1.25 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
 | **Record races automatically** | OBS records each race by itself, from the start lights to 5 s after the car stops past the finish ("Recording races automatically", below). Off by default |
 | **Debug** | Stamps frame numbers on the view and writes a frame trace, for checking a recording frame by frame ("Debug: stamp and frame trace", below) |
@@ -228,8 +230,9 @@ which it stays native. Above that zoom, the image is enlarged, and the video get
 of that size or more. Otherwise it keeps the image at the size the canvas shows it 1:1. Each
 resampling softens the finest detail, so near the game's size the view resamples the image once,
 straight from the game's.
-- All stored images together may take at most 4.7 GB of video memory. Look-ahead stores 52 to 55
-  images. When that many don't fit at the game's own size, each is stored smaller, to fit.
+- All stored images together may take at most 4.7 GB of video memory. With a 90 Hz headset,
+  Look-ahead stores 52 to 55 images, and more at a higher refresh rate (81 to 86 at 144 Hz). When that
+  many don't fit at the game's own size, each is stored smaller, to fit.
 - The OBS log says the size each image is stored at ("frame ring: ...").
 
 **For more detail from the Pimax game eye, raise Render Quality in Pimax Play.** The game eye is always
@@ -244,6 +247,8 @@ mirrors, so Render Quality is the only way to a larger game eye.
 
 Every 10 s while a source is shown, also while no game runs, the OBS log (Help → Log Files) shows:
 - how many output ticks showed a new game frame, a repeat, or held the last image
+- how many game frames weren't copied because no tick would show them (the OpenXR source with
+  Look-ahead, below)
 - the game's frame rate over the same 10 s. When OBS's frame rate is the headset's refresh rate, the
   repeats match the frames the game never rendered.
 - the footprint ("footprint: ..."):
@@ -280,8 +285,21 @@ The source copies each game frame into a ring of textures as soon as it arrives,
 overwrites its image about a frame later. It shows the copy a fixed delay later (the OBS log: "output
 delay ... ms", about 4–5 ms measured). The frame picker (`vr_mirror\core\pipeline\3_frame_picker\`,
 `FixedDelayPicker`) decides which copy each tick shows, the delay, and the copies needed.
-- The ring starts with 8 copies, because the source allows 40 ms until it has measured that delay. It
-  then keeps only the frames inside the delay plus 3, and at least 4.
+- Until it has measured that delay, the ring keeps the frames of 45 ms plus 3: 8 copies with a 90 Hz
+  headset, 10 at 144 Hz. It then keeps only the frames inside the delay plus 3, and at least 4. When
+  OBS records slower than the headset, it keeps a few frames more, so a frame it hasn't shown yet
+  isn't overwritten before OBS's next tick.
+- **The OpenXR source with Look-ahead copies only the frames OBS will show.** When a frame arrives,
+  the source works out whether a tick will show it even if the next frame comes on time. Such a
+  frame is copied at once. The others wait for the next frame, which settles whether a tick shows
+  them, and are copied or not. The layer keeps each image until the third frame after it, so a
+  waiting frame is still there. When OBS records slower than the headset, the ring then holds only
+  the frames shown: at most one per OBS tick. At 90 Hz with OBS at 60 fps that is about 37 copies
+  instead of 54, and about a third of the frames are never copied. With Instant every frame is
+  copied as it arrives: its frames are due too soon after they arrive to be sure.
+  The Pimax source copies every frame as it arrives, because its image is gone by the next frame.
+  When OBS's frame rate changes while the source runs, it measures its output delay again ("OBS at
+  ... fps" in the log), so the ring follows the new rate.
 - From the OpenXR source each copy is the game's own size, or the size the canvas shows it (above).
   From the Pimax source each copy is the size of the game eye. A copy takes 4 bytes per pixel, so 4
   copies take half the memory of 8.

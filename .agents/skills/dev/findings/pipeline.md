@@ -211,6 +211,235 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   entry can be ready but excluded would need it.
 - **The ring's size follows the delay:** the frames in the delay plus 3, at least 4
   (`vr_mirror\obs_plugin\README.md`).
+- **Fixed: the ring was too small when the host's ticks come slower than the headset.** Its size
+  counted only the frames inside the output delay, not how many could arrive before the next tick.
+  When more frames arrived between two ticks than the ring held, the frame shown at the previous
+  tick fell out of the ring. `FixedDelayStep` then took its branch for when the previous frame isn't
+  found, which has no 4 ms slack and always labels its pick `kNext`, however far it caught up. The
+  size now adds the frames that can arrive before the next tick (`ceil(tickPeriod / period)`), when
+  the host ticks slower than the display.
+
+  Measured with `stage_replay --stage frame_picker`, synthetic frames, Look-ahead, before and after:
+
+  | Headset, OBS | Entries | Ticks labelled `kNext` | Frames shown after a `WillShow` no |
+  |---|---|---|---|
+  | 144 Hz, 60 fps | 81 → 84 | 290 → 89 | 102 → 15 |
+  | 90 Hz, 60 fps | 52 → 54 | 951 → 952 | 6 → 6 |
+  | 90 Hz, 50 fps | 52 → 54 | 374 → 376 | 8 → 8 |
+
+  At 144 Hz, 2.4 headset frames arrive for every OBS tick, so most ticks should be `kJump` (catching
+  up over several frames) once the previous frame is found. With the ring too small, most were
+  mislabelled `kNext` instead. At 90 Hz the mismatch is smaller, so the fix only recovers a frame or
+  two over each run. `stage_replay --golden` and the two OpenXR traces (90 Hz headset, OBS at 90 fps, where
+  the ring's size doesn't change) are unchanged.
+- **The fixed delay stores every frame, and OBS shows only some of them.** Measured with
+  `stage_replay --stage frame_picker` on the synthetic frames of a 90 Hz headset, with Look-ahead for
+  most of each 30 s run. Shares are of the frames due before the run ends, about 2,550 per run:
+
+  | OBS | Frames shown | Still stored when due | Most entries holding a frame |
+  |---|---|---|---|
+  | 144 fps, faster than the headset | 98% | 100% | 55 |
+  | 90 fps, the headset's own rate | 98% | 98% | 55 |
+  | 60 fps, slower than the headset | 68% | 99% | 57 |
+  | 59.94 fps | 67% | 99% | 57 |
+  | 50 fps | 56% | 98% | 57 |
+
+  - At 144 fps the 2% not shown are skipped where the view jumps ahead. 44 frames go at the switch
+    from Look-ahead to Instant (0.5 s), and 3 each time the copy delay is fixed (about 35 ms). A few
+    single frames are skipped with Instant, when their copy wasn't ready in time.
+  - The 2% gone before they were due are let go of when the store shrinks. About 41 frames per run go
+    at the switch from Look-ahead to Instant. Another 2–3 go each time the copy delay is fixed and the
+    store shrinks to its size.
+  - The store holds 55 entries during the warm-up and 52 once the copy delay is fixed, whatever OBS's
+    frame rate.
+- **Fixed: the warm-up's store assumed a 90 Hz headset.** It was sized for 45 ms of copy and the
+  smoothing's delay at 90 Hz: 55 entries with Look-ahead, where a 144 Hz headset needs 86. Frames
+  were overwritten before they were due, and OBS had nothing to show. The size now comes from the
+  display's period that the frame source reports, at the start and on every tick of the warm-up.
+  Measured on the synthetic frames of a 144 Hz headset with OBS at 60 fps:
+
+  | | Assuming 90 Hz | The headset's period |
+  |---|---|---|
+  | Ticks with nothing to show | 308 of 1,800 | 67 (as at 90 Hz) |
+  | Frames still stored when due | 84% | 98% |
+  | Frames shown | 36% | 42% |
+  | Most entries holding a frame | 81 | 86 |
+
+  The 90 Hz runs and `stage_replay --golden` were unchanged, byte for byte.
+- **Fixed: the warm-up counted each copy at every tick it stayed in the store** (#33). `WarmUp`
+  pushed the delay of every copied frame in the store on every tick, so a frame held for half a
+  second counted dozens of times: on the synthetic frames, 175 to 296 frames made up samples of 990
+  to 13,764. It also counted the copies made before a restart. It now counts each copy once, by its
+  serial, and only the copies made since the restart: those before may have been made another way
+  (held for the next frame, with Look-ahead before a switch to Instant). A high-water mark of the
+  serials counted would miss the copies that finish late, which are the 95th percentile's.
+  - On an OpenXR trace, copy times synthetic, the delay fixed was 5.0 ms with Instant and 9.7 ms
+    with Look-ahead from the same copy times. It is now 8.9 ms for both, and 20.1 ms for both when
+    each frame is held for the next.
+  - The synthetic runs still fix 5.0 ms at 90 Hz and 9.8 ms at 144 Hz. Their copies take 1–3 ms,
+    and 5% of them 5–30 ms, so the 95th percentile falls at that gap. Which side it falls on depends
+    on how many slow copies the 2 s held (about 9 of 180 at 90 Hz, 14 of 288 at 144 Hz). That is the
+    test's distribution, not the counting.
+  - `stage_replay --golden` is unchanged. Not checked with a real GPU's copy times.
+- **OBS's ticks can be predicted half a second ahead to within microseconds.** A picker that decides
+  ahead which frame each coming tick shows predicts the ticks as the last tick plus whole OBS frame
+  periods. Measured with `vr_mirror\recording_analysis\tick_regularity.py` on 8 frame traces of the
+  OBS plugin with the OpenXR source, OBS at 90 fps: 1.57 million ticks in 4.9 h.
+  - 0.5 and 0.6 s ahead, the real tick was off the prediction by at most 0.002 ms. None was off by
+    1 ms or more.
+  - The reason: the plugin's tick is the time OBS scheduled for the video frame
+    (`obs_get_video_frame_time`), which steps by exactly one frame period, moved onto the frame
+    source's clock. Only that clock's slow correction moves it, by microseconds.
+  - OBS skipped ticks in 4 places, 1 to 10 ticks in a row. The ticks after a skip were still on the
+    same grid.
+  - So the margin for the clocks' noise in issue #27's first way can be far below 1 ms, and its second
+    way can rely on the predicted ticks.
+  - At 60 and 120 fps too: one trace with the OpenXR source and OBS's frame rate changed while it ran
+    (90, 60 and 120 fps: 30,678, 2,125 and 9,269 ticks). At each rate no tick was off the prediction
+    by more than 0.001 ms, 0.1 to 0.6 s ahead, and OBS skipped none. The script splits a trace where
+    the rate changes. The Pimax source, on the same clock correction, wasn't measured.
+- **Fixed: when the ring shrank, it could drop the frame on screen, and the fixed delay stepped
+  back.** Shrinking freed the ring's entries by raw index, past the new size, whatever they held.
+  Once the ring had wrapped, the newest entry's index could be anywhere, so this sometimes freed the
+  frame on screen, not the oldest one. `FrameRing::ShrinkTo` (and `FrameStore`'s matching change)
+  now keeps the entries most recently copied, compacted to the new size, wherever they physically
+  were. Measured with `stage_replay --stage frame_picker`, synthetic frames, Look-ahead, at a 144 Hz
+  headset with OBS at 60 fps: repeats with a newer frame due dropped from 3 to 0 (jittered ticks) and
+  2 to 0 (exact), out of about 10 repeats total. `stage_replay --golden` is unchanged. Not checked in
+  a recording.
+- **`stage_replay`'s store emptied itself when it grew,** where the plugin's ring keeps its frames,
+  and it took a new size at once, where the ring takes it at the next copy. Now it does as the ring
+  does. At the switch back to Look-ahead the frames already held can then be shown: 3 to 7 fewer
+  ticks with nothing to show per synthetic run, and the other counts move by 4 or less. The numbers
+  in this file from before were measured with the old store. `stage_replay --golden` is unchanged.
+- **OpenXR traces replay in `stage_replay`, as the plugin had them.** Their frames' de-jittered
+  arrivals, rebuilt by the source's arrival timing, match the plugin's to within the trace's 0.001 ms
+  at the median and the 99th percentile, over 615,148 and 520,199 ticks of two traces. 6 and 12
+  ticks are off by more than 1 ms, all within a few frames of a new game session. Restarting the
+  arrival timing at every pause over 1 s instead gave 1,129 and 1,462: the source doesn't.
+- **The fixed delay, run ahead, says which frames no tick will show, and picks as before.** Its rule
+  (`FixedDelayStep`) runs over the coming ticks on OBS's grid (`FixedDelayAhead`). Whether it shows
+  frame N depends only on the frames up to N+1, so `WillShow` answers once N+1 has arrived. The picks
+  are the same as before, tick for tick, on the synthetic runs and two OpenXR traces, and
+  `stage_replay --golden` is unchanged. Synthetic runs with exact ticks, and the traces (90 Hz,
+  OBS at 90 fps), the store keeping every frame:
+
+  | Input | Said no | Shown after all |
+  |---|---|---|
+  | 90 Hz, OBS 60 fps | 633 of 2,548 | 6 |
+  | 90 Hz, OBS 59.94 fps | 643 of 2,564 | 8 |
+  | 90 Hz, OBS 50 fps | 867 of 2,557 | 7 |
+  | 90 Hz, OBS 90 fps, the headset's own rate | 0 | 0 |
+  | 90 Hz, OBS 144 fps | 0 | 0 |
+  | 144 Hz, OBS 60 fps | 1,854 of 4,104 | 15 |
+  | Traces, Look-ahead | 82 of 605,005 and 27 of 511,036 | 1 and 0 |
+  | Traces, Instant | 87 of 605,005 and 21 of 511,036 | 3 and 1 |
+
+  - At 60 fps it says no to about 3 of every 4 frames never shown. The rest come during the
+    warm-ups (2 s after each start and smoothing switch), when it can't decide yet.
+  - At the headset's own rate, or faster, it never says no: every frame is shown.
+  - With all copies at 1–3 ms, the 90 Hz synthetic runs give 0 or 1 frames shown after a no: those
+    are late copies, which the run ahead assumes ready.
+  - At 144 Hz the store-size and shrink fixes (above) cut the frames shown after a no from 102 to
+    15. What is left are late copies, as at the other rates.
+  - The grid follows every tick. Kept from the first tick on, it drifted over a trace of an hour or
+    two (the period rounded, the clocks' correction), and frames due near the 4 ms slack's border
+    went the other way: 19 of 45 and 16 of 35 shown after a no with Look-ahead.
+- **Copying only the frames shown, with Look-ahead, shows the same frames in less memory.** The
+  OpenXR source can hold each frame until the next one arrives, ask the forecast, and copy it or
+  not. The store then needs room for the frames shown only. `stage_replay --stage frame_picker` runs
+  each input three ways: copied as they arrive (today), each held for the next and all copied, and
+  held with only those shown copied. Synthetic runs with exact ticks, Look-ahead with an Instant
+  third in the middle:
+
+  | Headset, OBS | Store entries, held and all copied / only those shown | Copies made | Repeats with a newer frame due: today / held and all copied / only those shown |
+  |---|---|---|---|
+  | 90 Hz, 60 fps | 56 / 38 | 2,165 of 2,592 | 0 / 0 / 0 |
+  | 90 Hz, 59.94 fps | 55 / 37 | 2,183 of 2,606 | 0 / 0 / 0 |
+  | 90 Hz, 50 fps | 56 / 32 | 2,011 of 2,603 | 0 / 1 / 0 |
+  | 144 Hz, 60 fps | 86 / 37 | 2,925 of 4,179 | 0 / 0 / 0 |
+  | 90 Hz, 90 fps | 54 / 55 | all | 12 / 13 / 12 |
+  | 90 Hz, 144 fps | 53 / 53 | all | 12 / 13 / 11 |
+
+  - On an OpenXR trace of 766,094 frames (90 Hz, OBS faster than the headset), Look-ahead copied
+    766,056 and repeated exactly as when all were copied, with none of its repeats with a newer
+    frame due. At the headset's rate or faster nearly every frame is shown, so nothing is saved.
+  - **Instant copies every frame as it arrives.** Its frames are due 5–25 ms after they arrive, and a
+    copy running late (5% of the runs' copies take 5–30 ms) made the picker show a frame the forecast
+    had passed over: 6 to 33 extra repeats with a newer frame due per run. So the forecast passes
+    over a frame only 0.1 s after the next one's arrival (`kFixedDelayCopyDoneS`: two display periods
+    of holding and the 45 ms longest copy delay), which only Look-ahead's delay reaches, and the
+    picker asks for the frames to be held only then (`TickRecord::copiesShownOnly`). Holding them at
+    Instant would only have delayed them: 8.9 to 20.1 ms on the trace.
+  - Holding a frame for the next one adds about a display period to the copy delay: 8.9 to 20.1 ms
+    with Look-ahead on the trace.
+  - The frames copied before the forecast started are past only once they were due, so the store
+    takes its smaller size three of the longer periods (display or tick) after the delay is fixed.
+  - A smoothing switch can show a skipped frame's place as a repeat: the 50 fps run's one frame shown
+    after a no arrived just before its switch to Instant, under the old delay. The view jumps by the
+    smoothing's delay there anyway.
+  - With the ticks jittered by ±0.25 ms, more than real OBS (above), the 59.94 fps run repeated 5
+    times with a newer frame due, the others as with exact ticks.
+  - At 90 and 144 fps the three ways repeat alike, all in the Instant third: late copies, at the
+    exact ticks' phase. Before the warm-up counted each copy once (above), the Instant third after
+    Look-ahead counted the held copies too and fixed a longer delay (15.5 against 12.6 ms), and only
+    the held runs repeated there.
+  - Holding every frame lost images in LMU: the layer writes a frame's texture over sooner than
+    holding allows when the PC is busy (`findings\obs_plugin.md`, "Copying only the frames OBS
+    shows"). Since, the forecast says as each frame arrives whether a tick shows it even with the
+    next frame on time (`ShowForecast::Arrived`, run ahead without keeping its ticks), and only the
+    others are held. The synthetic runs then copy 2,169 of 2,592 frames at 60 fps and 2,927 of 4,179
+    at 144 Hz with OBS at 60 fps, with the repeats of copying at arrival and its 5.0 and 9.8 ms copy
+    delay.
+- **Tried and dropped: the tick plan (`TickPlanPicker`), issue #27's second way.** Each tick showed
+  the newest frame due by its grid time, with no slack. `stage_replay --stage frame_picker
+  --frame_picker tick_plan`, synthetic frames, the store keeping every frame:
+
+  | Headset, OBS | Said no | Shown after all | Repeats, tick plan / fixed delay | Jumps |
+  |---|---|---|---|---|
+  | 90 Hz, 60 fps | 655 of 2,548 | 7 | 44 / 17 | 798 / 769 |
+  | 90 Hz, 59.94 fps | 657 of 2,564 | 10 | 40 / 17 | 809 / 786 |
+  | 90 Hz, 50 fps | 872 of 2,557 | 7 | 25 / 14 | 1,070 / 1,056 |
+  | 90 Hz, 144 fps | 0 of 2,550 | 0 | 1,674 / 1,670 | 14 / 2 |
+  | 144 Hz, 60 fps | 1,852 of 4,104 | 19 | 12 / 9 | 1,642 / 1,434 |
+
+  - Every frame said yes to during the warm-ups (2 s after each start and smoothing switch), when it
+    can't decide yet: about 200 per run at 60 fps were said yes and never shown.
+  - The frames shown after a no: the next frame was due, but its copy wasn't finished (5% of the
+    run's copies take 5–30 ms, the copy delay is 5 ms), so the tick showed the frame before. With all
+    copies at 1–3 ms, none was shown after a no, but 1 right after a switch to Instant, where a
+    restart drops the earlier answers. A host that skips those copies would show the last frame
+    again at that tick.
+  - The extra repeats come after a single dropped game frame (measured on the 60 fps run, all copies
+    at 1–3 ms: 20 of its 21 extra repeats). The next frame then comes 22 ms later, more than OBS's
+    16.7 ms, so one tick has no new frame. The fixed delay moves one frame per tick and catches up
+    only when two frames are 4 ms overdue, so it is often a frame behind, which covers the gap.
+  - **On real traces it repeats and skips far more than the fixed delay.** Two OpenXR traces with a
+    90 Hz headset and OBS at 90 fps (615,149 and 520,202 ticks), copy times synthetic:
+
+    | Smoothing | Repeats with a newer frame due, fixed delay / tick plan | Jumps |
+    |---|---|---|
+    | Instant | 13,087 / 21,164 and 12,063 / 18,490 | 5,825 / 20,935 and 4,704 / 18,223 |
+    | Look-ahead | 2 / 121 and 2 / 708 | 83 / 269 and 28 / 681 |
+
+    At equal rates a frame's due time can sit close to a tick for a long time, and the tick plan
+    shows it at whichever tick comes first after it, so small noise moves it a tick either way: a
+    repeat, then a jump. The fixed delay's 4 ms slack holds it to one frame per tick there.
+  - Tried and dropped: showing frames up to 4 ms before they were due, like the fixed delay's
+    slack. With all copies at 1–3 ms, the 60 fps run still repeated 40 times, and frames were shown
+    after a no in three runs (41 at 50 fps, 60 at 59.94 fps, 116 at 144 Hz), because a frame 4 ms
+    early often wasn't copied yet.
+  - A repeat after a dropped game frame shows the game as it was, and is allowed (#27). Counting only
+    the repeats with a newer frame due by the tick, the tick plan has 8 / 12 / 7 at 60 / 59.94 / 50
+    fps against the fixed delay's 3 / 4 / 3, and 4 against 2 at 144 Hz. They are late copies: the
+    newer frame was still being copied, where the fixed delay, often a frame behind, gives a late
+    copy more time.
+  - At 144 fps it counts 140 against 22. 111 of those are the synthetic ticks' ±0.25 ms jitter: the
+    picker judges a frame due by the tick's grid time, and the frame became due between the grid time
+    and the jittered tick. Real OBS ticks lie on the grid to within 0.002 ms (above). The other 29
+    are late copies. With the ticks on the exact grid, the same frames give 28 against 21, and the
+    other runs change by 2 or less. The ±0.25 ms runs stay, because they show how the tick plan
+    depends on the ticks keeping to the grid.
 - **The fixed delay's moments trail their images and jump once. The slot timeline's didn't**
   (`stage_replay --stage frame_picker --frame_picker K`, the shorter of those OBS traces and
   synthetic ticks). The slot-timeline picker has since been removed (below).

@@ -21,12 +21,33 @@ follows, and how many stored frames it needs.
 
 **In:** the tick's time, the display period and the host's store of copied frames (`StoredFrame` in
 `pipeline_types.h`: serial, arrival, de-jittered arrival, slot, and when the copy was seen complete).
+`Restart` takes the display period too, as the host knows it then. With OpenXR it is known only once
+the layer runs, which can be later. It also takes the host's output frame period, from OBS's video
+settings, or 0 for a host without regular ticks (the mirror app), and whether the host can copy only
+the frames its forecast says a tick will show. It can when the game's images stay readable until the
+next frame has arrived (through the OpenXR layer, not Pimax's single mirror image).
 
 **Out:**
 - `Pick`: the store entry to show, the kind of pick (`kNext`, `kRepeat`, `kJump`, `kHeld`, `kNone`,
   for the host's 10 s stats), the tick's moment and when the frame was due.
 - The output delay (`OutDelay`). When it changes, the host logs it and gives the picker's `Report`.
-- The entries in use (`SlotsInUse`).
+- The entries in use (`SlotsInUse`). They can change at any tick, and the host resizes its store when
+  they do. The fixed delay changes them when it fixes its delay, and during the warm-up when the
+  display period changes.
+- The entries it would settle at for another smoothing (`SlotsFor`), from what it has measured: the
+  OBS plugin shows them as video memory in a source's properties. The fixed delay gives 0 until it
+  has fixed its copy delay. Its sizing is `FixedDelaySlots` and `FixedDelayCopiesShownOnly`, which it
+  uses itself.
+- A forecast of its picks (`MakeForecast`, a `ShowForecast`), for the host to run where it sees the
+  frames arrive. It is told of every frame as it arrives (`Arrived`), and says whether a tick will
+  show it even with the next frame on time. Once the next frame has arrived, it says whether any tick
+  will show the frame before (`WillShow`). The picker's `Record` after each tick tells it where the
+  picker stands: the frame shown, the tick, the tick period, the display period, the output delay,
+  whether that delay is settled, whether the host is to copy only the frames shown, and a count of
+  restarts. It is plain data, so the host can hand a copy to the thread that copies frames. To copy
+  only the frames shown, the host copies at once a frame `Arrived` says is shown, holds the others
+  until the next one arrives, and copies one only if `WillShow` says so. A picker without a forecast
+  gives none, and the host copies every frame. A forecast that can't tell says yes.
 - Through the shared report, once, the tick at which the delay was fixed (`TakeDelayFixed`, for the
   host's log line).
 
@@ -36,7 +57,7 @@ follows, and how many stored frames it needs.
 |---|---|---|---|
 | `newest_frame_picker.h/.cpp` | `NewestFramePicker` | `FramePickerKind::kNewestFrame` | The mirror app with Instant. It picks the newest frame as soon as it is new (at most 60 times a second without a frame signal). The frame is due the window's present delay after its de-jittered arrival. It is not held if that is over 15 ms ahead, which would be a clock glitch. The store is the newest frame alone |
 | `held_frame_picker.h/.cpp` | `HeldFramePicker` | `FramePickerKind::kHeldFrame` | The mirror app with Look-ahead. It picks the oldest held frame once its view can be computed. The frame is due the smoothing's delay plus the present delay after its de-jittered arrival, and it is picked 4 ms ahead so the window can wait and present then. Without a frame signal it picks the newest frame at once, at most 60 times a second. The store is the held frames, oldest first, then the newest frame |
-| `fixed_delay_picker.h/.cpp` | `FixedDelayPicker` (and `WarmupSlots`) | `FramePickerKind::kFixedDelay` | The OBS plugin. Each frame is shown a fixed delay after its de-jittered arrival. The delay is the copy delay measured over a 2 s warm-up (the 95th percentile plus 2 ms, between 4 and 45 ms, and 40 ms until then), plus the smoothing's delay. It shows one frame per tick in order: the next one unless it is clearly not due (4 ms slack). It catches up only when two frames are clearly overdue |
+| `fixed_delay_picker.h/.cpp` | `FixedDelayPicker` (and `WarmupSlots`) | `FramePickerKind::kFixedDelay` | The OBS plugin. Each frame is shown a fixed delay after its de-jittered arrival. The delay is the copy delay measured over a 2 s warm-up (the 95th percentile of the copies made since it started, each counted once, plus 2 ms, between 4 and 45 ms, and 40 ms until then), plus the smoothing's delay. It shows one frame per tick in order: the next one unless it is clearly not due (4 ms slack). It catches up only when two frames are clearly overdue. Its helper `fixed_delay_picker_ahead.h/.cpp` holds that rule (`FixedDelayStep`) and its forecast, the rule run ahead on the host's ticks (`FixedDelayAhead`), which keep to a grid of output frame periods: whether it shows a frame depends only on the frames up to the next one, so the forecast answers once the next frame has arrived, assuming every copy is ready when due. It keeps its own list of the frames from the one shown on, and passes over a frame only once the next one's copy is certainly done (0.1 s after it arrived), so only with Look-ahead. Then it asks a host that can to copy only the frames shown, and once the frames copied before are past, the store holds those: the frames in the delay at the slower of the display's and the ticks' rate, plus one tick and 3 more |
 
 `ConfigFor(settings, clock)` chooses the implementation from how the host draws:
 - `OutputClock::kTicks` (the OBS plugin) gives the fixed delay.

@@ -13,7 +13,8 @@
 
 class NewestFramePicker : public FramePicker {
 public:
-    void Restart(double delayS, int maxSlots) override;
+    void
+    Restart(double delayS, double period, double tickPeriod, int maxSlots, bool copiesShownOnly) override;
     Pick Tick(double tick, double period, const StoredFrame* frames, int total) override;
     double OutDelay() const override { return delay_; }
     int SlotsInUse() const override { return maxSlots_; }
