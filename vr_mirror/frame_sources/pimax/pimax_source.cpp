@@ -250,8 +250,8 @@ PimaxSource::PassCalls PimaxSource::CallRuntime(Poll& poll) {
         poll.lastPoseSample = pass.now;
         pass.tracked = calls.Orientation(pass.now, &pass.pose, poll.pending.calls[kCallPose]);
 
-        // The headset's display slots: a clean 90 Hz grid, used as a clock to
-        // de-jitter arrivals.
+        // The headset's display slots, as Pimax predicts them at the headset's own refresh rate: a
+        // clean grid, used as a clock to de-jitter arrivals.
         pass.gridSlot = calls.NextDisplaySlot(poll.pending.calls[kCallSlot]);
     }
 

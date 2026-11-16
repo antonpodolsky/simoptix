@@ -21,6 +21,10 @@ session of its own. It needs Pimax Play.
 
 ## The source
 
+- **It takes the headset's refresh rate from Pimax.** It asks when it opens its session, as the
+  source is shown, with or without a game, and never sets the rate itself. It runs at whatever rate
+  Pimax Play sets: the display period, the display slots and the size of the host's store follow it.
+  If Pimax reports no rate, it keeps 90 Hz. It doesn't ask again while the session stays open.
 - **It waits for the game.** After 2 s without a game frame (none yet, or the game quit), the source
   stops asking Pimax for head poses, the time and the display slots. It only waits for the game's
   frame signal, at most 50 ms at a time. It is back at full rate on the game's first frame, and catches
