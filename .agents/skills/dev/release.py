@@ -18,6 +18,7 @@ Usage, from anywhere inside the repo:
   python -I .agents\skills\dev\release.py [--dry-run] [--since <tag>] [--date YYYY-MM-DD]
                                           [--prs <file>] [--notes-file <file>]
   python -I .agents\skills\dev\release.py --notes [--notes-file <file>]
+  python -I .agents\skills\dev\release.py --check-pr <number>
 
   --dry-run      print the section without changing CHANGELOG.md
   --since        the release to start after (default: the newest release tag before HEAD, or the
@@ -27,6 +28,9 @@ Usage, from anywhere inside the repo:
                  number,title,body,labels,mergeCommit,url` wrote, instead of asking GitHub
   --notes        print the notes of the version in version.txt from CHANGELOG.md again, changing nothing
   --notes-file   also write the notes to this file, in UTF-8 (for `gh release create --notes-file`)
+  --check-pr     check one pull request's label and Changelog section as a release would, and print
+                 the lines a release takes from it, changing nothing. The checks on GitHub run it on
+                 each pull request
 
 Asking GitHub needs the GitHub CLI (gh), signed in.
 """
@@ -344,6 +348,21 @@ def make_release(args):
     print(f"## [{version}] - {args.date}\n\n{notes}", end="")
 
 
+def check_pull_request(number):
+    """Checks one pull request's label and Changelog section the way a release will."""
+    pr = json.loads(run(["gh", "pr", "view", str(number), "--json", "number,title,body,labels"]))
+    entries, problems = collect_entries([pr])
+
+    if problems:
+        raise ReleaseError("A release would refuse this pull request:\n  " + "\n  ".join(problems))
+
+    found = [entry for label in TYPES for entry in entries[label]]
+    print(f"#{number}: a release takes {len(found)} Changelog line(s) from it.")
+
+    for entry in found:
+        print(f"- {entry}")
+
+
 def print_notes(args):
     notes = section_notes(read_changelog(), read_version())
     write_notes(notes, args.notes_file)
@@ -358,13 +377,16 @@ def main():
     parser.add_argument("--prs")
     parser.add_argument("--notes", action="store_true")
     parser.add_argument("--notes-file")
+    parser.add_argument("--check-pr", type=int)
     args = parser.parse_args()
 
     # The notes go to a console that may not be UTF-8 (Windows' code page), and they hold × and –.
     sys.stdout.reconfigure(encoding="utf-8")
 
     try:
-        if args.notes:
+        if args.check_pr is not None:
+            check_pull_request(args.check_pr)
+        elif args.notes:
             print_notes(args)
         else:
             make_release(args)

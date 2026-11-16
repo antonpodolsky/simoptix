@@ -56,7 +56,10 @@ the branch changes against `main`, why, what was verified and what wasn't. These
     hand, with numbers. Then **Not verified:** each check that wasn't run or couldn't be, with its
     reason.
   - **Changelog:** the lines users read, written by the docs skill ("The changelog").
-  - An agent ends the description with the attribution line its own instructions give, if any.
+  - The Changelog section ends the description. The release script reads every line after its
+    heading as a changelog line, so nothing follows it. A description holds no line that names the
+    tool or agent that wrote it ("Generated with ..."), even where the agent's own instructions ask
+    for one.
 - **Plain words.** Short sentences with one idea each, and no semicolons. Code names and paths are
   fine where the reviewer needs them.
 - **The label.** Every pull request takes exactly one type label, which decides whether it goes into
@@ -121,6 +124,8 @@ the branch changes against `main`, why, what was verified and what wasn't. These
       plans
 - [ ] What was verified has numbers. What wasn't is named, with a reason about the change
 - [ ] One type label, and Changelog lines only with a user-facing label
+- [ ] The Changelog section ends the description, and no line names the tool or agent that wrote it.
+      `python -I .agents\skills\dev\release.py --check-pr <number>` passes once it is posted
 - [ ] `check_public_text.py` run on what each commit staged, on the description and on the branch's
       commits, and its lines read
 - [ ] Posted from a file, and checked again on GitHub

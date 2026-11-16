@@ -1,10 +1,11 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
 # The checks GitHub runs on each pull request and each push to main: every part built with no
-# warnings (shared\build\build_all.ps1), the formatters, the docs and public-text checks, and whether
-# stage_replay's golden output changed against the build before. The e2e suite and the local files
-# test run on trial: their results show in the run, but don't fail the checks, until they are known
-# to work on GitHub's runners. Nothing here signs, and no job has a secret.
+# warnings (shared\build\build_all.ps1), the formatters, the docs and public-text checks of the files
+# and commits, and whether stage_replay's golden output changed against the build before. The e2e
+# suite and the local files test run on trial: their results show in the run, but don't fail the
+# checks, until they are known to work on GitHub's runners. pull_request.yml checks the description
+# and the label. Nothing here signs, and no job has a secret.
 name: Checks
 
 on:
@@ -85,17 +86,12 @@ jobs:
       - name: Every file in the repo
         run: python -I .agents\skills\public-text\check_public_text.py --repo
 
-      - name: The pull request's description and commits
+      # The description and the label are checked by pull_request.yml, each time they change.
+      - name: The pull request's commits
         if: github.event_name == 'pull_request'
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
           COMMITS: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
-        run: |
-          python -I .agents\skills\public-text\check_public_text.py --pr $env:PR
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python -I .agents\skills\public-text\check_public_text.py --commits $env:COMMITS
-          exit $LASTEXITCODE
+        run: python -I .agents\skills\public-text\check_public_text.py --commits $env:COMMITS
 
   golden:
     name: stage_replay against the build before

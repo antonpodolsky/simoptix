@@ -191,7 +191,9 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   Plans, next steps and work on other branches go in an issue.
 - GitHub checks each pull request (`.github\workflows\checks.yml`): every build with no warnings,
   clang-format and ruff, the docs and public-text checks, and whether the stage replay's output changed.
-  It also runs the e2e suite and the local files test, whose results don't fail the pull request. Its
+  Each time the description or the label changes, it checks the label and the Changelog section the way
+  a release reads them (`.github\workflows\pull_request.yml`). The Changelog section ends the
+  description, so nothing goes after it. It also runs the e2e suite and the local files test, whose results don't fail the pull request. Its
   runners have no LMU, no Pimax SDK and no headset. So say in the pull request what you checked by
   hand.
 - Give the pull request one label, which decides whether it goes into `CHANGELOG.md`:

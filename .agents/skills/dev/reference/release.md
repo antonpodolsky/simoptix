@@ -99,6 +99,7 @@ It lists the commits that came from no pull request and leaves them out.
 | `--prs <file>` | Read the pull requests from a file that `gh pr list --state merged --json number,title,body,labels,mergeCommit,url` wrote |
 | `--notes` | Print the notes of the version in `version.txt` from `CHANGELOG.md` again, and change nothing |
 | `--notes-file <file>` | Also write the notes to a file, in UTF-8. PowerShell's `>` would write UTF-16 |
+| `--check-pr <number>` | Check one pull request's label and Changelog section as a release would, print the lines a release takes from it, and change nothing. The checks on GitHub run it on each pull request, each time its description or label changes |
 
 ## Making a release
 

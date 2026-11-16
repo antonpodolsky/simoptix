@@ -749,8 +749,11 @@ Record what each start of the game showed in `findings\openxr.md`.
   `main`, on GitHub's Windows runners. A pull request is merged when they pass. They are:
   - every build, with no warnings (`shared\build\build_all.ps1`, step 3)
   - clang-format and ruff, at the versions step 3 names
-  - `check_docs.py`, and `check_public_text.py` on every file, the pull request's description and its
-    commits. Those fail only on what the scripts fail on, and their lines to review show in the run
+  - `check_docs.py`, and `check_public_text.py` on every file and the pull request's commits. Those
+    fail only on what the scripts fail on, and their lines to review show in the run
+  - in `.github\workflows\pull_request.yml`, each time the description or the label changes too: the
+    type label and the Changelog section as a release reads them (`release.py --check-pr`), and
+    `check_public_text.py` on the description
   - `stage_replay --golden` against the build before, compared run by run. A change shows in the run's
     summary and fails nothing, because many pull requests change the output on purpose
   - the e2e suite and the local files test, on trial: their results show in the run, and fail nothing
