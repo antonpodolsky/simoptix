@@ -433,7 +433,8 @@ One convention, everywhere. Check every new name against it, and rename what bre
   PowerShell 5.1 adds a byte-order mark and garbles non-ASCII text (an en dash comes out as `â€“`).
 - **Don't put code containing backslashes in bash heredocs or `python -c`.** The escapes get mangled.
   Write a script file with a file-editing tool and run that instead.
-- Files in the working copy use LF line endings. Keep them that way.
+- Files in the working copy use LF line endings. `.gitattributes` checks every text file out with LF,
+  on Windows too. Keep them that way.
 
 ## 3. Build (every change)
 
