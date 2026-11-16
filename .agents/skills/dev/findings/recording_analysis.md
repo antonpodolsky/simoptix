@@ -32,3 +32,25 @@ smoothing 2 (its README). Lower is better in every row.
   images shown for another frame. The old scripts read every tick of these recordings as one, for the
   reason in the README's "Known limits" (`followed_serial`).
 - The old per-jump report of session E came from the wrong place in the trace.
+
+## OBS's encoder at 4K and 120 fps
+
+- **A 120 fps recording that stuttered badly was OBS's encoder, not VR Mirror.** Three recordings of
+  the OpenXR source with Look-ahead, 3840x2160, NVENC AV1 (preset p6, CQP 16, quality pass on):
+
+  | OBS | Video frames | OBS ticks repeated in the video | Ticks lost | Game frames per second of video |
+  |---|---|---|---|---|
+  | 90 fps | 3,188 | 0 | 0 | 90 |
+  | 60 fps | 1,757 | 0 | 0 | 60 (a third of the game's never shown, as at that rate) |
+  | 120 fps | 3,608 | 2,515 (70%) | 2,507, in 443 places | 30.7 |
+
+  - At 120 fps OBS's log says "number of skipped frames due to encoding lag: 2527/3621 (69.8%)": the
+    encoder couldn't keep up, and OBS repeated the last frame in the place of each one it dropped.
+  - Over those 30 s the plugin drew all 3,600 ticks, with every one of the game's 2,698 frames (90 a
+    second). 25.1% of its ticks showed the game frame before again: 90 Hz on 120 fps.
+  - So a recording's own frame steps (`analyse_recording.py`, "OBS ticks shown twice or dropped") and
+    OBS's "skipped frames due to encoding lag" line come first, before reading anything of VR
+    Mirror's into a stutter.
+- **The stamp check took such a video for one without a stamp.** It asked for most frames to step by
+  one tick. It now asks for nearly every frame to step forward by 30 ticks at most, which noise read
+  as a stamp doesn't.

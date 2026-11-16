@@ -81,9 +81,11 @@ def Load(prefix):
                 if len(r) == 6:
                     S.append([float(x) for x in r])
 
-    S = np.array(S)
-    S = S[np.lexsort((S[:, 0], S[:, 1]))]
-    S = S[np.r_[S[1:, 1] != S[:-1, 1], True]]  # the last prediction for each slot
+    S = np.array(S).reshape(-1, 6)  # none in an OpenXR trace
+
+    if len(S):
+        S = S[np.lexsort((S[:, 0], S[:, 1]))]
+        S = S[np.r_[S[1:, 1] != S[:-1, 1], True]]  # the last prediction for each slot
     d = {
         "num": np.array(num),
         "kind": np.array(kind),
@@ -113,8 +115,14 @@ def Arrivals(prefix, serials):
 
 
 def FirstPose(prefix):
-    """source time of the trace's first head pose (P row)."""
+    """source time of the trace's first head pose (P row), or of its first tick where the source's
+    file has no poses (OpenXR): both start at the game's first frame."""
     with open(SourceTrace(prefix)) as f:
         for line in f:
             if line.startswith("P,"):
+                return float(line.split(",")[1])
+
+    with open(prefix + "_ticks.csv") as f:
+        for line in f:
+            if line[0].isdigit():
                 return float(line.split(",")[1])

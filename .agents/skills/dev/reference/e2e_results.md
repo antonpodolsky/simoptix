@@ -10,6 +10,66 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 16: the forecast told of each frame as it arrives, so only the frames it can't tell yet are
+held.** LMU, OBS and Pimax Play were closed. All 38 runs passed, and 18 of 19 comparisons with
+Instant. `stage_replay --golden` is unchanged. The mirror app, which e2e runs, uses neither the fixed
+delay's forecast nor the plugin's copying.
+- `replay_queued_late_frames` failed its comparison on the worst horizon tilt: 0.141° at Instant,
+  0.257° with Look-ahead (allowed 0.191°). The pair was run again five times, and the comparison
+  passed each time, with 6.8–9.7 / 4.3–5.5% from the wrong pose. The standalone runs didn't print the
+  horizon tilt line.
+
+**Run 15: the frame picker's forecast and tick record, the store sized for the frames shown, and
+the warm-up counting each copy once (#33).** LMU, OBS and Pimax Play were closed. All 38 runs passed,
+and all 19 comparisons with Instant. `stage_replay --golden` is unchanged.
+- `replay_late_frame_same_slot` passed at both smoothings, with no frame from the wrong pose (#32).
+- `replay_queued_late_frames` 8.8 / 5.1% from the wrong pose (limits 12 / 7%), and
+  `game_starts_late` 4.8 runtime calls/s idle.
+
+**Run 14: the fixed delay's store counts the frames that can arrive before the host's next tick.**
+LMU, OBS and Pimax Play were closed. The pipeline's output is the same as before
+(`stage_replay --golden` byte for byte).
+- `openxr_black_borders` at Instant had one stall mid-turn, as in runs 9 and 11. A rerun at both
+  smoothings passed, with its comparison.
+- Otherwise, all 38 runs and all 19 comparisons passed.
+
+**Run 13: the fixed delay runs ahead for `WillShow`, the tick plan picker is dropped.** LMU, OBS and
+Pimax Play were closed. All 38 runs passed, and all 19 comparisons with Instant. The pipeline's
+output is the same as before (`stage_replay --golden` byte for byte).
+- `replay_late_frame_same_slot` passed at both smoothings, with no frame from the wrong pose (#32).
+- `replay_queued_late_frames` 8.4 / 4.3% from the wrong pose, and `game_starts_late` 4.8 runtime
+  calls/s idle.
+
+**Run 12: the tick plan picker, and the frame pickers' `Restart` takes the output frame period.** LMU,
+OBS and Pimax Play were closed. 35 of 38 runs passed, and all 19 comparisons with Instant. The mirror
+app's pickers ignore the new period and keep every frame, and the pipeline's output is the same as
+before (`stage_replay --golden` byte for byte).
+- `replay_late_frame_same_slot` at Instant had 1 frame from the wrong pose (0.100%, limit 0), as on
+  `main` (#32).
+- `black_borders_low_zoom` at Instant had one stall mid-turn, as in runs 5, 7 and 8.
+- `stabilization` at Instant smoothed the shake to 0.547 of the head's (limit 0.5). Runs 8 to 11
+  gave 0.42 to 0.50.
+- A rerun of the last two, at both smoothings, passed with their comparisons: 0.460 of the head's
+  shake, no stall.
+
+**Run 11: the frame picker gets the display's period at its start.** LMU, OBS and Pimax Play were
+closed. 36 of 38 runs passed, and 18 of 19 comparisons with Instant. The pipeline's output is the
+same as before (`stage_replay --golden` byte for byte), and the mirror app's pickers ignore the new
+period.
+- Two runs failed, as in earlier runs:
+  - `openxr_black_borders` at Instant had one stall mid-turn, as in runs 7 and 9.
+  - `queued_cockpit_lookahead` missed 3.5% of the game's frames (limit 1%), which also failed its
+    comparison with Instant.
+- A rerun of both, at both smoothings, passed with their comparisons: no stall, and 0 / 0.08% of
+  frames missed.
+- `replay_queued_late_frames` 7.3 / 4.1% from the wrong pose, the featureless replay 1.50 / 0.21%,
+  and `game_starts_late` 5.6 runtime calls/s idle.
+- Recorded view jitter: `stabilization` 0.128 / 0.116°, `dropped_frames` 0.177 / 0.160°.
+- Worst horizon tilt: `openxr_stabilization` 0.214 / 0.166°, `openxr_dropped_frames` 0.164 / 0.140°,
+  `openxr_game_behind` 0.153 / 0.165°, `openxr_black_borders` 0.216 / 0.257°, `stabilization` 0.116 /
+  0.105°.
+- `openxr_stall`: image/pose mismatch 0.054 / 0.054° rms.
+
 **Run 10 (ce4d1fd): the code says "image" for "picture".** LMU and OBS were closed, Pimax Play was
 running. All 38 runs passed, and all 19 comparisons with Instant. The pipeline's output is the same
 as before (`stage_replay --golden` byte for byte).

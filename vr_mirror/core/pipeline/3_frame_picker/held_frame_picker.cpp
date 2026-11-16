@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "pipeline/3_frame_picker/held_frame_picker.h"
 
-void HeldFramePicker::Restart(double delayS, int maxSlots) {
+void HeldFramePicker::
+    Restart(double delayS, double /*period*/, double /*tickPeriod*/, int maxSlots, bool /*copiesShownOnly*/) {
     delay_ = delayS;
     maxSlots_ = maxSlots;
     lastShown_ = 0;
