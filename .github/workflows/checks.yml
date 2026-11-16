@@ -213,12 +213,24 @@ jobs:
         with:
           name: built
 
-      - name: Install OBS
+      # The OBS the plugins are tested with (CONTRIBUTING.md), from OBS's own release, checked against
+      # its SHA-256. OBS 33.0.1 loaded no plugin from the test's folder (OBS_PLUGINS_PATH).
+      - name: Download OBS
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OBS_ZIP: OBS-Studio-32.2.2-Windows-x64.zip
+          OBS_SHA256: 4d6e40e3ab155f56b30de517380566a206d74b63cdf5ad49aa596924768f97e1
         run: |
-          choco install obs-studio --no-progress -y
-          exit $LASTEXITCODE
+          gh release download 32.2.2 -R obsproject/obs-studio -p $env:OBS_ZIP -D $env:RUNNER_TEMP
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $hash = (Get-FileHash "$env:RUNNER_TEMP\$env:OBS_ZIP" -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne $env:OBS_SHA256) { "SHA-256 $hash, expected $env:OBS_SHA256"; exit 1 }
+          Expand-Archive "$env:RUNNER_TEMP\$env:OBS_ZIP" "$env:RUNNER_TEMP\obs"
+          if (-not (Test-Path "$env:RUNNER_TEMP\obs\bin\64bit\obs64.exe")) { "no bin\64bit\obs64.exe in the zip"; exit 1 }
 
       - name: Test
+        env:
+          OBS_DIR: ${{ runner.temp }}\obs
         run: |
           vr_mirror\e2e\bin\local_files_e2e.exe
           exit $LASTEXITCODE

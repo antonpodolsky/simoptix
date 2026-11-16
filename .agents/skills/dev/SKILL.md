@@ -769,7 +769,7 @@ Record what each start of the game showed in `findings\openxr.md`.
   | Public text | `check_public_text.py` on every file and on the pull request's commits |
   | Pipeline output | `stage_replay --golden` against the expected output in `vr_mirror\e2e\stage_replay\golden_expected.txt`, run by run. Any change fails it, and the run uploads the new golden file and its `golden_expected.txt` ("Tests", "The pipeline's expected output") |
   | Pipeline e2e | The e2e suite (`vr_mirror\e2e\bin\e2e_runner.exe`) |
-  | Logs e2e | The local files test (`vr_mirror\e2e\bin\local_files_e2e.exe`), in an OBS installed on the runner |
+  | Logs e2e | The local files test (`vr_mirror\e2e\bin\local_files_e2e.exe`), in OBS 32.2.2 from OBS's own release, checked against its SHA-256 |
   | Changelog | The type label and the Changelog section as a release reads them (`release.py --check-pr`) |
   | Description | `check_public_text.py` on the description |
 
