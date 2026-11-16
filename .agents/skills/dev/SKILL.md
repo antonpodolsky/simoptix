@@ -788,10 +788,6 @@ Record what each start of the game showed in `findings\openxr.md`.
   title, its description from the template, which covers this change only, and its one type label,
   which feeds the changelog. The release script refuses a release while a pull request since the last
   one has no type label.
-- **An agent in Claude Code's desktop app turns on Auto-fix for each pull request it opens,** right
-  after opening it. The app then wakes the agent when a check fails, the branch conflicts with `main`,
-  or a review comment arrives. The agent fixes the branch, checks the fix and pushes it. A review
-  comment's request waits for the maintainer.
 - Until the remote exists, there are two cases:
   - If `main` isn't checked out anywhere, run `git push . <branch>:main` (fast-forward only).
   - If `main` is checked out in the main folder and that folder's tracked files are clean, run
