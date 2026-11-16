@@ -15,13 +15,6 @@ namespace {
         return tickPeriod > period ? int(std::ceil(tickPeriod / period)) : 0;
     }
 
-    // The store's entries when the host copies only the frames the forecast says a tick shows: the
-    // frames shown within the output delay `outDelay` and one tick more (at most one a tick, and one
-    // a display period), and 3 more for a late copy or a frame copied but never shown.
-    int ShownOnlySlots(double outDelay, double period, double tickPeriod) {
-        return int(std::ceil((outDelay + tickPeriod) / std::max(period, tickPeriod))) + 3;
-    }
-
     // The newest frame among the store's `total` entries, copied or not (0: none).
     uint64_t NewestSerial(const StoredFrame* frames, int total) {
         uint64_t newest = 0;
@@ -38,6 +31,39 @@ namespace {
 int WarmupSlots(double smoothingDelayS, double period, double tickPeriod, int maxSlots) {
     return std::clamp(
         int(std::ceil((0.045 + smoothingDelayS) / period)) + BetweenTicksSlots(period, tickPeriod) + 3,
+        4,
+        maxSlots
+    );
+}
+
+bool FixedDelayCopiesShownOnly(bool hostCan, double smoothingDelayS, double tickPeriod) {
+    return hostCan && tickPeriod > 0 && smoothingDelayS >= kFixedDelayCopyDoneS;
+}
+
+int FixedDelaySlots(
+    double copyDelayS,
+    double smoothingDelayS,
+    double period,
+    double tickPeriod,
+    bool copiesShownOnly,
+    int maxSlots
+) {
+    const double outDelay = copyDelayS + smoothingDelayS;
+
+    // Only the frames shown: those within the delay and one tick more, at most one a tick and one a
+    // display period. 3 more for a late copy or a frame copied but never shown.
+    if (copiesShownOnly) {
+        return std::clamp(
+            int(std::ceil((outDelay + tickPeriod) / std::max(period, tickPeriod))) + 3,
+            4,
+            maxSlots
+        );
+    }
+
+    // Every frame: those inside the delay, those that can arrive before the host's next tick, and room
+    // for a late copy.
+    return std::clamp(
+        int(std::ceil(outDelay / period)) + BetweenTicksSlots(period, tickPeriod) + 3,
         4,
         maxSlots
     );
@@ -62,9 +88,7 @@ void FixedDelayPicker::Restart(
     lastTick_ = 0;
     tickPeriod_ = tickPeriod;
     slots_ = WarmupSlots(smoothingDelayS, period, tickPeriod, maxSlots_);
-    // Without ticks the forecast says yes, and with a delay shorter than a copy certainly takes
-    // (Instant) it says yes too: holding frames for it would only delay them.
-    copiesShownOnly_ = copiesShownOnly && tickPeriod > 0 && smoothingDelayS >= kFixedDelayCopyDoneS;
+    copiesShownOnly_ = FixedDelayCopiesShownOnly(copiesShownOnly, smoothingDelayS, tickPeriod);
     shownOnlyFrom_ = 0;
     fixedPending_ = false;
     restarts_++;
@@ -127,15 +151,8 @@ void FixedDelayPicker::WarmUp(double tick, double period, const StoredFrame* fra
         fixedP95_ = p95;
         fixedPending_ = true;
 
-        // The store needs the frames inside the delay, the frames that can arrive before the host's
-        // next tick, and room for a late copy: entries = frames in the delay + frames between ticks
-        // + 3, at least 4.
-        slots_ = std::clamp(
-            int(std::ceil((copyDelay_ + smoothingDelay_) / period)) + BetweenTicksSlots(period, tickPeriod_)
-                + 3,
-            4,
-            maxSlots_
-        );
+        // Every frame copied until those copied before the forecast began are past (below).
+        slots_ = FixedDelaySlots(copyDelay_, smoothingDelay_, period, tickPeriod_, false, maxSlots_);
         delays_.clear();
 
         // The forecast starts at the first frame after this tick (the host's copy thread sees the
@@ -158,7 +175,7 @@ Pick FixedDelayPicker::Tick(double tick, double period, const StoredFrame* frame
     }
 
     if (shownOnlyFrom_ > 0 && tick >= shownOnlyFrom_) {
-        slots_ = std::clamp(ShownOnlySlots(OutDelay(), period, tickPeriod_), 4, maxSlots_);
+        slots_ = FixedDelaySlots(copyDelay_, smoothingDelay_, period, tickPeriod_, true, maxSlots_);
         shownOnlyFrom_ = 0;
     }
 

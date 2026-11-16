@@ -26,6 +26,24 @@
 // tick (`tickPeriod`, 0: none counted), and 3 more.
 int WarmupSlots(double smoothingDelayS, double period, double tickPeriod, int maxSlots);
 
+// Whether a host that can copy only the frames the forecast says a tick shows (`hostCan`) is asked
+// to: with regular ticks (`tickPeriod`) and a delay longer than a copy certainly takes (Look-ahead).
+// Without ticks the forecast says yes, and with Instant it says yes too: holding frames for it would
+// only delay them.
+bool FixedDelayCopiesShownOnly(bool hostCan, double smoothingDelayS, double tickPeriod);
+
+// Store entries once the copy delay is fixed (`copyDelayS`), for a display `period` and the host's
+// tick period: every frame inside the output delay, or only those a tick shows
+// (`copiesShownOnly`, FixedDelayCopiesShownOnly), with room for a late copy, at least 4.
+int FixedDelaySlots(
+    double copyDelayS,
+    double smoothingDelayS,
+    double period,
+    double tickPeriod,
+    bool copiesShownOnly,
+    int maxSlots
+);
+
 class FixedDelayPicker : public FramePicker {
 public:
     void Restart(
