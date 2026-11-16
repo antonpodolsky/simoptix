@@ -772,7 +772,9 @@ Record what each start of the game showed in `findings\openxr.md`.
   | Changelog | The type label and the Changelog section as a release reads them (`release.py --check-pr`) |
   | Description | `check_public_text.py` on the description |
 
-  `.github\workflows\checks.yml` holds the first seven, which also run on each push to `main`.
+  `.github\workflows\checks.yml` holds the first seven, which also run on each push to `main`. Build
+  builds once and uploads what it built. Pipeline output, Pipeline e2e and Logs e2e wait for it and
+  run those files, so they test what Build built, and are skipped when it fails.
   `.github\workflows\pull_request.yml` holds Changelog and Description, which also run each time the
   description or the label changes. The docs and public-text checks fail only on what their scripts
   fail on, and their lines to review show in the run.

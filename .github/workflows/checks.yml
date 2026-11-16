@@ -10,6 +10,8 @@
 #                    Any change fails it. A change that is meant commits a new golden_expected.txt
 #   Pipeline e2e     the e2e suite
 #   Logs e2e         the local files test
+# Build builds once, and uploads what it built. Pipeline output, Pipeline e2e and Logs e2e wait for it,
+# and run those files, so they test what Build built, and are skipped when it fails.
 # pull_request.yml checks the description and the label. Nothing here signs, and no job has a secret.
 name: Checks
 
@@ -51,6 +53,20 @@ jobs:
         with:
           name: build_logs
           path: ${{ runner.temp }}/build_logs
+
+      # At their paths in the repo, for the jobs that test them.
+      - name: Upload what was built
+        uses: actions/upload-artifact@v4
+        with:
+          name: built
+          if-no-files-found: error
+          path: |
+            vr_mirror/obs_plugin/bin/
+            overlays/obs_plugin/bin/
+            vr_mirror/frame_sources/openxr/bin/
+            vr_mirror/mirror_app/simoptix_vr_mirror.exe
+            vr_mirror/e2e/bin/
+            setup/bin/
 
   format:
     name: Format
@@ -118,18 +134,16 @@ jobs:
 
   pipeline_output:
     name: Pipeline output
+    needs: build
     runs-on: windows-latest
     steps:
-      # The whole history and the tags, for the version (shared\build\version.bat).
       - name: Check out
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Build stage_replay
-        run: |
-          cmd /c "vr_mirror\e2e\build.bat"
-          exit $LASTEXITCODE
+      - name: Download what Build built
+        uses: actions/download-artifact@v4
+        with:
+          name: built
 
       - name: Write the golden file
         run: |
@@ -159,13 +173,12 @@ jobs:
 
   pipeline_e2e:
     name: Pipeline e2e
+    needs: build
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
       - name: Check out
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Report the runner's graphics, processor and sessions
         run: |
@@ -174,12 +187,10 @@ jobs:
           query session
           exit 0
 
-      - name: Build the mirror app and the e2e suite
-        run: |
-          cmd /c "vr_mirror\mirror_app\build.bat"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cmd /c "vr_mirror\e2e\build.bat"
-          exit $LASTEXITCODE
+      - name: Download what Build built
+        uses: actions/download-artifact@v4
+        with:
+          name: built
 
       - name: Test the e2e suite
         run: |
@@ -195,19 +206,18 @@ jobs:
 
   logs_e2e:
     name: Logs e2e
+    needs: build
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
       - name: Check out
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       # The local files test runs both plugins, the OpenXR layer and the e2e builds.
-      - name: Build every part
-        run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1 -LogDir "$env:RUNNER_TEMP\build_logs"
-          exit $LASTEXITCODE
+      - name: Download what Build built
+        uses: actions/download-artifact@v4
+        with:
+          name: built
 
       - name: Install OBS
         run: |
