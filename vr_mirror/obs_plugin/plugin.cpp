@@ -157,8 +157,7 @@ namespace {
         obs_property_set_long_description(
             smoothing,
             "Instant: no delay, for live streaming.\n"
-            "Look-ahead: half a second behind the game, for recording.\n"
-            "The sound follows the same delay."
+            "Look-ahead: half a second behind the game, for recording."
         );
 
         // What the source's store of copied frames takes in video memory with these settings (the
