@@ -7,13 +7,13 @@
 #                                        and <name>\data\manifest.json
 #   simoptix_openxr_layer_<version>.zip  the layer and its manifest in bin\, beside install.ps1,
 #                                        uninstall.ps1 and uninstall.bat, which install it from there
-# Refuses when a file's version isn't exactly the one in VERSION (a build off the release tag, or with
+# Refuses when a file's version isn't exactly the one in version.txt (a build off the release tag, or with
 # changes), or when the layer's or setup's signature isn't valid.
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File release_files.ps1 <output folder>
 param([string]$OutputPath)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
-$version = ([IO.File]::ReadAllText((Join-Path $root 'VERSION'))).Trim()
+$version = ([IO.File]::ReadAllText((Join-Path $root 'version.txt'))).Trim()
 $layerName = 'XR_APILAYER_SIMOPTIX_frame_source'
 $layerBin = Join-Path $root 'vr_mirror\frame_sources\openxr\bin'
 $plugins = [ordered]@{

@@ -209,11 +209,11 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 
 ## Releases
 
-SimOptix has one version for all its parts, in `VERSION` at the repo's root, such as 0.1.0. Every
+SimOptix has one version for all its parts, in `version.txt` at the repo's root, such as 0.1.0. Every
 build carries it, and a build that isn't a release adds the commits since the last one
 (`0.1.0+12.gabc1234`). The maintainer makes the releases.
 
-1. In a "Release: v<version>" pull request, bump `VERSION` and run
+1. In a "Release: v<version>" pull request, bump `version.txt` and run
    `python -I .agents\skills\dev\release.py`. It writes the release's section of `CHANGELOG.md` from
    the labels and Changelog sections of the pull requests since the last release.
 2. After it merges, tag the merge commit on `main` as `v<version>`, annotated.

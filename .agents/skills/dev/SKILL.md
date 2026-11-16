@@ -458,7 +458,7 @@ The automated tests are the e2e suite (step 5).
 
 The plugin builds make OBS's import library from `shared\obs_lib\obs.def`.
 
-**The version.** `VERSION` at the repo's root holds SimOptix's version, one number for every part
+**The version.** `version.txt` at the repo's root holds SimOptix's version, one number for every part
 (`0.1.0`). `shared\build\version.bat` reads it and adds the commits since the release tag and the
 commit, the way `git describe --tags` gives them (`0.1.0+12.gabc1234`). A build exactly on the release
 tag gets the plain number. Every `build.bat` that makes a shipped file calls it: both plugins and the

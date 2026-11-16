@@ -11,7 +11,7 @@ rem It builds both plugins first, because they check that they come from one bui
 rem as it is in ..\vr_mirror\frame_sources\openxr\bin, because building it here would replace a signed
 rem DLL with an unsigned one: build the layer, and sign it, before this. It links the C runtime in (/MT),
 rem so the exe needs nothing beside it.
-rem Its version comes from ..\shared\build\version.bat (VERSION at the repo's root, and git), and goes
+rem Its version comes from ..\shared\build\version.bat (version.txt at the repo's root, and git), and goes
 rem into the exe's version resource (setup.rc) and the entry in Windows' installed apps.
 setlocal
 call "%~dp0..\shared\build\vs_env.bat" || exit /b 1
