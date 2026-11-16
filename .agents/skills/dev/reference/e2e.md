@@ -183,7 +183,9 @@ build before instead, as above.
 
 When Pipeline output fails, its run uploads the golden file it wrote and the `golden_expected.txt` of
 that output (`--write-expected`). When the change is meant, commit that `golden_expected.txt` with it.
-To read what changed, compare the uploaded golden file with a local one.
+To read what changed, compare a local build's golden file with the build before it's, as above. The
+uploaded golden file comes from another compiler than a local one, so a comparison of the two also
+shows the rounding.
 
 ### Stage 1 and stage 3 over OBS traces
 
