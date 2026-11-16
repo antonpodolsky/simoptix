@@ -2,7 +2,8 @@
 rem Copyright (C) 2026 Anton Podolsky
 rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds SimOptix: VR Mirror, simoptix_vr_mirror.dll: the OBS source SimOptix: Pimax
-rem Mirror (plugin.cpp; drawn by mirror_view.cpp with the effect in warp_effect.cpp, its frames
+rem Mirror (plugin.cpp, its video memory line by video_memory.cpp; drawn by mirror_view.cpp with
+rem the effect in warp_effect.cpp, its frames
 rem copied by frame_ring.cpp, its frame source started and stopped by session_worker.cpp, the audio kept
 rem in step with its view by audio_sync.cpp), and its race
 rem auto-record (race_auto_record\race_recorder.cpp decides when, race_auto_record\auto_record.cpp tells
@@ -34,7 +35,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ..\core\build\embed_text.ps1
    ..\core\pipeline\5_warp\warp.hlsli obj\warp_hlsli.h kWarpHlsli || exit /b 1
 cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Fo:obj\ ^
    /I..\.. /I..\core /I..\..\third_party\obs-32.2.2\libobs /Iobj %TELEMETRY_FLAGS% ^
-   plugin.cpp mirror_view.cpp warp_effect.cpp frame_ring.cpp session_worker.cpp audio_sync.cpp ^
+   plugin.cpp mirror_view.cpp video_memory.cpp warp_effect.cpp frame_ring.cpp session_worker.cpp ^
+   audio_sync.cpp ^
    race_auto_record\race_recorder.cpp race_auto_record\auto_record.cpp ^
    ..\..\shared\shared_memory.cpp ..\..\shared\program_delay.cpp ..\..\shared\crash_dump.cpp ^
    ..\..\shared\local_files.cpp ^

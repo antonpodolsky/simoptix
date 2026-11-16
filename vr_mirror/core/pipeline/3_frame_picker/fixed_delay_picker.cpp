@@ -53,20 +53,14 @@ int FixedDelaySlots(
     // Only the frames shown: those within the delay and one tick more, at most one a tick and one a
     // display period. 3 more for a late copy or a frame copied but never shown.
     if (copiesShownOnly) {
-        return std::clamp(
-            int(std::ceil((outDelay + tickPeriod) / std::max(period, tickPeriod))) + 3,
-            4,
-            maxSlots
-        );
+        const double shown = std::ceil((outDelay + tickPeriod) / std::max(period, tickPeriod));
+        return std::clamp(static_cast<int>(shown) + 3, 4, maxSlots);
     }
 
     // Every frame: those inside the delay, those that can arrive before the host's next tick, and room
     // for a late copy.
-    return std::clamp(
-        int(std::ceil(outDelay / period)) + BetweenTicksSlots(period, tickPeriod) + 3,
-        4,
-        maxSlots
-    );
+    const double inDelay = std::ceil(outDelay / period);
+    return std::clamp(static_cast<int>(inDelay) + BetweenTicksSlots(period, tickPeriod) + 3, 4, maxSlots);
 }
 
 void FixedDelayPicker::Restart(
@@ -92,6 +86,21 @@ void FixedDelayPicker::Restart(
     shownOnlyFrom_ = 0;
     fixedPending_ = false;
     restarts_++;
+}
+
+int FixedDelayPicker::SlotsFor(double smoothingDelayS, bool copiesShownOnly) const {
+    if (copyDelay_ == 0 || period_ <= 0) {
+        return 0;
+    }
+
+    return FixedDelaySlots(
+        copyDelay_,
+        smoothingDelayS,
+        period_,
+        tickPeriod_,
+        FixedDelayCopiesShownOnly(copiesShownOnly, smoothingDelayS, tickPeriod_),
+        maxSlots_
+    );
 }
 
 std::unique_ptr<ShowForecast> FixedDelayPicker::MakeForecast() const {

@@ -69,6 +69,7 @@ public:
     void PredictedHeadsBetween(const double* t, int n, Quat* out) override;
 
     void SetImageNeed(float width, double maxBytes) override { images_.SetNeed(width, maxBytes); }
+    bool CopySize(float width, double maxBytes, uint32_t* copyWidth, uint32_t* copyHeight) override;
     void OpenImages(ID3D11Device* device) override;
     // The layer's three textures take turns, so a frame's image is written over only when the third
     // frame after it is copied, and its newest finished frames are kept (kFinished).

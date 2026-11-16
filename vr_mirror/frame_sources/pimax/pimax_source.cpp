@@ -506,6 +506,8 @@ bool PimaxSource::CopyImage(
     }
     D3D11_TEXTURE2D_DESC sd;
     src->GetDesc(&sd);
+    mirrorWidth_ = sd.Width;
+    mirrorHeight_ = sd.Height;
 
     FrameCopyShape shape;
     shape.width = sd.Width, shape.height = sd.Height, shape.format = sd.Format;

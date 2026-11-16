@@ -230,6 +230,11 @@ void MirrorView::StartStop() {
             obs_leave_graphics();
         }
 
+        {
+            std::lock_guard<std::mutex> lock(factsMutex_);
+            facts_ = {};
+        }
+
         session_.Stop();
         SetProgramDelay(0);
         blog(
@@ -237,6 +242,37 @@ void MirrorView::StartStop() {
             "[simoptix_vr_mirror] stopping (source hidden): graphics thread done in %.2f ms",
             (os_gettime_ns() - t0) / 1e6
         );
+    }
+}
+
+std::string MirrorView::VideoMemory(const MirrorSettings& settings) {
+    MemoryFacts facts;
+
+    {
+        std::lock_guard<std::mutex> lock(factsMutex_);
+        facts = facts_;
+    }
+
+    return VideoMemoryText(facts, settings, *frameSource_);
+}
+
+// The facts the video memory line needs, as of this tick: the store's settled size for each
+// smoothing, which the frame picker knows once it has measured its copy delay. Skipped while the UI
+// thread reads them: the next tick's come soon. Graphics thread.
+void MirrorView::KeepMemoryFacts(const FramePicker& picker) {
+    const bool canHold = frameSource_->CanCopyAfterNextFrame();
+    MemoryFacts facts;
+    facts.running = true;
+    facts.slots[0] = picker.SlotsFor(SmoothingDelayS(SmoothingKind::kInstant), canHold);
+    facts.slots[1] = picker.SlotsFor(SmoothingDelayS(SmoothingKind::kLookahead), canHold);
+    facts.eye = frameSource_->Eye();
+    facts.canvasWidth = width_;
+    facts.canvasHeight = height_;
+
+    std::unique_lock<std::mutex> lock(factsMutex_, std::try_to_lock);
+
+    if (lock.owns_lock()) {
+        facts_ = facts;
     }
 }
 
@@ -285,6 +321,7 @@ void MirrorView::Prepare(uint64_t tickNs) {
     FramePicker& picker = *pipeline_.Picker();
     const Pick pick = picker.Tick(tick, frameSource_->Period(), stored_, FrameRing::kMaxSlots);
     ring_.SetTickRecord(picker.Record());
+    KeepMemoryFacts(picker);
 
     if (picker.OutDelay() != outDelay_) {
         ApplyFixedDelay(picker);

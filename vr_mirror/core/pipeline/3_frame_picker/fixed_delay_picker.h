@@ -56,6 +56,8 @@ public:
     Pick Tick(double tick, double period, const StoredFrame* frames, int total) override;
     double OutDelay() const override { return (copyDelay_ > 0 ? copyDelay_ : 0.040) + smoothingDelay_; }
     int SlotsInUse() const override { return slots_; }
+    // With the copy delay it fixed: 0 until then.
+    int SlotsFor(double smoothingDelayS, bool copiesShownOnly) const override;
     std::unique_ptr<ShowForecast> MakeForecast() const override;
     TickRecord Record() const override;
     // Once, after the delay is fixed: "copy delay fixed", the copy delay chosen and the copy times'

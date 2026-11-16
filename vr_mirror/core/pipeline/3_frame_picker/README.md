@@ -34,6 +34,10 @@ next frame has arrived (through the OpenXR layer, not Pimax's single mirror imag
 - The entries in use (`SlotsInUse`). They can change at any tick, and the host resizes its store when
   they do. The fixed delay changes them when it fixes its delay, and during the warm-up when the
   display period changes.
+- The entries it would settle at for another smoothing (`SlotsFor`), from what it has measured: the
+  OBS plugin shows them as video memory in a source's properties. The fixed delay gives 0 until it
+  has fixed its copy delay. Its sizing is `FixedDelaySlots` and `FixedDelayCopiesShownOnly`, which it
+  uses itself.
 - A forecast of its picks (`MakeForecast`, a `ShowForecast`), for the host to run where it sees the
   frames arrive. It is told of every frame as it arrives (`Arrived`), and says whether a tick will
   show it even with the next frame on time. Once the next frame has arrived, it says whether any tick

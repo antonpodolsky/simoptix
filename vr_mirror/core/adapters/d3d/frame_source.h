@@ -72,6 +72,9 @@ public:
     // that size, or its own when that is near it, never above its own; one that can't ignores it. Any
     // thread, before Start too.
     virtual void SetImageNeed(float width, double maxBytes) = 0;
+    // The size (pixels) a copy of the newest frame's image takes with the needs SetImageNeed would get;
+    // false until the source has had an image. Any thread.
+    virtual bool CopySize(float width, double maxBytes, uint32_t* copyWidth, uint32_t* copyHeight) = 0;
     // The host's device and context (the thread that owns the context).
     // Opens the source's images on `device` (again, if the source re-created them): call every 2 s.
     virtual void OpenImages(ID3D11Device* device) = 0;

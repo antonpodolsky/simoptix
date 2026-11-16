@@ -71,6 +71,10 @@ public:
     // Store entries in use. It can change at any tick (the delay fixed, the display's period
     // learnt); a host resizes its store when it does.
     virtual int SlotsInUse() const = 0;
+    // The store entries it would settle at after a Restart with the smoothing's delay
+    // `smoothingDelayS` and `copiesShownOnly` (Restart's), from what it measured so far (the
+    // display's period, its copy delay, the host's ticks); 0 while it hasn't measured enough to tell.
+    virtual int SlotsFor(double /*smoothingDelayS*/, bool /*copiesShownOnly*/) const { return SlotsInUse(); }
     // A forecast of its picks (ShowForecast), fed with Record after every tick; null if it can't
     // forecast them, and then every frame is copied.
     virtual std::unique_ptr<ShowForecast> MakeForecast() const { return nullptr; }

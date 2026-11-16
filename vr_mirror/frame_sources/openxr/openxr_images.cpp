@@ -107,6 +107,19 @@ float4 Ps(V i) : SV_Target {
 
 }
 
+void OpenXrStoredSize(
+    int width,
+    int height,
+    float needWidth,
+    double maxBytes,
+    uint32_t* storedWidth,
+    uint32_t* storedHeight
+) {
+    const float w = StoredWidth(width, height, needWidth, maxBytes);
+    *storedWidth = std::max(1u, static_cast<uint32_t>(std::lround(w)));
+    *storedHeight = std::max(1u, static_cast<uint32_t>(std::lround(w * height / width)));
+}
+
 bool OpenXrImages::MakeShaders(ID3D11Device* device) {
     if (vs_ && ps_) {
         return true;
@@ -280,9 +293,8 @@ bool OpenXrImages::Copy(
         return false;
     }
 
-    const float w = StoredWidth(width, height, needWidth_.load(), maxBytes_.load());
-    const UINT sw = std::max(1u, UINT(std::lround(w)));
-    const UINT sh = std::max(1u, UINT(std::lround(w * height / width)));
+    uint32_t sw = 0, sh = 0;
+    OpenXrStoredSize(width, height, needWidth_.load(), maxBytes_.load(), &sw, &sh);
 
     const bool asIs = sw == UINT(width) && sh == UINT(height) && sameFamily_;
 

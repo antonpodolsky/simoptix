@@ -433,6 +433,29 @@ bool OpenXrSource::NextFrame(uint64_t after, GameFrame* f) {
     return false;
 }
 
+bool OpenXrSource::CopySize(float width, double maxBytes, uint32_t* copyWidth, uint32_t* copyHeight) {
+    int imageWidth = 0, imageHeight = 0;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        if (finishedCount_ == 0) {
+            return false;
+        }
+
+        const Finished& e = finished_[(finishedHead_ + finishedCount_ - 1) % kFinished];
+        imageWidth = e.width;
+        imageHeight = e.height;
+    }
+
+    if (imageWidth <= 0 || imageHeight <= 0) {
+        return false;
+    }
+
+    OpenXrStoredSize(imageWidth, imageHeight, width, maxBytes, copyWidth, copyHeight);
+    return true;
+}
+
 bool OpenXrSource::FindFinished(uint64_t serial, Finished* out) {
     std::lock_guard<std::mutex> lock(mutex_);
     for (int i = 0; i < finishedCount_; i++) {
