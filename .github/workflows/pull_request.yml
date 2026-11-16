@@ -23,22 +23,24 @@ defaults:
     shell: pwsh
 
 jobs:
-  description:
-    name: Label, Changelog and public text
+  verify_description:
+    name: Verify the description and the label
     runs-on: windows-latest
     env:
       GH_TOKEN: ${{ github.token }}
       PR: ${{ github.event.pull_request.number }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: The label and the Changelog section, as a release reads them
+      - name: Verify the label and the Changelog section, as a release reads them
         run: python -I .agents\skills\dev\release.py --check-pr $env:PR
 
-      - name: The description's public text
+      - name: Verify the public text of the description
         if: always()
         run: python -I .agents\skills\public-text\check_public_text.py --pr $env:PR

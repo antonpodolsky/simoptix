@@ -26,78 +26,84 @@ defaults:
 
 jobs:
   build:
-    name: Build every part
+    name: Build
     runs-on: windows-latest
     steps:
       # The whole history and the tags, for the version (shared\build\version.bat).
-      - uses: actions/checkout@v4
+      - name: Check out
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Build
+      - name: Build every part
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1 -LogDir "$env:RUNNER_TEMP\build_logs"
           exit $LASTEXITCODE
 
-      - name: Keep the build logs
+      - name: Upload the build logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build_logs
           path: ${{ runner.temp }}/build_logs
 
-  format:
-    name: Formatters
+  verify_formatting:
+    name: Verify formatting
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: Install the formatters, at the versions the dev skill names
+      - name: Install clang-format and ruff, at the versions the dev skill names
         run: python -m pip install clang-format==23.1.5 ruff==0.17.4
 
-      - name: clang-format
+      - name: Verify the C++ and HLSL layout (clang-format)
         run: |
           $files = git ls-files -- '*.cpp' '*.h' '*.hlsli' ':!third_party'
           clang-format --dry-run --Werror $files
           exit $LASTEXITCODE
 
-      - name: ruff
+      - name: Verify the Python layout (ruff)
         run: ruff format --check
 
-  docs_and_public_text:
-    name: Docs and public text
+  verify_docs_and_public_text:
+    name: Verify docs and public text
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: Docs
+      - name: Verify the docs
         run: python -I .agents\skills\docs\check_docs.py
 
-      - name: Every file in the repo
+      - name: Verify the public text of every file
         run: python -I .agents\skills\public-text\check_public_text.py --repo
 
-      # The description and the label are checked by pull_request.yml, each time they change.
-      - name: The pull request's commits
+      # The description and the label are verified by pull_request.yml, each time they change.
+      - name: Verify the public text of the pull request's commits
         if: github.event_name == 'pull_request'
         env:
           COMMITS: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
         run: python -I .agents\skills\public-text\check_public_text.py --commits $env:COMMITS
 
-  golden:
-    name: stage_replay against the build before
+  compare_stage_replay:
+    name: Compare stage_replay with the build before
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -114,19 +120,19 @@ jobs:
 
       # A build before that doesn't build on GitHub leaves nothing to compare. It is said in the
       # summary, and fails nothing.
-      - name: Build stage_replay before
+      - name: Build stage_replay of the build before
         id: before
         continue-on-error: true
         run: |
           cmd /c "$env:RUNNER_TEMP\before\vr_mirror\e2e\build.bat"
           exit $LASTEXITCODE
 
-      - name: No build before
+      - name: Report that the build before didn't build
         if: steps.before.outcome == 'failure'
         run: |
           "stage_replay --golden: the build before didn't build here, so there is nothing to compare." >> $env:GITHUB_STEP_SUMMARY
 
-      - name: Compare the golden dumps
+      - name: Compare the golden files
         if: steps.before.outcome == 'success'
         run: |
           vr_mirror\e2e\bin\stage_replay.exe --golden "$env:RUNNER_TEMP\after.txt"
@@ -138,29 +144,30 @@ jobs:
           # A change in the output is shown, and fails nothing: many pull requests change it on purpose.
           exit 0
 
-  tests_trial:
-    name: e2e and local files test (trial)
+  test_trial:
+    name: Test e2e and local files (trial)
     runs-on: windows-latest
     continue-on-error: true
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: What the runner has
+      - name: Report the runner's graphics, processor and sessions
         run: |
           Get-CimInstance Win32_VideoController | Format-Table Name, DriverVersion, VideoModeDescription
           Get-CimInstance Win32_Processor | Format-Table Name, NumberOfLogicalProcessors
           query session
           exit 0
 
-      - name: Build
+      - name: Build every part
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File shared\build\build_all.ps1 -LogDir "$env:RUNNER_TEMP\build_logs"
           exit $LASTEXITCODE
 
-      - name: e2e suite
+      - name: Test the e2e suite
         id: e2e
         run: |
           vr_mirror\e2e\bin\e2e_runner.exe
@@ -172,13 +179,13 @@ jobs:
           choco install obs-studio --no-progress -y
           exit $LASTEXITCODE
 
-      - name: Local files test
+      - name: Test the local files
         if: always() && steps.e2e.outcome != 'skipped'
         run: |
           vr_mirror\e2e\bin\local_files_e2e.exe
           exit $LASTEXITCODE
 
-      - name: Keep the tests' output
+      - name: Upload the tests' output
         if: always()
         uses: actions/upload-artifact@v4
         with:
