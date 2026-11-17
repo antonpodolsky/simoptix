@@ -802,6 +802,15 @@ Record what each start of the game showed in `findings\openxr.md`.
   title, its description from the template, which covers this change only, and its one type label,
   which feeds the changelog. The release script refuses a release while a pull request since the last
   one has no type label.
+- **The pull request names the issues it closes and the issues it works on.** Before writing it, look
+  through the open issues (`gh issue list --state open`) and read the "Done when" of each one the
+  change touches. The description starts with one line per issue:
+  - `Fixes #<number>` for each issue whose "Done when" is met once the pull request is merged. GitHub
+    closes that issue at the merge.
+  - `Part of #<number>` for each issue it works on and leaves open.
+
+  The pull-requests skill ("The issues it closes") has the form GitHub needs, and the check after
+  posting.
 - Until the remote exists, there are two cases:
   - If `main` isn't checked out anywhere, run `git push . <branch>:main` (fast-forward only).
   - If `main` is checked out in the main folder and that folder's tracked files are clean, run
