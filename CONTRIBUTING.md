@@ -194,6 +194,10 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   builds, the e2e results if `vr_mirror\core\` or the mirror app changed, and what you checked by hand.
   The description covers that change only. How the work went and details of your own PC stay out.
   Plans, next steps and work on other branches go in an issue.
+- Start the description with the issues it closes and works on, one line each. `Fixes #<number>`
+  names an issue whose "Done when" the change meets, and GitHub closes it at the merge. Give each
+  issue its own line, because in `Fixes #12, #27` GitHub closes only #12. `Part of #<number>` names an
+  issue the change works on and leaves open.
 - GitHub checks each pull request, and a failing check fails it: Build (every part, with no warnings),
   Format (clang-format and ruff), Docs, Public text and Pipeline output (the stage replay's output
   against `vr_mirror\e2e\stage_replay\golden_expected.txt`), in `.github\workflows\checks.yml`. A pull

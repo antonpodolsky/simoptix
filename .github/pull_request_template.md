@@ -1,6 +1,8 @@
 ## What changed and why
 
-<!-- This change only. Recording names, session dates and times, tracks, cars, details of your own PC,
+<!-- First, one line per issue: "Fixes #<number>" for each issue this closes, so GitHub closes it at
+the merge, and "Part of #<number>" for each issue it works on and leaves open.
+This change only. Recording names, session dates and times, tracks, cars, details of your own PC,
 how the work went, plans, next steps and work on other branches stay out
 (.agents\skills\public-text\SKILL.md). -->
 
