@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "frame_store.h"
+#include "pipeline/image_room/image_room.h"
 #include "pipeline/pipeline_builder.h"
 #include "replay_drawn_pose.h"
 #include "runs.h"
@@ -151,7 +152,7 @@ namespace stage_replay {
             out_.view = view;
             out_.image = image;
             out_.trueLag = trueLag;
-            out_.warp = pipeline_.Update(settings_, *poses_, kEye, {view, image, now, kAspect});
+            out_.warp = pipeline_.Update(settings_, *poses_, run_.eye, {view, image, now, kAspect});
             output_(out_);
         }
 
@@ -260,6 +261,29 @@ namespace stage_replay {
             }
         }
 
+        // One output: the input, the moment its view stands for (source seconds), the followed, view
+        // and image poses (x, y, z, w each), the edge stops and plans so far, and how far the view trails
+        // the shown image against its room there (degrees each; RoomIn, as the smoothings ask).
+        void DumpOutput(FILE* dump, const std::string& input, const HostOutput& out, const ViewGeometry& g) {
+            const Pipeline& p = *out.pipeline;
+            fprintf(dump, "%s,%.6f", input.c_str(), out.view.moment);
+
+            for (const Quat* q : {&p.LastRaw(), &p.LastView(), &p.LastImagePose()}) {
+                fprintf(dump, ",%.7f,%.7f,%.7f,%.7f", q->x, q->y, q->z, q->w);
+            }
+
+            const EdgeRoom room = RoomIn(p.LastImagePose(), p.LastView(), g);
+            constexpr double kDeg = 180 / 3.14159265358979;
+            fprintf(
+                dump,
+                ",%u,%u,%.4f,%.4f\n",
+                p.EdgeStops(),
+                p.EdgePlanned(),
+                room.lag * kDeg,
+                room.room * kDeg
+            );
+        }
+
     }
 
     void RunHost(const HostRun& run, const std::function<void(const HostOutput&)>& output) {
@@ -277,9 +301,12 @@ namespace stage_replay {
     int RunPipeline(
         const PipelineConfig& config,
         const MirrorSettings& settings,
+        const EyeInfo& eye,
         const std::vector<const Input*>& inputs,
-        double tickHz
+        double tickHz,
+        FILE* dump
     ) {
+        const ViewGeometry geometry = GeometryFor(eye, settings, kAspect);
         printf(
             "pipeline: arrival_timing %s, drawn_pose %s, frame_picker %s, smoothing %s, warp %s; "
             "zoom %.2f; %s\n",
@@ -303,12 +330,19 @@ namespace stage_replay {
             run.input = input;
             run.settings = settings;
             run.config = config;
+            run.eye = eye;
             run.ticks = tickHz > 0;
             run.tickHz = tickHz;
             run.pickByStage = true;
 
             Scores scores(*input);
-            RunHost(run, [&](const HostOutput& out) { scores.Add(out); });
+            RunHost(run, [&](const HostOutput& out) {
+                scores.Add(out);
+
+                if (dump) {
+                    DumpOutput(dump, input->name, out, geometry);
+                }
+            });
             scores.Print(input->name.c_str());
         }
 

@@ -250,7 +250,10 @@ three things:
   the OBS plugin's frame traces.
 - **Run the whole pipeline with any mix of stages.** It draws as the mirror app's window or as the OBS
   plugin's ticks, and scores from the pipeline's numbers alone (`scores.*`): black corners, lag, jitter
-  while still and in small moves, edge stops and planning, and frames from the wrong pose.
+  while still and in small moves, edge stops and planning, and frames from the wrong pose. It also runs
+  on a replay file named on the command line, with the game's field of view, and writes every output's
+  poses and its room in the image to a file. That shows what each setting would have shown at a moment
+  of a real session.
 - **Write every output of the pipeline** as a golden file, each float exactly, over a fixed matrix of
   inputs and settings. A change that must not change behaviour can be checked byte for byte against
   the build before it.

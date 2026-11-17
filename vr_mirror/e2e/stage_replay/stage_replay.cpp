@@ -10,12 +10,14 @@
 //     smoothing 1/2 and zoom 1.2 and 1.5, as the window and as OBS ticks; then single runs with
 //     stabilization switched off and on. A refactor that must not change behaviour reproduces the
 //     file byte for byte.
-//   --pipeline [stage flags] [--zoom Z] [--ticks HZ] [--input NAME ...]: the pipeline with the
-//     settings' configuration (Look-ahead, the slot check), each stage overridden by its flag:
-//     --arrival_timing grid, --drawn_pose slot_check|arrival_slot|cockpit,
-//     --frame_picker fixed_delay|newest_frame|held_frame, --smoothing instant|lookahead,
-//     --warp rotation (PipelineConfig's fields and values). As the mirror app's window, or as OBS ticks
-//     at HZ picked by the frame picker. Inputs: four of the five replays (kReplays) and the two motions.
+//   --pipeline [stage flags] [--zoom Z] [--ticks HZ] [--input NAME ...] [--replay FILE ...]
+//     [--eye L,R,U,D] [--dump FILE]: the pipeline with the settings' configuration (Look-ahead, the slot
+//     check), each stage overridden by its flag: --arrival_timing grid, --drawn_pose
+//     slot_check|arrival_slot|cockpit, --frame_picker fixed_delay|newest_frame|held_frame, --smoothing
+//     instant|lookahead, --warp rotation (PipelineConfig's fields and values). As the mirror app's
+//     window, or as OBS ticks at HZ picked by the frame picker. Inputs: four of the five replays
+//     (kReplays) and the two motions, or the replay files named. --eye: the game's field of view in
+//     degrees (the OpenXR layer's log); --dump: every output's poses and room, a line each.
 //   --stage drawn_pose <replay .csv> [--show FIRST-LAST] [--dump FILE] [--delays A,B,...]
 //     [--drawn_pose K]: the drawn pose alone on a replay's real thumbnails, its poses scored
 // against the true ones as each host asks for them (runs_drawn_pose.cpp; the findings call it lag_sim, its
@@ -27,6 +29,7 @@
 
 #include <windows.h>
 
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -205,8 +208,28 @@ namespace {
         PipelineConfig config = ConfigFor(settings);
         PipelineConfig flags = config;
         std::vector<std::string> names;
+        std::vector<std::string> replayFiles;  // --replay: these in place of the fixed inputs
+        std::string dump;
+        EyeInfo eye = kEye;
         std::vector<std::pair<std::string, std::string>> traces;
     };
+
+    // --eye LEFT,RIGHT,UP,DOWN: the game's field of view in degrees from straight ahead, as the OpenXR
+    // layer's log gives it (its view's fov), and not turned against the head.
+    bool ParseEye(const char* value, EyeInfo* eye) {
+        float deg[4];
+
+        if (sscanf_s(value, "%f,%f,%f,%f", &deg[0], &deg[1], &deg[2], &deg[3]) != 4) {
+            return false;
+        }
+
+        constexpr float kRad = 3.14159265f / 180;
+        eye->leftTan = std::tan(std::fabs(deg[0]) * kRad), eye->rightTan = std::tan(std::fabs(deg[1]) * kRad);
+        eye->upTan = std::tan(std::fabs(deg[2]) * kRad), eye->downTan = std::tan(std::fabs(deg[3]) * kRad);
+        eye->hmdToEye = Quat{};
+        eye->encodedTwice = false;
+        return true;
+    }
 
     bool IsStageFlag(const char* option, const char* value, Options* options) {
         PipelineConfig& flags = options->flags;
@@ -245,6 +268,19 @@ namespace {
             } else if (!strcmp(option, "--input")) {
                 options->names.push_back(value);
                 i++;
+            } else if (!strcmp(option, "--replay")) {
+                options->replayFiles.push_back(value);
+                i++;
+            } else if (!strcmp(option, "--dump")) {
+                options->dump = value;
+                i++;
+            } else if (!strcmp(option, "--eye")) {
+                if (!ParseEye(value, &options->eye)) {
+                    printf("--eye wants LEFT,RIGHT,UP,DOWN in degrees: %s\n", value);
+                    options->bad = true;
+                }
+
+                i++;
             } else if (!strcmp(option, "--trace") && i + 2 < argc) {
                 options->traces.push_back({argv[i + 1], argv[i + 2]});
                 i += 2;
@@ -268,10 +304,36 @@ namespace {
         return RunArrivalTiming(options.config, pimax) == 0 ? 0 : 1;
     }
 
+    // The replay files named, each under its file name without the folder and `.csv`.
+    bool LoadReplayFiles(const std::vector<std::string>& paths, std::vector<std::unique_ptr<Input>>* inputs) {
+        for (const std::string& path : paths) {
+            std::string name = path.substr(path.find_last_of("\\/") + 1);
+            name = name.substr(0, name.rfind(".csv"));
+            inputs->push_back(std::make_unique<Input>());
+            std::string error;
+
+            if (!LoadReplay(path, name, inputs->back().get(), &error)) {
+                printf("%s\n", error.c_str());
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     int PipelineRun(const Options& options) {
         std::vector<std::unique_ptr<Input>> inputs;
+        const bool loaded = options.replayFiles.empty() ? LoadInputs(options.replays, &inputs)
+                                                        : LoadReplayFiles(options.replayFiles, &inputs);
 
-        if (!LoadInputs(options.replays, &inputs)) {
+        if (!loaded) {
+            return 1;
+        }
+
+        FILE* dump = nullptr;
+
+        if (!options.dump.empty() && (fopen_s(&dump, options.dump.c_str(), "wb") != 0 || !dump)) {
+            printf("cannot write %s\n", options.dump.c_str());
             return 1;
         }
 
@@ -289,14 +351,27 @@ namespace {
             }
         }
 
-        return RunPipeline(options.config, options.settings, chosen, options.tickHz) == 0 ? 0 : 1;
+        const int failures = RunPipeline(
+            options.config,
+            options.settings,
+            options.eye,
+            chosen,
+            options.tickHz,
+            dump
+        );
+
+        if (dump) {
+            fclose(dump);
+        }
+
+        return failures == 0 ? 0 : 1;
     }
 
     void PrintUsage() {
         printf(
             "usage: stage_replay.exe --golden FILE [--replays DIR]\n"
             "       stage_replay.exe --pipeline [--<stage> <kind> ...] [--zoom Z] [--ticks HZ] "
-            "[--input NAME ...]\n"
+            "[--input NAME ...] [--replay FILE ...] [--eye L,R,U,D] [--dump FILE]\n"
             "       stage_replay.exe --stage drawn_pose <replay .csv> [--show FIRST-LAST] [--dump FILE] "
             "[--delays A,B,...] [--drawn_pose K]\n"
             "       stage_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]\n"
