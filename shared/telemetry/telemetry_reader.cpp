@@ -219,7 +219,7 @@ void TelemetryReader::Ensure(bool wait) {
             int64_t mine = r.Token();
             a->reader.compare_exchange_strong(mine, 0);
 
-            CoreLog("telemetry: reader stopped by an unexpected error");
+            CoreLogError("telemetry: reader stopped by an unexpected error");
         }
         r.done = true;
     });

@@ -52,12 +52,12 @@ namespace {
         }
 
         if (area && !matches) {
-            CoreLog(
+            CoreLogError(
                 "telemetry: the other plugin is a different build; reading the game separately (install both "
                 "from one build to share one reader)"
             );
         } else {
-            CoreLog(
+            CoreLogError(
                 "telemetry: couldn't open the shared telemetry (error %lu); reading the game separately",
                 GetLastError()
             );

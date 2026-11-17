@@ -42,7 +42,8 @@ struct ObsRun {
 
 // Runs OBS once with fresh settings and a scene that shows `run.sources`, then closes it as its close
 // button does. `log` gets OBS's log. False, with the reason, if OBS didn't start, the sources didn't start
-// within 30 s, or OBS didn't close within 30 s (then it is ended).
+// within 30 s (with Debug off, which logs nothing of it: OBS's window didn't show), or OBS didn't close
+// within 30 s (then it is ended).
 bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string* error);
 
 // The program's environment with `set` (NAME=value) in place of the same names, as CreateProcessW takes it.

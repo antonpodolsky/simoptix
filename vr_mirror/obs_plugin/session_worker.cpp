@@ -28,15 +28,18 @@ void SessionWorker::Start() {
     Join();
     state_ = kStarting;
 
-    thread_ = std::thread([this] {
+    const std::atomic<bool>* logGate = CurrentLogGate();  // it logs as the thread starting it does
+    thread_ = std::thread([this, logGate] {
+        const ScopedLogGate gate(logGate);
+
         // An exception escaping a thread would end OBS on the spot; log it and give up the start.
         try {
             const auto t0 = std::chrono::steady_clock::now();
             std::string error;
             if (!source_->Start(&error)) {
-                CoreLog("%s", error.c_str());
+                CoreLogError("%s", error.c_str());
             } else if (!ring_->Start(source_)) {
-                CoreLog("could not create the copy device");
+                CoreLogError("could not create the copy device");
                 source_->Stop();
             } else {
                 CoreLog("%s ready after %.0f ms (on its own thread)", source_->Name(), MsSince(t0));
@@ -44,7 +47,7 @@ void SessionWorker::Start() {
                 return;
             }
         } catch (...) {
-            CoreLog("starting the %s stopped by an unexpected error", source_->Name());
+            CoreLogError("starting the %s stopped by an unexpected error", source_->Name());
         }
         failed_ = true;
         state_ = kStopped;
@@ -57,14 +60,17 @@ void SessionWorker::Stop() {
     }
     Join();
     state_ = kStopping;
-    thread_ = std::thread([this] {
+    const std::atomic<bool>* logGate = CurrentLogGate();  // it logs as the thread starting it does
+    thread_ = std::thread([this, logGate] {
+        const ScopedLogGate gate(logGate);
+
         try {
             const auto t0 = std::chrono::steady_clock::now();
             ring_->Stop();
             source_->Stop();
             CoreLog("%s and threads stopped after %.0f ms (on its own thread)", source_->Name(), MsSince(t0));
         } catch (...) {
-            CoreLog("stopping the %s stopped by an unexpected error", source_->Name());
+            CoreLogError("stopping the %s stopped by an unexpected error", source_->Name());
         }
         state_ = kStopped;
     });

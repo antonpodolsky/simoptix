@@ -29,23 +29,21 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import sources
 from shake import DEG, PX_PER_DEG
-from trace_common import VideoTime
+from trace_common import StatsLines, VideoTime
 
 ROLL_RADIUS = 540  # px of the 1080p video at which a roll step is counted (half its height)
 REPEAT_SPREAD = 0.6  # a repeated game frame: 90% of patches follow the rigid fit within 0.6 px (at 960 px)
 OBS_SAME = 0.3  # whole-frame mean abs difference (grey levels) below which OBS showed the same image
 
 
-def LogWindows(path, start, stop):
-    """The plugin's 10 s stats inside a recording (start, stop: wall s, sources.LogLines' clock): rows
-    of (video time at the window's end, game fps, repeats, skips, judged, judged behind)."""
+def LogWindows(rec, start, stop):
+    """The plugin's 10 s stats inside a recording (start, stop: wall s, sources.LogLines' clock), from
+    OBS's log or the frame trace (StatsLines): rows of (video time at the window's end, game fps, repeats,
+    skips, judged, judged behind)."""
 
+    log = [(t, text) for t, text in sources.LogLines(rec["log"]) if text.startswith("[simoptix_vr_mirror] ")]
     rows, pending = [], {}
-    for t, text in sources.LogLines(path):
-        if not text.startswith("[simoptix_vr_mirror] "):
-            continue
-        if not start < t < stop + 10:
-            continue
+    for t, text in StatsLines(log, rec.get("trace"), rec.get("trace_opened") or start, start, stop):
         g = re.search(r"game behind: (\d+) of (\d+)", text)
         if g:
             pending = {"behind": int(g[1]), "judged": int(g[2])}
@@ -116,7 +114,7 @@ def _Run(npz, rec, video_name, threshold, out):
     fit_ok = (z["n_in"] >= 15) & np.isfinite(step)
 
     start, stop = rec["start"], rec["stop"] or rec["start"] + n / 90 + 1
-    win = LogWindows(rec["log"], start, stop)
+    win = LogWindows(rec, start, stop)
 
     # Each frame's 10 s log window.
     wi = np.searchsorted(win[:, 0], t)

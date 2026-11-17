@@ -322,12 +322,14 @@ bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string
     const UniqueHandle processHandle(process.hProcess);
     const UniqueHandle threadHandle(process.hThread);
 
-    // Each source logs "started (source shown)" once its frame source runs.
+    // Each source with Debug on logs "started (source shown)" once its frame source runs. With Debug off it
+    // logs nothing, so OBS's window showing up is all there is to wait for.
     bool sourcesStarted = false;
 
     for (DWORD waited = 0; waited < kStartMs && !sourcesStarted; waited += 250) {
         Sleep(250);
-        sourcesStarted = Count(NewestLog(obs.dir), "started (source shown)") >= run.sources.size();
+        sourcesStarted = run.debug ? Count(NewestLog(obs.dir), "started (source shown)") >= run.sources.size()
+                                   : MainWindowOf(process.dwProcessId) != nullptr;
     }
 
     if (sourcesStarted && !run.holdUntilLogged.empty()) {

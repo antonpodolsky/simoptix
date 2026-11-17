@@ -22,6 +22,7 @@ namespace {
     int64_t g_queued = -1;  // the shift last queued (ns; -1: none yet)
     // The shift the UI task applies (ns), set when it is queued.
     std::atomic<int64_t> g_shift{0};
+    bool (*g_anyDebug)() = nullptr;  // set at Start, then only read: whether to log a change
 
     // The delay as a shift, to the millisecond (so the copy delay's small changes don't touch the offsets).
     int64_t ShiftNow() {
@@ -57,7 +58,7 @@ namespace {
             &ctx
         );
 
-        if (ctx.changed) {
+        if (ctx.changed && g_anyDebug && g_anyDebug()) {
             blog(
                 LOG_INFO,
                 "[simoptix_vr_mirror] audio sync: %d audio source%s now %+lld ms on top of their own offsets "
@@ -88,7 +89,8 @@ namespace {
 
 }
 
-void AudioSync::Start() {
+void AudioSync::Start(bool (*anyDebug)()) {
+    g_anyDebug = anyDebug;
     obs_add_tick_callback(Tick, nullptr);
 }
 

@@ -60,16 +60,17 @@ namespace {
     constexpr float kDefaultZoom = 1.25f;
     constexpr int kDrawnPose = 2;  // the slot check plus the cockpit correction below 90 fps
 
-    // Race auto-record is on while at least one VR Mirror source has it ticked. UI thread.
+    // Race auto-record is on while at least one VR Mirror source has it ticked, and logs while one of
+    // those has Debug on. UI thread.
     void FollowAutoRecord(Source* s, bool on) {
         if (on == s->autoRecord) {
             return;
         }
         s->autoRecord = on;
         if (on) {
-            AutoRecord::Enable();
+            AutoRecord::Enable(s->view->DebugFlag());
         } else {
-            AutoRecord::Disable();
+            AutoRecord::Disable(s->view->DebugFlag());
         }
     }
 
@@ -202,6 +203,7 @@ namespace {
             bool debug = false;
             const MirrorSettings st = MirrorSettingsOf(settings, &debug);
             s->view = std::make_unique<MirrorView>(std::make_unique<Frames>(), st, debug);
+            const ScopedLogGate gate(s->view->DebugFlag());
             FollowAutoRecord(s.get(), obs_data_get_bool(settings, "auto_record"));
             return s.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });
@@ -210,13 +212,17 @@ namespace {
     void Destroy(void* data) {
         Guarded("destroy", [&] {
             std::unique_ptr<Source> s(static_cast<Source*>(data));  // the one place that frees a Source
+            const ScopedLogGate gate(s->view->DebugFlag());         // ends before the source is freed
             FollowAutoRecord(s.get(), false);
         });
     }
 
+    // Each callback for one source logs as that source's Debug setting says (shared\log.h): OBS's threads
+    // work for every source in turn.
     void Update(void* data, obs_data_t* settings) {
         Guarded("update", [&] {
             Source* s = static_cast<Source*>(data);
+            const ScopedLogGate gate(s->view->DebugFlag());
             bool debug = false;
             const MirrorSettings st = MirrorSettingsOf(settings, &debug);
             s->view->SetSettings(st, debug);
@@ -245,11 +251,17 @@ namespace {
     }
 
     void VideoTick(void* data, float) {
-        Guarded("tick", [&] { ViewOf(data)->Tick(); });
+        Guarded("tick", [&] {
+            const ScopedLogGate gate(ViewOf(data)->DebugFlag());
+            ViewOf(data)->Tick();
+        });
     }
 
     void VideoRender(void* data, gs_effect_t*) {
-        Guarded("render", [&] { ViewOf(data)->Render(); });
+        Guarded("render", [&] {
+            const ScopedLogGate gate(ViewOf(data)->DebugFlag());
+            ViewOf(data)->Render();
+        });
     }
 
     bool LoadModule() {
@@ -285,7 +297,7 @@ namespace {
         info.create = Create<OpenXrSource>;
         obs_register_source(&info);
 
-        AudioSync::Start();
+        AudioSync::Start(&MirrorView::AnyDebug);
         RecordingNotes::Start();
         blog(LOG_INFO, "[simoptix_vr_mirror] loaded, version %s", SIMOPTIX_VERSION);
         return true;

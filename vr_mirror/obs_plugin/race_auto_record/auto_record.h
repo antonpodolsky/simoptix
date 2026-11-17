@@ -15,10 +15,13 @@
 // plugin links only libobs. Without it, auto-record logs that once and does nothing.
 #pragma once
 
+#include <atomic>
+
 class AutoRecord {
 public:
     // Each VR Mirror source with "Record races automatically" ticked calls Enable, and Disable
-    // when it's unticked or the source is destroyed: on while at least one has it. UI thread.
-    static void Enable();
-    static void Disable();
+    // when it's unticked or the source is destroyed: on while at least one has it. It logs what it
+    // does while one of those sources has Debug on (`debug`, its Debug setting). UI thread.
+    static void Enable(const std::atomic<bool>* debug);
+    static void Disable(const std::atomic<bool>* debug);
 };

@@ -245,15 +245,23 @@ mirrors, so Render Quality is the only way to a larger game eye.
 
 ### The OBS log
 
-With **Debug** on, the OBS log (Help → Log Files) says what each source runs with. Each line names where
-the source takes the game's frames from, `Pimax session` or `OpenXR layer`:
+VR Mirror's lines in the OBS log (Help → Log Files) are debugging output, like the frame trace. A
+source writes them only while it has **Debug** on: race auto-record's lines too, while a source that has
+it ticked has Debug on, and the audio's delay while any source has Debug on. With Debug off, VR Mirror
+writes its version when OBS loads it, and a line only when something fails, such as "could not write
+the frame trace".
+
+With Debug on, the OBS log says what each source runs with. Each line names where the source takes the
+game's frames from, `Pimax session` or `OpenXR layer`:
 - its settings as `key=value`, when Debug is turned on and whenever one of them changes:
   `settings (OpenXR layer): smoothing=2 zoom=1.32 drawn_pose=1`
 - the game's eye when the frame trace starts, at the game's first frame: its field of view in degrees
   from straight ahead, and how far it is turned against the head:
   `eye (OpenXR layer): left <a> right <b> up <c> down <d> deg, turned <e> deg against the head`
 
-Every 10 s while a source is shown, also while no game runs, the OBS log shows:
+Every 10 s while a source is shown with Debug on, also while no game runs, its frame trace gets these
+stats as `#stats,` lines ("Debug: stamp and frame trace", below). They go to the trace and not to the
+OBS log:
 - how many output ticks showed a new game frame, a repeat, or held the last image
 - how many game frames weren't copied because no tick would show them (the OpenXR source with
   Look-ahead, below)
@@ -265,8 +273,9 @@ Every 10 s while a source is shown, also while no game runs, the OBS log shows:
     thread.
   - how long OBS's graphics thread spends each tick choosing the frame and computing the warp (99th
     percentile and longest)
-  - The plugin that runs the telemetry reader logs the reader's footprint every 10 s while it is
-    connected to a game, with that plugin's tag ("footprint: telemetry thread (Le Mans Ultimate) ...").
+  - The plugin that runs the telemetry reader logs the reader's footprint to the OBS log every 10 s
+    while it is connected to a game, with that plugin's tag ("footprint: telemetry thread (Le Mans
+    Ultimate) ..."), Debug or not.
 - for the OpenXR source, the frames read and the frames that were gone before they were copied
   ("OpenXR frames: ..."). The layer logs its own side, including the copy's time on the graphics card
   (`vr_mirror\frame_sources\openxr\README.md`).
@@ -413,7 +422,8 @@ For checking a recording frame by frame, the **Debug** setting does two things:
     - the output's shape
     - the slot check's own notes on each frame, for example how many slots back it judged the frame,
       and how far the cockpit correction turned it
-    - every 10 s, the stages' log lines, as `#stats,` rows
+    - every 10 s, the stats ("The OBS log", above) and the stages' own lines, as `#stats,` rows, each
+      among the rows of the ticks it was written at, within a tick
     - after the column header, the settings and the game's eye as the OBS log has them, as
       `#settings,` and `#eye,` rows, and a `#settings,` row again where a setting changes
 

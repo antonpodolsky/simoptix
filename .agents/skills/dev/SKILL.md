@@ -617,8 +617,8 @@ the size, place and colour of every live part.
     difference (the live G landed halfway).
   - Example: the live G sits 0.5 design px above its window's box (the inner shadow) and 0.8 right of
     it.
-- **Smoothness and timing:** use the plugin's 10 s stats in the OBS log, or frame-by-frame analysis of a
-  recording.
+- **Smoothness and timing:** use the plugin's 10 s stats, which a source with Debug on writes into its
+  frame trace as `#stats,` lines (OBS's log in older builds), or frame-by-frame analysis of a recording.
   - **A whole recording:** `python -I vr_mirror\recording_analysis\analyse_recording.py
     "<recording>.mp4"`. It finds the recording's OBS log and frame trace, and measures the cockpit's
     jumps. It lines the video up with the trace, and lists the timing events (`summary.txt` in its
@@ -661,9 +661,9 @@ build, then fix.
   scripts. `episodes.py` lists what the plugin re-timed in a recording (from the OBS log and the trace,
   with video times and frame timing). `window.py` lines a stretch of video up with the trace by the
   stamp and says which lag the cockpit motion supports. Extend them rather than starting over.
-- **Find the moment:** in the OBS log, the 10 s stats (repeats, game fps) and the "game behind" lines
-  (frames judged and re-timed by the slot check). Video time is the log time minus `==== Recording
-  Start`.
+- **Find the moment:** in the frame trace's `#stats,` lines (OBS's log in older builds), the 10 s stats
+  (repeats, game fps) and the "game behind" lines (frames judged and re-timed by the slot check). Video
+  time is the log time minus `==== Recording Start`.
 - **Line up video and trace** (`window.py` does this): decode the stamp (top-left, 15 squares of 16x16
   px, bit 0 first, white = 1) from each video frame. It is the `stamp` column of `_ticks.csv` and wraps
   every 32768 ticks (6 min), so pick the occurrence by time. Map frames by their own stamp, because OBS

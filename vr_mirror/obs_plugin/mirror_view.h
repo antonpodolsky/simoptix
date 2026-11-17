@@ -44,8 +44,12 @@ public:
     MirrorView(std::unique_ptr<FrameSource> frames, const MirrorSettings& settings, bool debug);
     ~MirrorView();
 
-    // Core's settings, and Debug (the frame-number stamp and the frame trace together).
+    // Core's settings, and Debug (the frame-number stamp, the frame trace and the source's log lines).
     void SetSettings(const MirrorSettings& settings, bool debug);
+    // Its Debug setting, as the gate of the threads working for it (ScopedLogGate, shared\log.h), and
+    // whether any VR Mirror source has Debug on (for what all sources share, such as the audio's delay).
+    const std::atomic<bool>* DebugFlag() const { return &debug_; }
+    static bool AnyDebug();
 
     // OBS's show and hide: the frame source starts and stops with them.
     void Show() { wanted_ = true; }
@@ -77,8 +81,8 @@ private:
     void OpenSlotTexture(const FrameRing::SlotInfo& slot);
     void SetImageNeed();
     void StartFootprint();
-    void LogFootprint(double seconds);
-    void LogStats(uint64_t tickNs);
+    void TraceFootprint(double seconds);
+    void TraceStats(uint64_t tickNs);
     void DrawStamp();
     void DestroyTextures();
 
@@ -93,7 +97,9 @@ private:
 
     MirrorSettings settings_;
     std::string loggedSettings_;  // UI thread: the settings as last logged (SetSettings)
-    bool notedDebug_ = false;     // UI thread: Debug as RecordingNotes last heard it
+    std::atomic<bool> debug_{
+        false
+    };  // the Debug setting: set on the UI thread, read by every thread's log gate
     // The OBS canvas's base size: written each tick on the graphics thread (FollowVideoSettings), read
     // by OBS from any thread (Width, Height).
     std::atomic<uint32_t> width_{2560}, height_{1440};
@@ -129,11 +135,16 @@ private:
         TraceWriter* writer = nullptr;
         void Line(const char* line) override { writer->Printf("%s\n", line); }
     } tickTraceSink_;
+    // The frame source's 10 s stats lines into the same trace, as `#stats,` lines (TakeStats).
+    struct TraceStatsLines : StatsLineSink {
+        TraceWriter* writer = nullptr;
+        void Line(const char* line) override { writer->Printf("#stats,%s\n", line); }
+    } traceStats_;
 
     int statTicks_ = 0, statRepeats_ = 0, statJumps_ = 0, statNoFrame_ = 0, statHeld_ = 0;
     double statStart_ = 0;     // source time the current 10 s stretch of stats began (0: not yet)
     uint64_t statFrames_ = 0;  // FrameSource::FramesArrived() then
-    // Footprint (LogFootprint): the threads' cycle counts and the timestamp counter at the start of
+    // Footprint (TraceFootprint): the threads' cycle counts and the timestamp counter at the start of
     // the stretch, and the graphics thread's time in Prepare per tick (seconds).
     uint64_t footClock_ = 0, footPoll_ = 0, footCopy_ = 0;
     DurationSamples prepareTimes_;

@@ -88,7 +88,7 @@ public:
     const char* ThreadName() const override { return "reader thread"; }
     uint64_t ThreadCycles() override;
     // The 10 s line: frames read, and those whose image was gone before a host copied it.
-    uint64_t TakeStats(double seconds, void (*line)(const char*)) override;
+    uint64_t TakeStats(double seconds, StatsLineSink* lines) override;
 
     // Diagnostic trace, CSV with one tagged row per event, to `prefix` + `_openxr.csv`: F = a frame the
     // layer published, with how the game handed its image over (which swapchain image, on which

@@ -73,7 +73,7 @@ namespace {
         const std::unique_ptr<FILE, decltype(&fclose)> f(_wfopen(file.c_str(), mode), &fclose);
 
         if (!f) {
-            CoreLog("recording notes: could not write the file beside the recording");
+            CoreLogError("recording notes: could not write the file beside the recording");
             return;
         }
 
@@ -136,7 +136,9 @@ namespace {
         st.file = NotesFile(st);
 
         if (st.file.empty()) {
-            CoreLog("recording notes: OBS didn't say where it records, so the recording gets no notes file");
+            CoreLogError(
+                "recording notes: OBS didn't say where it records, so the recording gets no notes file"
+            );
             return;
         }
 
@@ -222,7 +224,7 @@ void RecordingNotes::Start() {
 
     if (!add || !st.removeCallback || !st.recordingOutput) {
         st.removeCallback = nullptr;
-        CoreLog("recording notes: OBS's frontend API isn't there, so recordings get no notes file");
+        CoreLogError("recording notes: OBS's frontend API isn't there, so recordings get no notes file");
         return;
     }
 
