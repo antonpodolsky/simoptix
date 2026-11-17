@@ -639,6 +639,10 @@ the size, place and colour of every live part.
     frames. A repeated game frame shows as the scenery moving exactly with the cockpit. The **frame
     trace** and **frame-number stamp** debug options (`vr_mirror\obs_plugin\README.md`, "Debug: stamp
     and frame trace") match a recording to the poses frame by frame.
+  - **What another setting would have shown:** export a moment of the recording as a replay and run it
+    through the pipeline offline, at the session's own settings first, then at others
+    (`reference\recording_analysis.md`, "A real moment through the pipeline"). Its views at the
+    session's own settings should match the trace before the others are compared.
 - Report numbers, and say what wasn't checked (headset, live telemetry, a real recording).
 
 ## 5a. Replay tests from real sessions

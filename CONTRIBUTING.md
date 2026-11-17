@@ -119,7 +119,8 @@ Build both plugins, the layer and `vr_mirror\e2e\build.bat` first, and close OBS
 a minute, and its first run copies OBS (466 MB).
 
 The stage replay (`vr_mirror\e2e\bin\stage_replay.exe`) runs in about a second. Use it to find out why
-a scenario fails, and to check that a refactor changes nothing (`.agents\skills\dev\reference\e2e.md`).
+a scenario fails, to check that a refactor changes nothing, and to see what another setting would have
+shown at a moment of a real recording (`.agents\skills\dev\reference\e2e.md`).
 `vr_mirror\e2e\stage_replay\golden_expected.txt` holds its expected output, as GitHub builds it, and the
 Pipeline output check fails on any change to it. When your change is meant to change the output, the
 failed check uploads the new `golden_expected.txt`. Commit it with your change. A build with another
