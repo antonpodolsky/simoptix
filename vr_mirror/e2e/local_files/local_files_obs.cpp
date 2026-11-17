@@ -77,8 +77,22 @@ namespace {
                + items + "]}}" + list + "]}";
     }
 
-    // OBS's settings for one run: no first-run questions, a 1280x720 canvas at 60 fps, and the scene.
-    bool WriteSettings(const fs::path& dir, const std::vector<std::string>& sources) {
+    // Where OBS records (`recordTo`, if set): a short MKV with the software encoder, which every machine
+    // has.
+    std::string RecordingSettings(const fs::path& recordTo) {
+        if (recordTo.empty()) {
+            return "";
+        }
+
+        // With forward slashes, as OBS writes its own: its settings file reads a backslash as an escape.
+        return "[SimpleOutput]\r\nFilePath=" + recordTo.generic_string()
+               + "\r\nRecFormat2=mkv\r\nRecQuality=Stream\r\nStreamEncoder=x264\r\n";
+    }
+
+    // OBS's settings for one run: no first-run questions, no question on closing while it records, a
+    // 1280x720 canvas at 60 fps, where it records, and the scene.
+    bool
+    WriteSettings(const fs::path& dir, const std::vector<std::string>& sources, const fs::path& recordTo) {
         const fs::path config = dir / "config" / "obs-studio";
         const fs::path profile = config / "basic" / "profiles" / kName;
         const fs::path scenes = config / "basic" / "scenes";
@@ -94,8 +108,8 @@ namespace {
                              )  // 32.2.2: no "what's new"
                              && Write(
                                  config / "user.ini",
-                                 "[General]\r\nFirstRun=true\r\n[Basic]\r\nProfile=" + name
-                                     + "\r\nProfileDir=" + name + "\r\nSceneCollection=" + name
+                                 "[General]\r\nFirstRun=true\r\nConfirmOnExit=false\r\n[Basic]\r\nProfile="
+                                     + name + "\r\nProfileDir=" + name + "\r\nSceneCollection=" + name
                                      + "\r\nSceneCollectionFile=" + name + ".json\r\n"
                              )
                              && Write(
@@ -104,6 +118,7 @@ namespace {
                                      + "\r\n[Video]\r\nBaseCX=1280\r\nBaseCY=720\r\nOutputCX="
                                        "1280\r\nOutputCY=720\r\nFPSType=0\r\n"
                                        "FPSCommon=60\r\n[Output]\r\nMode=Simple\r\n"
+                                     + RecordingSettings(recordTo)
                              )
                              && Write(scenes / (name + ".json"), SceneCollection(sources));
 
@@ -263,7 +278,7 @@ bool PrepareObs(const fs::path& repo, const fs::path& out, ObsCopy* obs, std::st
 }
 
 bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string* error) {
-    if (!WriteSettings(obs.dir, run.sources)) {
+    if (!WriteSettings(obs.dir, run.sources, run.recordTo)) {
         *error = "could not write OBS's settings";
         return false;
     }
@@ -280,6 +295,10 @@ bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string
     std::wstring
         command = L"\"" + exe.wstring()
                   + L"\" --portable --disable-shutdown-check --disable-updater --disable-missing-files-check";
+
+    if (!run.recordTo.empty()) {
+        command += L" --startrecording";
+    }
     STARTUPINFOW startup = {sizeof(startup)};
     PROCESS_INFORMATION process = {};
 

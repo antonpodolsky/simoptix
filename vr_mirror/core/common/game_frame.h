@@ -1,13 +1,16 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The game eye's geometry and a game frame's record as a frame source (vr_mirror\frame_sources\)
-// hands them out: plain data, shared by the sources and the pipeline. Knows nothing about PVR,
-// OpenXR, D3D or threads.
+// hands them out: plain data, shared by the sources and the pipeline, and the eye's description for the
+// log. Knows nothing about PVR, OpenXR, D3D or threads.
 // Times are source time: seconds on the frame source's clock (the Pimax runtime's, or the
 // performance counter's for the OpenXR layer), which the pipeline and the hosts use throughout.
 #pragma once
 
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <cstdio>
 
 #include "common/rot.h"
 
@@ -19,6 +22,25 @@ struct EyeInfo {
     // as the game drew it.
     bool encodedTwice = false;
 };
+
+// The eye's field of view in degrees from straight ahead, and its turn against the head, for the log, the
+// frame trace and the file beside a recording: "left 52.59 right 47.56 up 44.55 down 44.55 deg, turned
+// 1.98 deg against the head". The turn is 2 atan2(|v|, |w|), which stays exact for small angles.
+inline void DescribeEye(const EyeInfo& eye, char* text, size_t size) {
+    constexpr float kDeg = 57.2957795f;
+    const Quat& q = eye.hmdToEye;
+    const float turnDeg = 2 * std::atan2(std::sqrt(q.x * q.x + q.y * q.y + q.z * q.z), std::fabs(q.w)) * kDeg;
+    std::snprintf(
+        text,
+        size,
+        "left %.2f right %.2f up %.2f down %.2f deg, turned %.2f deg against the head",
+        std::atan(eye.leftTan) * kDeg,
+        std::atan(eye.rightTan) * kDeg,
+        std::atan(eye.upTan) * kDeg,
+        std::atan(eye.downTan) * kDeg,
+        turnDeg
+    );
+}
 
 struct GameFrame {
     int buffer = -1;        // which of the source's images holds it (Pimax: 0, its one mirror; the OpenXR

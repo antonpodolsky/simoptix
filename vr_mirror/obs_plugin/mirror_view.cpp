@@ -10,6 +10,7 @@
 #include <cstring>
 
 #include "pipeline/pipeline_builder.h"
+#include "recording_notes.h"
 #include "shared/local_files.h"
 #include "shared/program_delay.h"
 #include "shared/thread_cpu.h"
@@ -53,6 +54,7 @@ MirrorView::MirrorView(std::unique_ptr<FrameSource> frames, const MirrorSettings
 }
 
 MirrorView::~MirrorView() {
+    RecordingNotes::Forget(this);
     tickTrace_.Close();
     session_.StopNow();
     obs_enter_graphics();
@@ -64,10 +66,34 @@ MirrorView::~MirrorView() {
     obs_leave_graphics();
 }
 
+// Logs the settings when they differ from the ones logged last (OBS calls this for every change in the
+// properties, Debug's too), into the frame trace if it is open, and for the file beside a recording.
 void MirrorView::SetSettings(const MirrorSettings& settings, bool debug) {
     settings_ = settings;
     stamp_ = debug;
     trace_ = debug;
+
+    char text[200];
+    DescribeSettings(settings, text, sizeof(text));
+
+    if (loggedSettings_ == text) {
+        return;
+    }
+
+    loggedSettings_ = text;
+    blog(LOG_INFO, "[simoptix_vr_mirror] settings (%s): %s", frameSource_->Name(), text);
+    tickTrace_.Printf("#settings,%s\n", text);
+    RecordingNotes::Note(this, frameSource_->Name(), "settings", text);
+}
+
+// The game's eye, once per start of the frame source, at its first frame: the eye is what the game draws
+// with, which it doesn't change while it runs. Graphics thread.
+void MirrorView::LogEye() {
+    loggedEye_ = true;
+    DescribeEye(frameSource_->Eye(), eyeText_, sizeof(eyeText_));
+    blog(LOG_INFO, "[simoptix_vr_mirror] eye (%s): %s", frameSource_->Name(), eyeText_);
+    tickTrace_.Printf("#eye,%s\n", eyeText_);
+    RecordingNotes::Note(this, frameSource_->Name(), "eye", eyeText_);
 }
 
 // OBS's graphics context entered.
@@ -100,11 +126,16 @@ void MirrorView::FollowVideoSettings() {
 // warp used: trace_<time>_ticks.csv here (one row per drawn tick) and the frame source's own beside it,
 // if it has one (Pimax: trace_<time>_pimax.csv, head poses, slot predictions, frame arrivals), in
 // %LOCALAPPDATA%\simoptix\traces. LocalFiles names it and keeps the newest traces.
-// Opens with the setting at the game's first frame, and closes with the setting or when the source stops.
-// Graphics thread.
+// Opens with the setting at the game's first frame, once the pipeline's observer is there to write the
+// column header first, and closes with the setting or when the source stops. The settings and the eye
+// follow the header. Graphics thread.
 void MirrorView::ToggleTrace(bool on) {
     if (on == tickTrace_.IsOpen()) {
         return;
+    }
+
+    if (on && pipeline_.Config().observer != ObserverKind::kStampTrace) {
+        return;  // Debug was just ticked: the next Prepare adds the observer
     }
     if (!on) {
         pipeline_.SetTraceSink(nullptr);  // its last row first
@@ -132,8 +163,16 @@ void MirrorView::ToggleTrace(bool on) {
     }
 
     tickTraceSink_.writer = &tickTrace_;
-    pipeline_.SetTraceSink(&tickTraceSink_);
+    pipeline_.SetTraceSink(&tickTraceSink_);  // its observer writes the column header
     const bool own = frameSource_->StartTrace(prefix);
+
+    char settings[200];
+    DescribeSettings(settings_, settings, sizeof(settings));
+    tickTrace_.Printf("#settings,%s\n", settings);
+
+    if (loggedEye_) {
+        tickTrace_.Printf("#eye,%s\n", eyeText_);
+    }
 
     // On this thread, timed: it lists one folder and deletes a trace or two.
     const uint64_t t0 = os_gettime_ns();
@@ -150,6 +189,7 @@ void MirrorView::ToggleTrace(bool on) {
         deleted,
         pruneMs
     );
+    RecordingNotes::Note(this, frameSource_->Name(), "frame trace", utf8);
 }
 
 // The pipeline for the settings and what the frame source reports, with the frame-number stamp and the
@@ -213,6 +253,7 @@ void MirrorView::StartStop() {
     } else if (wanted_ && state == SessionWorker::kRunning && !started_) {
         started_ = true;
         framesAtStart_ = frameSource_->FramesArrived();
+        loggedEye_ = false;  // the game may have started anew with another headset
         clock_.Reset();
         RestartDelay();  // measure the output delay again
         warpSlot_ = -1;
@@ -282,9 +323,13 @@ void MirrorView::Tick() {
     if (!started_) {
         return;
     }
-    ToggleTrace(
-        trace_ && frameSource_->FramesArrived() > framesAtStart_
-    );  // no trace before the game's frames
+    const bool hasFrames = frameSource_->FramesArrived() > framesAtStart_;
+    ToggleTrace(trace_ && hasFrames);  // no trace before the game's frames
+
+    if (hasFrames && !loggedEye_) {
+        LogEye();
+    }
+
     SetImageNeed();
     const uint64_t q0 = os_gettime_ns();
     const double now = frameSource_->Now();

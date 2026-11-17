@@ -65,6 +65,7 @@ private:
     void KeepMemoryFacts(const FramePicker& picker);
     void FollowVideoSettings();
     void ToggleTrace(bool on);
+    void LogEye();
     PipelineConfig ConfigOf() const;
     void FeedDrawnPose();
     void RestartDelay();
@@ -91,6 +92,7 @@ private:
     uint64_t framesAtStart_ = 0;  // graphics thread: FrameSource::FramesArrived() when it started
 
     MirrorSettings settings_;
+    std::string loggedSettings_;  // UI thread: the settings as last logged (SetSettings)
     // The OBS canvas's base size: written each tick on the graphics thread (FollowVideoSettings), read
     // by OBS from any thread (Width, Height).
     std::atomic<uint32_t> width_{2560}, height_{1440};
@@ -115,6 +117,8 @@ private:
     int delaySmoothing_ = -1;      // the SmoothingKind the frame picker and ring are set for
     double delayTickPeriod_ = -1;  // ...and OBS's frame period
     bool loggedStabilize_ = true;  // Stabilizes(settings) as last logged (a change is logged once)
+    bool loggedEye_ = false;       // the game's eye is logged for this start of the frame source (LogEye)
+    char eyeText_[160] = {};       // ...as it was logged
     const DrawnPose* fedDrawnPose_ = nullptr;  // the pipeline's drawn pose the ring was handed last
     double outDelay_ = 0;                      // the frame picker's output delay as last logged (s)
     FrameRing::SlotInfo snapshot_[FrameRing::kMaxSlots];  // this tick's ring (Prepare)

@@ -35,6 +35,8 @@ struct ObsRun {
     // When set, OBS first runs until its log has this text (60 s at most), then holdMs more: the time
     // a frame takes to arrive is the machine's, and isn't what the test checks.
     std::string holdUntilLogged;
+    // When set, OBS records into this folder from its start (--startrecording) until it closes.
+    fs::path recordTo;
 };
 
 // Runs OBS once with fresh settings and a scene that shows `run.sources`, then closes it as its close

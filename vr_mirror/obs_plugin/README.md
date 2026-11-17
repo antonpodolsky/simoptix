@@ -245,7 +245,15 @@ mirrors, so Render Quality is the only way to a larger game eye.
 
 ### The OBS log
 
-Every 10 s while a source is shown, also while no game runs, the OBS log (Help → Log Files) shows:
+The OBS log (Help → Log Files) says what each source runs with. Each line names the source's frame
+source, `Pimax session` or `OpenXR layer`:
+- its settings as `key=value`, when the source is made and whenever one of them changes:
+  `settings (OpenXR layer): smoothing=2 zoom=1.32 drawn_pose=1`
+- the game's eye at the game's first frame, each time the source starts: its field of view in degrees
+  from straight ahead, and how far it is turned against the head:
+  `eye (OpenXR layer): left <a> right <b> up <c> down <d> deg, turned <e> deg against the head`
+
+Every 10 s while a source is shown, also while no game runs, the OBS log shows:
 - how many output ticks showed a new game frame, a repeat, or held the last image
 - how many game frames weren't copied because no tick would show them (the OpenXR source with
   Look-ahead, below)
@@ -278,6 +286,27 @@ Every 10 s while a source is shown, also while no game runs, the OBS log (Help �
 
 CPU is counted in cycles (`QueryThreadCycleTime` against the processor's timestamp counter), because
 `GetThreadTimes` can't see a thread that runs a few microseconds at a time.
+
+### The file beside each recording
+
+When OBS starts a recording, VR Mirror writes a text file beside it, with the recording's name and
+`.simoptix.txt` in place of its extension. It says what each VR Mirror source ran with while it
+recorded, in the OBS log's words:
+- the plugin's version, on its first line
+- for each source, its settings, the game's eye and its frame trace, if Debug is on
+
+Each line starts with its time in the video. The lines at `0:00.000` hold what the sources ran with
+when the recording started. A line is added when one of these changes while it records, such as a
+setting, or the eye and the trace at the game's first frame.
+
+```
+0:00.000 OpenXR layer: settings: smoothing=2 zoom=1.32 drawn_pose=1
+0:00.000 OpenXR layer: frame trace: %LOCALAPPDATA%\simoptix\traces\trace_<time>_ticks.csv
+1:23.456 OpenXR layer: settings: smoothing=2 zoom=1.5 drawn_pose=1
+```
+
+The file stays when the recording's logs and traces are long gone, so a recording can be analysed
+with what it ran with.
 
 ### Video memory
 
@@ -384,6 +413,8 @@ For checking a recording frame by frame, the **Debug** setting does two things:
     - the slot check's own notes on each frame, for example how many slots back it judged the frame,
       and how far the cockpit correction turned it
     - every 10 s, the stages' log lines, as `#stats,` rows
+    - after the column header, the settings and the game's eye as the OBS log has them, as
+      `#settings,` and `#eye,` rows, and a `#settings,` row again where a setting changes
 
     The pipeline's observer writes it, and `vr_mirror\core\pipeline\observer\README.md` has the
     columns. `vr_mirror\recording_analysis` finds the slot a frame was drawn for by comparing `img`

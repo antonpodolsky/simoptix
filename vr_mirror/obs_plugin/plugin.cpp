@@ -20,6 +20,7 @@
 #include "common/settings.h"
 #include "mirror_view.h"
 #include "race_auto_record/auto_record.h"
+#include "recording_notes.h"
 #include "shared/crash_dump.h"
 #include "shared/guarded.h"
 #include "shared/log.h"
@@ -285,6 +286,7 @@ namespace {
         obs_register_source(&info);
 
         AudioSync::Start();
+        RecordingNotes::Start();
         blog(LOG_INFO, "[simoptix_vr_mirror] loaded, version %s", SIMOPTIX_VERSION);
         return true;
     }
@@ -298,6 +300,7 @@ bool obs_module_load(void) {
 void obs_module_unload(void) {
     Guarded("unload", [] {
         AudioSync::Stop();
+        RecordingNotes::Stop();
 
         // The telemetry reader may run in this plugin for Overlays too: stop it before the DLL goes, so
         // Overlays takes it over.
