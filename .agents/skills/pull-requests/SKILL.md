@@ -88,8 +88,9 @@ done.
   `close`, `closes`, `closed`, `resolve`, `resolves` and `resolved` followed by an issue number, in
   any case, anywhere in the description. A sentence about an issue that stays open never puts one of
   these words right before its number: "the fault in #12" instead of "fixes #12 partly".
-- **Commit messages name no issue with a closing keyword.** The pull request's description does, so
-  the issue closes with the merge and not with a push.
+- **Commit messages name no issue with a closing keyword.** The pull request's description does. A
+  keyword in a commit message also closes the issue once the commit reaches `main`, but GitHub then
+  doesn't list the pull request as linked to the issue.
 - **Check it after posting.** `gh pr view <number> --json closingIssuesReferences` lists the issues
   GitHub will close. It must list exactly the `Fixes` lines.
 
