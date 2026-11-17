@@ -31,6 +31,7 @@ namespace {
     struct Source {
         std::string name;
         std::map<std::string, std::string> notes;  // by what they are ("settings", "eye", ...)
+        bool debug = false;                        // its Debug setting is on: only then is it noted
     };
 
     // UI thread only.
@@ -49,12 +50,14 @@ namespace {
         return *state;
     }
 
-    // One change from Note or Forget, queued to the UI thread.
+    // One change from Note, SetDebug or Forget, queued to the UI thread.
     struct Change {
+        enum class Kind { kNote, kDebug, kForget };
+        Kind kind = Kind::kNote;
         const void* source = nullptr;
-        bool forget = false;
         std::string name, what, text;
-        uint64_t ns = 0;  // when it was noted (os_gettime_ns)
+        bool debug = false;  // kDebug's value
+        uint64_t ns = 0;     // when it was noted (os_gettime_ns)
     };
 
     // "m:ss.sss <name>: <what>: <text>", at `ns` into the recording.
@@ -112,7 +115,24 @@ namespace {
         return file + L".simoptix.txt";
     }
 
+    bool AnyDebug(const State& st) {
+        for (const auto& source : st.sources) {
+            if (source.second.debug) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // A recording started: its notes file, if a source has Debug on.
     void StartNotes(State& st) {
+        st.file.clear();
+
+        if (!AnyDebug(st)) {
+            return;
+        }
+
         st.file = NotesFile(st);
 
         if (st.file.empty()) {
@@ -127,6 +147,10 @@ namespace {
                    "runs with from then on.\n";
 
         for (const auto& source : st.sources) {
+            if (!source.second.debug) {
+                continue;
+            }
+
             for (const auto& note : source.second.notes) {
                 text += Line(0, source.second.name, note.first, note.second);
             }
@@ -152,16 +176,22 @@ namespace {
             const std::unique_ptr<Change> change(static_cast<Change*>(data));  // the one place that frees it
             State& st = TheState();
 
-            if (change->forget) {
+            if (change->kind == Change::Kind::kForget) {
                 st.sources.erase(change->source);
                 return;
             }
 
             Source& source = st.sources[change->source];
             source.name = change->name;
+
+            if (change->kind == Change::Kind::kDebug) {
+                source.debug = change->debug;
+                return;
+            }
+
             source.notes[change->what] = change->text;
 
-            if (!st.file.empty()) {
+            if (!st.file.empty() && source.debug) {
                 const uint64_t ns = change->ns > st.startNs ? change->ns - st.startNs : 0;
                 Write(st.file, L"ab", Line(ns, change->name, change->what, change->text));
             }
@@ -217,9 +247,18 @@ void RecordingNotes::Note(const void* source, const char* name, const char* what
     Queue(std::move(change));
 }
 
+void RecordingNotes::SetDebug(const void* source, const char* name, bool on) {
+    auto change = std::make_unique<Change>();
+    change->kind = Change::Kind::kDebug;
+    change->source = source;
+    change->name = name;
+    change->debug = on;
+    Queue(std::move(change));
+}
+
 void RecordingNotes::Forget(const void* source) {
     auto change = std::make_unique<Change>();
+    change->kind = Change::Kind::kForget;
     change->source = source;
-    change->forget = true;
     Queue(std::move(change));
 }

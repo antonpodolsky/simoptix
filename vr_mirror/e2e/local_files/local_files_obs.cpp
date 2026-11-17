@@ -51,9 +51,9 @@ namespace {
         return text.str();
     }
 
-    // A scene that shows each source in `sources` at the canvas's top left, with Debug on, Instant
-    // smoothing (no output delay) and race auto-record off.
-    std::string SceneCollection(const std::vector<std::string>& sources) {
+    // A scene that shows each source in `sources` at the canvas's top left, with Debug on or off
+    // (`debug`), Instant smoothing (no output delay) and race auto-record off.
+    std::string SceneCollection(const std::vector<std::string>& sources, bool debug) {
         std::string items, list;
 
         for (size_t i = 0; i < sources.size(); i++) {
@@ -65,8 +65,8 @@ namespace {
                        "5}";
             list += ",{\"name\":\"" + std::string(DisplayName(sources[i])) + "\",\"uuid\":\"" + Uuid(id)
                     + "\",\"id\":\"" + sources[i] + "\",\"versioned_id\":\"" + sources[i]
-                    + "\",\"enabled\":true,\"settings\":{\"debug\":true,\"smoothing\":1,\"auto_record\":"
-                      "false}}";
+                    + "\",\"enabled\":true,\"settings\":{\"debug\":" + (debug ? "true" : "false")
+                    + ",\"smoothing\":1,\"auto_record\":false}}";
         }
 
         return std::string("{\"name\":\"") + kName
@@ -91,8 +91,7 @@ namespace {
 
     // OBS's settings for one run: no first-run questions, no question on closing while it records, a
     // 1280x720 canvas at 60 fps, where it records, and the scene.
-    bool
-    WriteSettings(const fs::path& dir, const std::vector<std::string>& sources, const fs::path& recordTo) {
+    bool WriteSettings(const fs::path& dir, const ObsRun& run) {
         const fs::path config = dir / "config" / "obs-studio";
         const fs::path profile = config / "basic" / "profiles" / kName;
         const fs::path scenes = config / "basic" / "scenes";
@@ -118,9 +117,9 @@ namespace {
                                      + "\r\n[Video]\r\nBaseCX=1280\r\nBaseCY=720\r\nOutputCX="
                                        "1280\r\nOutputCY=720\r\nFPSType=0\r\n"
                                        "FPSCommon=60\r\n[Output]\r\nMode=Simple\r\n"
-                                     + RecordingSettings(recordTo)
+                                     + RecordingSettings(run.recordTo)
                              )
-                             && Write(scenes / (name + ".json"), SceneCollection(sources));
+                             && Write(scenes / (name + ".json"), SceneCollection(run.sources, run.debug));
 
         return written;
     }
@@ -278,7 +277,7 @@ bool PrepareObs(const fs::path& repo, const fs::path& out, ObsCopy* obs, std::st
 }
 
 bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string* error) {
-    if (!WriteSettings(obs.dir, run.sources, run.recordTo)) {
+    if (!WriteSettings(obs.dir, run)) {
         *error = "could not write OBS's settings";
         return false;
     }

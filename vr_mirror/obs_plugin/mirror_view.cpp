@@ -66,12 +66,23 @@ MirrorView::~MirrorView() {
     obs_leave_graphics();
 }
 
-// Logs the settings when they differ from the ones logged last (OBS calls this for every change in the
-// properties, Debug's too), into the frame trace if it is open, and for the file beside a recording.
+// With Debug on, logs the settings when Debug is turned on and whenever they change after (OBS calls this
+// for every change in the properties, Debug's too), into the frame trace if it is open, and for the file
+// beside a recording. Like the trace, these are debugging output: nothing with Debug off.
 void MirrorView::SetSettings(const MirrorSettings& settings, bool debug) {
     settings_ = settings;
     stamp_ = debug;
     trace_ = debug;
+
+    if (debug != notedDebug_) {
+        notedDebug_ = debug;
+        RecordingNotes::SetDebug(this, frameSource_->Name(), debug);
+    }
+
+    if (!debug) {
+        loggedSettings_.clear();  // logged again when Debug is turned on
+        return;
+    }
 
     char text[200];
     DescribeSettings(settings, text, sizeof(text));
@@ -86,14 +97,15 @@ void MirrorView::SetSettings(const MirrorSettings& settings, bool debug) {
     RecordingNotes::Note(this, frameSource_->Name(), "settings", text);
 }
 
-// The game's eye, once per start of the frame source, at its first frame: the eye is what the game draws
-// with, which it doesn't change while it runs. Graphics thread.
+// The game's eye, in the log, the frame trace and for the file beside a recording, when the trace opens:
+// with Debug on and the game's frames there, once per start and per time Debug is turned on. The game
+// draws with one eye while it runs. Graphics thread.
 void MirrorView::LogEye() {
-    loggedEye_ = true;
-    DescribeEye(frameSource_->Eye(), eyeText_, sizeof(eyeText_));
-    blog(LOG_INFO, "[simoptix_vr_mirror] eye (%s): %s", frameSource_->Name(), eyeText_);
-    tickTrace_.Printf("#eye,%s\n", eyeText_);
-    RecordingNotes::Note(this, frameSource_->Name(), "eye", eyeText_);
+    char text[160];
+    DescribeEye(frameSource_->Eye(), text, sizeof(text));
+    blog(LOG_INFO, "[simoptix_vr_mirror] eye (%s): %s", frameSource_->Name(), text);
+    tickTrace_.Printf("#eye,%s\n", text);
+    RecordingNotes::Note(this, frameSource_->Name(), "eye", text);
 }
 
 // OBS's graphics context entered.
@@ -169,10 +181,7 @@ void MirrorView::ToggleTrace(bool on) {
     char settings[200];
     DescribeSettings(settings_, settings, sizeof(settings));
     tickTrace_.Printf("#settings,%s\n", settings);
-
-    if (loggedEye_) {
-        tickTrace_.Printf("#eye,%s\n", eyeText_);
-    }
+    LogEye();
 
     // On this thread, timed: it lists one folder and deletes a trace or two.
     const uint64_t t0 = os_gettime_ns();
@@ -253,7 +262,6 @@ void MirrorView::StartStop() {
     } else if (wanted_ && state == SessionWorker::kRunning && !started_) {
         started_ = true;
         framesAtStart_ = frameSource_->FramesArrived();
-        loggedEye_ = false;  // the game may have started anew with another headset
         clock_.Reset();
         RestartDelay();  // measure the output delay again
         warpSlot_ = -1;
@@ -323,13 +331,9 @@ void MirrorView::Tick() {
     if (!started_) {
         return;
     }
-    const bool hasFrames = frameSource_->FramesArrived() > framesAtStart_;
-    ToggleTrace(trace_ && hasFrames);  // no trace before the game's frames
-
-    if (hasFrames && !loggedEye_) {
-        LogEye();
-    }
-
+    ToggleTrace(
+        trace_ && frameSource_->FramesArrived() > framesAtStart_
+    );  // no trace before the game's frames
     SetImageNeed();
     const uint64_t q0 = os_gettime_ns();
     const double now = frameSource_->Now();

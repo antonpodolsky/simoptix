@@ -13,6 +13,8 @@
 //    first and then the settings and the eye. Of it and 12 older traces, the newest 10 are left, and each
 //    older one's files (_ticks, and _pimax or _openxr) went together. Beside the recording, a notes file
 //    has the version, the settings, the eye and the frame trace.
+//  - no_debug: the Pimax source with the fake runtime's game and Debug off, recorded by OBS. No notes file
+//    beside the recording, no frame trace, and no settings or eye in OBS's log.
 //  - openxr_game: the OpenXR source with fake_openxr.exe's game. The settings and the eye are logged, and
 //    one new trace, _ticks and _openxr, has rows, as in pimax_game. Of it and 10 older traces, the newest
 //    10 are left.
@@ -357,6 +359,42 @@ namespace {
         CheckRecordingNotes(run.recordTo, "Pimax session");
     }
 
+    // The Pimax source with the fake runtime's game and Debug off, recorded by OBS: the recording gets no
+    // notes file, no frame trace is written, and OBS's log has no settings or eye, since all are Debug's.
+    void NoDebug(const ObsCopy& obs, const fs::path& out) {
+        printf("no_debug\n");
+        const Case c = MakeCase(out, "no_debug");
+
+        ObsRun run;
+        run.sources = {"simoptix_pimax_mirror"};
+        run.debug = false;
+        run.localAppData = c.appData;
+        run.fakePvrScenario = FakePvrScenario(c, 0);
+        run.recordTo = c.dir / "recordings";
+        std::error_code ec;
+        fs::remove_all(run.recordTo, ec);
+        fs::create_directories(run.recordTo, ec);
+        std::string log;
+
+        if (!RunObsCase(obs, c, run, &log)) {
+            return;
+        }
+
+        std::vector<fs::path> recordings, notes;
+
+        for (const fs::directory_entry& entry : fs::directory_iterator(run.recordTo, ec)) {
+            const std::string name = entry.path().filename().string();
+            const bool isNotes = name.size() > 13 && name.compare(name.size() - 13, 13, ".simoptix.txt") == 0;
+            (isNotes ? notes : recordings).push_back(entry.path());
+        }
+
+        Check(recordings.size() == 1, "one recording (" + std::to_string(recordings.size()) + ")");
+        Check(notes.empty(), "no notes file beside it, with Debug off");
+        Check(TimedFiles(c.traces, L"trace", L".csv").empty(), "no frame trace, with Debug off");
+        Check(log.find("settings (") == std::string::npos, "no settings in OBS's log, with Debug off");
+        Check(log.find("eye (") == std::string::npos, "no eye in OBS's log, with Debug off");
+    }
+
     void OpenXrGame(const ObsCopy& obs, const fs::path& repo, const fs::path& out) {
         printf("openxr_game\n");
         const Case c = MakeCase(out, "openxr_game");
@@ -547,6 +585,7 @@ int wmain() {
 
     NoGame(obs, out);
     PimaxGame(obs, out);
+    NoDebug(obs, out);
     OpenXrGame(obs, repo, out);
     Layer(repo, out);
 

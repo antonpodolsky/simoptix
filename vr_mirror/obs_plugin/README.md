@@ -245,11 +245,11 @@ mirrors, so Render Quality is the only way to a larger game eye.
 
 ### The OBS log
 
-The OBS log (Help → Log Files) says what each source runs with. Each line names the source's frame
-source, `Pimax session` or `OpenXR layer`:
-- its settings as `key=value`, when the source is made and whenever one of them changes:
+With **Debug** on, the OBS log (Help → Log Files) says what each source runs with. Each line names where
+the source takes the game's frames from, `Pimax session` or `OpenXR layer`:
+- its settings as `key=value`, when Debug is turned on and whenever one of them changes:
   `settings (OpenXR layer): smoothing=2 zoom=1.32 drawn_pose=1`
-- the game's eye at the game's first frame, each time the source starts: its field of view in degrees
+- the game's eye when the frame trace starts, at the game's first frame: its field of view in degrees
   from straight ahead, and how far it is turned against the head:
   `eye (OpenXR layer): left <a> right <b> up <c> down <d> deg, turned <e> deg against the head`
 
@@ -289,9 +289,10 @@ CPU is counted in cycles (`QueryThreadCycleTime` against the processor's timesta
 
 ### The file beside each recording
 
-When OBS starts a recording, VR Mirror writes a text file beside it, with the recording's name and
-`.simoptix.txt` in place of its extension. It says what each VR Mirror source ran with while it
-recorded, in the OBS log's words:
+When OBS starts a recording while a VR Mirror source has **Debug** on, VR Mirror writes a text file
+beside it, with the recording's name and `.simoptix.txt` in place of its extension. Without Debug on,
+no file is written. It says what each source with Debug on ran with while it recorded, in the OBS log's
+words:
 - the plugin's version, on its first line
 - for each source, its settings, the game's eye and its frame trace, if Debug is on
 

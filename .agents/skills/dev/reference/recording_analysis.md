@@ -15,9 +15,9 @@ Paths below are relative to `vr_mirror\recording_analysis\`. Run the scripts wit
   newest 10 traces are kept, so copy the trace of a recording to analyse into the data folder soon after
   recording.
 - The OBS log (`%APPDATA%\obs-studio\logs`) says which trace belongs to which session.
-- The file beside each recording, `<recording>.simoptix.txt`, says what each source ran with: the
-  plugin's version, the settings, the game's eye and the frame trace, with their video times. It stays
-  when OBS's logs and the traces have rotated away, so read it first.
+- The file beside a recording made with Debug on, `<recording>.simoptix.txt`, says what each such
+  source ran with: the plugin's version, the settings, the game's eye and the frame trace, with their
+  video times. It stays when OBS's logs and the traces have rotated away, so read it first.
 
 ## Setup
 

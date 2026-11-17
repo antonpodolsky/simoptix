@@ -272,6 +272,7 @@ the frame trace, and the file beside a recording. It runs the plugins and the la
 |---|---|---|
 | `no_game` | OBS with both sources and Debug on. The fake runtime runs with no game | No frame trace. The OBS log has each source's settings and no eye. Of 12 older crash dumps, the newest 8 are left once the plugins have loaded |
 | `pimax_game` | The Pimax source with the fake runtime's game, recorded by OBS from its start | The OBS log has the settings and the eye. One new trace, both its files with rows, the column header first and then the settings and the eye. Of it and 12 older traces, the newest 10 are left, each older one gone with all its files. Beside the recording, a file with the version, the settings, the eye and the trace |
+| `no_debug` | The Pimax source with the fake runtime's game and Debug off, recorded by OBS from its start | No file beside the recording, no frame trace, and no settings or eye in the OBS log |
 | `openxr_game` | The OpenXR source with `fake_openxr.exe` | The OBS log has the settings and the eye. One new trace, both its files with rows, the column header first and then the settings and the eye. Of it and 10 older traces, the newest 10 are left |
 | `layer` | The fake game three times: with the first OpenXR call, without it, and with it again | Each start has its own log, which starts with the load line. Of 12 older logs and the new ones, the newest 10 are left after each start with the call. The layer's logs of older names stay |
 

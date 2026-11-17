@@ -28,7 +28,8 @@ struct ObsCopy {
 bool PrepareObs(const fs::path& repo, const fs::path& out, ObsCopy* obs, std::string* error);
 
 struct ObsRun {
-    std::vector<std::string> sources;  // the source ids the scene shows, each with Debug on
+    std::vector<std::string> sources;  // the source ids the scene shows
+    bool debug = true;                 // ...each with Debug on, or each with it off
     fs::path localAppData;             // %LOCALAPPDATA% for OBS and the plugins
     fs::path fakePvrScenario;          // the fake runtime's settings (SIMOPTIX_FAKE_PVR_SCENARIO)
     DWORD holdMs = 5000;               // how long OBS runs once every source has started
