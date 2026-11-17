@@ -48,9 +48,9 @@ the branch changes against `main`, why, what was verified and what wasn't. These
   subject. With several, it says what they do together: `SimOptix files: one place names them and
   keeps the newest 10 of each kind`.
 - **The description** follows the template (`.github\pull_request_template.md`):
-  - **What changed and why:** the problem in a sentence or two, then a bullet per change, each with a
-    bold lead. `Fixes #<number>` names an issue the pull request closes. `Part of #<number>` names one
-    it doesn't close.
+  - **What changed and why:** first the issues it closes and works on, one line each ("The issues it
+    closes", below). Then the problem in a sentence or two, and a bullet per change, each with a bold
+    lead.
   - **What was verified:** the builds, the e2e results if `vr_mirror\core\` or
     `vr_mirror\mirror_app\` changed (compared with `reference\e2e_results.md`), and what was checked by
     hand, with numbers. Then **Not verified:** each check that wasn't run or couldn't be, with its
@@ -69,10 +69,34 @@ the branch changes against `main`, why, what was verified and what wasn't. These
   - Any other change gets `internal` and an empty Changelog section: tests, refactors, contributors'
     docs, the skills, the build, findings.
 
+## The issues it closes
+
+GitHub closes an issue by itself when a pull request that names it with a closing keyword is merged
+into `main`. A pull request that names its issues this way leaves no issue open after its work is
+done.
+
+- **Find them first.** List the open issues (`gh issue list --state open`). Read the "Done when" of
+  each one the change touches, and check each of its items against the branch.
+- **`Fixes #<number>`** for each issue whose "Done when" is fully met once the pull request is
+  merged. One line per issue, each with its own keyword: `Fixes #12` and `Fixes #27` on two lines.
+  In `Fixes #12, #27`, GitHub closes only #12.
+- **`Part of #<number>`** for each issue the change works on and leaves open, with what of it this
+  change does: `Part of #34: every part builds on each pull request`. GitHub links it without
+  closing it.
+- **These lines start the description,** under "What changed and why", before the problem.
+- **A closing keyword closes the issue wherever it stands.** GitHub reads `fix`, `fixes`, `fixed`,
+  `close`, `closes`, `closed`, `resolve`, `resolves` and `resolved` followed by an issue number, in
+  any case, anywhere in the description. A sentence about an issue that stays open never puts one of
+  these words right before its number: "the fault in #12" instead of "fixes #12 partly".
+- **Commit messages name no issue with a closing keyword.** The pull request's description does, so
+  the issue closes with the merge and not with a push.
+- **Check it after posting.** `gh pr view <number> --json closingIssuesReferences` lists the issues
+  GitHub will close. It must list exactly the `Fixes` lines.
+
 ## Opening a pull request
 
-1. Write the description from the template into a file outside the repo, such as the agent's scratch
-   folder.
+1. Find the issues the change closes and works on ("The issues it closes"). Write the description
+   from the template into a file outside the repo, such as the agent's scratch folder.
 2. Read each sentence as a reviewer who sees only `git diff main...<branch>`. Delete each one that
    reviewer doesn't need ("Only this change").
 3. Check the description and the branch's commit messages (public-text skill, "Check before committing
@@ -92,7 +116,8 @@ the branch changes against `main`, why, what was verified and what wasn't. These
    gh pr create --base main --title "<title>" --label <label> --body-file <file>
    ```
 
-5. Check what was posted: `check_public_text.py --pr <number>`.
+5. Check what was posted: `check_public_text.py --pr <number>`, and the issues GitHub will close:
+   `gh pr view <number> --json closingIssuesReferences`.
 6. An agent in Claude Code's desktop app turns on Auto-fix for the pull request. The app then wakes
    the agent when a check fails, the branch conflicts with `main`, or a review comment arrives. The
    agent fixes the branch, checks the fix and pushes it. A review comment's request waits for the
@@ -123,6 +148,9 @@ the branch changes against `main`, why, what was verified and what wasn't. These
 ## Checklist before posting
 
 - [ ] The title is `Area: what changed`
+- [ ] The open issues were checked. Each one the change closes has its own `Fixes #<number>` line,
+      and each it works on a `Part of #<number>` line. `closingIssuesReferences` lists exactly the
+      `Fixes` lines once it is posted
 - [ ] Every sentence is about this change, and a reviewer who sees only the diff needs it
 - [ ] No personal information, nothing about the maintainer's PC, nothing of how the work went, no
       plans
