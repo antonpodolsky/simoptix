@@ -54,6 +54,10 @@ video gets softer.
 `vr_mirror\obs_plugin\README.md` ("Recording at the source's
 native resolution") has more canvases and zooms.
 
+VR Mirror writes a text file beside each recording, with the recording's name and `.simoptix.txt` in
+place of its extension. It holds the plugin's version and each source's settings, so a recording can
+be checked later against what it was made with.
+
 ## SimOptix and EAC
 
 - **Pimax Mirror, the G-meter and race auto-record** run in OBS, outside the game, and are unaffected by EAC.

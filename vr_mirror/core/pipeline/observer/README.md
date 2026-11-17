@@ -76,7 +76,9 @@ x, y, z, w.
 | `drawn_slot` | The display slot the frame source says the frame was drawn for. It is the OpenXR source's, and 0 for the Pimax source, whose frames don't say |
 | `pose_notes` | The drawn pose stage's own account of how it found this frame's pose (`DrawnPose::Describe`): space-separated `name=value` pairs in its own terms. Examples are the slot check's `slots_before_arrival=2 judged=1 own_judgement=1` and the cockpit correction's `looked_at=1 corrected=1 correction_deg=0.312` |
 
-The stages' report lines follow as `#stats,<line>`.
+The stages' report lines follow as `#stats,<line>`. The OBS plugin adds the source's settings and the
+game's eye after the header, as `#settings,` and `#eye,` lines, and a `#settings,` line where a setting
+changes (`vr_mirror\obs_plugin\README.md`, "Debug: stamp and frame trace").
 
 The first 19 columns are the OBS plugin's frame trace as `vr_mirror\recording_analysis` reads it, by
 position. The mirror app's trace has the same columns, and the e2e runner reads them by name.
