@@ -2,7 +2,7 @@
 
 ## The dev workflow
 
-The workflow is written down, and every agent follows it.
+The workflow is tailored to a wide type of coding agents.
 - **The dev skill** (`.agents\skills\dev\SKILL.md`) holds the rules for the whole repo and the order
   to work in. The rules cover using only the game's official interfaces, a minimal footprint beside the
   game, and the code's layers and which way they depend. `AGENTS.md` points every coding agent at the
