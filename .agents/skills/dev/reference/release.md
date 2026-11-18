@@ -150,12 +150,12 @@ Work in a worktree from `main` (`SKILL.md`, step 0), named `release_v<version>`.
    ```
 
    ```
-   gh release create v<version> --title "SimOptix <version>" --notes-file <folder>\notes.md --generate-notes <folder>\SimOptixSetup-<version>.exe <folder>\simoptix_obs_plugins_<version>.zip <folder>\simoptix_openxr_layer_<version>.zip
+   gh release create v<version> --title "SimOptix <version>" --notes-file <folder>\notes.md --generate-notes <folder>\SimOptixSetup-<version>.exe <folder>\SimOptixOBSPlugins-<version>.zip <folder>\SimOptixOpenXRLayer-<version>.zip
    ```
 
-   `release_files.ps1` copies setup as `SimOptixSetup-<version>.exe` and makes two zips. One holds
-   both plugins, laid out as in OBS's plugin folder, each with its `manifest.json` in its own `data`
-   folder. The other holds the layer and its manifest in `bin\`, beside `install.ps1`,
+   `release_files.ps1` copies setup as `SimOptixSetup-<version>.exe` and makes two zips.
+   `SimOptixOBSPlugins-<version>.zip` holds both plugins, laid out as in OBS's plugin folder, each with its `manifest.json` in its own `data`
+   folder. `SimOptixOpenXRLayer-<version>.zip` holds the layer and its manifest in `bin\`, beside `install.ps1`,
    `uninstall.ps1` and `uninstall.bat`. It refuses when a file's version isn't exactly the release's,
    or when the layer or setup isn't validly signed. `--generate-notes` adds GitHub's list of the
    merged pull requests under the notes, without the `internal` ones.

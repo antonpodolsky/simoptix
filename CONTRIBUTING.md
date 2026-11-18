@@ -168,7 +168,7 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 - **Names.**
   - A part's name is its folder's: `frame_sources\pimax\` holds `pimax_source.*` and `PimaxSource`.
   - File names and the names programs see are snake_case with `simoptix_`, and never have hyphens.
-    The one exception is SimOptix Setup's download on a GitHub Release, `SimOptixSetup-<version>.exe`.
+    The one exception is the files on a GitHub Release, such as `SimOptixSetup-<version>.exe`.
   - "PVR" names the code that wraps Pimax's client interface. "Pimax" names the rest: the frame source,
     the headset and Pimax's software.
   - What OBS shows is "SimOptix: <what>", matching the id.

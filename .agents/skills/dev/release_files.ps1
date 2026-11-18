@@ -1,12 +1,12 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Packs a release's built files for its GitHub Release (reference\release.md, step 8):
-#   SimOptixSetup-<version>.exe          SimOptix Setup, which carries both plugins and the layer
-#   simoptix_obs_plugins_<version>.zip   both plugins, laid out as in OBS's plugin folder,
-#                                        C:\ProgramData\obs-studio\plugins: <name>\bin\64bit\<name>.dll
-#                                        and <name>\data\manifest.json
-#   simoptix_openxr_layer_<version>.zip  the layer and its manifest in bin\, beside install.ps1,
-#                                        uninstall.ps1 and uninstall.bat, which install it from there
+#   SimOptixSetup-<version>.exe        SimOptix Setup, which carries both plugins and the layer
+#   SimOptixOBSPlugins-<version>.zip   both plugins, laid out as in OBS's plugin folder,
+#                                      C:\ProgramData\obs-studio\plugins: <name>\bin\64bit\<name>.dll
+#                                      and <name>\data\manifest.json
+#   SimOptixOpenXRLayer-<version>.zip  the layer and its manifest in bin\, beside install.ps1,
+#                                      uninstall.ps1 and uninstall.bat, which install it from there
 # Refuses when a file's version isn't exactly the one in version.txt (a build off the release tag, or with
 # changes), or when the layer's or setup's signature isn't valid.
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File release_files.ps1 <output folder>
@@ -70,8 +70,8 @@ foreach ($script in 'install.ps1', 'uninstall.ps1', 'uninstall.bat') {
 }
 
 $setupCopy = Join-Path $OutputPath "SimOptixSetup-$version.exe"
-$pluginsZip = Join-Path $OutputPath "simoptix_obs_plugins_$version.zip"
-$layerZip = Join-Path $OutputPath "simoptix_openxr_layer_$version.zip"
+$pluginsZip = Join-Path $OutputPath "SimOptixOBSPlugins-$version.zip"
+$layerZip = Join-Path $OutputPath "SimOptixOpenXRLayer-$version.zip"
 Copy-Item $setup $setupCopy -Force
 Compress-Archive -Path (Join-Path $pluginsFolder '*') -DestinationPath $pluginsZip -Force
 Compress-Archive -Path (Join-Path $layerFolder '*') -DestinationPath $layerZip -Force
