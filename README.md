@@ -125,22 +125,9 @@ its Uninstall removes everything. `setup\README.md` describes setup.
 | `vr_mirror\e2e\` | End-to-end tests: the desktop window against a simulated Pimax headset and game, or a simulated game with the API layer |
 | `vr_mirror\recording_analysis\` | Scripts that check a recording frame by frame, and turn a moment of it into a test |
 | `overlays\` | SimOptix: Overlays: the G-meter (`gmeter\`, its image layers in `gmeter\design\`) and what any overlay can reuse (`common\`) |
-| `shared\` | Code compiled into both plugins: logging, CPU counters, crash dumps, text drawn with DirectWrite, the files kept in `%LOCALAPPDATA%\simoptix` (the newest 10 of each kind), the view's delay, and the list of OBS functions they call (`obs_lib\`). `build\` finds Visual Studio and gives every build SimOptix's version |
-| `shared\telemetry\` | One reader of the game's telemetry for all of OBS, and the G-meter's demo lap. `games\lmu\fake\` makes up LMU telemetry, to test without the game |
+| `shared\` | Code shared between all plugins |
 | `setup\` | SimOptix Setup: one program that installs and removes both plugins and the layer |
 | `third_party\` | libobs 32.2.2 and the OpenXR headers, as published |
-
-Each part's README describes what it does, its settings and its files:
-- `vr_mirror\obs_plugin\README.md`
-- `vr_mirror\core\README.md`, and a README for each stage of the pipeline in `vr_mirror\core\pipeline\`
-- `vr_mirror\frame_sources\README.md`, `vr_mirror\frame_sources\pimax\README.md` and
-  `vr_mirror\frame_sources\openxr\README.md`
-- `vr_mirror\mirror_app\README.md`
-- `vr_mirror\e2e\README.md`
-- `vr_mirror\recording_analysis\README.md`
-- `overlays\README.md` and `overlays\gmeter\design\README.md`
-- `shared\telemetry\README.md`
-- `setup\README.md`
 
 ## Contributing
 
