@@ -100,18 +100,25 @@ void FramesSessionCreated(
     }
 
     if (!device) {
-        CoreLog("frame source: not a D3D11 session: no frames for VR Mirror");
+        CoreLogError("frame source: not a D3D11 session: no frames for VR Mirror");
         return;
     }
 
     if (!counterToTime) {
-        CoreLog("frame source: the instance has no %s: no frames for VR Mirror", kXrTimeConversionExtension);
+        CoreLogError(
+            "frame source: the instance has no %s: no frames for VR Mirror",
+            kXrTimeConversionExtension
+        );
         return;
     }
 
     g_instance = instance;
     g_counterToTime = counterToTime;
     g_publisher.Start(device, Clock, nullptr);
+}
+
+void FramesOnReader(OpenXrPublisher::ReaderNews news) {
+    g_publisher.SetReaderNews(news);
 }
 
 void FramesSessionDestroyed() {
@@ -134,7 +141,7 @@ void FramesSwapchainCreated(XrSwapchain swapchain, const XrSwapchainCreateInfo& 
         return;
     }
 
-    CoreLog(
+    CoreLogError(
         "frame source: more than %d swapchains: swapchain %llx not tracked",
         kMaxChains,
         static_cast<unsigned long long>(reinterpret_cast<uint64_t>(swapchain))

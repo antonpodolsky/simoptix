@@ -24,6 +24,7 @@
 #include "openxr/openxr_loader_negotiation.h"
 #include "openxr_d3d11.h"
 #include "openxr_layer_calls.h"
+#include "openxr_layer_frames.h"
 #include "openxr_layer_log.h"
 #include "shared/log.h"
 #include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
@@ -186,7 +187,7 @@ namespace {
         const XrApiLayerNextInfo* mine = layerInfo->nextInfo;
         if (strcmp(mine->layerName, kLayerName) != 0) {
             if (g_inGame) {
-                CoreLog("the loader passed layer %s's place in the chain, not ours", mine->layerName);
+                CoreLogError("the loader passed layer %s's place in the chain, not ours", mine->layerName);
             }
             return XR_ERROR_INITIALIZATION_FAILED;
         }
@@ -204,7 +205,7 @@ namespace {
         XrResult r = mine->nextCreateApiLayerInstance(&passed, &rest, instance);
         if (XR_FAILED(r) && passed.enabledExtensionNames != info->enabledExtensionNames) {
             if (g_inGame) {
-                CoreLog(
+                CoreLogError(
                     "instance with %s not created (%d): trying the game's own",
                     kXrTimeConversionExtension,
                     static_cast<int>(r)
@@ -218,7 +219,7 @@ namespace {
 
         if (XR_FAILED(r)) {
             if (g_inGame) {
-                CoreLog("instance not created: %d", static_cast<int>(r));
+                CoreLogError("instance not created: %d", static_cast<int>(r));
             }
             return r;
         }
@@ -252,6 +253,7 @@ extern "C" XrResult XRAPI_CALL xrNegotiateLoaderApiLayerInterface(
         if (!g_inGame && ProcessIsGame()) {
             g_inGame = true;
             if (StartLayerLog()) {
+                FramesOnReader(FollowReaderDebug);  // the log writes while VR Mirror reads with Debug on
                 CoreLog(
                     "%s %s loaded into %ls, process %lu (layer built %s %s)",
                     kLayerName,
@@ -307,7 +309,7 @@ extern "C" XrResult XRAPI_CALL xrNegotiateLoaderApiLayerInterface(
 
     if (refused) {
         if (g_inGame) {
-            CoreLog("handshake refused: %s doesn't match", refused);
+            CoreLogError("handshake refused: %s doesn't match", refused);
         }
         return XR_ERROR_INITIALIZATION_FAILED;
     }

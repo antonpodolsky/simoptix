@@ -14,6 +14,9 @@ using CoreLogFn = void (*)(const char* message);
 
 // nullptr (the default) prints to stdout.
 void SetCoreLog(CoreLogFn fn);
+// Where failures (CoreLogError) go, for a host that treats them apart from its normal lines (the OpenXR
+// layer writes them whatever Debug says). nullptr (the default): where CoreLog's go.
+void SetCoreLogError(CoreLogFn fn);
 
 // printf-style; a trailing newline is added if missing. Nothing while this thread's gate is closed.
 void CoreLog(const char* fmt, ...);

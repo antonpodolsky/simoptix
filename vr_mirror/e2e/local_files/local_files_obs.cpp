@@ -29,6 +29,10 @@ namespace {
             return "SimOptix: OpenXR Mirror";
         }
 
+        if (id == "simoptix_gmeter_overlay") {
+            return "SimOptix: G-Meter Overlay";
+        }
+
         return id.c_str();
     }
 
@@ -322,13 +326,20 @@ bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string
     const UniqueHandle processHandle(process.hProcess);
     const UniqueHandle threadHandle(process.hThread);
 
-    // Each source with Debug on logs "started (source shown)" once its frame source runs. With Debug off it
-    // logs nothing, so OBS's window showing up is all there is to wait for.
+    // Each VR Mirror source with Debug on logs "started (source shown)" once its frame source runs (a
+    // G-meter has no such line). With Debug off it logs nothing, so OBS's window showing up is all there is
+    // to wait for.
+    size_t mirrors = 0;
+
+    for (const std::string& id : run.sources) {
+        mirrors += id == "simoptix_pimax_mirror" || id == "simoptix_openxr_mirror" ? 1 : 0;
+    }
+
     bool sourcesStarted = false;
 
     for (DWORD waited = 0; waited < kStartMs && !sourcesStarted; waited += 250) {
         Sleep(250);
-        sourcesStarted = run.debug ? Count(NewestLog(obs.dir), "started (source shown)") >= run.sources.size()
+        sourcesStarted = run.debug ? Count(NewestLog(obs.dir), "started (source shown)") >= mirrors
                                    : MainWindowOf(process.dwProcessId) != nullptr;
     }
 

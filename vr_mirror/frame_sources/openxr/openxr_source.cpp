@@ -129,6 +129,7 @@ bool OpenXrSource::OpenShare() {
     }
 
     layerEvent_.Reset(OpenEventW(SYNCHRONIZE, FALSE, openxr_share::kNewImageEvent));
+    header_->readerDebug.store(CoreLogWanted() ? 1 : 0);  // the source's Debug setting, as this thread's gate
     header_->readerSigned.store(Counter());  // signed before the layer looks: it makes its textures now
     if (UniqueHandle reader(OpenEventW(EVENT_MODIFY_STATE, FALSE, openxr_share::kReaderEvent)); reader) {
         SetEvent(reader.Get());
@@ -363,6 +364,7 @@ void OpenXrSource::Run() {
 
         openxr_share::Header& h = *header_;
         const int64_t counter = Counter();
+        h.readerDebug.store(CoreLogWanted() ? 1 : 0);  // this thread's gate is the source's Debug setting
         h.readerSigned.store(counter);
         const double now = double(counter) / frequency_;
         if (h.state.load() != openxr_share::kRunning) {

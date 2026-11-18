@@ -38,7 +38,8 @@ namespace {
         bool logged = false;  // loggedKind and loggedPhase hold what was logged last
         SessionKind loggedKind = SessionKind::Other;
         SessionPhase loggedPhase = SessionPhase::Unknown;
-        std::atomic<bool> logging{false};  // one of its sources has Debug on: this thread's log gate
+        std::atomic<bool> logging{false};    // one of its sources has Debug on: this thread's log gate
+        std::atomic<bool> heldDebug{false};  // ...as told to the telemetry (Telemetry::HoldDebug)
     };
 
     // Never destroyed, like the telemetry reader.
@@ -84,6 +85,11 @@ namespace {
         st.nextStep = now + kStepEvery;
         st.logging = AnyDebug(st, st.logging);
         const ScopedLogGate gate(&st.logging);
+
+        // The telemetry it holds logs while one of its sources has Debug on.
+        if (st.heldDebug.exchange(st.logging) != st.logging) {
+            Telemetry::HoldDebug(st.logging);
+        }
 
         const SessionState session = Telemetry::SessionAt(now);
         if (session.connected && session.t > 0
@@ -139,6 +145,15 @@ void AutoRecord::Enable(const std::atomic<bool>* debug) {
     st.recorder.Reset();
     st.nextStep = 0;
     st.logged = false;
+
+    // Its source's Debug, before the telemetry's reader starts, so its first pass logs as Debug says. Tick
+    // follows it from then on. This source is the only one in the list.
+    st.logging = debug->load();
+    st.heldDebug = st.logging.load();
+    if (st.heldDebug) {
+        Telemetry::HoldDebug(true);
+    }
+
     Telemetry::Acquire();
     obs_add_tick_callback(Tick, nullptr);
     st.on = true;
@@ -158,6 +173,11 @@ void AutoRecord::Disable(const std::atomic<bool>* debug) {
         return;
     }
     obs_remove_tick_callback(Tick, nullptr);
+
+    if (st.heldDebug.exchange(false)) {
+        Telemetry::HoldDebug(false);
+    }
+
     Telemetry::Release();
     st.on = false;
     CoreLog("LMU race auto-record: off");

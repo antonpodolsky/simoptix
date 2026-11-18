@@ -128,7 +128,7 @@ void MeterImage::Build(int size) {
     const double start = Seconds();
     std::vector<uint8_t> pixels;
     if (!Render(resource_, size, &pixels)) {
-        CoreLog("G-Meter Overlay: couldn't read the meter image %ls from the plugin", resource_);
+        CoreLogError("G-Meter Overlay: couldn't read the meter image %ls from the plugin", resource_);
         failed_ = true;
         return;
     }

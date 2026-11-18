@@ -20,7 +20,8 @@ near the game.
 - It behaves like LMU: the same name and extensions, a D3D11 session, one image buffer per eye in the
   game's format and usage, and five seconds of frames. It clears the left eye to a colour that encodes
   the frame's number.
-- Meanwhile it reads what the layer publishes, as VR Mirror does, on a device of its own.
+- Meanwhile it reads what the layer publishes, as VR Mirror does with Debug on, on a device of its
+  own. So the layer writes its log.
 - It fails unless:
   - every frame record holds what it submitted
   - nearly every frame after the first copy was copied
@@ -29,7 +30,7 @@ near the game.
 - It carries the game's file name only because the layer wakes up for no other name. It touches no game
   file.
 - It needs the headset on, with Pimax Play running. Without them it stops at `xrGetSystem` (−35, no
-  headset available) and says so. The log then shows only the handshake and the instance.
+  headset available) and says so. Then nothing reads the layer's frames, so the layer writes no log.
 
 Afterwards the layer's log, which the check names in its last line (the newest
 `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`), should show the runtime, the time
@@ -116,9 +117,10 @@ Test a signed DLL cheapest first, and stop at the first step where the game does
    went cleanly.
 
 Where to look after each start:
-- **VR Mirror's OBS log** (`%APPDATA%\obs-studio\logs`), with an OpenXR Mirror source shown: "the
-  layer runs in the game", the layer's textures opened, and the frames per 10 s. With Easy Anti-Cheat
-  the layer wrote no log of its own, so this is the evidence that it loaded.
+- **VR Mirror's OBS log** (`%APPDATA%\obs-studio\logs`), with an OpenXR Mirror source shown with
+  **Debug** on: "the layer runs in the game" and the layer's textures opened. Its frames per 10 s are in
+  the source's frame trace. With Easy Anti-Cheat the layer wrote no log of its own, so this is the
+  evidence that it loaded. The layer writes its log only while that source has Debug on.
 - **Easy Anti-Cheat's launcher log**, in `%APPDATA%\EasyAntiCheat\` under the game's folder:
   "Easy Anti-Cheat successfully loaded in-game".
 - **Windows' System log**, event 26: an "Untrusted system file" popup names a refused DLL.

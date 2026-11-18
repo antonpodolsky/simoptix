@@ -8,9 +8,10 @@
 
 namespace {
     CoreLogFn g_log = nullptr;
+    CoreLogFn g_logError = nullptr;  // failures' own place (SetCoreLogError); null: g_log
     thread_local const std::atomic<bool>* t_gate = nullptr;  // this thread's gate (ScopedLogGate)
 
-    void Write(const char* fmt, va_list args) {
+    void Write(CoreLogFn to, const char* fmt, va_list args) {
         char message[1024];
         vsnprintf(message, sizeof(message), fmt, args);
 
@@ -19,8 +20,8 @@ namespace {
             message[len - 1] = '\0';
         }
 
-        if (g_log) {
-            g_log(message);
+        if (to) {
+            to(message);
         } else {
             printf("%s\n", message);
             fflush(stdout);
@@ -32,6 +33,10 @@ void SetCoreLog(CoreLogFn fn) {
     g_log = fn;
 }
 
+void SetCoreLogError(CoreLogFn fn) {
+    g_logError = fn;
+}
+
 void CoreLog(const char* fmt, ...) {
     if (!CoreLogWanted()) {
         return;
@@ -39,14 +44,14 @@ void CoreLog(const char* fmt, ...) {
 
     va_list args;
     va_start(args, fmt);
-    Write(fmt, args);
+    Write(g_log, fmt, args);
     va_end(args);
 }
 
 void CoreLogError(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    Write(fmt, args);
+    Write(g_logError ? g_logError : g_log, fmt, args);
     va_end(args);
 }
 

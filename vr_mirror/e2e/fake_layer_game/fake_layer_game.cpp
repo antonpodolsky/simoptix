@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // fake_layer_game: a fake game that loads the real OpenXR layer's DLL as the OpenXR loader does in LMU, for
 // the local files test (vr_mirror\e2e\local_files\). build.bat names it bin\fake_layer_game\Le Mans
-// Ultimate.exe, because the layer only wakes up in a program of that name. It loads the DLL, which notes the
-// load in the layer's log, and with --handshake makes the loader's first call, which starts the log's
-// writing. It needs no OpenXR runtime or headset, and makes no instance.
+// Ultimate.exe, because the layer only wakes up in a program of that name. It loads the DLL, which keeps
+// the load line for the layer's log, and with --handshake makes the loader's first call, which starts the
+// log. With --wrong-name that call names another layer, which the layer refuses and logs as a failure. It
+// needs no OpenXR runtime or headset, makes no instance and reads no frames, so no VR Mirror tells the layer
+// it has Debug on.
 //
-// Usage: "Le Mans Ultimate.exe" <the layer's DLL> [--handshake]
-// Exit code 0 when the DLL loaded and, with --handshake, accepted the handshake.
+// Usage: "Le Mans Ultimate.exe" <the layer's DLL> [--handshake | --wrong-name]
+// Exit code 0 when the DLL loaded and, with --handshake, accepted the handshake, or with --wrong-name,
+// refused it.
 #include <windows.h>
 
 #include <cstdio>
@@ -19,9 +22,11 @@
 namespace {
 
     constexpr const char* kLayerName = "XR_APILAYER_SIMOPTIX_frame_source";
+    constexpr const char* kOtherLayerName = "XR_APILAYER_SIMOPTIX_another";
     constexpr DWORD kLogWriteMs = 500;  // time for the layer's own thread to write its log before the exit
 
-    bool Handshake(HMODULE layer) {
+    // The loader's first call, for the layer named `name`: true if the layer accepted it.
+    bool Handshake(HMODULE layer, const char* name) {
         const auto negotiate = reinterpret_cast<PFN_xrNegotiateLoaderApiLayerInterface>(
             GetProcAddress(layer, "xrNegotiateLoaderApiLayerInterface")
         );
@@ -45,7 +50,7 @@ namespace {
         request.structVersion = XR_API_LAYER_INFO_STRUCT_VERSION;
         request.structSize = sizeof(request);
 
-        const XrResult r = negotiate(&info, kLayerName, &request);
+        const XrResult r = negotiate(&info, name, &request);
 
         if (XR_FAILED(r)) {
             printf("the layer refused the handshake: %d\n", static_cast<int>(r));
@@ -59,11 +64,12 @@ namespace {
 
 int wmain(int argc, wchar_t** argv) {
     if (argc < 2) {
-        printf("usage: \"Le Mans Ultimate.exe\" <the layer's DLL> [--handshake]\n");
+        printf("usage: \"Le Mans Ultimate.exe\" <the layer's DLL> [--handshake | --wrong-name]\n");
         return 2;
     }
 
     const bool handshake = argc > 2 && wcscmp(argv[2], L"--handshake") == 0;
+    const bool wrongName = argc > 2 && wcscmp(argv[2], L"--wrong-name") == 0;
     const HMODULE layer = LoadLibraryW(argv[1]);
 
     if (!layer) {
@@ -71,7 +77,12 @@ int wmain(int argc, wchar_t** argv) {
         return 1;
     }
 
-    if (handshake && !Handshake(layer)) {
+    if (handshake && !Handshake(layer, kLayerName)) {
+        return 1;
+    }
+
+    if (wrongName && Handshake(layer, kOtherLayerName)) {
+        printf("the layer accepted a handshake for another layer\n");
         return 1;
     }
 

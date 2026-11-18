@@ -70,6 +70,10 @@ namespace {
 
         // the demo lap instead of the game: set by the properties button, not saved
         std::atomic<bool> demo{false};
+        // The Debug setting (UI thread): its log lines, as the gate of the threads working for it
+        // (ScopedLogGate, shared\log.h), and the telemetry's while it holds it.
+        std::atomic<bool> debug{false};
+        bool heldDebug = false;  // graphics thread: Debug as told to the telemetry (Telemetry::HoldDebug)
 
         // Graphics thread (drawSize and previewPixels also read by the UI thread).
         float shownScale = 0;  // the largest canvas scale it was drawn at since the last tick (0: not drawn)
@@ -286,26 +290,61 @@ namespace {
                 data
             );
 
+            obs_properties_add_bool(p, "debug", "Debug");
             return p;
         });
     }
 
-    void* Create(obs_data_t*, obs_source_t* source) {
+    void* Create(obs_data_t* settings, obs_source_t* source) {
         return Guarded("create", [&]() -> void* {
             auto m = std::make_unique<GMeter>();
             m->samples.resize(Telemetry::kRing);
             m->shapes.reserve(1 << 16);
             m->source = source;
+            m->debug = obs_data_get_bool(settings, "debug");
             return m.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });
+    }
+
+    // The properties changed: Debug is the setting it reads. UI thread.
+    void FollowSettings(void* data, obs_data_t* settings) {
+        Guarded("update", [&] { static_cast<GMeter*>(data)->debug = obs_data_get_bool(settings, "debug"); });
+    }
+
+    // Lets go of the telemetry if it holds it, its Debug first (Telemetry::HoldDebug).
+    void ReleaseTelemetry(GMeter* m) {
+        if (m->heldDebug) {
+            Telemetry::HoldDebug(false);
+            m->heldDebug = false;
+        }
+
+        if (m->started) {
+            Telemetry::Release();
+            m->started = false;
+        }
+    }
+
+    // Holds the telemetry while the meter is shown, its Debug first: the reader's first pass, which starts
+    // with Acquire, already logs as Debug says. Graphics thread, each tick.
+    void HoldTelemetry(GMeter* m) {
+        const bool debug = m->debug;
+
+        if (debug != m->heldDebug) {
+            Telemetry::HoldDebug(debug);
+            m->heldDebug = debug;
+        }
+
+        if (!m->started) {
+            Telemetry::Acquire();
+            m->started = true;
+        }
     }
 
     void Destroy(void* data) {
         Guarded("destroy", [&] {
             std::unique_ptr<GMeter> m(static_cast<GMeter*>(data));  // the one place that frees a GMeter
-            if (m->started) {
-                Telemetry::Release();
-            }
+            const ScopedLogGate gate(&m->debug);                    // ends before the meter is freed
+            ReleaseTelemetry(m.get());
             obs_enter_graphics();
             m->look.Destroy();
             m->batch.Destroy();
@@ -358,6 +397,8 @@ namespace {
         std::unique_ptr<FitTask> t(static_cast<FitTask*>(param));  // queued by StepPreviewFit: freed here
         Guarded("preview fit", [&] {
             GMeter* m = t->m;
+            const ScopedLogGate gate(&m->debug);
+
             if (t->restart) {
                 RestartPreviewFit(m->fit);
             }
@@ -406,15 +447,17 @@ namespace {
         m->fitRestart = false;
     }
 
+    // Each callback logs as the meter's Debug setting says (shared\log.h): OBS's threads work for every
+    // source in turn.
     void VideoTick(void* data, float) {
         Guarded("tick", [&] {
             GMeter* m = static_cast<GMeter*>(data);
-            if (m->wanted && !m->started) {
-                Telemetry::Acquire();
-                m->started = true;
-            } else if (!m->wanted && m->started) {
-                Telemetry::Release();
-                m->started = false;
+            const ScopedLogGate gate(&m->debug);
+
+            if (m->wanted) {
+                HoldTelemetry(m);
+            } else {
+                ReleaseTelemetry(m);
             }
 
             const double now = QpcNow();
@@ -483,6 +526,7 @@ namespace {
     void VideoRender(void* data, gs_effect_t*) {
         Guarded("render", [&] {
             GMeter* m = static_cast<GMeter*>(data);
+            const ScopedLogGate gate(&m->debug);
             Update(m);
             if (!Fit(m)) {
                 return;
@@ -523,6 +567,7 @@ void RegisterGMeterSource() {
     info.get_name = GetName;
     info.create = Create;
     info.destroy = Destroy;
+    info.update = FollowSettings;
     info.get_defaults = GetDefaults;
     info.get_properties = GetProperties;
     info.get_width = GetWidth;

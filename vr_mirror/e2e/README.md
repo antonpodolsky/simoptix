@@ -259,22 +259,23 @@ three things:
 
 `bin\local_files_e2e.exe` checks the frame traces, crash dumps and OpenXR layer logs that SimOptix
 keeps in `%LOCALAPPDATA%\simoptix`. It also checks the settings and the game's eye in the OBS log and
-the frame trace, and the file beside a recording. It runs the plugins and the layer as built, with
+the frame trace, which lines the OBS log has with Debug on and off, and the file beside a recording. It runs the plugins and the layer as built, with
 `%LOCALAPPDATA%` pointed at a test folder that already holds older files of each kind.
 - **The plugins** run in OBS 32.2.2, in a copy of the installed OBS in `out\obs_portable\`, made on the
   first run. The copy runs in OBS's portable mode, with settings of its own made fresh for each run.
   It loads the plugins from this build and no installed plugin, so the user's own OBS stays as it was.
   The Pimax source reads the fake runtime, which sits beside the copy's `obs64.exe`.
 - **The layer** runs in `bin\fake_layer_game\Le Mans Ultimate.exe`. The fake game loads the layer's DLL
-  and makes the OpenXR loader's first call to it, without a runtime or a headset.
+  and makes the OpenXR loader's first call to it, without a runtime or a headset. Nothing reads the
+  layer's frames, so no VR Mirror source tells the layer it has Debug on.
 
 | Case | What runs | Checks |
 |---|---|---|
 | `no_game` | OBS with both sources and Debug on. The fake runtime runs with no game | No frame trace. The OBS log has each source's settings and no eye. Of 12 older crash dumps, the newest 8 are left once the plugins have loaded |
-| `pimax_game` | The Pimax source with the fake runtime's game, recorded by OBS from its start | The OBS log has the settings and the eye. One new trace, both its files with rows, the column header first and then the settings and the eye. Of it and 12 older traces, the newest 10 are left, each older one gone with all its files. Beside the recording, a file with the version, the settings, the eye and the trace |
-| `no_debug` | The Pimax source with the fake runtime's game and Debug off, recorded by OBS from its start | No file beside the recording, no frame trace, and no settings or eye in the OBS log |
+| `pimax_game` | The Pimax source with the fake runtime's game, and a G-meter, recorded by OBS from its start | The OBS log has the settings and the eye. One new trace, both its files with rows, the column header first and then the settings and the eye. Of it and 12 older traces, the newest 10 are left, each older one gone with all its files. Beside the recording, a file with the version, the settings, the eye and the trace. The OBS log has the G-meter's lines, and the telemetry's from the reader's first pass |
+| `no_debug` | The Pimax source with the fake runtime's game, and a G-meter, with Debug off, recorded by OBS from its start | No file beside the recording, no frame trace, no line of either plugin in the OBS log but its version, and no telemetry line |
 | `openxr_game` | The OpenXR source with `fake_openxr.exe` | The OBS log has the settings and the eye. One new trace, both its files with rows, the column header first and then the settings and the eye. Of it and 10 older traces, the newest 10 are left |
-| `layer` | The fake game three times: with the first OpenXR call, without it, and with it again | Each start has its own log, which starts with the load line. Of 12 older logs and the new ones, the newest 10 are left after each start with the call. The layer's logs of older names stay |
+| `layer` | The fake game three times: with the first OpenXR call, without it, and with a call for another layer, which the layer refuses | The first two starts leave no log. The refusal is a failure, so the third writes a log that starts with it, without the lines Debug holds back. Of 12 older logs and the new one, the newest 10 are left. The layer's logs of older names stay |
 
 Each case also checks that files of other names stay. OBS and LMU must be closed. A run takes about a
 minute, and the first run takes longer while it copies OBS. Each case's files, OBS's log among them, are

@@ -251,11 +251,12 @@ for the agents that read those files. Change the rules here, never in those file
 - **The local files test (`vr_mirror\e2e\bin\local_files_e2e.exe`):** the real, built OBS plugins run
   in a private copy of OBS, and the real OpenXR layer in a fake game. It checks the files they write
   under `%LOCALAPPDATA%\simoptix`: when each is made, its name, and that only the newest of each kind
-  are kept. It also checks the settings and the game's eye in OBS's log and the frame trace, and the
-  file beside a recording (`vr_mirror\e2e\README.md`, "The local files test").
+  are kept. It also checks the settings and the game's eye in OBS's log and the frame trace, which
+  lines OBS's log has with Debug on and off, and the file beside a recording (`vr_mirror\e2e\README.md`,
+  "The local files test").
   - Run it at the end of a change to `shared\local_files.*`, the crash dump, the frame trace's files,
-    the layer's log, the settings and eye lines or the file beside a recording, and give such a change a
-    case or a check there.
+    the layer's log, what a plugin logs with Debug on or off, the settings and eye lines or the file
+    beside a recording, and give such a change a case or a check there.
   - It takes about a minute. OBS and LMU must be closed. Its first run copies OBS (466 MB).
 - **What gets a scenario:**
   - New behaviour in the pipeline gets a scenario, or a new measure in an existing one.
@@ -493,7 +494,7 @@ committed.
 |---|---|---|
 | `vr_mirror\core\`, `vr_mirror\frame_sources\pimax\` | Both plugins (step 4), `vr_mirror\mirror_app\build.bat`, `vr_mirror\e2e\build.bat` | Yes |
 | `shared\` | The same, and `shared\telemetry\games\lmu\fake\build.bat` for a telemetry change, and `vr_mirror\frame_sources\openxr\build.bat` for `shared\local_files.*` | If the mirror app or e2e use the file. The local files test for `shared\local_files.*` and the crash dump |
-| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins (step 4) | The local files test for the frame trace's files, the settings and eye lines, or the file beside a recording. Otherwise no. Verify as in step 5 |
+| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins (step 4) | The local files test for the frame trace's files, what a plugin logs with Debug on or off, the settings and eye lines, or the file beside a recording. Otherwise no. Verify as in step 5 |
 | `vr_mirror\mirror_app\` | `vr_mirror\mirror_app\build.bat` (if `simoptix_vr_mirror.exe` is running, build `simoptix_vr_mirror_dev.exe` instead) | Yes, for behaviour changes |
 | `vr_mirror\e2e\` | `vr_mirror\e2e\build.bat` | The scenarios that changed |
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`: the layout check, on a PC with Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`. `PVR_SDK` names another `Include` folder. Without the SDK it says so and skips | Yes |

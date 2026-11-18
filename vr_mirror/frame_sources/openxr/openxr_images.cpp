@@ -151,7 +151,7 @@ bool OpenXrImages::MakeShaders(ID3D11Device* device) {
             &ps,
             &errors
         ))) {
-        CoreLog(
+        CoreLogError(
             "OpenXR images: shader not compiled: %s",
             errors ? static_cast<const char*>(errors->GetBufferPointer()) : "?"
         );
@@ -244,7 +244,7 @@ void OpenXrImages::Open(ID3D11Device* device) {
     for (int k = 0; k < openxr_share::kTextures; k++) {
         HANDLE h = reinterpret_cast<HANDLE>(header_->textureHandle[k]);
         if (FAILED(device->OpenSharedResource(h, IID_PPV_ARGS(&textures_[k])))) {
-            CoreLog("OpenXR images: the layer's texture %d not opened (another graphics adapter?)", k);
+            CoreLogError("OpenXR images: the layer's texture %d not opened (another graphics adapter?)", k);
             CloseTextures();
             return;
         }

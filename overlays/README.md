@@ -119,6 +119,9 @@ Rebuilding the four highest values and the live G at once takes 0.3–0.6 ms on 
   The demo works with or without the game running. It isn't saved, so it is off again when OBS
   restarts. Starting or stopping it clears the tail and the highest values, so demo numbers never mix
   with real ones. The lap is in `shared\telemetry\demo_lap.cpp`.
+- **Debug:** the G-meter writes its lines to the OBS log, and the telemetry writes its own while the
+  G-meter is shown (`shared\telemetry\README.md`). With Debug off, the plugin writes its version when
+  OBS loads it, and a line only when something fails, such as "couldn't read the meter image".
 
 Everything else is fixed in the code (`gmeter_source.cpp`, the constants at its top):
 - The dot shows the force the driver feels.
@@ -133,15 +136,15 @@ Add it to the scene above the VR Mirror source.
   1920x1080 and 400 on 2560x1440. At 1080 its box sits 16 px from the right edge and 11 from the
   bottom. Move or resize it like any overlay.
 - It always draws itself at the size it is shown on the canvas, so it stays sharp at any size. When the
-  canvas changes, OBS keeps it in proportion. The OBS log says the size it draws at ("drawn at 400
-  px").
+  canvas changes, OBS keeps it in proportion. With Debug on, the OBS log says the size it draws at
+  ("drawn at 400 px").
 - While you drag its size, it shows the last build stretched and rebuilds 0.3 s after the drag stops.
 - Leave its scale filtering at **Disable** and leave it uncropped. OBS draws a cropped or filtered item
   at its base size first (300 px) and then stretches that.
 - Its **Properties** window resizes itself when it opens, whatever size it was left at. The preview
   then shows the meter at exactly its size on the canvas (1:1), and again if that size changes while
-  the window is open. The window moves up or left if it would leave the screen. The log says
-  "properties preview ... (1:1)". OBS doesn't tell a source which window shows its properties. So the
+  the window is open. The window moves up or left if it would leave the screen. With Debug on, the log
+  says "properties preview ... (1:1)". OBS doesn't tell a source which window shows its properties. So the
   plugin takes the window OBS activates as it opens them, with the source's name in its title. This
   works in any OBS language.
 
@@ -152,4 +155,5 @@ both plugins share (`shared\telemetry\README.md`). One reader serves the whole o
 while something needs it: a G-meter on screen, or race auto-record switched on.
 
 The plugin that runs the telemetry reader logs the reader's footprint every 10 s while it is connected
-to a game, with that plugin's tag ("footprint: telemetry thread (Le Mans Ultimate) ...").
+to a game, with that plugin's tag ("footprint: telemetry thread (Le Mans Ultimate) ..."). It does so
+while a G-meter or a source with race auto-record ticked has Debug on.

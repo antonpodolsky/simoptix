@@ -249,7 +249,8 @@ VR Mirror's lines in the OBS log (Help → Log Files) are debugging output, like
 source writes them only while it has **Debug** on: race auto-record's lines too, while a source that has
 it ticked has Debug on, and the audio's delay while any source has Debug on. With Debug off, VR Mirror
 writes its version when OBS loads it, and a line only when something fails, such as "could not write
-the frame trace".
+the frame trace". The telemetry's lines follow Debug too (`shared\telemetry\README.md`), and so does
+the OpenXR layer's log (`vr_mirror\frame_sources\openxr\README.md`).
 
 With Debug on, the OBS log says what each source runs with. Each line names where the source takes the
 game's frames from, `Pimax session` or `OpenXR layer`:
@@ -275,10 +276,10 @@ OBS log:
     percentile and longest)
   - The plugin that runs the telemetry reader logs the reader's footprint to the OBS log every 10 s
     while it is connected to a game, with that plugin's tag ("footprint: telemetry thread (Le Mans
-    Ultimate) ..."), Debug or not.
+    Ultimate) ..."). It does so while a G-meter or a source with race auto-record ticked has Debug on.
 - for the OpenXR source, the frames read and the frames that were gone before they were copied
-  ("OpenXR frames: ..."). The layer logs its own side, including the copy's time on the graphics card
-  (`vr_mirror\frame_sources\openxr\README.md`).
+  ("OpenXR frames: ..."). The layer logs its own side while the source has Debug on, including the
+  copy's time on the graphics card (`vr_mirror\frame_sources\openxr\README.md`).
 - for the Pimax source, every call into the Pimax runtime ("Pimax calls: ..."), by kind, per second,
   with its average and longest time. Each is a call into Pimax's compositor (`pi_server`), so this is
   the load the source puts on it.

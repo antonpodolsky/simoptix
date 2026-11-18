@@ -8,20 +8,24 @@
 //    sends no frame). No frame trace is written. OBS's log has each source's settings, and no eye. Of 12
 //    older crash dumps, the newest 8 are left once the plugins have loaded, which leaves room for the 2 a
 //    crash can add.
-//  - pimax_game: the Pimax source with the fake runtime's game, recorded by OBS from its start. OBS's log
-//    has the settings and the game's eye. One new trace, _ticks and _pimax, with rows, its column header
-//    first and then the settings and the eye. Of it and 12 older traces, the newest 10 are left, and each
-//    older one's files (_ticks, and _pimax or _openxr) went together. Beside the recording, a notes file
-//    has the version, the settings, the eye and the frame trace. It runs past 10 s: the 10 s stats are in
-//    the trace and not in OBS's log.
-//  - no_debug: the Pimax source with the fake runtime's game and Debug off, recorded by OBS. No notes file
-//    beside the recording, no frame trace, and no VR Mirror line in OBS's log but the version.
+//  - pimax_game: the Pimax source with the fake runtime's game, and a G-meter, recorded by OBS from its
+//    start. OBS's log has the settings and the game's eye. One new trace, _ticks and _pimax, with rows, its
+//    column header first and then the settings and the eye. Of it and 12 older traces, the newest 10 are
+//    left, and each older one's files (_ticks, and _pimax or _openxr) went together. Beside the recording, a
+//    notes file has the version, the settings, the eye and the frame trace. It runs past 10 s: the 10 s
+//    stats are in the trace and not in OBS's log. OBS's log has the G-meter's lines, and the telemetry's
+//    from the reader's first pass.
+//  - no_debug: the Pimax source with the fake runtime's game, and a G-meter, with Debug off, recorded by
+//    OBS. No notes file beside the recording, no frame trace, no VR Mirror or Overlays line in OBS's log but
+//    the versions, and no telemetry line.
 //  - openxr_game: the OpenXR source with fake_openxr.exe's game. The settings and the eye are logged, and
 //    one new trace, _ticks and _openxr, has rows, as in pimax_game. Of it and 10 older traces, the newest
 //    10 are left.
 //  - layer: the layer's DLL loaded into "Le Mans Ultimate.exe", with and without the loader's handshake.
-//    Each start has its own log, starting with the load line. Of it and 12 older logs, the newest 10 are
-//    left. The files the layer wrote before under fixed names stay.
+//    No VR Mirror reads its frames, so none says it has Debug on, and neither start leaves a log. Then a
+//    handshake for another layer, which the layer refuses: that failure is written whatever Debug says, in
+//    a new log that has none of the held lines. Of it and 12 older logs, the newest 10 are left. The files
+//    the layer wrote before under fixed names stay.
 // Each run checks that names of any other form stay. OBS and LMU must be closed. Takes about a minute (the
 // first run longer: it copies OBS).
 //
@@ -187,7 +191,7 @@ namespace {
         Check(HasLineStarting(lines, "#eye,left "), "it has the game's eye");
     }
 
-    bool HasLineWith(const std::vector<std::string>& lines, const char* text) {
+    bool HasLine(const std::vector<std::string>& lines, const char* text) {
         for (const std::string& line : lines) {
             if (line.find(text) != std::string::npos) {
                 return true;
@@ -210,26 +214,26 @@ namespace {
         }
 
         Check(
-            HasLineWith(lines, "#stats,") && HasLineWith(lines, " ticks in 10 s: "),
+            HasLine(lines, "#stats,") && HasLine(lines, " ticks in 10 s: "),
             "the trace has the 10 s stats"
         );
-        Check(HasLineWith(lines, "#stats,footprint: "), "...and the footprint");
+        Check(HasLine(lines, "#stats,footprint: "), "...and the footprint");
         Check(log.find("ticks in 10 s") == std::string::npos, "OBS's log has no 10 s stats");
         Check(log.find("footprint: Pimax") == std::string::npos, "...and no footprint");
     }
 
-    // With Debug off, OBS's log has VR Mirror's version line and no other line of its: every other one is
-    // Debug's (the failures excepted, and this run has none).
-    void CheckOnlyVersionLogged(const std::string& log) {
-        const char* const tag = "[simoptix_vr_mirror] ";
+    // With Debug off, OBS's log has the plugin's version line and no other line of its (`tag`, as
+    // "[simoptix_vr_mirror] "): every other one is Debug's (the failures excepted, and this run has none).
+    // The telemetry's lines carry the tag of the plugin that runs its reader.
+    void CheckOnlyVersionLogged(const std::string& log, const std::string& tag, const std::string& plugin) {
         std::string others;
         size_t count = 0;
 
         for (size_t at = log.find(tag); at != std::string::npos; at = log.find(tag, at + 1)) {
             const size_t end = log.find('\n', at);
             const std::string line = log.substr(
-                at + strlen(tag),
-                end == std::string::npos ? end : end - at - strlen(tag)
+                at + tag.size(),
+                end == std::string::npos ? end : end - at - tag.size()
             );
 
             if (!StartsWith(line, "loaded, version ")) {
@@ -239,9 +243,24 @@ namespace {
 
         Check(
             count == 0,
-            "OBS's log has no VR Mirror line but the version, with Debug off"
+            "OBS's log has no " + plugin + " line but the version, with Debug off"
                 + (count ? " (" + others + ")" : "")
         );
+    }
+
+    // A G-meter shown with Debug on: OBS's log has its lines, and the telemetry's it holds, from the reader's
+    // first pass (no game runs, so it waits for one).
+    void CheckMeterLogged(const std::string& log) {
+        Check(
+            log.find("[simoptix_overlays] G-Meter Overlay: drawn at ") != std::string::npos,
+            "OBS's log has the G-meter's lines, with Debug on"
+        );
+        Check(log.find("telemetry: reader started") != std::string::npos, "...and the telemetry's");
+
+        const bool firstPass = log.find("telemetry: waiting for a game") != std::string::npos
+                               || log.find("telemetry: built without any game") != std::string::npos
+                               || log.find("telemetry: connected to ") != std::string::npos;
+        Check(firstPass, "...from the reader's first pass");
     }
 
     // The recording in `dir`, and the notes file beside it with the version, and the settings, the eye and
@@ -397,7 +416,7 @@ namespace {
         SeedTraces(c, kOlder);
 
         ObsRun run;
-        run.sources = {"simoptix_pimax_mirror"};
+        run.sources = {"simoptix_pimax_mirror", "simoptix_gmeter_overlay"};
         run.localAppData = c.appData;
         run.fakePvrScenario = FakePvrScenario(c, 0);
         run.holdUntilLogged = kTraceLogged;
@@ -417,16 +436,18 @@ namespace {
         CheckNewTrace(c, log, L"_pimax.csv");
         CheckTracesKept(c, kOlder);
         CheckRecordingNotes(run.recordTo, "Pimax session");
+        CheckMeterLogged(log);
     }
 
-    // The Pimax source with the fake runtime's game and Debug off, recorded by OBS: the recording gets no
-    // notes file, no frame trace is written, and OBS's log has no settings or eye, since all are Debug's.
+    // The Pimax source and a G-meter with the fake runtime's game and Debug off, recorded by OBS: the
+    // recording gets no notes file, no frame trace is written, and OBS's log has no settings or eye, and no
+    // line of either plugin or the telemetry but the versions, since all are Debug's.
     void NoDebug(const ObsCopy& obs, const fs::path& out) {
         printf("no_debug\n");
         const Case c = MakeCase(out, "no_debug");
 
         ObsRun run;
-        run.sources = {"simoptix_pimax_mirror"};
+        run.sources = {"simoptix_pimax_mirror", "simoptix_gmeter_overlay"};
         run.debug = false;
         run.holdMs = 12000;  // from OBS's window: the source starts, and runs past 10 s of stats
         run.localAppData = c.appData;
@@ -454,7 +475,9 @@ namespace {
         Check(TimedFiles(c.traces, L"trace", L".csv").empty(), "no frame trace, with Debug off");
         Check(log.find("settings (") == std::string::npos, "no settings in OBS's log, with Debug off");
         Check(log.find("eye (") == std::string::npos, "no eye in OBS's log, with Debug off");
-        CheckOnlyVersionLogged(log);
+        CheckOnlyVersionLogged(log, "[simoptix_vr_mirror] ", "VR Mirror");
+        CheckOnlyVersionLogged(log, "[simoptix_overlays] ", "Overlays");
+        Check(log.find("telemetry: ") == std::string::npos, "no telemetry line, with Debug off");
     }
 
     void OpenXrGame(const ObsCopy& obs, const fs::path& repo, const fs::path& out) {
@@ -503,14 +526,14 @@ namespace {
         CheckTracesKept(c, kKept);
     }
 
-    // Runs the fake game with the layer in it, with `appData` as its %LOCALAPPDATA%.
-    bool RunLayerGame(const fs::path& repo, const fs::path& appData, bool handshake) {
+    // Runs the fake game with the layer in it, with `appData` as its %LOCALAPPDATA% and the game's `option`
+    // (L"--handshake", L"--wrong-name" or L"" for none).
+    bool RunLayerGame(const fs::path& repo, const fs::path& appData, const wchar_t* option) {
         const fs::path exe = repo / "vr_mirror" / "e2e" / "bin" / "fake_layer_game" / "Le Mans Ultimate.exe";
         const fs::path layer = repo / "vr_mirror" / "frame_sources" / "openxr" / "bin"
                                / "XR_APILAYER_SIMOPTIX_frame_source.dll";
         std::wstring environment = EnvironmentWith({L"LOCALAPPDATA=" + appData.wstring()});
-        std::wstring command = L"\"" + exe.wstring() + L"\" \"" + layer.wstring() + L"\""
-                               + (handshake ? L" --handshake" : L"");
+        std::wstring command = L"\"" + exe.wstring() + L"\" \"" + layer.wstring() + L"\" " + option;
         STARTUPINFOW startup = {sizeof(startup)};
         PROCESS_INFORMATION process = {};
 
@@ -555,16 +578,6 @@ namespace {
         return Lines(c.simoptix / logs.back());
     }
 
-    bool HasLine(const std::vector<std::string>& lines, const char* text) {
-        for (const std::string& line : lines) {
-            if (line.find(text) != std::string::npos) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     void Layer(const fs::path& repo, const fs::path& out) {
         printf("layer\n");
         const Case c = MakeCase(out, "layer");
@@ -582,14 +595,33 @@ namespace {
             Touch(c.simoptix / name);
         }
 
-        Check(RunLayerGame(repo, c.appData, true), "the layer loaded and accepted the handshake");
-        std::vector<std::string> lines = NewestLayerLog(c);
-        Check(
-            !lines.empty() && lines[0].find("loaded into process") != std::string::npos,
-            "a new log, starting with the load line"
-        );
-        Check(HasLine(lines, "loader offers layer interface"), "...then the handshake");
+        // No VR Mirror reads the frames, so none says it has Debug on: the layer's lines stay in memory.
+        Check(RunLayerGame(repo, c.appData, L"--handshake"), "the layer loaded and accepted the handshake");
         size_t logs = TimedFiles(c.simoptix, L"openxr_frame_source", L".log").size();
+        Check(
+            logs == kOlder,
+            "no new log and none deleted, with no VR Mirror's Debug (" + std::to_string(logs) + " logs)"
+        );
+
+        Sleep(kNewSecondMs);
+        Check(RunLayerGame(repo, c.appData, L""), "the layer loaded (no handshake)");
+        logs = TimedFiles(c.simoptix, L"openxr_frame_source", L".log").size();
+        Check(logs == kOlder, "...nor with no handshake (" + std::to_string(logs) + " logs)");
+
+        // A failure is written whatever Debug says, and the log is made for it.
+        Sleep(kNewSecondMs);
+        Check(
+            RunLayerGame(repo, c.appData, L"--wrong-name"),
+            "the layer refused a handshake for another layer"
+        );
+        const std::vector<std::string> lines = NewestLayerLog(c);
+        Check(
+            !lines.empty()
+                && lines[0].find("handshake refused: the layer name doesn't match") != std::string::npos,
+            "a new log, starting with the refusal"
+        );
+        Check(!HasLine(lines, "loaded into process"), "...and without the lines Debug holds back");
+        logs = TimedFiles(c.simoptix, L"openxr_frame_source", L".log").size();
         Check(logs == kKept, std::to_string(kKept) + " logs left (" + std::to_string(logs) + ")");
         Check(
             !Exists(c.simoptix / (SeedStem(L"openxr_frame_source", kOlder - kKept) + L".log"))
@@ -597,23 +629,6 @@ namespace {
             "the oldest are the ones gone"
         );
         CheckOthersStay(c.simoptix, fixedNames);
-
-        Sleep(kNewSecondMs);
-        Check(RunLayerGame(repo, c.appData, false), "the layer loaded (no handshake)");
-        lines = NewestLayerLog(c);
-        Check(
-            lines.size() == 1 && lines[0].find("loaded into process") != std::string::npos,
-            "a new log with the load line alone"
-        );
-
-        Sleep(kNewSecondMs);
-        Check(RunLayerGame(repo, c.appData, true), "the layer loaded and accepted the handshake again");
-        logs = TimedFiles(c.simoptix, L"openxr_frame_source", L".log").size();
-        Check(
-            logs == kKept,
-            "the next start with a handshake leaves " + std::to_string(kKept) + " logs ("
-                + std::to_string(logs) + ")"
-        );
     }
 
 }
