@@ -1,7 +1,7 @@
 # SimOptix
 
 SimOptix is a set of sim racing tools for capturing stabilized VR footage and overlays.
-The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both currently work with `Le Mans Ultimate (LMU)` and `Pimax` headsets (support for more games and headsets is planned).
+The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both currently work with `Le Mans Ultimate (LMU)` and `Pimax` headsets.
 
 ## What you get
 
@@ -31,7 +31,7 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
   - It also works over a normal capture of a flat-screen game.
   - It plays a demo lap, so you can try it without the game.
 
-## Headsets and games
+## Supported VR headsets and games
 
 ### Games
 | Game | VR Mirror | G-meter and race auto-record |
