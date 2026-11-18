@@ -17,7 +17,7 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
   - **Look-ahead:** prioritizes smoothness (0.5s delay, higher VRAM usage), best for
     recording.
 - Auto-record option:
-  - Race is recorded from the start lights to 5s after the car stops past the finish.
+  - Race is recorded from the starting lights to 5s after the car stops past the finish.
 - OBS Overlays plugin adds the **SimOptix: G-Meter Overlay** source.
 
 ## Supported VR headsets and games
