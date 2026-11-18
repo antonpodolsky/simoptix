@@ -13,7 +13,7 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
     - Frames are full resolution.
     - The layer works with Easy Anti-Cheat (EAC) only when it is signed (below).
 - Two stabilization methods:
-  - **Instant:** prioritizes latency (no delay, low VRAM usage), best for live streams.
+  - **Instant:** prioritizes low latency (no delay, low VRAM usage), best for live streams.
   - **Look-ahead:** prioritizes smoothness (0.5s delay, higher VRAM usage), best for
     recording.
 - Auto-record option:
