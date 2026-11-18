@@ -14,7 +14,7 @@ sessions, and recordings made there were successful. `uninstall.bat` removes the
 
 | Term | Meaning |
 |---|---|
-| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`) or the OpenXR source (`vr_mirror\frame_sources\openxr\`) |
+| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
@@ -166,6 +166,7 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 | `install.ps1`, `uninstall.ps1` | Install or remove the layer for every user (as administrator). `install.ps1` shows the installed DLL's signature |
 | `openxr_source.*` | `OpenXrSource`: the reader, a frame source for the hosts (`vr_mirror\core\adapters\d3d\frame_source.h`) |
 | `openxr_images.*` | `OpenXrImages`: the layer's textures opened on a host's device, and the copy of an eye image into the host's store at the size it needs |
+| `openxr_headset_test.*` | The headset test: with no game in VR, the source is an OpenXR app for about a second, showing "Collecting headset info" on black, and reads the eye image size, the field of view, the eye's turn and the refresh rate a game would get. The runtime is loaded directly, without the OpenXR loader or any layer. Only the OBS plugin runs it, once per source |
 | `openxr.rsp` | The reader's `.cpp` files, as a `cl` response file that the hosts' build scripts list |
 | `check\` | The check program. It runs the built layer the way the game will, before the layer goes anywhere near the game: with LMU's name, a D3D11 session, one image buffer per eye in the game's format, and five seconds of frames, through a real OpenXR loader. It reads what the layer publishes as VR Mirror would |
 

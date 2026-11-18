@@ -84,11 +84,12 @@ bool WindowOutput::Create(HWND hwnd, LUID luid) {
         }
     }
 
+    // With video support: the demo decodes its images on this device (DemoSource).
     HRESULT hr = D3D11CreateDevice(
         found.Get(),
         found ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,
         nullptr,
-        0,
+        D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
         nullptr,
         0,
         D3D11_SDK_VERSION,

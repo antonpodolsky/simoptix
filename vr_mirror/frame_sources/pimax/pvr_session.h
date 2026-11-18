@@ -32,6 +32,9 @@ public:
     LUID AdapterLuid() const { return luid_; }
     EyeInfo Eye(int eye) const { return eyes_[eye]; }
     double Period() const { return period_; }
+    // The left eye image Pimax renders at Pimax Play's Render Quality (pixels; 0: not told).
+    uint32_t RenderWidth() const { return renderWidth_; }
+    uint32_t RenderHeight() const { return renderHeight_; }
 
     // The call lock, held for its lifetime; every runtime call after Open goes through one. Each call
     // adds its duration to the CallStats it is given (owned by the calling thread).
@@ -90,6 +93,7 @@ public:
     }
 
 private:
+    void ReadRenderSize(PvrHmd hmd);
     bool CreateSession();   // under no lock: hmd_ is set under the call lock
     void DestroySession();  // under the call lock
 
@@ -98,5 +102,6 @@ private:
     LUID luid_ = {};
     EyeInfo eyes_[2];
     double period_ = 1.0 / 90;
+    uint32_t renderWidth_ = 0, renderHeight_ = 0;
     mutable std::mutex mutex_;  // the call lock
 };

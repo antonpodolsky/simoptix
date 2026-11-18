@@ -39,8 +39,8 @@ Smoothed InstantSmoothing::Smooth(const SmoothingInput& in) {
     const Quat view = filter_.Update(
         in.followed,
         in.dt,
-        kMinCutoffHz,
-        kBeta,
+        kMinCutoffHz / strength_,
+        kBeta / strength_,
         kDeadzoneDeg * deg,
         kMaxAngleDeg * deg,
         extraHz

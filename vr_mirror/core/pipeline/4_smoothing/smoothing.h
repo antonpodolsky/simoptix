@@ -48,6 +48,10 @@ public:
     virtual void Reset() = 0;
     // How long after a frame's arrival its view can be computed (s): the output delay hosts keep.
     virtual double DelayS() const = 0;
+    // How strong the smoothing is (the Strength setting): 1 its own tuning, above 1 calmer (the view
+    // follows the head less closely), below 1 closer. Each implementation maps it onto its own tuning. The
+    // pipeline sets it every frame, before Window and Smooth.
+    virtual void SetStrength(float strength) = 0;
     // Samples of the head's path needed before and after the frame at spacing `period` (0, 0: none).
     virtual void Window(double period, int* behind, int* ahead) const = 0;
     // The frame's view.

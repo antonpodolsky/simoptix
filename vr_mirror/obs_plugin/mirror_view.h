@@ -18,8 +18,14 @@
 //
 // It runs only while shown anywhere (program, preview, a projector): otherwise no frame source running and
 // no threads. Knows nothing about OBS's settings or properties (plugin.cpp reads them). Threads: the
-// constructor, the destructor, SetSettings and VideoMemory on OBS's UI thread; Show and Hide on any; Tick
-// and Render on OBS's graphics thread; Width and Height on any.
+// constructor, the destructor, SetSettings, SetDemo and SetRecordLap on OBS's UI thread; Show
+// and Hide on any; Tick and Render on OBS's graphics thread; Width, Height, the demo's and lap's states and
+// EmptyStateViewers on any.
+//
+// The demo: the view plays the newest recorded lap (DemoSource) in place of the game, through the same
+// pipeline. Switching stops one frame source and starts the other, as hiding and showing the source does.
+// Record a lap: while the game's frames come, the lap recorder (LapRecorder) records the next full lap.
+// When there is no image to show, the view shows an empty state (EmptyState): how to record or play a lap.
 #pragma once
 
 #include <obs-module.h>
@@ -34,18 +40,39 @@
 #include "common/clock_sync.h"
 #include "common/footprint.h"
 #include "common/settings.h"
+#include "empty_state.h"
 #include "frame_ring.h"
+#include "lap_recorder/lap_recorder.h"
 #include "pipeline/pipeline.h"
 #include "session_worker.h"
 #include "video_memory.h"
 
 class MirrorView {
 public:
-    MirrorView(std::unique_ptr<FrameSource> frames, const MirrorSettings& settings, bool debug);
+    // `game`: the game's frames (the Pimax session or the OpenXR layer's reader).
+    MirrorView(std::unique_ptr<FrameSource> game, const MirrorSettings& settings, bool debug);
     ~MirrorView();
 
     // Core's settings, and Debug (the frame-number stamp and the frame trace together).
     void SetSettings(const MirrorSettings& settings, bool debug);
+
+    // Plays the newest recorded lap in place of the game (not saved: off when OBS starts).
+    void SetDemo(bool on) { demoWanted_ = on; }
+    bool DemoOn() const { return demoWanted_; }
+    // Records the next full lap the game's frames show, while the source is shown; off again once it is
+    // saved.
+    void SetRecordLap(bool on);
+    bool RecordingLap() const { return lapWanted_; }
+    // Looks for the recorded lap again (after it was deleted), for the empty state. Any thread: it lists the
+    // laps' folder, so not per frame.
+    void FindLap();
+    LapRecorder::State LapState() const { return recorder_.Get(); }
+    // How many places show the empty state while the view waits for the game: counted up and down by them,
+    // from any thread, and kept by them as long as they need it. With none, a view waiting for the game draws
+    // nothing.
+    std::shared_ptr<std::atomic<int>> EmptyStateViewers() const { return emptyViewers_; }
+    // The properties dialog opened: the game source reads the headset if it isn't known yet. Any thread.
+    void DialogOpened() { dialogOpened_ = true; }
 
     // OBS's show and hide: the frame source starts and stops with them.
     void Show() { wanted_ = true; }
@@ -58,21 +85,26 @@ public:
     void Tick();
     void Render();
 
-    // The properties' video memory line, for `settings` (the dialog's, maybe not applied yet).
-    std::string VideoMemory(const MirrorSettings& settings);
-
 private:
-    void KeepMemoryFacts(const FramePicker& picker);
     void FollowVideoSettings();
+    bool FollowSource(SessionWorker::State state);
+    void FollowLap();
+    bool WaitsForGame() const;
+    EmptyText EmptyTextNow();
+    void StopSession(const char* why);
+    void KeepMemoryFacts(const FramePicker& picker);
+    void KeepReportedFacts();
+    void FollowDialogOpened();
     void ToggleTrace(bool on);
     PipelineConfig ConfigOf() const;
     void FeedDrawnPose();
     void RestartDelay();
+    double StartCopyDelay();
     void StartStop();
     void Prepare(uint64_t tickNs);
     void ApplySettingChanges(const PipelineConfig& config);
     void ApplyFixedDelay(FramePicker& picker);
-    void FollowSlotCount(int slots);
+    void SizeRing();
     void OpenSlotTexture(const FrameRing::SlotInfo& slot);
     void SetImageNeed();
     void StartFootprint();
@@ -81,12 +113,23 @@ private:
     void DrawStamp();
     void DestroyTextures();
 
-    std::unique_ptr<FrameSource> frameSource_;  // the frames and poses
+    std::unique_ptr<FrameSource> gameSource_, demoSource_;
+    // The frames and poses: the game's or the demo's (the graphics thread switches it while stopped).
+    FrameSource* frameSource_ = nullptr;
     FrameRing ring_;
     // OBS's show/hide set `wanted_`; the graphics thread asks the session worker to start and stop
     // (StartStop), never waiting for it.
-    SessionWorker session_{frameSource_.get(), &ring_};
+    SessionWorker session_{nullptr, &ring_};
     std::atomic<bool> wanted_{false};
+    std::atomic<bool> demoWanted_{false}, lapWanted_{false};
+    std::atomic<bool> telemetryHeld_{false};  // for the lap recorder (Telemetry::Acquire)
+    LapRecorder recorder_;
+    std::atomic<bool> lapRecorded_{false};  // a lap is recorded (FindLap)
+    EmptyState emptyState_;                 // graphics thread
+    std::shared_ptr<std::atomic<int>> emptyViewers_ = std::make_shared<std::atomic<int>>(0);
+    std::atomic<bool> dialogOpened_{false};  // DialogOpened
+    bool headsetUnread_ = false;  // graphics thread: the game source couldn't read the headset (or start)
+    bool lapStarted_ = false;     // graphics thread: the recorder was started for this run of the source
     bool started_ = false;        // graphics thread: the session runs and its per-start state is set up
     uint64_t framesAtStart_ = 0;  // graphics thread: FrameSource::FramesArrived() when it started
 
@@ -97,8 +140,8 @@ private:
     double obsFramePeriod_ = 0;  // graphics thread: OBS's video frame period (s; 0: unknown), likewise
     bool stamp_ = false;
     bool trace_ = false;  // debug: write a frame trace (see ToggleTrace)
-    // What the video memory line needs, written by the graphics thread at each tick (KeepMemoryFacts)
-    // and cleared when the source stops, read by the UI thread (VideoMemory).
+    // What the empty state's facts need, written by the graphics thread as the game source starts
+    // (KeepReportedFacts) and at each tick (KeepMemoryFacts). Kept when the source stops.
     std::mutex factsMutex_;
     MemoryFacts facts_;
 

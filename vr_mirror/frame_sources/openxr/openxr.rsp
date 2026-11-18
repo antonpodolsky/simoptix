@@ -1,2 +1,3 @@
 ..\frame_sources\openxr\openxr_source.cpp
 ..\frame_sources\openxr\openxr_images.cpp
+..\frame_sources\openxr\openxr_headset_test.cpp

@@ -16,8 +16,10 @@ if not exist obj mkdir obj
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\core\build\embed_text.ps1 ^
    ..\core\pipeline\5_warp\warp.hlsli obj\warp_hlsli.h kWarpHlsli || exit /b 1
 cl /nologo /std:c++17 /EHsc /O2 /W3 /DUNICODE /D_UNICODE /DNOMINMAX /Fo:obj\ ^
-   /I..\.. /I..\core /Iobj ^
+   /I..\.. /I..\core /I..\..\third_party\openxr /Iobj ^
    main.cpp window_output.cpp mirror_app_settings.cpp frame_hold.cpp precise_wait.cpp ^
    @..\core\build\common.rsp @..\core\build\pipeline.rsp @..\core\build\adapters.rsp ^
-   @..\frame_sources\pimax\pimax.rsp @..\frame_sources\openxr\openxr.rsp /Fe:%OUT% ^
-   /link d3d11.lib dxgi.lib d3dcompiler.lib winmm.lib user32.lib dwmapi.lib || exit /b 1
+   @..\frame_sources\pimax\pimax.rsp @..\frame_sources\openxr\openxr.rsp @..\frame_sources\demo\demo.rsp ^
+   ..\..\shared\local_files.cpp ..\..\shared\text_raster.cpp /Fe:%OUT% ^
+   /link d3d11.lib dxgi.lib d3dcompiler.lib winmm.lib user32.lib dwmapi.lib ^
+   mfplat.lib mfreadwrite.lib mfuuid.lib ole32.lib propsys.lib advapi32.lib dwrite.lib || exit /b 1

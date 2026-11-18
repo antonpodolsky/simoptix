@@ -136,7 +136,7 @@ assumes.
      Remove words, never these.
 7. **No code names in text for non-programmers.** A code name is the name of a class, function,
    file or setting key, such as `PimaxSource` or `kDrawnPose`. In the root README and the
-   plugin READMEs, say what the thing is instead: "the Pimax source", "the Smoothing setting". Give a
+   plugin READMEs, say what the thing is instead: "the Pimax source", "the Stabilization Method setting". Give a
    file path only where the reader has to open that file. In READMEs for contributors, code names
    go in tables, next to a plain description.
 8. **Avoid "picture" as a technical word.** Use the precise one:

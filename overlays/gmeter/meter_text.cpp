@@ -11,7 +11,7 @@
 #include <cwchar>
 #include <vector>
 
-#include "text_raster.h"
+#include "shared/text_raster.h"
 
 namespace {
 

@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "text_raster.h"
+#include "shared/text_raster.h"
 
 #include <windows.h>
 #include <dwrite_2.h>

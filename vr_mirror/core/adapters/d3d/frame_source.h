@@ -30,6 +30,16 @@
 // at the OpenXR layer's full 5084x4168.
 constexpr double kImageMemory = 4.7e9;
 
+// What a source's runtime tells of the headset with no game running: the image its frames will have, and
+// what else it can tell then.
+struct HeadsetReport {
+    uint32_t imageWidth = 0, imageHeight = 0;  // the image of a frame of this source (pixels); 0: nothing
+    bool hasEye = false;                       // the left eye below is the runtime's
+    EyeInfo eye;
+    double period = 0;    // the refresh period (s); 0: not reported
+    bool failed = false;  // the source tried to read the headset and couldn't (off, or its runtime closed)
+};
+
 class FrameSource : public PoseSource {
 public:
     virtual ~FrameSource() = default;
@@ -49,6 +59,18 @@ public:
     virtual LUID AdapterLuid() const = 0;
     // The left eye the images show.
     virtual EyeInfo Eye() const = 0;
+    // Whether its images are half the size the game draws (Pimax's client mirror); false: the game's own.
+    virtual bool HalvesImages() const { return false; }
+    // The copy delay a host's frame picker can start with when the source knows it (s;
+    // FramePicker::SetStartCopyDelay); 0 if it doesn't.
+    virtual double StartCopyDelayS() const { return 0; }
+    // What the runtime reported of the headset when the source last started, game or no game; nothing by
+    // default. Any thread, once Start has returned.
+    virtual HeadsetReport Reported() const { return {}; }
+    // Asks the next Start to show the headset a test of the source's own and read it, if no game is in VR
+    // (the OpenXR source: a second of "Collecting headset info"). Others read it as they start anyway. Only
+    // the OBS plugin asks, as its properties dialog opens. Any thread.
+    virtual void RequestHeadsetTest() {}
     // The source's clock (seconds): the frames', the poses' and the arrival timing's. Cheap.
     virtual double Now() const = 0;
 
@@ -75,6 +97,21 @@ public:
     // The size (pixels) a copy of the newest frame's image takes with the needs SetImageNeed would get;
     // false until the source has had an image. Any thread.
     virtual bool CopySize(float width, double maxBytes, uint32_t* copyWidth, uint32_t* copyHeight) = 0;
+    // The size (pixels) a copy of an image of this source, `imageWidth` x `imageHeight`, takes with the
+    // needs SetImageNeed would get, whether or not the source runs. By default the image's own: a source
+    // that copies its images whole. Any thread.
+    virtual void StoredSize(
+        uint32_t imageWidth,
+        uint32_t imageHeight,
+        float width,
+        double maxBytes,
+        uint32_t* copyWidth,
+        uint32_t* copyHeight
+    ) const {
+        (void)width, (void)maxBytes;
+        *copyWidth = imageWidth;
+        *copyHeight = imageHeight;
+    }
     // The host's device and context (the thread that owns the context).
     // Opens the source's images on `device` (again, if the source re-created them): call every 2 s.
     virtual void OpenImages(ID3D11Device* device) = 0;

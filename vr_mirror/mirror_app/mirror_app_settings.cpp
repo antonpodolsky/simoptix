@@ -44,6 +44,7 @@ MirrorAppSettings LoadSettings() {
     wchar_t source[32];
     GetPrivateProfileStringW(L"mirror", L"frame_source", L"pimax", source, 32, IniPath().c_str());
     s.frameSource = _wcsicmp(source, L"openxr") == 0 ? MirrorAppFrameSource::kOpenXr
+                    : _wcsicmp(source, L"demo") == 0 ? MirrorAppFrameSource::kDemo
                                                      : MirrorAppFrameSource::kPimax;
 
     return s;

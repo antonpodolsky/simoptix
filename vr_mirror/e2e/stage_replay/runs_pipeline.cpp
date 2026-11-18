@@ -282,13 +282,14 @@ namespace stage_replay {
     ) {
         printf(
             "pipeline: arrival_timing %s, drawn_pose %s, frame_picker %s, smoothing %s, warp %s; "
-            "zoom %.2f; %s\n",
+            "zoom %.2f, strength %.2f; %s\n",
             NameOf(config.arrivalTiming),
             NameOf(config.drawnPose),
             NameOf(config.framePicker),
             NameOf(config.smoothing),
             NameOf(config.warp),
             settings.zoom,
+            settings.strength,
             tickHz > 0 ? "OBS ticks" : "window"
         );
 

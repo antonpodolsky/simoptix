@@ -2,6 +2,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "pipeline/4_smoothing/lookahead_smoothing.h"
 
+void LookaheadSmoothing::SetStrength(float strength) {
+    if (strength == strength_) {
+        return;
+    }
+
+    strength_ = strength;
+    params_ = LookaheadParams();
+    params_.tauStillS *= strength;
+    params_.tauMoveS *= strength;
+}
+
 void LookaheadSmoothing::Window(double period, int* behind, int* ahead) const {
     *behind = LookaheadSmoother::Behind(params_, period);
     *ahead = LookaheadSmoother::Ahead(params_, period);

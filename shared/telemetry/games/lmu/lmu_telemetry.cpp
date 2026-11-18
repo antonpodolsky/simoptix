@@ -31,17 +31,23 @@ namespace {
         return h;
     }
 
-    // Copies the session state under LMU's lock (all but connected, t and session).
-    void CopySession(const SharedMemoryLayout* layout, SessionState* r) {
+    // Copies the session state under LMU's lock (all but connected, t and session), read at `now`
+    // (performance-counter seconds).
+    void CopySession(const SharedMemoryLayout* layout, double now, SessionState* r) {
         const SharedMemoryTelemetryData& tel = layout->data.telemetry;
         const ScoringInfoV01& scoring = layout->data.scoring.scoringInfo;
         r->kind = SessionKindFromLmu(scoring.mSession);
         r->phase = SessionPhaseFromLmu(scoring.mGamePhase);
         r->driving = scoring.mInRealtime;
         int finishStatus = -1;
+        r->inPits = false;
+
         for (long i = 0; i < scoring.mNumVehicles && i < 104; i++) {
-            if (layout->data.scoring.vehScoringInfo[i].mIsPlayer) {
-                finishStatus = layout->data.scoring.vehScoringInfo[i].mFinishStatus;
+            const VehicleScoringInfoV01& vehicle = layout->data.scoring.vehScoringInfo[i];
+
+            if (vehicle.mIsPlayer) {
+                finishStatus = vehicle.mFinishStatus;
+                r->inPits = vehicle.mInPits || vehicle.mInGarageStall;
                 break;
             }
         }
@@ -50,9 +56,18 @@ namespace {
         const int idx = tel.playerVehicleIdx;
         r->hasCar = tel.playerHasVehicle && idx >= 0 && idx < 104;
         r->speed = 0;
+        r->lap = -1;
+        r->lapStart = 0;
+
         if (r->hasCar) {
-            const TelemVect3& v = tel.telemInfo[idx].mLocalVel;
+            const TelemInfoV01& car = tel.telemInfo[idx];
+            const TelemVect3& v = car.mLocalVel;
             r->speed = float(std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z));
+            r->lap = static_cast<int>(car.mLapNumber);
+
+            // The lap's start on the game's session clock, put on the performance counter by how long ago
+            // it was at the physics step read now.
+            r->lapStart = now - (car.mElapsedTime - car.mLapStartET);
         }
     }
 
@@ -143,11 +158,12 @@ namespace {
             return GameRead::Nothing;
         }
 
+        const double now = QpcNow();
         double elapsed = -1;
         long sessionType = 0;
         char track[64];
         const bool has = Copy(&out->car, &elapsed, &sessionType, track);
-        CopySession(layout_.Get(), &out->session);
+        CopySession(layout_.Get(), now, &out->session);
         lock_->Unlock();
 
         out->hasCar = has && elapsed != lastElapsed_;  // a car, and a new physics step
@@ -157,7 +173,7 @@ namespace {
             out->sessionClock = elapsed;
         }
 
-        out->session.t = out->car.t = QpcNow();
+        out->session.t = out->car.t = now;
         return GameRead::Update;
     }
 

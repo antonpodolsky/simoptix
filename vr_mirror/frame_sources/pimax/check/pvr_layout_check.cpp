@@ -118,6 +118,10 @@ CHECK_FIELD(PvrFov, downTan, pvrFovPort, DownTan);
 CHECK_FIELD(PvrFov, leftTan, pvrFovPort, LeftTan);
 CHECK_FIELD(PvrFov, rightTan, pvrFovPort, RightTan);
 
+CHECK_TYPE(PvrSize, pvrSizei);
+CHECK_FIELD(PvrSize, w, pvrSizei, w);
+CHECK_FIELD(PvrSize, h, pvrSizei, h);
+
 CHECK_TYPE(PvrDisplayInfo, pvrDisplayInfo);
 CHECK_FIELD(PvrDisplayInfo, refreshRate, pvrDisplayInfo, refresh_rate);
 CHECK_FIELD(PvrDisplayInfo, adapterLuid, pvrDisplayInfo, luid);
@@ -147,8 +151,10 @@ CHECK_ENTRY(getEyeDisplayInfo);
 CHECK_ENTRY(getEyeRenderInfo);
 CHECK_ENTRY(getHmdStatus);
 CHECK_ENTRY(getTrackingState);
+CHECK_ENTRY(getFloatConfig);
 CHECK_ENTRY(setIntConfig);
 CHECK_ENTRY(getPredictedDisplayTime);
+CHECK_ENTRY(getFovTextureSize);
 CHECK_ENTRY(getInt64Config);
 static_assert(SameCall<PvrGetInterface, getPvrInterface_Fn>::value, "getPvrInterface: called differently");
 

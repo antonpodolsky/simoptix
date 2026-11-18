@@ -45,18 +45,31 @@ bool FrameRing::Start(FrameSource* source) {
         }
     }
 
-    if (FAILED(D3D11CreateDevice(
+    // With video support: the demo decodes its images on this device (DemoSource). Without it if the adapter
+    // has none, for the game's sources.
+    bool made = false;
+
+    for (const UINT flags : {static_cast<UINT>(D3D11_CREATE_DEVICE_VIDEO_SUPPORT), 0u}) {
+        const HRESULT hr = D3D11CreateDevice(
             found.Get(),
             found ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,
             nullptr,
-            0,
+            flags,
             nullptr,
             0,
             D3D11_SDK_VERSION,
             &device_,
             nullptr,
             &context_
-        ))) {
+        );
+
+        if (SUCCEEDED(hr)) {
+            made = true;
+            break;
+        }
+    }
+
+    if (!made) {
         return false;
     }
 
@@ -414,7 +427,7 @@ void FrameRing::TakeNewDrawnPose() {
 
 // Hands finished copies to OBS (never waits, never submits work). True while any is pending.
 bool FrameRing::CheckCopies() {
-    bool pending = false;
+    bool pending = false, finished = false;
     for (int i = 0; i < kMaxSlots; i++) {
         if (!inFlight_[i]) {
             continue;
@@ -425,10 +438,15 @@ bool FrameRing::CheckCopies() {
         }
 
         inFlight_[i] = false;
+        finished = true;
         std::lock_guard<std::mutex> lock(mutex_);
         info_[i].frame = inFlightFrame_[i];
         info_[i].ready = source_->Now();
         info_[i].valid = true;
+    }
+
+    if (finished) {
+        SetEvent(copiedEvent_.Get());
     }
 
     return pending;

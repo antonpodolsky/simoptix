@@ -82,6 +82,9 @@ public:
     // Copies all kMaxSlots entries into `out` (nothing allocated); those beyond the slots in use are
     // never valid.
     void Snapshot(SlotInfo out[kMaxSlots]);
+    // Signalled (auto-reset) when copies are finished, for one waiter (the recorded lap's recorder). Kept
+    // across Stop and Start.
+    HANDLE CopiedEvent() const { return copiedEvent_.Get(); }
     // Graphics thread: use `count` slots (4 to kMaxSlots) from the next copy on (more: made as they are
     // first used); the copy thread frees the textures of the others. The caller should close its own
     // handles to them too, or their memory stays allocated.
@@ -128,6 +131,7 @@ private:
     int next_ = 0;
     uint32_t generation_ = 0;
     UniqueHandle wake_;
+    UniqueHandle copiedEvent_{CreateEventW(nullptr, FALSE, FALSE, nullptr)};
     CallStats statLookTime_;                 // the drawn pose's time, for the 10 s stats (mutex_)
     std::atomic<int> wakeups_{0};            // copy-thread passes, for the 10 s stats
     std::atomic<int> wantSlots_{kMaxSlots};  // SetSlotCount

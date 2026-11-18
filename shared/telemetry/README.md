@@ -1,8 +1,8 @@
 # Telemetry (shared by both plugins)
 
 This folder reads the game's telemetry: what the car is doing (G-forces, speed, pedals, ABS and TC)
-and where the session is (practice or race, the start lights, the finish). The G-meter (Overlays) and
-race auto-record read it. Both plugins compile this folder in.
+and where the session is (practice or race, the start lights, the finish). The G-meter (Overlays), race
+auto-record and the lap recorder for VR Mirror's demo read it. Both plugins compile this folder in.
 
 ## Terms
 
@@ -69,6 +69,8 @@ Every overlay reads the same description of the car and the session, whichever g
 - SI units
 - the session in plain terms: practice, qualifying or race, the formation lap, the start lights, green,
   and so on, plus the player's result
+- the player's lap: its number, when the car crossed the line to start it, and whether the car is in
+  the pits. VR Mirror's lap recorder finds the lap for its demo with it
 
 Each game's own reading code turns the game's units, axes and codes into these. For LMU that is
 `games\lmu\lmu_convert.h` (LMU's car axes are +x left, +y up, +z rear). The overlays are written in the model's terms. A

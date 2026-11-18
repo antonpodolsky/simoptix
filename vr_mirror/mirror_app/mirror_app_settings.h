@@ -10,11 +10,11 @@
 #include "pipeline/pipeline_config.h"
 
 // Where the frames come from: Pimax's client mirror, or the OpenXR layer in the game.
-enum class MirrorAppFrameSource { kPimax, kOpenXr };
+enum class MirrorAppFrameSource { kPimax, kOpenXr, kDemo };
 
 struct MirrorAppSettings {
     MirrorSettings core;
-    MirrorAppFrameSource frameSource = MirrorAppFrameSource::kPimax;  // frame_source: pimax, openxr
+    MirrorAppFrameSource frameSource = MirrorAppFrameSource::kPimax;  // frame_source: pimax, openxr, demo
     int outputWidth = 2560;  // window client size at startup; match the OBS canvas
     int outputHeight = 1440;
     // SIMOPTIX_VR_MIRROR_TRACE is set (main): the pipeline's observer writes the frame trace
