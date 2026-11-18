@@ -30,7 +30,7 @@ closer at one moment. They need the trace that the Pimax source's **Debug** sett
 | `episodes.py` | The plugin's re-timed stretches in a recording, from the trace |
 | `window.py` | A stretch of video against the trace: the true lag per frame, from the cockpit's motion |
 | `replica.py` | The slot check replayed offline on a recording's real images |
-| `export_replay.py` | A stretch of the trace as an e2e replay file |
+| `export_replay.py` | A stretch of the trace as an e2e replay file, from the Pimax source's trace or the OpenXR source's |
 | `export_thumbs.py` | A replay's real thumbnails, rebuilt from the recording (`<replay>.thumbs.png`) |
 | `thumbs.py` | Rebuilding the mirror app's thumbnails from a recording (used by `replica.py` and `export_thumbs.py`) |
 | `e2e_frames.py` | The frames of an e2e replay run that came out from the wrong pose |

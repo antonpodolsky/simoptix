@@ -155,6 +155,24 @@ e2e on the same thumbnails (`findings\e2e.md`, "Real thumbnails in replays").
 
 `reference\e2e.md`, "Adding a replay of a real session", has the rest of the steps and the file format.
 
+## A real moment through the pipeline
+
+This runs core's pipeline offline on a moment of a real session, to see what each smoothing or setting
+would have shown there.
+
+1. Export the stretch as a replay, as above, with a few seconds either side. The look-ahead plans half
+   a second either side of each moment. With the OpenXR source's trace, the OpenXR source has no head
+   poses of its own. So each frame's drawn pose is the head pose at its drawn slot and that slot's
+   prediction, as the source feeds the pipeline live.
+2. Run it with the session's settings, and write every output:
+   ```
+   vr_mirror\e2e\bin\stage_replay.exe --pipeline --arrival_timing reported --drawn_pose reported --ticks <OBS fps> --zoom <zoom> --eye <left>,<right>,<up>,<down> --replay <replay>.csv --dump <out>.csv
+   ```
+   `--eye` takes the left view's field of view from the OpenXR layer's log (its `fov` line). Drop
+   `--arrival_timing` and `--drawn_pose` for a Pimax session.
+3. Check the run at the session's own settings against the trace first: its views should match the
+   trace's `view` at the same moments (`view_time`). Then compare other settings with it.
+
 ## Older traces
 
 The columns are in `vr_mirror\core\pipeline\observer\README.md`, and the formats the scripts read in

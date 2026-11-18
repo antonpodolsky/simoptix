@@ -111,7 +111,7 @@ the same numbers.
 ### The whole pipeline: `--pipeline`
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --pipeline [--smoothing instant --drawn_pose cockpit ...] [--zoom 1.2] [--ticks 60] [--input NAME ...]
+vr_mirror\e2e\bin\stage_replay.exe --pipeline [--smoothing instant --drawn_pose cockpit ...] [--zoom 1.2] [--ticks 60] [--input NAME ...] [--replay FILE ...] [--eye L,R,U,D] [--dump FILE]
 ```
 
 It runs the whole pipeline with any mix of stages. The settings' configuration (Look-ahead, the slot
@@ -130,6 +130,16 @@ check) applies, with any stage replaced by its flag, named after the config's fi
 - The run draws as the mirror app's window, or with `--ticks HZ` as the OBS plugin's ticks, with the
   frames picked by the frame picker.
 - It runs over the replays and motions. `--input NAME` picks some.
+- `--replay FILE` runs over that replay file instead, named by its file name. It may be given more
+  than once. A replay exported from an OpenXR session runs with `--arrival_timing reported
+  --drawn_pose reported`, as the OpenXR source does (`reference\recording_analysis.md`, "A real moment
+  through the pipeline").
+- `--eye L,R,U,D` sets the game's field of view, in degrees from straight ahead, as the OpenXR
+  layer's log gives it. The eye is then not turned against the head. Without it, the run uses the
+  e2e fake's eye.
+- `--dump FILE` writes one line per output: the input's name, the moment the view stands for, the
+  followed, view and image poses (x, y, z, w each), the edge stops and plans so far, and how far the
+  view trails the shown image against its room there (degrees each).
 - The slot check and the cockpit correction are given the replays' true slots' poses (`arrival_slot`:
   the slot each frame arrived for). To replay them on the real thumbnails, use `--stage drawn_pose`.
 
@@ -256,7 +266,9 @@ It runs the frame picker as the OBS plugin does: the fixed delay, unless `--fram
 2. **Export the moment.** Find the moment in the recording, and match its stamped frame numbers to the
    trace's `_ticks.csv`. Cut the matching rows of `_pimax.csv` into a file in `vr_mirror\e2e\replay\`.
    The format is in the header of `queued_late_frames.csv`. `vr_mirror\recording_analysis\` does these
-   steps (`episodes.py`, `window.py`, `export_replay.py`: `reference\recording_analysis.md`).
+   steps (`episodes.py`, `window.py`, `export_replay.py`: `reference\recording_analysis.md`). From an
+   OpenXR session's trace, `export_replay.py` writes each frame's drawn pose as the head pose and the
+   prediction instead, and says so in the file's header.
 3. **Set the lag column.** Each frame's `lag` is the slot it was really rendered for, relative to the
    one the mirror app assigned. It comes from matching the recording's cockpit motion against the
    predictions for each slot. Frames that look normal have lag 0.
