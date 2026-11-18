@@ -356,6 +356,8 @@ void OpenXrSource::Run() {
     while (running_) {
         wakeups_++;
         if (!header_) {
+            FollowIdle(Now());  // the game gone sends no frames either
+
             if (session_event_) {
                 ResetEvent(session_event_.Get());  // before looking: a session starting now sets it again
             }
@@ -409,14 +411,19 @@ void OpenXrSource::Run() {
         if (report.noise) {
             CoreLog("OpenXR: arrival timing noise removed: %.2f ms rms", report.noiseMs);
         }
-        if (!idle_ && now - lastFinished_ > kIdleAfter) {
-            idle_ = true;
-            fps_ = 0;
-            CoreLog("OpenXR: no game frames for %.0f s: idle", kIdleAfter);
-        }
-
+        FollowIdle(now);
         HANDLE wait[2] = {stop_.Get(), layerEvent_.Get()};
         WaitForMultipleObjects(layerEvent_ ? 2 : 1, wait, FALSE, 500);
+    }
+}
+
+// Idle once no frame has finished for kIdleAfter: the game stalled, or quit and closed the layer's memory.
+// Source time `now`. Reader thread.
+void OpenXrSource::FollowIdle(double now) {
+    if (!idle_ && now - lastFinished_ > kIdleAfter) {
+        idle_ = true;
+        fps_ = 0;
+        CoreLog("OpenXR: no game frames for %.0f s: idle", kIdleAfter);
     }
 }
 

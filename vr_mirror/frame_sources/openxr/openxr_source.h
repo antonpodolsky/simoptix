@@ -131,6 +131,7 @@ private:
     static constexpr int kWaiting = 8;
 
     void Run();
+    void FollowIdle(double now);
     bool OpenShare();
     void CloseShare(const char* why);
     void ReadClock();
