@@ -64,6 +64,11 @@ native resolution") has more canvases and zooms.
 - **Unsigned,** the layer is refused by EAC, and online play is disabled as a result.
 - **Signed with a code signing certificate Windows trusts,** the layer loads and online is enabled.
 
+## How SimOptix is built
+
+SimOptix's development is AI-assisted, using a strict workflow to ensure code and product quality (read more in `HOW_SIMOPTIX_IS_BUILT.md`).
+Author is a software enginneer with over 15 years of experience.
+
 ## Requirements
 
 To run:
@@ -143,11 +148,6 @@ Each part's README describes what it does, its settings and its files:
 for the code and the same way of working in full, written for AI coding agents and people alike, with
 what was measured and tried so far. `.agents\skills\docs\` holds the rules for writing the docs.
 `AGENTS.md` points every coding agent at these skills.
-
-## How SimOptix is built
-
-SimOptix's development is AI-assisted, using a strict workflow that follows best software engineering practices (read more in `HOW_SIMOPTIX_IS_BUILT.md`).
-Author is a software enginneer with over 15 years of experience.
 
 ## Licence
 
