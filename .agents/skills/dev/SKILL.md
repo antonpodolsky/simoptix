@@ -411,6 +411,11 @@ One convention, everywhere. Check every new name against it, and rename what bre
   Everything a plugin or the layer writes goes under `%LOCALAPPDATA%\simoptix\` (traces in its
   `traces\`). `shared\local_files.*` names each such file `<kind>_<date>_<time>...` and keeps the newest
   10 of each kind. A new kind of file is added there.
+  - The one exception is the files on a GitHub Release: `SimOptixSetup-<version>.exe`,
+    `SimOptixOBSPlugins-<version>.zip` and `SimOptixOpenXRLayer-<version>.zip`. They are named the way
+    the downloads of Windows programs usually are (`OculusSetup.exe`, `SimHubSetup_<version>.exe`),
+    so people who download them know what each is. The files inside keep their names
+    (`simoptix_setup.exe`, the plugins' DLLs, the layer's).
 - **What OBS shows is "SimOptix: <what>", matching the id.** `simoptix_pimax_mirror` is "SimOptix:
   Pimax Mirror", `simoptix_openxr_mirror` is "SimOptix: OpenXR Mirror", and `simoptix_gmeter_overlay`
   is "SimOptix: G-Meter Overlay".
