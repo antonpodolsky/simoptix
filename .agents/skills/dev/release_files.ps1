@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Packs a release's built files for its GitHub Release (reference\release.md, step 8):
-#   simoptix_setup_<version>.exe         SimOptix Setup, which carries both plugins and the layer
+#   SimOptixSetup-<version>.exe          SimOptix Setup, which carries both plugins and the layer
 #   simoptix_obs_plugins_<version>.zip   both plugins, laid out as in OBS's plugin folder,
 #                                        C:\ProgramData\obs-studio\plugins: <name>\bin\64bit\<name>.dll
 #                                        and <name>\data\manifest.json
@@ -69,7 +69,7 @@ foreach ($script in 'install.ps1', 'uninstall.ps1', 'uninstall.bat') {
     Copy-Item (Join-Path $root "vr_mirror\frame_sources\openxr\$script") $layerFolder
 }
 
-$setupCopy = Join-Path $OutputPath "simoptix_setup_$version.exe"
+$setupCopy = Join-Path $OutputPath "SimOptixSetup-$version.exe"
 $pluginsZip = Join-Path $OutputPath "simoptix_obs_plugins_$version.zip"
 $layerZip = Join-Path $OutputPath "simoptix_openxr_layer_$version.zip"
 Copy-Item $setup $setupCopy -Force
