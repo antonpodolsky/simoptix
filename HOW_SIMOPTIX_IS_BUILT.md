@@ -9,8 +9,7 @@ The workflow is tailored to a wide type of coding agents.
   skills.
 - **The code style skill** (`.agents\skills\code-style\SKILL.md`) holds the rules for how the code
   reads, with examples from the repo and a review checklist.
-- **The docs skill** (`.agents\skills\docs\SKILL.md`) holds the rules for the docs: who reads each
-  level, plain words, and only what exists.
+- **The docs skill** (`.agents\skills\docs\SKILL.md`) holds the rules for writing docs.
 - Each change is made in its own git worktree, built, tested, and committed as one small commit. Its
   subject says what changed, and its body says why.
 - Docs change in the same commit as the code they describe.
