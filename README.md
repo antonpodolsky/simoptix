@@ -66,7 +66,7 @@ native resolution") has more canvases and zooms.
 
 ## How SimOptix is built
 
-SimOptix's development is AI-assisted, using a strict workflow to ensure code and product quality (read more in `HOW_SIMOPTIX_IS_BUILT.md`).
+SimOptix's development is AI-assisted, using a strict workflow to ensure code and product quality (read more in `HOW_SIMOPTIX_IS_BUILT.md`).  
 Author is a software enginneer with over 15 years of experience.
 
 ## Requirements
