@@ -412,6 +412,11 @@ One convention, everywhere. Check every new name against it, and rename what bre
   Everything a plugin or the layer writes goes under `%LOCALAPPDATA%\simoptix\` (traces in its
   `traces\`). `shared\local_files.*` names each such file `<kind>_<date>_<time>...` and keeps the newest
   10 of each kind. A new kind of file is added there.
+  - The one exception is the files on a GitHub Release: `SimOptixSetup-<version>.exe`,
+    `SimOptixOBSPlugins-<version>.zip` and `SimOptixOpenXRLayer-<version>.zip`. They are named the way
+    the downloads of Windows programs usually are (`OculusSetup.exe`, `SimHubSetup_<version>.exe`),
+    so people who download them know what each is. The files inside keep their names
+    (`simoptix_setup.exe`, the plugins' DLLs, the layer's).
 - **What OBS shows is "SimOptix: <what>", matching the id.** `simoptix_pimax_mirror` is "SimOptix:
   Pimax Mirror", `simoptix_openxr_mirror` is "SimOptix: OpenXR Mirror", and `simoptix_gmeter_overlay`
   is "SimOptix: G-Meter Overlay".
@@ -772,6 +777,7 @@ Record what each start of the game showed in `findings\openxr.md`.
 
   | Check | What it runs |
   |---|---|
+  | Changes | Lists the files the pull request changes, and says whether Build runs |
   | Build | Every part, with no warnings (`shared\build\build_all.ps1`, step 3) |
   | Format | clang-format and ruff, at the versions step 3 names |
   | Docs | `check_docs.py` |
@@ -780,9 +786,15 @@ Record what each start of the game showed in `findings\openxr.md`.
   | Changelog | The type label and the Changelog section as a release reads them (`release.py --check-pr`) |
   | Description | `check_public_text.py` on the description |
 
-  `.github\workflows\checks.yml` holds the first five, which also run on each push to `main`. Build
+  `.github\workflows\checks.yml` holds the first six, which also run on each push to `main`. Build
   builds once and uploads what it built. Pipeline output waits for it and runs those files, so it
-  tests what Build built, and is skipped when it fails.
+  tests what Build built, and is skipped when Build fails or is skipped.
+
+  On a pull request that changes only Markdown files (`*.md`, anywhere in the repo), Build and Pipeline
+  output are skipped, because no build reads those files. Any other changed file runs both, the
+  workflows and the scripts in `.agents\skills\` included. Format, Docs and Public text run on every
+  pull request, and a push to `main` runs every check. GitHub counts a skipped check as passed.
+
   `.github\workflows\pull_request.yml` holds Changelog and Description, which also run each time the
   description or the label changes. The docs and public-text checks fail only on what their scripts
   fail on, and their lines to review show in the run.
@@ -798,6 +810,15 @@ Record what each start of the game showed in `findings\openxr.md`.
   title, its description from the template, which covers this change only, and its one type label,
   which feeds the changelog. The release script refuses a release while a pull request since the last
   one has no type label.
+- **The pull request names the issues it closes and the issues it works on.** Before writing it, look
+  through the open issues (`gh issue list --state open`) and read the "Done when" of each one the
+  change touches. The description starts with one line per issue:
+  - `Fixes #<number>` for each issue whose "Done when" is met once the pull request is merged. GitHub
+    closes that issue at the merge.
+  - `Part of #<number>` for each issue it works on and leaves open.
+
+  The pull-requests skill ("The issues it closes") has the form GitHub needs, and the check after
+  posting.
 - Until the remote exists, there are two cases:
   - If `main` isn't checked out anywhere, run `git push . <branch>:main` (fast-forward only).
   - If `main` is checked out in the main folder and that folder's tracked files are clean, run

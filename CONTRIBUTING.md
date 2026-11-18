@@ -168,6 +168,7 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 - **Names.**
   - A part's name is its folder's: `frame_sources\pimax\` holds `pimax_source.*` and `PimaxSource`.
   - File names and the names programs see are snake_case with `simoptix_`, and never have hyphens.
+    The one exception is the files on a GitHub Release, such as `SimOptixSetup-<version>.exe`.
   - "PVR" names the code that wraps Pimax's client interface. "Pimax" names the rest: the frame source,
     the headset and Pimax's software.
   - What OBS shows is "SimOptix: <what>", matching the id.
@@ -194,9 +195,15 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   builds, the e2e results if `vr_mirror\core\` or the mirror app changed, and what you checked by hand.
   The description covers that change only. How the work went and details of your own PC stay out.
   Plans, next steps and work on other branches go in an issue.
+- Start the description with the issues it closes and works on, one line each. `Fixes #<number>`
+  names an issue whose "Done when" the change meets, and GitHub closes it at the merge. Give each
+  issue its own line, because in `Fixes #12, #27` GitHub closes only #12. `Part of #<number>` names an
+  issue the change works on and leaves open.
 - GitHub checks each pull request, and a failing check fails it: Build (every part, with no warnings),
   Format (clang-format and ruff), Docs, Public text and Pipeline output (the stage replay's output
-  against `vr_mirror\e2e\stage_replay\golden_expected.txt`), in `.github\workflows\checks.yml`. Changelog checks the label and the Changelog section the way a
+  against `vr_mirror\e2e\stage_replay\golden_expected.txt`), in `.github\workflows\checks.yml`. A pull
+  request that changes only Markdown files skips Build and Pipeline output, because no build reads
+  them, and runs the other checks. Changelog checks the label and the Changelog section the way a
   release reads them, and Description the description's public text, each time either changes
   (`.github\workflows\pull_request.yml`). The Changelog section ends the description, so nothing goes
   after it. GitHub's runners have no LMU, no Pimax SDK, no headset and no graphics card, so the e2e

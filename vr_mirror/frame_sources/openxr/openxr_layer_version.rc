@@ -3,6 +3,6 @@
 // The version resource of XR_APILAYER_SIMOPTIX_frame_source.dll (shared\build\version_info.rc).
 
 #define SIMOPTIX_FILE_NAME "XR_APILAYER_SIMOPTIX_frame_source.dll"
-#define SIMOPTIX_FILE_DESCRIPTION "SimOptix: VR Mirror's OpenXR layer for Le Mans Ultimate"
+#define SIMOPTIX_FILE_DESCRIPTION "SimOptix API layer"
 
 #include "shared/build/version_info.rc"

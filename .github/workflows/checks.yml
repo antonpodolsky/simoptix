@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # The checks GitHub runs on each pull request and each push to main. Each is a job, and a pull request
 # passes only when every one passes:
+#   Changes          the files a pull request changes, and whether Build runs
 #   Build            every part, with no warnings (shared\build\build_all.ps1)
 #   Format           clang-format and ruff
 #   Docs             check_docs.py
@@ -9,7 +10,11 @@
 #   Pipeline output  stage_replay's golden file against vr_mirror\e2e\stage_replay\golden_expected.txt.
 #                    Any change fails it. A change that is meant commits a new golden_expected.txt
 # Build builds once, and uploads what it built. Pipeline output waits for it, and runs those files, so
-# it tests what Build built, and is skipped when it fails.
+# it tests what Build built, and is skipped when it fails or is skipped.
+# Build and Pipeline output are skipped on a pull request that changes only Markdown files, which no
+# build reads (the Changes job). GitHub counts a skipped job as passed, also for a required check. A
+# workflow left out by on.pull_request.paths reports nothing, and a required check would wait forever.
+# Format, Docs and Public text run on every pull request, and every job runs on each push to main.
 # The e2e suite isn't here: on GitHub's runners, with no graphics card, the mirror app drew 9.5 to 28.5
 # fps against the 75 to 85 its scenarios ask for (findings\e2e.md). It runs by hand (dev skill, step 5).
 # Nor is the local files test: its OpenXR case gets almost no game frames on the runners (issue #41).
@@ -33,8 +38,45 @@ defaults:
     shell: pwsh
 
 jobs:
+  changes:
+    name: Changes
+    runs-on: windows-latest
+    outputs:
+      build: ${{ steps.list.outputs.build }}
+    steps:
+      # The whole history, for the merge base of the pull request and its base.
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The files the pull request changes since it left its base (three dots). --no-renames lists a
+      # renamed file under its old name too, so a .cpp renamed to .md still runs the build.
+      - name: List changed files
+        id: list
+        env:
+          RANGE: ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}
+        run: |
+          if ($env:GITHUB_EVENT_NAME -ne 'pull_request') {
+              'build=true' >> $env:GITHUB_OUTPUT
+              exit 0
+          }
+
+          $files = @(git diff --name-only --no-renames $env:RANGE)
+          if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+          }
+
+          $notMarkdown = @($files | Where-Object { $_ -notlike '*.md' })
+          "Files changed: $($files.Count). Not Markdown: $($notMarkdown.Count)"
+          $notMarkdown
+          $build = if ($notMarkdown.Count -gt 0) { 'true' } else { 'false' }
+          "build=$build" >> $env:GITHUB_OUTPUT
+
   build:
     name: Build
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     runs-on: windows-latest
     steps:
       # The whole history and the tags, for the version (shared\build\version.bat).
