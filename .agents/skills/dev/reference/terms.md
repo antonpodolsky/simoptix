@@ -19,7 +19,7 @@ A new term goes here, and into the table of every README that uses it.
 |---|---|
 | game eye | The eye image a frame source delivers. The Pimax source's is a half-size copy of the left eye. The OpenXR source's is the left eye at full size |
 | frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
-| recorded lap | One full lap of the game that a VR Mirror source's Record a lap saved: the raw left eye of each frame, and the head pose it was drawn with. The demo source plays it in place of the game |
+| recorded lap | One full lap of the game that a VR Mirror source recorded for its demo: the raw left eye of each frame, and the head pose it was drawn with. The demo source plays it in place of the game |
 | frame ring | The OBS plugin's store of copied game frames (`vr_mirror\obs_plugin\frame_ring.*`, `FrameRing`), as many slots as the frame picker needs. Shrinking it keeps the frames copied most recently, wherever they physically were, and frees the rest |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |

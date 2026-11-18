@@ -424,11 +424,15 @@ One convention, everywhere. Check every new name against it, and rename what bre
   - "Drawn pose" is the head pose a frame was drawn with: the stage (`2_drawn_pose\`, `DrawnPose`),
     the setting `drawn_pose`, and the trace's `drawn_pose` column. It was called the picture pose,
     and the setting `picture_matching`, in older builds.
-  - "Look-ahead" is the smoothing that runs half a second behind the game: the Smoothing setting's
-    choice (2), `SmoothingKind::kLookahead`, `LookaheadSmoothing`, and the e2e runs `<name>_lookahead`.
+  - "Look-ahead" is the smoothing that runs half a second behind the game: the Stabilization Method
+    setting's choice (2), `SmoothingKind::kLookahead`, `LookaheadSmoothing`, and the e2e runs `<name>_lookahead`.
     It was called Smooth (`_smooth`) until #22, beside Smoothest (a second behind, 3,
     `_smoothest`), which was dropped then (`findings\obs_plugin.md`, "Smoothing and zoom"). Findings
     and e2e results from before keep the old names.
+  - The OBS settings Stabilization Method (`stabilization_method`) and Stabilization Strength
+    (`stabilization_strength`) were called Smoothing (`smoothing`) and Strength
+    (`smoothing_strength`) before. The plugin moves a scene's old keys to the new ones. The core's
+    own settings, and the mirror app's ini file, keep `smoothing` and `smoothing_strength`.
   - "Mirror" in a name ("VR Mirror", "Pimax Mirror", `MirrorView`, `vr_mirror\`) is our plugin and its
     sources. "The mirror" or "client mirror" in a sentence means only Pimax's client mirror
     (`PvrMirror`). A sentence that means the plugin says "VR Mirror".
@@ -574,7 +578,7 @@ the size, place and colour of every live part.
   480 px board, centre (240, 240), with angles clockwise from up (as in `meter_draw.h`). Keep those
   constants and the tables in `overlays\gmeter\design\README.md` the same, and change both together.
 - **Text** is drawn live and never put in an image, because it would be shrunk with the image and go
-  soft. DirectWrite (`text_raster.cpp`) rasterises it at the size shown. `meter_text.cpp` makes labels
+  soft. DirectWrite (`shared\text_raster.cpp`) rasterises it at the size shown. `meter_text.cpp` makes labels
   of it, placed by their ink to a fraction of a pixel, with numbers in the font's tabular figures.
   Measure a label change at 1:1 (sharpness, position) before looking in OBS.
 - **Verify** as for any visual change (step 5). Screenshot the OBS preview at 1:1 and measure it

@@ -58,7 +58,7 @@ The rules for includes, file names and the build lists are in the dev skill
 | `pipeline\observer\` | Beside the stages: `observer.h` (interface, `FrameRecord`, `TraceSink`), `no_observer.h` (`NoObserver`), `stamp_trace_observer.*` (`StampTraceObserver`: the frame-number stamp and the frame trace) |
 | `pipeline\5_warp\` | Stage 5: `warp.h` (`WarpParams`, interface), `rotation_warp.*` (`RotationWarp`), `warp.hlsli` (the per-pixel warp that a host wraps in its own shader or effect) |
 | `adapters\` | Thin glue for input and output that the pipeline runs on. It makes no decisions |
-| `adapters\d3d\frame_source.h` | `FrameSource`: what a host needs from a frame source (`vr_mirror\frame_sources\`): the frames, the poses, the eye, the clock, and a copy of each eye image into the host's store |
+| `adapters\d3d\frame_source.h` | `FrameSource`: what a host needs from a frame source (`vr_mirror\frame_sources\`): the frames, the poses, the eye, the clock, what the runtime reports of the headset before a game runs, and a copy of each eye image into the host's store |
 | `adapters\d3d\frame_copy.*` | A host's own copy of a frame's eye image: the texture (shared or not, copied or drawn into) and its views. The frame source fills it |
 | `adapters\d3d\thumbnail.*` | Tiny thumbnails for comparing images by content, or several areas side by side (the cockpit patches), read back without flushing |
 | `adapters\d3d\drawn_pose_feed.*` | `DrawnPoseFeed`: makes the images stage 2 looks at (thumbnails and the cockpit patches it asks for) on the GPU, reads them back, and feeds them to stage 2 with the frame source's pose predictions |

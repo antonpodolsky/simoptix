@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // DemoSource: the newest recorded lap (recorded_lap.h), played in a loop as if a game were drawing it,
 // for a VR Mirror source's demo (a FrameSource: core\adapters\d3d\frame_source.h). The hosts can't tell it
-// from a game: the pipeline stabilizes its frames with the host's settings, so changing Smoothing or Zoom
-// shows at once.
+// from a game: the pipeline stabilizes its frames with the host's settings, so changing a setting shows
+// at once.
 //
 // A thread of its own hands out each frame a little before its moment in the lap, on the performance counter,
 // with the moment it was drawn for, the head pose it was drawn with, exactly (FrameReport::kSlotAndPose, as
 // the OpenXR layer's frames), and its index in the lap. The head path between frames is interpolated between
-// their poses. A frame's image is decoded when the host copies it (CopyImage), on the host's own device, by
-// its index in the lap: no texture passes between devices, and no image can belong to another frame. The lap
-// ends where it starts, on the line, so it plays on into its start with the clock running on.
+// their poses. A frame's image is decoded when the host copies it (CopyImage), on the host's own device, and
+// found by its time in the video: no texture passes between devices, and no image can belong to another
+// frame. The lap ends where it starts, on the line, so it plays on into its start with the clock running on.
 //
 // Source time is the performance counter, in seconds. Knows nothing about OBS, the game or video files
 // beyond DemoVideo.
@@ -28,6 +28,7 @@
 #include "adapters/d3d/frame_source.h"
 #include "common/arrival_stats.h"
 #include "common/pose_history.h"
+#include "pipeline/3_frame_picker/fixed_delay_picker.h"
 #include "shared/unique_handle.h"
 #include "vr_mirror/frame_sources/demo/demo_video.h"
 #include "vr_mirror/frame_sources/demo/recorded_lap.h"
@@ -48,6 +49,9 @@ public:
     EyeInfo Eye() const override;
     double Now() const override;
     double Period() const override { return period_.load(); }
+    // A copy decodes the lap's next frame on the host's device: about 2 ms (95th percentile 1.6-1.8 ms,
+    // measured), so the frame picker fixes its shortest delay.
+    double StartCopyDelayS() const override { return kMinCopyDelayS; }
 
     GameFrame LatestFrame() override;
     bool NextFrame(uint64_t after, GameFrame* f) override;
@@ -105,12 +109,18 @@ private:
     // it hands it out.
     static constexpr int kAhead = 2;
     static constexpr int kQueue = kAhead + 2;
+    // Frames ahead of the decoder past which it seeks instead of decoding on (the host fell far behind): the
+    // encoder put a key frame every 90 frames in the laps measured, and decoding 90 frames takes about 0.1 s
+    // at 2560 wide.
+    static constexpr int kSeekPast = 90;
 
     void Run();
     bool HandOut(double now);
     bool FindFinished(uint64_t serial, Playing* out);
     bool OpenVideo(ID3D11Device* device);
     bool Ready(int index);
+    bool Seek(int index);
+    int FrameAt(double videoT) const;
     void Forget();
 
     struct Recorded : PoseLookup {
@@ -148,7 +158,7 @@ private:
     ID3D11Device* failedDevice_ = nullptr;  // not held: the video can't be decoded on it (logged once)
     Decoded queue_[kQueue];
     int queued_ = 0;
-    int decodeNext_ = 0;  // the lap index of the frame the decoder hands out next
+    int decodeNext_ = 0;  // the lap index of the frame the decoder hands out next (0 after a seek: not known)
 
     std::atomic<double> period_{1.0 / 90};
     std::atomic<double> fps_{0};

@@ -26,6 +26,18 @@ namespace {
         return c.QuadPart;
     }
 
+    // The lap's first frame at or after `t` (s from the line), or its very first if none is.
+    size_t FirstFrameFrom(const RecordedLap& lap, double t) {
+        const auto first = std::lower_bound(
+            lap.frames.begin(),
+            lap.frames.end(),
+            t,
+            [](const RecordedLapFrame& f, double at) { return f.t < at; }
+        );
+
+        return first == lap.frames.end() ? 0 : static_cast<size_t>(first - lap.frames.begin());
+    }
+
 }
 
 DemoSource::DemoSource() {
@@ -319,20 +331,14 @@ void DemoSource::Forget() {
 }
 
 // Makes lap frame `index`'s image ready to copy: decoded, with kAhead frames decoded after it, and first in
-// the queue. Frames the host never asked for are decoded and dropped; an earlier index (the lap started
-// again) rewinds the video. False if the frame can't be decoded.
+// the queue. Frames the host never asked for are decoded and dropped. An earlier frame (the lap started
+// again) or one far ahead (the host fell behind) seeks the video. False if the frame can't be decoded.
 bool DemoSource::Ready(int index) {
     const int first = queued_ > 0 ? queue_[0].index : decodeNext_;
+    const bool seek = index < first || index > first + kSeekPast;
 
-    if (index < first) {
-        Forget();
-
-        if (!video_.Rewind()) {
-            CoreLog("demo: the lap's video could not be played again from its start");
-            return false;
-        }
-
-        decodeNext_ = 0;
+    if (seek && !Seek(index)) {
+        return false;
     }
 
     while (queued_ > 0 && queue_[0].index < index) {
@@ -344,9 +350,10 @@ bool DemoSource::Ready(int index) {
 
     while (decodeNext_ <= last) {
         Microsoft::WRL::ComPtr<IMFSample> sample;
+        double t = 0;
         bool end = false;
 
-        if (!video_.Next(&sample, &end)) {
+        if (!video_.Next(&sample, &t, &end)) {
             if (!end) {
                 CoreLog("demo: the lap's video could not be decoded");
             }
@@ -354,14 +361,49 @@ bool DemoSource::Ready(int index) {
             break;
         }
 
-        if (decodeNext_ >= index && queued_ < kQueue) {
-            queue_[queued_++] = {decodeNext_, std::move(sample)};
+        const int decoded = FrameAt(t);
+
+        if (decoded < 0) {
+            continue;  // no frame of the lap: dropped
         }
 
-        decodeNext_++;
+        if (decoded >= index && queued_ < kQueue) {
+            queue_[queued_++] = {decoded, std::move(sample)};
+        }
+
+        decodeNext_ = decoded + 1;
     }
 
     return queued_ > 0 && queue_[0].index == index;
+}
+
+// The video on to the key frame before lap frame `index`: the frames from there are decoded on.
+bool DemoSource::Seek(int index) {
+    Forget();
+    decodeNext_ = 0;
+    const RecordedLapFrame& start = lap_.frames.front();
+
+    // Half a period early: the key frame at the frame itself, not the next.
+    if (!video_.SeekTo(lap_.frames[index].t - start.t - 0.5 * period_.load())) {
+        CoreLog("demo: the lap's video could not be played from %.1f s", lap_.frames[index].t);
+        return false;
+    }
+
+    return true;
+}
+
+// The lap frame whose image the video shows at `videoT` (s), or -1 if none. The video starts at the lap's
+// first frame: its time in the video is the frame's moment less the first frame's.
+int DemoSource::FrameAt(double videoT) const {
+    const double t = videoT + lap_.frames.front().t;
+    const double halfPeriod = 0.5 * period_.load();
+    const size_t i = FirstFrameFrom(lap_, t - halfPeriod);
+
+    if (std::fabs(lap_.frames[i].t - t) > halfPeriod) {
+        return -1;
+    }
+
+    return static_cast<int>(i);
 }
 
 void DemoSource::OpenImages(ID3D11Device* device) {

@@ -73,6 +73,22 @@ void PimaxSource::StopTrace() {
     trace_.Close();
 }
 
+HeadsetReport PimaxSource::Reported() const {
+    HeadsetReport r;
+
+    if (session_.RenderWidth() == 0) {
+        return r;
+    }
+
+    // Measured: a 2508 x 2084 mirror at a 5016 x 4168 render size.
+    r.imageWidth = session_.RenderWidth() / 2;
+    r.imageHeight = session_.RenderHeight() / 2;
+    r.hasEye = true;
+    r.eye = session_.Eye(0);
+    r.period = session_.Period();
+    return r;
+}
+
 bool PimaxSource::Start(std::string* error) {
     if (!arrival_) {
         *error = "no arrival timing set (PimaxSource::SetArrivalTiming)";

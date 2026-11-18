@@ -9,12 +9,15 @@
 //
 // Each source also holds race auto-record's switch ("Record races automatically",
 // race_auto_record\auto_record.h), which works whether the source is shown or not, and the demo's two
-// buttons: Record a lap (the next full lap the game shows, lap_recorder\lap_recorder.h) and Start demo
-// (the newest lap in place of the game, vr_mirror\frame_sources\demo\). Neither is saved.
+// buttons: Record a lap (the next full lap the game shows, lap_recorder\lap_recorder.h), Play recorded lap
+// (the lap in place of the game, vr_mirror\frame_sources\demo\) and Delete recorded lap. None is saved.
 
+#include <windows.h>
 #include <obs-module.h>
+#include <shellapi.h>
 
 #include <algorithm>
+#include <atomic>
 #include <memory>
 #include <string>
 
@@ -24,6 +27,7 @@
 #include "race_auto_record/auto_record.h"
 #include "shared/crash_dump.h"
 #include "shared/guarded.h"
+#include "shared/local_files.h"
 #include "shared/log.h"
 #include "shared/telemetry/telemetry.h"
 #include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
@@ -78,17 +82,19 @@ namespace {
         obs_weak_source_release(weak);
     }
 
-    // The demo's status line.
-    const char* LapStatus(const MirrorView& view, bool lapRecorded) {
+    // The demo's status line, while a lap is asked for or just after: where the recording stands; null
+    // otherwise.
+    const char* LapStatus(const MirrorView& view) {
         switch (view.LapState()) {
             case LapRecorder::State::kWaiting:
-                return "Drive to the line: leave the pits, and the lap records from the next crossing.";
+                return "Drive to the start/finish line: leave the pits, and the lap records from the next "
+                       "crossing.";
             case LapRecorder::State::kRecording:
-                return "Recording the lap: drive on to the line.";
+                return "Recording the lap: drive on to the start/finish line.";
             case LapRecorder::State::kSaving:
                 return "Saving the lap.";
             case LapRecorder::State::kSaved:
-                return "Lap saved. Start demo plays it.";
+                return "Lap saved: \"Play recorded lap\" plays it.";
             case LapRecorder::State::kFailed:
                 return "The lap wasn't recorded: the OBS log says why.";
             default:
@@ -96,10 +102,11 @@ namespace {
         }
 
         if (view.RecordingLap()) {
-            return "The lap records once the game's frames come (the source shown, the demo stopped).";
+            return "The lap records once the game's frames come (the source shown, the recorded lap "
+                   "stopped).";
         }
 
-        return lapRecorded ? "A lap is recorded." : "No lap recorded yet.";
+        return nullptr;  // no recording asked for: the view's empty state says whether a lap is recorded
     }
 
     // The source's core settings are the smoothing, its strength and the zoom; the drawn pose method is
@@ -125,24 +132,40 @@ namespace {
         }
     }
 
-    // A scene saved with the dropped Smoothest (3) shows Look-ahead in the list, not an empty choice.
-    void UpgradeSavedSmoothing(obs_data_t* s) {
-        if (obs_data_get_int(s, "smoothing") > MirrorSettings::kSmoothingLookahead) {
-            obs_data_set_int(s, "smoothing", MirrorSettings::kSmoothingLookahead);
+    // The settings' keys: Stabilization Method (MirrorSettings::kSmoothing*) and Stabilization Strength.
+    constexpr const char* kMethodKey = "stabilization_method";
+    constexpr const char* kStrengthKey = "stabilization_strength";
+
+    // A scene saved before the two settings were renamed keeps its values: "smoothing" and
+    // "smoothing_strength" move to the new keys. One saved with the dropped Smoothest (3) shows
+    // Look-ahead in the list, not an empty choice.
+    void UpgradeSavedSettings(obs_data_t* s) {
+        if (obs_data_has_user_value(s, "smoothing")) {
+            obs_data_set_int(s, kMethodKey, obs_data_get_int(s, "smoothing"));
+            obs_data_erase(s, "smoothing");
+        }
+
+        if (obs_data_has_user_value(s, "smoothing_strength")) {
+            obs_data_set_double(s, kStrengthKey, obs_data_get_double(s, "smoothing_strength"));
+            obs_data_erase(s, "smoothing_strength");
+        }
+
+        if (obs_data_get_int(s, kMethodKey) > MirrorSettings::kSmoothingLookahead) {
+            obs_data_set_int(s, kMethodKey, MirrorSettings::kSmoothingLookahead);
         }
     }
 
-    // "smoothing": MirrorSettings::kSmoothing*. "zoom": the crop factor (1 to 3). "debug": the
-    // frame-number stamp and the frame trace together.
+    // kMethodKey, kStrengthKey. "zoom": the crop factor (1 to 3). "debug": the frame-number stamp and the
+    // frame trace together.
     MirrorSettings MirrorSettingsOf(obs_data_t* s, bool* debug) {
         MirrorSettings st;
         st.smoothing = std::clamp(
-            static_cast<int>(obs_data_get_int(s, "smoothing")),
+            static_cast<int>(obs_data_get_int(s, kMethodKey)),
             MirrorSettings::kSmoothingOff,
             MirrorSettings::kSmoothingLookahead
         );
         st.strength = std::clamp(
-            static_cast<float>(obs_data_get_double(s, "smoothing_strength")),
+            static_cast<float>(obs_data_get_double(s, kStrengthKey)),
             kMinStrength,
             kMaxStrength
         );
@@ -162,25 +185,82 @@ namespace {
 
     void GetDefaults(obs_data_t* s) {
         Guarded("defaults", [&] {
-            obs_data_set_default_int(s, "smoothing", MirrorSettings::kSmoothingLookahead);
-            obs_data_set_default_double(s, "smoothing_strength", 1.0);
+            obs_data_set_default_int(s, kMethodKey, MirrorSettings::kSmoothingLookahead);
+            obs_data_set_default_double(s, kStrengthKey, 1.0);
             obs_data_set_default_double(s, "zoom", kDefaultZoom);
             obs_data_set_default_bool(s, "auto_record", false);
             obs_data_set_default_bool(s, "debug", false);
         });
     }
 
+    // Asks `question`, Yes or No (No by default), in a box over the properties dialog: the buttons' callbacks
+    // run on OBS's UI thread, whose active window it is. True for Yes.
+    bool Confirm(const wchar_t* title, const wchar_t* question) {
+        return MessageBoxW(GetActiveWindow(), question, title, MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2)
+               == IDYES;
+    }
+
     // UI thread: records the next lap, or gives up the one asked for. The demo stops: a lap is the game's.
+    // Recording over a recorded lap asks first.
     bool ToggleRecordLap(obs_properties_t*, obs_property_t*, void* data) {
         return Guarded("record lap button", [&]() -> bool {
             MirrorView& view = *static_cast<Source*>(data)->view;
             const bool on = !view.RecordingLap();
+            std::wstring stem;
+
+            if (on && NewestRecordedLap(&stem)
+                && !Confirm(
+                    L"Record a new lap",
+                    L"Record a new lap? Once it is saved, it replaces the existing recording."
+                )) {
+                return false;
+            }
+
             view.SetRecordLap(on);
 
             if (on) {
                 view.SetDemo(false);
             }
 
+            return true;  // the properties again, with the buttons as they are now
+        });
+    }
+
+    // UI thread: opens the folder the recorded lap is kept in, in File Explorer, with the lap's video
+    // selected when there is one. Nothing in the properties changes.
+    bool OpenLapFolder(obs_properties_t*, obs_property_t*, void*) {
+        return Guarded("open lap folder button", [&]() -> bool {
+            std::wstring stem, arguments;
+            wchar_t file[MAX_PATH];
+
+            if (NewestRecordedLap(&stem)) {
+                arguments = L"/select,\"" + stem + L".mp4\"";
+            } else if (NewLocalFilePath(LocalFileKind::kRecordedLap, file, MAX_PATH)) {  // makes the folder
+                arguments = file;
+                arguments = L"\"" + arguments.substr(0, arguments.find_last_of(L'\\')) + L"\"";
+            }
+
+            if (!arguments.empty()) {
+                ShellExecuteW(nullptr, L"open", L"explorer.exe", arguments.c_str(), nullptr, SW_SHOWNORMAL);
+            }
+
+            return false;
+        });
+    }
+
+    // UI thread: deletes the recorded lap, after asking. Greyed out while it plays or a lap records.
+    bool DeleteLap(obs_properties_t*, obs_property_t*, void* data) {
+        return Guarded("delete lap button", [&]() -> bool {
+            if (!Confirm(L"Delete recorded lap", L"Delete the recorded lap? This can't be undone.")) {
+                return false;
+            }
+
+            const int deleted = PruneLocalFiles(
+                LocalFileKind::kRecordedLap,
+                LocalFilesKept(LocalFileKind::kRecordedLap)
+            );
+            blog(LOG_INFO, "[simoptix_vr_mirror] recorded lap deleted (%d)", deleted);
+            static_cast<Source*>(data)->view->FindLap();
             return true;  // the properties again, with the buttons as they are now
         });
     }
@@ -200,37 +280,54 @@ namespace {
         });
     }
 
-    // The video memory line for the settings in the dialog (`settings`), or for none when OBS asks for
-    // the properties without a source (`s` null).
-    std::string VideoMemoryOf(Source* s, obs_data_t* settings) {
-        if (!s || !settings) {
-            return kVideoMemoryNotMeasured;
-        }
-
-        bool debug = false;
-        return s->view->VideoMemory(MirrorSettingsOf(settings, &debug));
+    // Whether the method in the dialog (`settings`) stabilizes; true without settings (the default does).
+    bool MethodOn(obs_data_t* settings) {
+        return !settings || obs_data_get_int(settings, kMethodKey) != MirrorSettings::kSmoothingOff;
     }
 
-    // Smoothing or Zoom changed in the dialog: the line follows at once.
-    bool RefreshVideoMemory(void* data, obs_properties_t* props, obs_property_t*, obs_data_t* settings) {
-        return Guarded("video memory", [&] {
-            const std::string text = VideoMemoryOf(static_cast<Source*>(data), settings);
-            obs_property_set_description(obs_properties_get(props, "video_memory"), text.c_str());
+    // Stabilization Method changed in the dialog: Stabilization Strength is hidden while it is Off (OBS
+    // greys out only the number box of a decimal slider, not the slider).
+    bool FollowMethod(obs_properties_t* props, obs_property_t*, obs_data_t* settings) {
+        return Guarded("settings in the dialog", [&] {
+            obs_property_set_visible(obs_properties_get(props, kStrengthKey), MethodOn(settings));
             return true;
         });
     }
 
-    // The demo's buttons and status line, for source `s`.
+    // The demo's buttons, in the settings' column under a rule, and the recording's status line under them
+    // while there is one, for source `s`. No group: OBS lays a group out on a grid of its own, out of line
+    // with the settings, and puts each button on a row of its own anyway.
     void AddDemoProperties(obs_properties_t* p, Source* s) {
         std::wstring stem;
         const bool lapRecorded = NewestRecordedLap(&stem);
         const bool recording = s->view->RecordingLap();
         const bool demo = s->view->DemoOn();
 
+        // OBS has no separator property; its text lines are rich text, stretched across the settings' column.
+        obs_properties_add_text(p, "demo_rule", "<hr>", OBS_TEXT_INFO);
+
+        obs_property_t* play = obs_properties_add_button2(
+            p,
+            "demo",
+            demo ? "Stop playing" : "Play recorded lap",
+            ToggleDemo,
+            s
+        );
+
+        obs_property_set_long_description(
+            play,
+            lapRecorded || demo ? "Plays the recorded lap in a loop, in place of the game.\n"
+                                  "The settings above apply as it plays."
+                                : "No lap recorded yet: record one with \"Record a lap\"."
+        );
+
+        obs_property_set_enabled(play, demo || lapRecorded);
+
+        const char* recordLabel = lapRecorded ? "Record a new lap" : "Record a lap";
         obs_property_t* record = obs_properties_add_button2(
             p,
             "record_lap",
-            recording ? "Cancel lap recording" : "Record a lap",
+            recording ? "Cancel lap recording" : recordLabel,
             ToggleRecordLap,
             s
         );
@@ -238,21 +335,48 @@ namespace {
         obs_property_set_long_description(
             record,
             "Drive one full lap in LMU, in practice.\n"
-            "It records from a crossing of the line to the next.\n"
-            "Going into the pits or to the menus throws the lap away."
+            "It records from a crossing of the start/finish line to the next.\n"
+            "Entering the pits or pausing the game starts the lap over at the next start/finish line."
         );
+
+        obs_property_t* open = obs_properties_add_button2(
+            p,
+            "open_lap_folder",
+            "Open recording location",
+            OpenLapFolder,
+            s
+        );
+        obs_property_set_long_description(open, "Opens the folder the recorded lap is kept in.");
 
         obs_property_t*
-            play = obs_properties_add_button2(p, "demo", demo ? "Stop demo" : "Start demo", ToggleDemo, s);
-
+            remove = obs_properties_add_button2(p, "delete_lap", "Delete recorded lap", DeleteLap, s);
         obs_property_set_long_description(
-            play,
-            "Plays the newest recorded lap in a loop, in place of the game.\n"
-            "Smoothing and Zoom apply as it plays."
+            remove,
+            demo || recording ? "Stop playing the lap, or cancel the recording, first."
+                              : "Deletes the recorded lap. Asks first."
         );
+        obs_property_set_enabled(remove, lapRecorded && !demo && !recording);
 
-        obs_property_set_enabled(play, demo || lapRecorded);
-        obs_properties_add_text(p, "lap_status", LapStatus(*s->view, lapRecorded), OBS_TEXT_INFO);
+        if (const char* status = LapStatus(*s->view)) {
+            obs_property_text_set_info_word_wrap(
+                obs_properties_add_text(p, "lap_status", status, OBS_TEXT_INFO),
+                true
+            );
+        }
+    }
+
+    // The view draws its empty state only while a properties dialog shows it, never only in the recording. A
+    // dialog holds the list it asked for, and OBS destroys the list when the dialog closes, or when it asks
+    // for a new one: the list counts the dialog in while it lives (OBS calls `destroy` with the parameter).
+    void CountDialog(obs_properties_t* p, const MirrorView& view) {
+        using Viewers = std::shared_ptr<std::atomic<int>>;
+        Viewers* viewers = new Viewers(view.EmptyStateViewers());  // owned by the list from here
+        ++**viewers;
+
+        obs_properties_set_param(p, viewers, [](void* param) {
+            const std::unique_ptr<Viewers> owned(static_cast<Viewers*>(param));
+            --**owned;
+        });
     }
 
     // `s`: the source, or null for OBS's defaults (no demo buttons then).
@@ -261,49 +385,47 @@ namespace {
 
         // Look-ahead (vr_mirror\core\pipeline\4_smoothing\): the view runs half a second behind the game,
         // and the smoothing uses the head's movement in that time.
-        obs_property_t* smoothing = obs_properties_add_list(
+        obs_property_t* method = obs_properties_add_list(
             p,
-            "smoothing",
-            "Smoothing",
+            kMethodKey,
+            "Stabilization Method",
             OBS_COMBO_TYPE_LIST,
             OBS_COMBO_FORMAT_INT
         );
 
-        obs_property_list_add_int(smoothing, "Off", MirrorSettings::kSmoothingOff);
+        obs_property_list_add_int(method, "Off", MirrorSettings::kSmoothingOff);
         obs_property_list_add_int(
-            smoothing,
+            method,
             "Instant (no delay, low VRAM usage)",
             MirrorSettings::kSmoothingInstant
         );
         obs_property_list_add_int(
-            smoothing,
+            method,
             "Look-ahead (0.5s delay, higher VRAM usage)",
             MirrorSettings::kSmoothingLookahead
         );
 
         obs_property_set_long_description(
-            smoothing,
+            method,
             "Instant: no delay, for live streaming.\n"
             "Look-ahead: half a second behind the game, for recording."
         );
 
-        // What the source's store of copied frames takes in video memory with these settings (the
-        // line is the property's description; it has no value of its own).
         obs_data_t* settings = s ? obs_source_get_settings(s->source) : nullptr;
-        const std::string memory = VideoMemoryOf(s, settings);
+        const bool methodOn = MethodOn(settings);
         obs_data_release(settings);
-        obs_property_t* line = obs_properties_add_text(p, "video_memory", memory.c_str(), OBS_TEXT_INFO);
-        obs_property_text_set_info_type(line, OBS_TEXT_INFO_WARNING);
-        obs_property_set_modified_callback2(smoothing, RefreshVideoMemory, s);
+        obs_property_set_modified_callback(method, FollowMethod);
 
         obs_property_t* strength = obs_properties_add_float_slider(
             p,
-            "smoothing_strength",
-            "Strength",
+            kStrengthKey,
+            "Stabilization Strength",
             kMinStrength,
             kMaxStrength,
             0.05
         );
+
+        obs_property_set_visible(strength, methodOn);
 
         obs_property_set_long_description(
             strength,
@@ -312,8 +434,7 @@ namespace {
             "Lower: the view follows the head more closely."
         );
 
-        obs_property_t* zoom = obs_properties_add_float_slider(p, "zoom", "Zoom", 1.0, 3.0, 0.01);
-        obs_property_set_modified_callback2(zoom, RefreshVideoMemory, s);
+        obs_properties_add_float_slider(p, "zoom", "Zoom", 1.0, 3.0, 0.01);
         obs_property_t* record = obs_properties_add_bool(p, "auto_record", "Record races automatically");
 
         // The hint, one short line per point (OBS shows it as a plain-text tooltip, which doesn't wrap).
@@ -328,6 +449,8 @@ namespace {
 
         if (s) {
             AddDemoProperties(p, s);
+            CountDialog(p, *s->view);
+            s->view->DialogOpened();
         }
 
         return p;
@@ -345,7 +468,7 @@ namespace {
             auto s = std::make_unique<Source>();
             s->source = source;
             s->weak = obs_source_get_weak_source(source);
-            UpgradeSavedSmoothing(settings);
+            UpgradeSavedSettings(settings);
             bool debug = false;
             const MirrorSettings st = MirrorSettingsOf(settings, &debug);
             s->view = std::make_unique<MirrorView>(std::make_unique<Frames>(), st, debug);

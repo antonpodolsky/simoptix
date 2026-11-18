@@ -376,7 +376,79 @@ What the recorded lap's playback did in OBS, with the build of the pull request 
   (correlation 0.73 to 0.78), and with the computed view only at 0.46 to 0.53. The view the pipeline
   computed was 10 to 30 times calmer than the head, in that trace as in the game's. Every consecutive frame
   showed a new image, so no image was repeated. The recorded lap pairs each image with its own pose
-  (correlation 0.994 to 0.997 at no offset), decoded back to back and at the demo's pace. Not checked after a
-  rewind. The demo then decoded on a device of its own into 8 textures, which the host's device opened and
-  copied from. Its images are now decoded on the host's own device, by frame number. Not checked in OBS
-  since.
+  (correlation 0.994 to 0.997 at no offset), decoded back to back and at the demo's pace. That check covered
+  only the lap's first frames, before the game's first dropped frame. The cause is the next finding.
+- **Windows' decoder repeated images where the game had dropped frames.** Decoding the whole recorded lap
+  gave 41 images more than the lap has frames, their times exactly one refresh apart. The `.mp4` itself
+  held one sample per frame, at the frames' own uneven times. The converter to BGRA in the source reader
+  (advanced video processing) evens the frame rate out: where a frame was missing, it repeated an image.
+  The demo paired images with frames by counting, so from the first repeat, about 8 s into the lap, each
+  image was drawn with an earlier frame's pose: 17 frames earlier halfway round, 41 at the end. A pose
+  0.2 s early cancels none of the head's shake, which is why the view looked like the raw headset view.
+  - Turning the converter's frame-rate conversion off (`MF_XVP_DISABLE_FRC` on the reader's video
+    processor) gave one image per frame, each image's time within 0.1 ms of its frame's moment over the
+    whole lap.
+  - In the mirror app on the same lap, at Zoom 1.6 in a 1280×720 window, a fixed patch of the cockpit
+    then moved 0.89 and 0.74 px per frame (sideways, up and down) with Smoothing Off, and 0.50 and 0.29 px
+    with Look-ahead. Before the fix the two were about the same. Not checked in OBS.
+  - The demo's earlier copy through 8 shared textures was not the cause of the 17 frames.
+- **Tried and set aside: starting part way into the lap and pausing,** with a Position slider and a
+  Pause button in the properties, and then OBS's media controls (next section). The demo plays the lap in a
+  loop, from two buttons in the properties. Measured in a throwaway harness that drove the demo
+  source as a host does on the recorded lap. Started at 50 %, it began at the right frame, paused it held
+  one frame for 90 images in 1 s, and resumed with the next frame. Started at 99.5 %, it played across the
+  line into the lap's start. All 525 images it handed out matched their frames decoded straight through
+  from the video's start, to the grey level. The encoder had put a key frame every 90 frames.
+
+## OBS's media controls
+
+Tried for the demo and set aside: it plays in a loop, from buttons in the properties. How OBS 32's
+frontend and libobs drive a source that sets `OBS_SOURCE_CONTROLLABLE_MEDIA`, read in OBS's own source:
+its media controls (MediaControls.cpp), its Properties window (OBSBasicProperties.cpp) and libobs's
+sources (obs-source.c).
+
+- **Where they show:** OBS's media controls appear for any source with the flag. Their code checks only
+  the flag, and the source's id only for which buttons show. The Properties window has no media controls,
+  and its preview only draws the source: it passes no mouse or key input to it. Only the Interact window
+  passes input to a source. Where the main window places the controls (under the preview) was not read.
+- **The play button follows the state.** On selecting the source, the controls read
+  `obs_source_media_get_state` once: stopped, ended or none show restart (↻), playing shows pause, paused
+  shows play. Pressing it while stopped or ended calls the source's restart, while playing its pause,
+  while paused its play.
+- **After that the controls follow signals,** not the state. libobs signals `media_play`, `media_pause`,
+  `media_restart` and `media_stopped` after each action. `media_started` and `media_ended` come only from
+  the source (`obs_source_media_started`, `obs_source_media_ended`). A change the source makes by itself
+  (a lap saved, the demo failing to start) needs `obs_source_media_ended`, or the button stays as it was.
+- **Threads:** the actions are queued and run on the source's video tick, before its own `video_tick`,
+  so a signal the source sends from its tick comes after libobs's own. The state, time and length are read
+  straight from the source's callbacks on the UI thread.
+- **The seek bar** pauses a playing source while it is dragged, calls `media_set_time` about 10 times a
+  second while it moves and once on release, then plays again. With a length of 0 it shows 00:00:00.
+
+## The empty state's facts
+
+What the empty state's rows are made from before the game has run, measured on a Pimax Dream Air with
+Pimax Play's Render Quality at 1.0.
+
+- **Pimax tells it all without a game.** Its session reports the refresh rate and the eye. The size it
+  renders the eye at is `getFovTextureSize` for the eye's field of view at the runtime's pixel density,
+  the undocumented key `pixels_per_display_pixel_rate` (1.0 here): 5016 × 4168. The client mirror was
+  2508 × 2084, half of it, in every lap and session measured.
+- **OpenXR tells only the image size without a session.** `xrEnumerateViewConfigurationViews` gave the
+  recommended 5084 × 4168, the size LMU renders at. The field of view and the refresh rate come only with
+  a session. `XR_EPIC_view_configuration_fov` would give the field of view without one, and Pimax's
+  runtime doesn't offer it.
+- **The headset test** is that session. With the runtime loaded straight from its manifest (no loader,
+  so no layer) it took about 1.4 s from loading the runtime to ending the session, with the text shown
+  for 1 s. The views, located in the view space, gave the field of view LMU's frames carry (tangents
+  1.307, 1.094, 0.984, 0.984) and no turn between the eyes. The frame timing gave 90 Hz.
+  - Pimax refused every frame that held a quad layer (`XR_ERROR_RUNTIME_FAILURE`), so the text is drawn
+    into the eyes' own images, centred where each eye looks straight ahead.
+  - With the headset not worn, Pimax ran the session at about 13 frames a second, so the test waits for
+    a time rather than for a count of frames.
+  - An image written into a swapchain needs the context flushed before it is released: the compositor
+    reads it on a device of its own.
+- **The warm-up's jump.** The frame picker assumed a 40 ms copy delay until it fixed the one it
+  measured. On the recorded lap that was 4 ms (copies at most 1.8 ms at the 95th percentile), so after
+  2 s the output delay fell by 36 ms at once and the view jumped about 3 frames. The lap now starts at
+  4 ms, and the game at the delay measured the last time it ran since OBS started.

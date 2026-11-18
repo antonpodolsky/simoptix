@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdio>
 
+#include "openxr_headset_test.h"
 #include "shared/log.h"
 #include "shared/thread_cpu.h"
 
@@ -61,6 +62,15 @@ bool OpenXrSource::Start(std::string* error) {
     }
 
     Stop();
+
+    // A game in VR is measured instead, and the headset left to it.
+    const UniqueHandle published(OpenFileMappingW(FILE_MAP_READ, FALSE, openxr_share::kMappingName));
+
+    if (testRequested_.exchange(false) && !published && !RunHeadsetTest(&reported_)) {
+        reported_ = {};
+        reported_.failed = true;
+    }
+
     ResetEvent(stop_.Get());
     running_ = true;
     thread_ = std::thread([this] {

@@ -27,7 +27,7 @@ this out from the delay alone, not by looking at the view. Without VR Mirror the
 |---|---|
 | `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources), the DLL's version resource (`version.rc`) and `build.bat` |
 | `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its Chrono look (`meter_chrono.*`), shapes (`meter_draw.*`) and labels (`meter_text.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
-| `common\` | What any overlay can reuse: text (`text_raster.*`), images (`meter_image.*`), and the 1:1 properties preview (`properties_preview.*`) |
+| `common\` | What any overlay can reuse: images (`meter_image.*`) and the 1:1 properties preview (`properties_preview.*`). Text is rasterised by `shared\text_raster.*`, which VR Mirror uses too |
 
 The demo lap that the G-meter can play without the game is in `shared\telemetry\demo_lap.*`, beside the
 telemetry it stands in for.
@@ -98,7 +98,7 @@ is the numbers and the 1G, 2G and 3G ring labels.
 - The live G is centred on its window to a fraction of a pixel, then 0.8 design px right (half a pixel
   at size 300), which looks centred.
 
-**Text** is rasterised with DirectWrite (`text_raster.cpp`) at the size it is shown and drawn 1:1:
+**Text** is rasterised with DirectWrite (`shared\text_raster.cpp`) at the size it is shown and drawn 1:1:
 - grayscale anti-aliasing, because ClearType's colour fringes don't survive a video encode
 - outlines grid-fitted vertically, so horizontal strokes land on whole pixels
 - a slight contrast boost, so light strokes on the dark face don't read thin

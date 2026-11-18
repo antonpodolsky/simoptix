@@ -10,11 +10,13 @@
 #include <cstring>
 
 #include "pipeline/pipeline_builder.h"
+#include "setup_facts.h"
 #include "shared/local_files.h"
 #include "shared/program_delay.h"
 #include "shared/telemetry/telemetry.h"
 #include "shared/thread_cpu.h"
 #include "vr_mirror/frame_sources/demo/demo_source.h"
+#include "vr_mirror/frame_sources/demo/recorded_lap.h"
 #include "warp_effect.h"
 
 namespace {
@@ -59,6 +61,7 @@ MirrorView::MirrorView(std::unique_ptr<FrameSource> game, const MirrorSettings& 
     }
     bfree(errors);
     obs_leave_graphics();
+    FindLap();
 }
 
 MirrorView::~MirrorView() {
@@ -75,6 +78,7 @@ MirrorView::~MirrorView() {
     }
     effect_ = nullptr;
     DestroyTextures();
+    emptyState_.Destroy();
     obs_leave_graphics();
 }
 
@@ -82,6 +86,101 @@ void MirrorView::SetSettings(const MirrorSettings& settings, bool debug) {
     settings_ = settings;
     stamp_ = debug;
     trace_ = debug;
+}
+
+// Whether a lap is recorded, for the empty state: it lists the laps' folder, so not per frame.
+void MirrorView::FindLap() {
+    std::wstring stem;
+    lapRecorded_ = NewestRecordedLap(&stem);
+}
+
+// Whether the view waits for the game's frames, with the demo not asked for: none since the source started,
+// or none for 2 s (Idle). A tick that only lacks a frame of its own, mid-game, isn't waiting.
+bool MirrorView::WaitsForGame() const {
+    if (demoWanted_) {
+        return false;
+    }
+
+    return frameSource_ != gameSource_.get() || !started_ || gameSource_->FramesArrived() == framesAtStart_
+           || gameSource_->Idle();
+}
+
+namespace {
+
+    // The messages the empty state shows under its rule in place of the facts.
+    EmptyMessage HeadsetUnreadMessage() {
+        return {
+            L"The headset didn't answer",
+            FactTone::kWarning,
+            {L"Turn the headset on",
+             L"Start its VR software (Pimax Play)",
+             L"Close this window and open it again"},
+            L""
+        };
+    }
+
+    EmptyMessage LapFailedMessage() {
+        return {
+            L"The last lap wasn't recorded",
+            FactTone::kWarning,
+            {L"Find why in the OBS log: lines starting \"recorded lap:\"",
+             L"Press \"Record a lap\" to try again"},
+            L""
+        };
+    }
+
+    EmptyMessage RecordingMessage() {
+        return {
+            L"Recording a lap",
+            FactTone::kPlain,
+            {L"Start a practice session in LMU",
+             L"Leave the pits and cross the start/finish line",
+             L"Drive one full lap back to the start/finish line"},
+            L"Entering the pits or pausing the game starts the lap over at the next start/finish line."
+        };
+    }
+
+}
+
+// What the empty state says: why the view is empty (no game frames), then the one next step, which is the
+// game or the recorded lap. Under its rule one thing: the headset's error, else a failed lap's, else the
+// recording's steps while a lap is asked for, else the setup's facts (SetupFacts). It shows only in the
+// properties dialog, whose buttons are below it. Graphics thread.
+EmptyText MirrorView::EmptyTextNow() {
+    EmptyText text;
+    text.title = L"Waiting for the game";
+
+    if (lapWanted_) {
+        text.lines = {L"Start LMU in VR."};
+    } else if (lapRecorded_) {
+        text.lines = {L"Start LMU in VR, or press \"Play recorded lap\" below."};
+    } else {
+        text.lines = {L"Start LMU in VR, or record a lap with \"Record a lap\" below."};
+    }
+
+    SetupFactsInput in;
+    in.headsetUnread = headsetUnread_;
+    in.settings = settings_;
+    in.obs.canvasWidth = width_;
+    in.obs.canvasHeight = height_;
+    in.obs.framePeriod = obsFramePeriod_;
+
+    {
+        std::lock_guard<std::mutex> lock(factsMutex_);
+        in.facts = facts_;
+    }
+
+    if (headsetUnread_ && in.facts.imageWidth == 0) {
+        text.message = HeadsetUnreadMessage();
+    } else if (recorder_.Get() == LapRecorder::State::kFailed) {
+        text.message = LapFailedMessage();
+    } else if (lapWanted_) {
+        text.message = RecordingMessage();
+    } else {
+        text.facts = SetupFacts(in, *gameSource_);
+    }
+
+    return text;
 }
 
 void MirrorView::SetRecordLap(bool on) {
@@ -204,6 +303,7 @@ void MirrorView::RestartDelay() {
     BuildPipeline(config, &pipeline_);
     FeedDrawnPose();
     FramePicker& picker = *pipeline_.Picker();
+    picker.SetStartCopyDelay(StartCopyDelay());
     picker.Restart(
         SmoothingDelayS(config.smoothing),
         frameSource_->Period(),
@@ -219,6 +319,21 @@ void MirrorView::RestartDelay() {
         picker.Record()
     );
     SetImageNeed();
+}
+
+// The copy delay the frame picker starts with: the game's as last measured since OBS started, or what the
+// source knows of its own (the recorded lap's), so the delay barely changes when the picker fixes it. 0: the
+// picker's own guess. Graphics thread.
+double MirrorView::StartCopyDelay() {
+    if (frameSource_ == gameSource_.get()) {
+        std::lock_guard<std::mutex> lock(factsMutex_);
+
+        if (facts_.measured) {
+            return facts_.copyDelay;
+        }
+    }
+
+    return frameSource_->StartCopyDelayS();
 }
 
 // The ring as large as the frame picker needs (it changes when the delay is fixed, or when the display's
@@ -248,12 +363,17 @@ void MirrorView::SizeRing() {
 // the work on its own thread; the graphics thread only asks, sets up its own per-start state once
 // the session runs, and frees its textures when hidden. Graphics thread, every tick.
 void MirrorView::StartStop() {
+    // First: a stop it asks for must be in the state read below, or this tick would take the session
+    // stopping for one that has started, and miss the report of the start that follows.
+    FollowDialogOpened();
+
     const SessionWorker::State state = session_.Get();
     if (state == SessionWorker::kStopped && session_.TakeFailure()) {
         if (frameSource_ == demoSource_.get()) {
             demoWanted_ = false;  // no lap to play: back to the game
         } else {
-            wanted_ = false;  // retry when shown again
+            wanted_ = false;  // retry when shown again, or when the dialog opens (FollowDialogOpened)
+            headsetUnread_ = true;
         }
     }
 
@@ -271,6 +391,7 @@ void MirrorView::StartStop() {
         warpSlot_ = -1;
         statStart_ = 0;  // a new 10 s stretch of stats (LogStats)
         statTicks_ = statRepeats_ = statJumps_ = statNoFrame_ = statHeld_ = 0;
+        KeepReportedFacts();
         blog(LOG_INFO, "[simoptix_vr_mirror] started (source shown): %s", frameSource_->Name());
     } else if (!run && state == SessionWorker::kRunning) {
         StopSession(wanted_ ? "switching between the game and the demo" : "source hidden");
@@ -307,11 +428,6 @@ void MirrorView::StopSession(const char* why) {
         obs_leave_graphics();
     }
 
-    {
-        std::lock_guard<std::mutex> lock(factsMutex_);
-        facts_ = {};
-    }
-
     session_.Stop();
     SetProgramDelay(0);
     blog(
@@ -338,6 +454,7 @@ void MirrorView::FollowLap() {
     if (lapStarted_ && !recorder_.Running()) {
         lapStarted_ = false;  // saved or failed: its state says which
         lapWanted_ = false;
+        FindLap();
     }
 
     if (!lapWanted_ && !lapStarted_ && telemetryHeld_.exchange(false)) {
@@ -345,34 +462,71 @@ void MirrorView::FollowLap() {
     }
 }
 
-std::string MirrorView::VideoMemory(const MirrorSettings& settings) {
-    MemoryFacts facts;
+// What the game source's runtime reported as it started, until the game is measured: the empty state has
+// the headset before the game has run with the source. The game's stay: they are what it really did.
+// Graphics thread.
+void MirrorView::KeepReportedFacts() {
+    if (frameSource_ != gameSource_.get()) {
+        return;
+    }
+
+    const HeadsetReport report = gameSource_->Reported();
+    const MemoryFacts facts = ReportedFacts(report);
+    headsetUnread_ = report.failed;
+    std::lock_guard<std::mutex> lock(factsMutex_);
+
+    if (facts.imageWidth > 0 && !facts_.measured) {
+        facts_ = facts;
+    }
+}
+
+// The properties dialog opened (DialogOpened) with the headset not known yet and no game frames coming:
+// the game source reads it, by starting again (OpenXR's headset test). Graphics thread, every tick.
+void MirrorView::FollowDialogOpened() {
+    if (!dialogOpened_.exchange(false) || frameSource_ != gameSource_.get() || !WaitsForGame()) {
+        return;
+    }
 
     {
         std::lock_guard<std::mutex> lock(factsMutex_);
-        facts = facts_;
+
+        if (facts_.measured || facts_.imageWidth > 0) {
+            return;
+        }
     }
 
-    return VideoMemoryText(facts, settings, *gameSource_);
+    gameSource_->RequestHeadsetTest();
+    headsetUnread_ = false;
+
+    if (started_) {
+        StopSession("reading the headset");
+    } else {
+        wanted_ = true;  // the dialog shows it
+    }
 }
 
-// The facts the video memory line needs, as of this tick: the store's settled size for each
-// smoothing, which the frame picker knows once it has measured its copy delay. Only the game's: the line
-// is about the game, and the demo's images are its own size. Skipped while the UI thread reads them: the
-// next tick's come soon. Graphics thread.
+// The facts the empty state needs, as of this tick: the copy delay the frame picker fixed, the
+// headset's refresh period and the game's eye image; the store is worked out from them. Only the game's:
+// the facts are about the game, and the demo's images are its own size. Until all are measured, those
+// before stay. Skipped while the UI thread reads them: the next tick's come soon. Graphics thread.
 void MirrorView::KeepMemoryFacts(const FramePicker& picker) {
     if (frameSource_ != gameSource_.get()) {
         return;
     }
 
-    const bool canHold = frameSource_->CanCopyAfterNextFrame();
     MemoryFacts facts;
-    facts.running = true;
-    facts.slots[0] = picker.SlotsFor(SmoothingDelayS(SmoothingKind::kInstant), canHold);
-    facts.slots[1] = picker.SlotsFor(SmoothingDelayS(SmoothingKind::kLookahead), canHold);
+    facts.copyDelay = picker.CopyDelayS();
+    facts.hasEye = true;
     facts.eye = frameSource_->Eye();
-    facts.canvasWidth = width_;
-    facts.canvasHeight = height_;
+    facts.period = frameSource_->Period();
+
+    // The game's own image: its copy with no need of the host's (0, 0).
+    facts.measured = facts.copyDelay > 0 && facts.period > 0
+                     && frameSource_->CopySize(0, 0, &facts.imageWidth, &facts.imageHeight);
+
+    if (!facts.measured) {
+        return;
+    }
 
     std::unique_lock<std::mutex> lock(factsMutex_, std::try_to_lock);
 
@@ -662,6 +816,14 @@ void MirrorView::Render() {
             prepareTimes_.Add(Seconds(os_gettime_ns() - t0));
         }
         LogStats(tickNs);
+    }
+
+    if (WaitsForGame()) {
+        if (*emptyViewers_ > 0) {
+            emptyState_.Draw(EmptyTextNow(), width_, height_);
+        }
+
+        return;
     }
 
     if (!effect_ || warpSlot_ < 0 || !textures_[warpSlot_]) {

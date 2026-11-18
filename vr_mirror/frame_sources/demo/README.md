@@ -1,16 +1,16 @@
 # Demo frame source
 
 This frame source plays the newest recorded lap in a loop, in place of the game, for a VR Mirror source's
-demo (**Start demo**, `vr_mirror\obs_plugin\README.md`, "The demo"). The hosts take its frames as
-they take the game's. The pipeline stabilizes them with the source's settings, so a change of Smoothing
-or Zoom shows at once.
+demo (`vr_mirror\obs_plugin\README.md`, "The demo"). The hosts take its frames as
+they take the game's. The pipeline stabilizes them with the source's settings, so a change of a setting
+shows at once.
 
 ## Terms
 
 | Term | Meaning |
 |---|---|
 | frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
-| recorded lap | One full lap of the game that a VR Mirror source's Record a lap saved: the raw left eye of each frame, and the head pose it was drawn with. The demo source plays it in place of the game |
+| recorded lap | One full lap of the game that a VR Mirror source recorded for its demo: the raw left eye of each frame, and the head pose it was drawn with. The demo source plays it in place of the game |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | drawn slot | The display slot a frame source reports a frame was drawn for. The OpenXR source reports it. The Pimax source can't |
@@ -24,7 +24,7 @@ one name in `%LOCALAPPDATA%\simoptix\recorded_laps`, `recorded_lap_<date>_<time>
 
 | File | What |
 |---|---|
-| `.mp4` | The left eye of every frame of the lap, one video frame per game frame, in HEVC, at most 2560 pixels wide (a wider image scaled down). The bytes are the frame source's own encoding, so an image Pimax encodes twice is stored encoded twice |
+| `.mp4` | The left eye of each frame of the lap the source copied, one video frame per copied frame, in HEVC, at most 2560 pixels wide (a wider image scaled down). The bytes are the frame source's own encoding, so an image Pimax encodes twice is stored encoded twice |
 | `.csv` | The eye's field of view and its turn in the head, the images' size, the headset's refresh period and the lap's length (line to line), then one row per frame: its moment in the lap and the head pose it was drawn with |
 
 `recorded_lap.h` reads and writes the `.csv`. Its first lines say what each row holds.
@@ -37,12 +37,18 @@ one name in `%LOCALAPPDATA%\simoptix\recorded_laps`, `recorded_lap_<date>_<time>
   slot (the moment), its drawn pose, as the OpenXR source does, and its frame number in the lap's video.
   The head path between frames is interpolated between their poses.
 - **The images** are decoded on the graphics card by Windows' Media Foundation, on the host's own device,
-  when the host copies a frame into its store. The frame's number picks its image: frames the host skips
-  are decoded and dropped, and a frame number lower than the last one rewinds the video. Each image is
-  copied only once two later frames have been decoded after it. No texture passes from one device to
-  another. Through 8 textures that the host's device opened, OBS showed images 17 frames away from their
-  poses, so the stabilization couldn't cancel the head's shake.
-- **The loop.** The lap ends on the line it started from. After its last frame, the next lap starts its
+  when the host copies a frame into its store. No texture passes from one device to another.
+  - Each decoded image's time in the video picks its frame: the video starts at the lap's first frame, so
+    an image's time is its frame's moment less the first frame's.
+  - Frames the host skips are decoded and dropped. Each image is copied only once two later frames have
+    been decoded after it.
+  - A frame before the last one decoded (the lap started again), or more than 90 frames after it (the
+    host fell behind), seeks the video to the key frame before it, and decoding goes on from there.
+- **The decoder keeps each frame's own time.** The converter to BGRA in Windows' source reader evens the
+  frame rate out by default. Where the game dropped a frame, it repeats an image, and every later image
+  then belongs to an earlier pose. The demo turns that off in the converter (`MF_XVP_DISABLE_FRC`), and
+  fails to start where it can't.
+- **The loop.** The lap ends on the start/finish line it started from. After its last frame, the next lap starts its
   first frame one lap length after the lap before, and the clock runs on. So frames stay one refresh
   apart across the join, and the smoothing carries on across it.
 - **Falling behind.** A frame due more than 0.25 s ago (the PC stalled) moves the lap on to now, and

@@ -8,6 +8,9 @@
 #include <mferror.h>
 #include <propvarutil.h>
 
+#include <algorithm>
+#include <cmath>
+
 using Microsoft::WRL::ComPtr;
 
 namespace {
@@ -75,7 +78,43 @@ bool DemoVideo::OpenReader(
         return false;
     }
 
+    if (!KeepFrameTimes(reader->Get())) {
+        reader->Reset();
+        *error = "Windows' video decoder would add frames to the recorded lap's video";
+        return false;
+    }
+
     return true;
+}
+
+// The reader's converter to BGRA evens the frame rate out by repeating an image wherever the game dropped a
+// frame: 41 images more than the lap's frames in one recorded lap, each image after the first repeat shown
+// with an earlier frame's head pose. Turned off in the reader's converters.
+bool DemoVideo::KeepFrameTimes(IMFSourceReader* reader) {
+    ComPtr<IMFSourceReaderEx> readerEx;
+
+    if (FAILED(reader->QueryInterface(IID_PPV_ARGS(&readerEx)))) {
+        return false;
+    }
+
+    bool found = false;
+
+    for (DWORD i = 0;; i++) {
+        GUID category = {};
+        ComPtr<IMFTransform> transform;
+        ComPtr<IMFAttributes> attributes;
+
+        if (FAILED(
+                readerEx->GetTransformForStream(MF_SOURCE_READER_FIRST_VIDEO_STREAM, i, &category, &transform)
+            )) {
+            return found;
+        }
+
+        if (category == MFT_CATEGORY_VIDEO_PROCESSOR && SUCCEEDED(transform->GetAttributes(&attributes))
+            && SUCCEEDED(attributes->SetUINT32(MF_XVP_DISABLE_FRC, TRUE))) {
+            found = true;
+        }
+    }
 }
 
 bool DemoVideo::Check(const std::wstring& path, std::string* error) {
@@ -166,12 +205,12 @@ void DemoVideo::Close() {
     }
 }
 
-bool DemoVideo::Next(ComPtr<IMFSample>* sample, bool* end) {
+bool DemoVideo::Next(ComPtr<IMFSample>* sample, double* t, bool* end) {
     *end = false;
 
     for (;;) {
         DWORD flags = 0;
-        LONGLONG time = 0;
+        LONGLONG time = 0;  // 100 ns units
         ComPtr<IMFSample> s;
 
         if (FAILED(reader_->ReadSample(MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, nullptr, &flags, &time, &s))) {
@@ -185,6 +224,7 @@ bool DemoVideo::Next(ComPtr<IMFSample>* sample, bool* end) {
 
         if (s) {
             *sample = std::move(s);
+            *t = static_cast<double>(time) * 1e-7;
             return true;
         }
         // No sample (a format change or a gap): the next read has the image.
@@ -210,10 +250,14 @@ bool DemoVideo::CopyInto(IMFSample* sample, ID3D11DeviceContext* context, ID3D11
     return true;
 }
 
-bool DemoVideo::Rewind() {
-    PROPVARIANT start;
-    InitPropVariantFromInt64(0, &start);
-    const HRESULT hr = reader_->SetCurrentPosition(GUID_NULL, start);
-    PropVariantClear(&start);
+bool DemoVideo::SeekTo(double t) {
+    PROPVARIANT position;
+
+    if (FAILED(InitPropVariantFromInt64(std::llround(std::max(t, 0.0) * 1e7), &position))) {  // 100 ns units
+        return false;
+    }
+
+    const HRESULT hr = reader_->SetCurrentPosition(GUID_NULL, position);
+    PropVariantClear(&position);
     return SUCCEEDED(hr);
 }

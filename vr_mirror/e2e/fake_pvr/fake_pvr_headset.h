@@ -62,6 +62,8 @@ namespace fake_pvr {
 
         LUID AdapterLuid() const { return luid_; }
         double Period() const { return period_; }
+        // The left eye image the runtime renders: twice the client mirror's size, as measured.
+        PvrSize RenderSize() const { return {config_.width * 2, config_.height * 2}; }
 
         // True head orientation at time t (no knowledge of the future).
         Quat TrueHead(double t) const;

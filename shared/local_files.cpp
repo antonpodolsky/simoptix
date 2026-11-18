@@ -20,12 +20,13 @@ namespace {
     };
 
     // In LocalFileKind's order. Each kind keeps 10, as OBS keeps 10 of its own logs. A trace is 100-300 MB
-    // per hour, a dump a few MB, a layer log a few KB. A recorded lap is a GB or more, so only 3 are kept.
+    // per hour, a dump a few MB, a layer log a few KB. A recorded lap is a GB or more, and the demo plays
+    // only the newest, so only it is kept.
     constexpr Kind kKinds[] = {
         {L"traces", L"trace", L".csv", 10},
         {L"", L"obs", L".dmp", 10},
         {L"", L"openxr_frame_source", L".log", 10},
-        {L"recorded_laps", L"recorded_lap", L"", 3},
+        {L"recorded_laps", L"recorded_lap", L"", 1},
     };
 
     constexpr size_t kTimeChars = 15;  // yyyymmdd_hhmmss

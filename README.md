@@ -12,7 +12,7 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
     - It is the full size the game draws.
     - It needs an API layer in the game.
     - The layer works with Easy Anti-Cheat (EAC) only when it is signed (below).
-- **Stabilization** is set by the source's Smoothing setting:
+- **Stabilization** is set by the source's Stabilization Method setting:
   - **Off:** raw headset view.
   - **Instant:** prioritizes latency (no delay), best for live streams.
   - **Look-ahead:** prioritizes smoothness over latency (runs half a second behind the game), best for
@@ -20,10 +20,13 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
   - OBS's audio, the G-meter and race auto-record follow the delay, so they stay in sync with the view.
 - **Race auto-record** makes OBS record each LMU race by itself.
   - It records from the start lights to 5 s after the car stops past the finish.
-- **The demo** plays a lap of LMU that you recorded, in place of the game, so you can try Smoothing and
-  Zoom without the game or the headset.
-  - **Record a lap** records one full lap in practice, from a crossing of the line to the next.
-  - **Start demo** plays it in a loop, and each change of Smoothing or Zoom shows at once.
+- **The demo** plays a lap of LMU that you recorded, in place of the game, so you can try the
+  stabilization settings and Zoom without the game or the headset.
+  - **Record a lap** records one full lap in practice, from a crossing of the start/finish line to the
+    next.
+  - **Play recorded lap** plays it in a loop, and each change of a setting shows at once.
+  - With nothing to show, the source says how to record or play a lap, while its properties window is
+    open.
 - **SimOptix: Overlays** adds the **SimOptix: G-Meter Overlay** source.
   - It also works over a normal capture of a flat-screen game.
   - It plays a demo lap, so you can try it without the game.
@@ -130,7 +133,7 @@ its Uninstall removes everything. `setup\README.md` describes setup.
 | `vr_mirror\e2e\` | End-to-end tests: the desktop window against a simulated Pimax headset and game, or a simulated game with the API layer |
 | `vr_mirror\recording_analysis\` | Scripts that check a recording frame by frame, and turn a moment of it into a test |
 | `overlays\` | SimOptix: Overlays: the G-meter (`gmeter\`, its image layers in `gmeter\design\`) and what any overlay can reuse (`common\`) |
-| `shared\` | Code compiled into both plugins: logging, CPU counters, crash dumps, the files kept in `%LOCALAPPDATA%\simoptix` (the newest 10 of each kind), the view's delay, and the list of OBS functions they call (`obs_lib\`). `build\` finds Visual Studio and gives every build SimOptix's version |
+| `shared\` | Code compiled into both plugins: logging, CPU counters, crash dumps, text drawn with DirectWrite, the files kept in `%LOCALAPPDATA%\simoptix` (the newest 10 of each kind), the view's delay, and the list of OBS functions they call (`obs_lib\`). `build\` finds Visual Studio and gives every build SimOptix's version |
 | `shared\telemetry\` | One reader of the game's telemetry for all of OBS, and the G-meter's demo lap. `games\lmu\fake\` makes up LMU telemetry, to test without the game |
 | `setup\` | SimOptix Setup: one program that installs and removes both plugins and the layer |
 | `third_party\` | libobs 32.2.2 and the OpenXR headers, as published |

@@ -3,7 +3,7 @@ rem Copyright (C) 2026 Anton Podolsky
 rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds SimOptix: Overlays, simoptix_overlays.dll: plugin.cpp registers the G-meter
 rem (..\gmeter\gmeter_source.cpp: SimOptix: G-Meter Overlay, drawn by meter_chrono.cpp with
-rem meter_draw.cpp and meter_text.cpp; its text rasterised by ..\common\text_raster.cpp with
+rem meter_draw.cpp and meter_text.cpp; its text rasterised by ..\..\shared\text_raster.cpp with
 rem DirectWrite, its image layers by meter_image.cpp, embedded by gmeter.rc from its design folder).
 rem Telemetry is ..\..\shared\telemetry (the model, the one reader both plugins share and the games it
 rem reads), listed by its sources.bat, which also finds LMU's headers (without them the plugin builds
@@ -36,7 +36,7 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_S
    /I..\..\third_party\obs-32.2.2\libobs %TELEMETRY_FLAGS% ^
    plugin.cpp %TELEMETRY_FILES% ..\..\shared\telemetry\demo_lap.cpp ^
    %G%\gmeter_source.cpp %G%\meter_chrono.cpp %G%\meter_draw.cpp %G%\meter_text.cpp ^
-   %C%\text_raster.cpp %C%\meter_image.cpp %C%\properties_preview.cpp ^
+   %C%\meter_image.cpp %C%\properties_preview.cpp ..\..\shared\text_raster.cpp ^
    ..\..\shared\log.cpp ..\..\shared\shared_memory.cpp ..\..\shared\program_delay.cpp ^
    ..\..\shared\crash_dump.cpp ..\..\shared\local_files.cpp ^
    /LD /Fe:bin\%NAME%.dll ^

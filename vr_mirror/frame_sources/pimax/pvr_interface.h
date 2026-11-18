@@ -64,6 +64,11 @@ struct PvrFov {
     float upTan, downTan, leftTan, rightTan;
 };
 
+// A size in pixels.
+struct PvrSize {
+    int32_t w, h;
+};
+
 // What getEyeDisplayInfo fills in.
 struct alignas(8) PvrDisplayInfo {
     int32_t unused[9];
@@ -115,12 +120,23 @@ struct PvrInterface {
     void* unused10[3];
     // The poses for time `time`: measured, or predicted for a time still to come.
     PvrResult (*getTrackingState)(PvrHmd hmd, double time, PvrTrackingState* state);
-    void* unused14[5];
+    void* unused14[2];
+    float (*getFloatConfig)(PvrHmd hmd, const char* key, float defaultValue);
+    void* unused17[2];
     PvrResult (*setIntConfig)(PvrHmd hmd, const char* key, int value);
     void* unused20[2];
     // The display slot a frame would be shown at; frame 0: the one a game would render now.
     double (*getPredictedDisplayTime)(PvrHmd hmd, int64_t frame);
-    void* unused23[37];
+    // The size of an eye's image for field of view `fov` at `pixelsPerDisplayPixel` (1: the display's
+    // own density at the centre).
+    PvrResult (*getFovTextureSize)(
+        PvrHmd hmd,
+        PvrEye eye,
+        PvrFov fov,
+        float pixelsPerDisplayPixel,
+        PvrSize* size
+    );
+    void* unused24[36];
     int64_t (*getInt64Config)(PvrHmd hmd, const char* key, int64_t defaultValue);
     void* unused61[18];
 };
