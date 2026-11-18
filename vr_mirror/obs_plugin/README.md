@@ -113,8 +113,7 @@ recorded, a status line under them says where it stands. The buttons aren't save
 The source is always the size of the OBS canvas (Settings → Video → Base resolution), so it fills the
 canvas at 1:1. When the canvas changes, the source follows at once.
 
-Everything else is fixed in the code (`plugin.cpp`, the constants above `MirrorSettingsOf`, and the
-core's own):
+Everything else is fixed in the code (the constants in `source_settings.h`, and the core's own):
 - The horizon is kept level.
 - The filtering is sharp (bicubic).
 - Each frame is warped from the pose the game drew it with.

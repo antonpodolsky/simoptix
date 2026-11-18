@@ -16,7 +16,6 @@
 #include <obs-module.h>
 #include <shellapi.h>
 
-#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <string>
@@ -31,12 +30,15 @@
 #include "shared/log.h"
 #include "shared/telemetry/telemetry.h"
 #include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
+#include "source_settings.h"
 #include "video_memory.h"
 #include "vr_mirror/frame_sources/demo/recorded_lap.h"
 #include "vr_mirror/frame_sources/openxr/openxr_source.h"
 #include "vr_mirror/frame_sources/pimax/pimax_source.h"
 
 OBS_DECLARE_MODULE()
+
+using namespace source_settings;
 
 MODULE_EXPORT const char* obs_module_name(void) {
     return "SimOptix: VR Mirror";
@@ -109,16 +111,6 @@ namespace {
         return nullptr;  // no recording asked for: the view's empty state says whether a lap is recorded
     }
 
-    // The source's core settings are the smoothing, its strength and the zoom; the drawn pose method is
-    // fixed here. 1920x1080 a little above native at Render Quality 1.0 (README.md, "Recording at the
-    // source's native resolution")
-    constexpr float kDefaultZoom = 1.25f;
-    // Strength: 1 is each smoothing's own tuning. Measured with stage_replay at zoom 1.25: at 2 Look-ahead
-    // still never stopped at an edge on the racing motion; at 3 it did on 2.8% of its frames, and its jitter
-    // rose from 0.001 to 0.33 deg, because it sees only half a second ahead (findings\obs_plugin.md).
-    constexpr float kMinStrength = 0.25f, kMaxStrength = 2.0f;
-    constexpr int kDrawnPose = 2;  // the slot check plus the cockpit correction below 90 fps
-
     // Race auto-record is on while at least one VR Mirror source has it ticked. UI thread.
     void FollowAutoRecord(Source* s, bool on) {
         if (on == s->autoRecord) {
@@ -132,50 +124,6 @@ namespace {
         }
     }
 
-    // The settings' keys: Stabilization Method (MirrorSettings::kSmoothing*) and Stabilization Strength.
-    constexpr const char* kMethodKey = "stabilization_method";
-    constexpr const char* kStrengthKey = "stabilization_strength";
-
-    // A scene saved before the two settings were renamed keeps its values: "smoothing" and
-    // "smoothing_strength" move to the new keys. One saved with the dropped Smoothest (3) shows
-    // Look-ahead in the list, not an empty choice.
-    void UpgradeSavedSettings(obs_data_t* s) {
-        if (obs_data_has_user_value(s, "smoothing")) {
-            obs_data_set_int(s, kMethodKey, obs_data_get_int(s, "smoothing"));
-            obs_data_erase(s, "smoothing");
-        }
-
-        if (obs_data_has_user_value(s, "smoothing_strength")) {
-            obs_data_set_double(s, kStrengthKey, obs_data_get_double(s, "smoothing_strength"));
-            obs_data_erase(s, "smoothing_strength");
-        }
-
-        if (obs_data_get_int(s, kMethodKey) > MirrorSettings::kSmoothingLookahead) {
-            obs_data_set_int(s, kMethodKey, MirrorSettings::kSmoothingLookahead);
-        }
-    }
-
-    // kMethodKey, kStrengthKey. "zoom": the crop factor (1 to 3). "debug": the frame-number stamp and the
-    // frame trace together.
-    MirrorSettings MirrorSettingsOf(obs_data_t* s, bool* debug) {
-        MirrorSettings st;
-        st.smoothing = std::clamp(
-            static_cast<int>(obs_data_get_int(s, kMethodKey)),
-            MirrorSettings::kSmoothingOff,
-            MirrorSettings::kSmoothingLookahead
-        );
-        st.strength = std::clamp(
-            static_cast<float>(obs_data_get_double(s, kStrengthKey)),
-            kMinStrength,
-            kMaxStrength
-        );
-
-        st.zoom = std::clamp(float(obs_data_get_double(s, "zoom")), 1.0f, 3.0f);
-        st.drawnPose = Stabilizes(st) ? kDrawnPose : 0;  // off: no slot check, no thumbnails
-        *debug = obs_data_get_bool(s, "debug");
-        return st;
-    }
-
     const char* GetPimaxName(void*) {
         return "SimOptix: Pimax Mirror";
     }
@@ -184,13 +132,7 @@ namespace {
     }
 
     void GetDefaults(obs_data_t* s) {
-        Guarded("defaults", [&] {
-            obs_data_set_default_int(s, kMethodKey, MirrorSettings::kSmoothingLookahead);
-            obs_data_set_default_double(s, kStrengthKey, 1.0);
-            obs_data_set_default_double(s, "zoom", kDefaultZoom);
-            obs_data_set_default_bool(s, "auto_record", false);
-            obs_data_set_default_bool(s, "debug", false);
-        });
+        Guarded("defaults", [&] { SetDefaults(s); });
     }
 
     // Asks `question`, Yes or No (No by default), in a box over the properties dialog: the buttons' callbacks
@@ -278,11 +220,6 @@ namespace {
 
             return true;  // the properties again, with the buttons as they are now
         });
-    }
-
-    // Whether the method in the dialog (`settings`) stabilizes; true without settings (the default does).
-    bool MethodOn(obs_data_t* settings) {
-        return !settings || obs_data_get_int(settings, kMethodKey) != MirrorSettings::kSmoothingOff;
     }
 
     // Stabilization Method changed in the dialog: Stabilization Strength is hidden while it is Off (OBS
