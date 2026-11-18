@@ -110,6 +110,37 @@ def Recording(log, video, clip_of=None, clip_start=None):
     return start, stop
 
 
+def StatsLines(log_lines, prefix, first_tick_wall, start, stop):
+    """The plugin's 10 s stats lines from `start` to 10 s after `stop` (wall s), as (wall s, text without
+    the plugin's tag). From OBS's log (`log_lines`: (wall s, text)) when it has them, as older builds wrote
+    them there. Else from the frame trace at `prefix`, whose `#stats,` lines sit among the rows of the
+    ticks they were written at (within a tick): each takes the time of the row before it, on the wall clock
+    where the trace's first tick is `first_tick_wall`."""
+
+    tag = "[simoptix_vr_mirror] "
+    from_log = [(t, text[len(tag) :] if text.startswith(tag) else text) for t, text in log_lines]
+    from_log = [(t, text) for t, text in from_log if start < t < stop + 10]
+    if any("ticks in 10 s" in text for _, text in from_log) or not prefix:
+        return from_log
+
+    path = prefix + "_ticks.csv"
+    if not os.path.exists(path):
+        return from_log
+
+    lines, first, tick = [], None, None
+    with open(path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if line[0].isdigit():
+                tick = float(line.split(",", 2)[1])
+                first = tick if first is None else first
+            elif line.startswith("#stats,") and tick is not None:
+                t = first_tick_wall + tick - first
+                if start < t < stop + 10:
+                    lines.append((t, line[len("#stats,") :].rstrip("\r\n")))
+
+    return lines
+
+
 def FirstTick(prefix):
     with open(prefix + "_ticks.csv") as f:
         for line in f:

@@ -5,14 +5,20 @@
 // fake game (fake_layer_game), each with %LOCALAPPDATA% pointed at a test folder that holds older files of
 // each kind. Then it checks what each kind left there:
 //  - no_game: OBS with the Pimax and OpenXR sources shown, Debug on, and no game (the fake runtime runs but
-//    sends no frame). No frame trace is written. Of 12 older crash dumps, the newest 8 are left once the
-//    plugins have loaded, which leaves room for the 2 a crash can add.
-//  - pimax_game: the Pimax source with the fake runtime's game. One new trace, _ticks and _pimax, with rows.
-//    Of it and 12 older traces, the newest 10 are left, and each older one's files (_ticks, and _pimax or
-//    _openxr) went together.
-//  - openxr_game: the OpenXR source with fake_openxr.exe's game. One new trace, _ticks and _openxr, with
-//  rows.
-//    Of it and 10 older traces, the newest 10 are left.
+//    sends no frame). No frame trace is written. OBS's log has each source's settings, and no eye. Of 12
+//    older crash dumps, the newest 8 are left once the plugins have loaded, which leaves room for the 2 a
+//    crash can add.
+//  - pimax_game: the Pimax source with the fake runtime's game, recorded by OBS from its start. OBS's log
+//    has the settings and the game's eye. One new trace, _ticks and _pimax, with rows, its column header
+//    first and then the settings and the eye. Of it and 12 older traces, the newest 10 are left, and each
+//    older one's files (_ticks, and _pimax or _openxr) went together. Beside the recording, a notes file
+//    has the version, the settings, the eye and the frame trace. It runs past 10 s: the 10 s stats are in
+//    the trace and not in OBS's log.
+//  - no_debug: the Pimax source with the fake runtime's game and Debug off, recorded by OBS. No notes file
+//    beside the recording, no frame trace, and no VR Mirror line in OBS's log but the version.
+//  - openxr_game: the OpenXR source with fake_openxr.exe's game. The settings and the eye are logged, and
+//    one new trace, _ticks and _openxr, has rows, as in pimax_game. Of it and 10 older traces, the newest
+//    10 are left.
 //  - layer: the layer's DLL loaded into "Le Mans Ultimate.exe", with and without the loader's handshake.
 //    Each start has its own log, starting with the load line. Of it and 12 older logs, the newest 10 are
 //    left. The files the layer wrote before under fixed names stay.
@@ -149,6 +155,132 @@ namespace {
         Check(stay, "files of other names stay");
     }
 
+    bool StartsWith(const std::string& text, const char* start) {
+        return text.compare(0, strlen(start), start) == 0;
+    }
+
+    bool HasLineStarting(const std::vector<std::string>& lines, const char* start) {
+        for (const std::string& line : lines) {
+            if (StartsWith(line, start)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // What VR Mirror logs about what a source (its frame source's `name`) runs with: the settings as the
+    // scene has them (Instant smoothing), and the game's eye once its frames came (`withEye`).
+    void CheckSetupLogged(const std::string& log, const std::string& name, bool withEye) {
+        const bool settings = log.find("settings (" + name + "): smoothing=1 zoom=") != std::string::npos;
+        Check(settings, "OBS's log has the settings (" + name + ")");
+
+        const bool eye = log.find("eye (" + name + "): left ") != std::string::npos;
+        Check(eye == withEye, withEye ? "...and the game's eye" : "...and no eye, while no game runs");
+    }
+
+    // The new trace's _ticks file: the column header first, then the settings and the eye.
+    void CheckTraceSetup(const fs::path& ticks) {
+        const std::vector<std::string> lines = Lines(ticks);
+        Check(!lines.empty() && StartsWith(lines[0], "stamp,"), "its first line is the column header");
+        Check(HasLineStarting(lines, "#settings,smoothing=1 zoom="), "it has the settings");
+        Check(HasLineStarting(lines, "#eye,left "), "it has the game's eye");
+    }
+
+    bool HasLineWith(const std::vector<std::string>& lines, const char* text) {
+        for (const std::string& line : lines) {
+            if (line.find(text) != std::string::npos) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // A run past 10 s with Debug on: the 10 s stats are in the trace, as `#stats,` lines, and not in OBS's
+    // log.
+    void CheckStatsInTrace(const Case& c, const std::string& log) {
+        const std::vector<std::wstring> stems = StemsOf(TimedFiles(c.traces, L"trace", L".csv"), L"trace");
+        std::vector<std::string> lines;
+
+        for (const std::wstring& stem : stems) {
+            if (stem.compare(0, 14, L"trace_20260101") != 0) {
+                lines = Lines(c.traces / (stem + L"_ticks.csv"));
+            }
+        }
+
+        Check(
+            HasLineWith(lines, "#stats,") && HasLineWith(lines, " ticks in 10 s: "),
+            "the trace has the 10 s stats"
+        );
+        Check(HasLineWith(lines, "#stats,footprint: "), "...and the footprint");
+        Check(log.find("ticks in 10 s") == std::string::npos, "OBS's log has no 10 s stats");
+        Check(log.find("footprint: Pimax") == std::string::npos, "...and no footprint");
+    }
+
+    // With Debug off, OBS's log has VR Mirror's version line and no other line of its: every other one is
+    // Debug's (the failures excepted, and this run has none).
+    void CheckOnlyVersionLogged(const std::string& log) {
+        const char* const tag = "[simoptix_vr_mirror] ";
+        std::string others;
+        size_t count = 0;
+
+        for (size_t at = log.find(tag); at != std::string::npos; at = log.find(tag, at + 1)) {
+            const size_t end = log.find('\n', at);
+            const std::string line = log.substr(
+                at + strlen(tag),
+                end == std::string::npos ? end : end - at - strlen(tag)
+            );
+
+            if (!StartsWith(line, "loaded, version ")) {
+                others += (count++ ? "; " : "") + line.substr(0, 60);
+            }
+        }
+
+        Check(
+            count == 0,
+            "OBS's log has no VR Mirror line but the version, with Debug off"
+                + (count ? " (" + others + ")" : "")
+        );
+    }
+
+    // The recording in `dir`, and the notes file beside it with the version, and the settings, the eye and
+    // the frame trace of the source (its frame source's `name`).
+    void CheckRecordingNotes(const fs::path& dir, const std::string& name) {
+        std::vector<fs::path> recordings;
+        std::error_code ec;
+
+        for (const fs::directory_entry& entry : fs::directory_iterator(dir, ec)) {
+            if (entry.path().extension() == ".mkv") {
+                recordings.push_back(entry.path());
+            }
+        }
+
+        Check(recordings.size() == 1, "one recording (" + std::to_string(recordings.size()) + ")");
+
+        if (recordings.size() != 1) {
+            return;
+        }
+
+        fs::path notesFile = recordings[0];
+        notesFile.replace_extension(".simoptix.txt");
+        const std::vector<std::string> notes = Lines(notesFile);
+        Check(!notes.empty(), "a notes file beside it, " + notesFile.filename().string());
+        Check(!notes.empty() && StartsWith(notes[0], "SimOptix VR Mirror "), "...naming the version first");
+
+        bool settings = false, eye = false, trace = false;
+
+        for (const std::string& line : notes) {
+            settings = settings || line.find(name + ": settings: smoothing=1 zoom=") != std::string::npos;
+            eye = eye || line.find(name + ": eye: left ") != std::string::npos;
+            trace = trace || line.find(name + ": frame trace: ") != std::string::npos;
+        }
+
+        Check(settings, "...with the settings");
+        Check(eye, "...with the game's eye");
+        Check(trace, "...with the frame trace");
+    }
+
     // The new trace: the one stem left that wasn't seeded, with rows in its _ticks file and in its frame
     // source's own file (`sourceEnding`: "_pimax.csv" or "_openxr.csv").
     void CheckNewTrace(const Case& c, const std::string& log, const wchar_t* sourceEnding) {
@@ -172,6 +304,7 @@ namespace {
 
         const size_t ticks = Lines(c.traces / (made[0] + L"_ticks.csv")).size();
         Check(ticks > 50, "its _ticks file has rows (" + std::to_string(ticks) + " lines)");
+        CheckTraceSetup(c.traces / (made[0] + L"_ticks.csv"));
 
         const size_t own = Lines(c.traces / (made[0] + sourceEnding)).size();
         const std::string ending = Narrow(sourceEnding);
@@ -242,6 +375,8 @@ namespace {
 
         Check(TimedFiles(c.traces, L"trace", L".csv").empty(), "no frame trace while no game runs");
         Check(TracesLogged(log).empty(), "OBS's log names no frame trace");
+        CheckSetupLogged(log, "Pimax session", false);
+        CheckSetupLogged(log, "OpenXR layer", false);
 
         const std::vector<std::wstring> dumps = TimedFiles(c.simoptix, L"obs", L".dmp");
         Check(
@@ -266,14 +401,60 @@ namespace {
         run.localAppData = c.appData;
         run.fakePvrScenario = FakePvrScenario(c, 0);
         run.holdUntilLogged = kTraceLogged;
+        run.holdMs = 14000;  // past the first 10 s of stats
+        run.recordTo = c.dir / "recordings";
+        std::error_code ec;
+        fs::remove_all(run.recordTo, ec);
+        fs::create_directories(run.recordTo, ec);
         std::string log;
 
         if (!RunObsCase(obs, c, run, &log)) {
             return;
         }
 
+        CheckSetupLogged(log, "Pimax session", true);
+        CheckStatsInTrace(c, log);
         CheckNewTrace(c, log, L"_pimax.csv");
         CheckTracesKept(c, kOlder);
+        CheckRecordingNotes(run.recordTo, "Pimax session");
+    }
+
+    // The Pimax source with the fake runtime's game and Debug off, recorded by OBS: the recording gets no
+    // notes file, no frame trace is written, and OBS's log has no settings or eye, since all are Debug's.
+    void NoDebug(const ObsCopy& obs, const fs::path& out) {
+        printf("no_debug\n");
+        const Case c = MakeCase(out, "no_debug");
+
+        ObsRun run;
+        run.sources = {"simoptix_pimax_mirror"};
+        run.debug = false;
+        run.holdMs = 12000;  // from OBS's window: the source starts, and runs past 10 s of stats
+        run.localAppData = c.appData;
+        run.fakePvrScenario = FakePvrScenario(c, 0);
+        run.recordTo = c.dir / "recordings";
+        std::error_code ec;
+        fs::remove_all(run.recordTo, ec);
+        fs::create_directories(run.recordTo, ec);
+        std::string log;
+
+        if (!RunObsCase(obs, c, run, &log)) {
+            return;
+        }
+
+        std::vector<fs::path> recordings, notes;
+
+        for (const fs::directory_entry& entry : fs::directory_iterator(run.recordTo, ec)) {
+            const std::string name = entry.path().filename().string();
+            const bool isNotes = name.size() > 13 && name.compare(name.size() - 13, 13, ".simoptix.txt") == 0;
+            (isNotes ? notes : recordings).push_back(entry.path());
+        }
+
+        Check(recordings.size() == 1, "one recording (" + std::to_string(recordings.size()) + ")");
+        Check(notes.empty(), "no notes file beside it, with Debug off");
+        Check(TimedFiles(c.traces, L"trace", L".csv").empty(), "no frame trace, with Debug off");
+        Check(log.find("settings (") == std::string::npos, "no settings in OBS's log, with Debug off");
+        Check(log.find("eye (") == std::string::npos, "no eye in OBS's log, with Debug off");
+        CheckOnlyVersionLogged(log);
     }
 
     void OpenXrGame(const ObsCopy& obs, const fs::path& repo, const fs::path& out) {
@@ -317,6 +498,7 @@ namespace {
             return;
         }
 
+        CheckSetupLogged(log, "OpenXR layer", true);
         CheckNewTrace(c, log, L"_openxr.csv");
         CheckTracesKept(c, kKept);
     }
@@ -465,6 +647,7 @@ int wmain() {
 
     NoGame(obs, out);
     PimaxGame(obs, out);
+    NoDebug(obs, out);
     OpenXrGame(obs, repo, out);
     Layer(repo, out);
 

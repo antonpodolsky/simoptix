@@ -15,6 +15,9 @@ Paths below are relative to `vr_mirror\recording_analysis\`. Run the scripts wit
   newest 10 traces are kept, so copy the trace of a recording to analyse into the data folder soon after
   recording.
 - The OBS log (`%APPDATA%\obs-studio\logs`) says which trace belongs to which session.
+- The file beside a recording made with Debug on, `<recording>.simoptix.txt`, says what each such
+  source ran with: the plugin's version, the settings, the game's eye and the frame trace, with their
+  video times. It stays when OBS's logs and the traces have rotated away, so read it first.
 
 ## Setup
 
@@ -41,7 +44,7 @@ then: the plugin's last `frame trace:` line before that start.
 1. It decodes the video once, on the GPU, for two things: how 88 patches of the image moved from frame
    to frame (`grid_shift.exe`, on a 960x540 grey copy), and each frame's number stamp.
 2. It fits the cockpit's motion and its jumps (`shake.py`), and sets them against the plugin's 10 s
-   stats in the log (`shake_causes.py`).
+   stats (`shake_causes.py`): from the frame trace's `#stats,` lines, or from OBS's log in older builds.
 3. With a trace:
    - it lines the video up with the trace (`lineup.py`, the README's "Lining up with the trace")
    - it says which cause each jump had (`shake_traced.py`)
@@ -92,9 +95,9 @@ python -I frozen_check.py "<output folder>"
 python -I episodes.py "<OBS log>" "<recording>.mp4" [--context 6]
 ```
 
-It lists the log's "game behind" lines, and every stretch of frames the plugin drew from an earlier
-slot's pose, with video times. `--context` adds the frame timing around each: the arrival gap, the slot
-step and the slot lead.
+It lists the "game behind" lines of the 10 s stats (the trace's, or OBS's log's in older builds), and
+every stretch of frames the plugin drew from an earlier slot's pose, with video times. `--context` adds
+the frame timing around each: the arrival gap, the slot step and the slot lead.
 
 ## Which lag the video supports
 

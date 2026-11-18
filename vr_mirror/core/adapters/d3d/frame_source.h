@@ -30,6 +30,15 @@
 // at the OpenXR layer's full 5084x4168.
 constexpr double kImageMemory = 4.7e9;
 
+// Where a frame source's 10 s stats lines go (FrameSource::TakeStats): one line a call, no newline.
+class StatsLineSink {
+public:
+    virtual void Line(const char* line) = 0;
+
+protected:
+    ~StatsLineSink() = default;
+};
+
 class FrameSource : public PoseSource {
 public:
     virtual ~FrameSource() = default;
@@ -99,11 +108,11 @@ public:
     virtual void ReleaseImages() = 0;
 
     // Footprint and stats (the host's control thread): the source's own thread's timestamp-counter
-    // cycles so far, and its own 10 s log lines (`line`; null: only reset), returning its thread's
+    // cycles so far, and its own 10 s stats lines (to `lines`; null: only reset), returning its thread's
     // wake-ups since the last call.
     virtual const char* ThreadName() const = 0;
     virtual uint64_t ThreadCycles() = 0;
-    virtual uint64_t TakeStats(double seconds, void (*line)(const char*)) = 0;
+    virtual uint64_t TakeStats(double seconds, StatsLineSink* lines) = 0;
     // A debug trace of the source's own (poses, frames), to a file named `prefix` plus its own ending
     // (Pimax: `_pimax.csv`); false if it has none.
     virtual bool StartTrace(const wchar_t* /*prefix*/) { return false; }

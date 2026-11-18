@@ -18,7 +18,16 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from trace_common import DrawnLags, DrawnSlotColumn, FirstTick, LoadTrace, ReadObsLog, Recording, VideoTime
+from trace_common import (
+    DrawnLags,
+    DrawnSlotColumn,
+    FirstTick,
+    LoadTrace,
+    ReadObsLog,
+    Recording,
+    StatsLines,
+    VideoTime,
+)
 
 
 def main():
@@ -42,7 +51,8 @@ def main():
         return tick - t0 + log["trace_start"] - rec_start + args.offset
 
     print(f"trace {log['trace']}, recording {VideoTime(rec_stop - rec_start)} long")
-    for t, text in log["lines"]:
+    # The 10 s stats: from OBS's log, or from the frame trace (StatsLines).
+    for t, text in StatsLines(log["lines"], log["trace"], log["trace_start"], rec_start, rec_stop):
         # "game behind: X frames rendered for an earlier slot ..., Y frames judged by image" (older
         # builds: "... judged by picture", or "game behind: X of Y frames judged by picture ...").
         m = re.match(r"game behind: (\d+)(?: of| frames rendered)", text)

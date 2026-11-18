@@ -28,18 +28,22 @@ struct ObsCopy {
 bool PrepareObs(const fs::path& repo, const fs::path& out, ObsCopy* obs, std::string* error);
 
 struct ObsRun {
-    std::vector<std::string> sources;  // the source ids the scene shows, each with Debug on
+    std::vector<std::string> sources;  // the source ids the scene shows
+    bool debug = true;                 // ...each with Debug on, or each with it off
     fs::path localAppData;             // %LOCALAPPDATA% for OBS and the plugins
     fs::path fakePvrScenario;          // the fake runtime's settings (SIMOPTIX_FAKE_PVR_SCENARIO)
     DWORD holdMs = 5000;               // how long OBS runs once every source has started
     // When set, OBS first runs until its log has this text (60 s at most), then holdMs more: the time
     // a frame takes to arrive is the machine's, and isn't what the test checks.
     std::string holdUntilLogged;
+    // When set, OBS records into this folder from its start (--startrecording) until it closes.
+    fs::path recordTo;
 };
 
 // Runs OBS once with fresh settings and a scene that shows `run.sources`, then closes it as its close
 // button does. `log` gets OBS's log. False, with the reason, if OBS didn't start, the sources didn't start
-// within 30 s, or OBS didn't close within 30 s (then it is ended).
+// within 30 s (with Debug off, which logs nothing of it: OBS's window didn't show), or OBS didn't close
+// within 30 s (then it is ended).
 bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string* error);
 
 // The program's environment with `set` (NAME=value) in place of the same names, as CreateProcessW takes it.

@@ -51,9 +51,9 @@ namespace {
         return text.str();
     }
 
-    // A scene that shows each source in `sources` at the canvas's top left, with Debug on, Instant
-    // smoothing (no output delay) and race auto-record off.
-    std::string SceneCollection(const std::vector<std::string>& sources) {
+    // A scene that shows each source in `sources` at the canvas's top left, with Debug on or off
+    // (`debug`), Instant smoothing (no output delay) and race auto-record off.
+    std::string SceneCollection(const std::vector<std::string>& sources, bool debug) {
         std::string items, list;
 
         for (size_t i = 0; i < sources.size(); i++) {
@@ -65,8 +65,8 @@ namespace {
                        "5}";
             list += ",{\"name\":\"" + std::string(DisplayName(sources[i])) + "\",\"uuid\":\"" + Uuid(id)
                     + "\",\"id\":\"" + sources[i] + "\",\"versioned_id\":\"" + sources[i]
-                    + "\",\"enabled\":true,\"settings\":{\"debug\":true,\"smoothing\":1,\"auto_record\":"
-                      "false}}";
+                    + "\",\"enabled\":true,\"settings\":{\"debug\":" + (debug ? "true" : "false")
+                    + ",\"smoothing\":1,\"auto_record\":false}}";
         }
 
         return std::string("{\"name\":\"") + kName
@@ -77,8 +77,21 @@ namespace {
                + items + "]}}" + list + "]}";
     }
 
-    // OBS's settings for one run: no first-run questions, a 1280x720 canvas at 60 fps, and the scene.
-    bool WriteSettings(const fs::path& dir, const std::vector<std::string>& sources) {
+    // Where OBS records (`recordTo`, if set): a short MKV with the software encoder, which every machine
+    // has.
+    std::string RecordingSettings(const fs::path& recordTo) {
+        if (recordTo.empty()) {
+            return "";
+        }
+
+        // With forward slashes, as OBS writes its own: its settings file reads a backslash as an escape.
+        return "[SimpleOutput]\r\nFilePath=" + recordTo.generic_string()
+               + "\r\nRecFormat2=mkv\r\nRecQuality=Stream\r\nStreamEncoder=x264\r\n";
+    }
+
+    // OBS's settings for one run: no first-run questions, no question on closing while it records, a
+    // 1280x720 canvas at 60 fps, where it records, and the scene.
+    bool WriteSettings(const fs::path& dir, const ObsRun& run) {
         const fs::path config = dir / "config" / "obs-studio";
         const fs::path profile = config / "basic" / "profiles" / kName;
         const fs::path scenes = config / "basic" / "scenes";
@@ -94,8 +107,8 @@ namespace {
                              )  // 32.2.2: no "what's new"
                              && Write(
                                  config / "user.ini",
-                                 "[General]\r\nFirstRun=true\r\n[Basic]\r\nProfile=" + name
-                                     + "\r\nProfileDir=" + name + "\r\nSceneCollection=" + name
+                                 "[General]\r\nFirstRun=true\r\nConfirmOnExit=false\r\n[Basic]\r\nProfile="
+                                     + name + "\r\nProfileDir=" + name + "\r\nSceneCollection=" + name
                                      + "\r\nSceneCollectionFile=" + name + ".json\r\n"
                              )
                              && Write(
@@ -104,8 +117,9 @@ namespace {
                                      + "\r\n[Video]\r\nBaseCX=1280\r\nBaseCY=720\r\nOutputCX="
                                        "1280\r\nOutputCY=720\r\nFPSType=0\r\n"
                                        "FPSCommon=60\r\n[Output]\r\nMode=Simple\r\n"
+                                     + RecordingSettings(run.recordTo)
                              )
-                             && Write(scenes / (name + ".json"), SceneCollection(sources));
+                             && Write(scenes / (name + ".json"), SceneCollection(run.sources, run.debug));
 
         return written;
     }
@@ -263,7 +277,7 @@ bool PrepareObs(const fs::path& repo, const fs::path& out, ObsCopy* obs, std::st
 }
 
 bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string* error) {
-    if (!WriteSettings(obs.dir, run.sources)) {
+    if (!WriteSettings(obs.dir, run)) {
         *error = "could not write OBS's settings";
         return false;
     }
@@ -280,6 +294,10 @@ bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string
     std::wstring
         command = L"\"" + exe.wstring()
                   + L"\" --portable --disable-shutdown-check --disable-updater --disable-missing-files-check";
+
+    if (!run.recordTo.empty()) {
+        command += L" --startrecording";
+    }
     STARTUPINFOW startup = {sizeof(startup)};
     PROCESS_INFORMATION process = {};
 
@@ -304,12 +322,14 @@ bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string
     const UniqueHandle processHandle(process.hProcess);
     const UniqueHandle threadHandle(process.hThread);
 
-    // Each source logs "started (source shown)" once its frame source runs.
+    // Each source with Debug on logs "started (source shown)" once its frame source runs. With Debug off it
+    // logs nothing, so OBS's window showing up is all there is to wait for.
     bool sourcesStarted = false;
 
     for (DWORD waited = 0; waited < kStartMs && !sourcesStarted; waited += 250) {
         Sleep(250);
-        sourcesStarted = Count(NewestLog(obs.dir), "started (source shown)") >= run.sources.size();
+        sourcesStarted = run.debug ? Count(NewestLog(obs.dir), "started (source shown)") >= run.sources.size()
+                                   : MainWindowOf(process.dwProcessId) != nullptr;
     }
 
     if (sourcesStarted && !run.holdUntilLogged.empty()) {

@@ -63,11 +63,14 @@ bool OpenXrSource::Start(std::string* error) {
     Stop();
     ResetEvent(stop_.Get());
     running_ = true;
-    thread_ = std::thread([this] {
+    const std::atomic<bool>* logGate = CurrentLogGate();  // it logs as the thread starting it does
+    thread_ = std::thread([this, logGate] {
+        const ScopedLogGate gate(logGate);
+
         try {
             Run();
         } catch (...) {
-            CoreLog("OpenXR: the reader thread stopped by an unexpected error");
+            CoreLogError("OpenXR: the reader thread stopped by an unexpected error");
         }
     });
 
@@ -528,11 +531,11 @@ uint64_t OpenXrSource::ThreadCycles() {
     return ::ThreadCycles(thread_);
 }
 
-uint64_t OpenXrSource::TakeStats(double seconds, void (*line)(const char*)) {
+uint64_t OpenXrSource::TakeStats(double seconds, StatsLineSink* lines) {
     const uint64_t wakeups = wakeups_.exchange(0), lost = lost_.exchange(0), gone = images_.TakeGone();
     const uint64_t arrived = framesArrived_.load(), frames = arrived - statArrived_;
     statArrived_ = arrived;
-    if (!line) {
+    if (!lines) {
         return wakeups;
     }
     char text[200];
@@ -548,6 +551,6 @@ uint64_t OpenXrSource::TakeStats(double seconds, void (*line)(const char*)) {
         static_cast<unsigned long long>(gone)
     );
 
-    line(text);
+    lines->Line(text);
     return wakeups;
 }
