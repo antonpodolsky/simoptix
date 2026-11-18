@@ -435,9 +435,14 @@ One convention, everywhere. Check every new name against it, and rename what bre
     `_smoothest`), which was dropped then (`findings\obs_plugin.md`, "Smoothing and zoom"). Findings
     and e2e results from before keep the old names.
   - The OBS settings Stabilization Method (`stabilization_method`) and Stabilization Strength
-    (`stabilization_strength`) were called Smoothing (`smoothing`) and Strength
-    (`smoothing_strength`) before. The plugin moves a scene's old keys to the new ones. The core's
-    own settings, and the mirror app's ini file, keep `smoothing` and `smoothing_strength`.
+    (`stabilization_strength_level`) were called Smoothing (`smoothing`) and Strength
+    (`smoothing_strength`) before. Stabilization Strength is a level from 0 to 10, 5 by default, that
+    `vr_mirror\obs_plugin\source_settings.cpp` turns into the core's strength (0.25 at 0, 1 at 5, 2 at
+    10). In older builds the OBS setting was the strength itself (0.25 to 2), saved as
+    `stabilization_strength`, and findings from those builds quote that ("Strength 2"). The plugin moves a
+    scene's old keys to the new ones, and an old strength to its nearest level. The core's own
+    settings, `stage_replay --strength` and the mirror app's ini file keep the strength itself, as
+    `smoothing` and `smoothing_strength`.
   - "Mirror" in a name ("VR Mirror", "Pimax Mirror", `MirrorView`, `vr_mirror\`) is our plugin and its
     sources. "The mirror" or "client mirror" in a sentence means only Pimax's client mirror
     (`PvrMirror`). A sentence that means the plugin says "VR Mirror".

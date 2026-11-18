@@ -334,6 +334,8 @@ The Strength setting scales each smoothing's own tuning: Look-ahead's time const
 it, Instant's cutoff and beta divided by it. Measured with `stage_replay --pipeline` at zoom 1.25, as the
 mirror app's window, with the build of the pull request that added it.
 
+- **In OBS, a level from 0 to 10.** The table's strengths are the levels 0 (0.25), 5 (1) and 10 (2).
+  0.5 lies between the levels 2 (0.44) and 3 (0.57), and 1.5 is about level 8 (1.52).
 - **At 1 nothing changed:** `stage_replay --golden` wrote the same 26 MB as the build before, byte for
   byte, over all 52 runs.
 - **Look-ahead,** lag p99 and the view's jitter still, on the racing motion (`racing+heartbeat`) and the

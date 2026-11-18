@@ -100,7 +100,7 @@ Both sources have the same five settings:
 | Setting | What it does |
 |---|---|
 | **Stabilization Method** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). The list says each one's delay and how much video memory it takes ("no delay, low VRAM usage", "0.5s delay, higher VRAM usage"). Look-ahead is the default |
-| **Stabilization Strength** | A slider from 0.25 to 2, 1 by default: how strongly Instant and Look-ahead smooth. Hidden while Stabilization Method is Off. Higher is calmer, and the view follows the head less closely. Lower follows the head more closely ("Stabilization Strength", below) |
+| **Stabilization Strength** | A slider from 0 to 10, 5 by default: how strongly Instant and Look-ahead smooth. Hidden while Stabilization Method is Off. Higher is calmer, and the view follows the head less closely. Lower follows the head more closely, and 0 still smooths ("Stabilization Strength", below) |
 | **Zoom** | A slider from 1 to 3, 1.25 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
 | **Record races automatically** | OBS records each race by itself, from the start lights to 5 s after the car stops past the finish ("Recording races automatically", below). Off by default |
 | **Debug** | Stamps frame numbers on the view and writes a frame trace, for checking a recording frame by frame ("Debug: stamp and frame trace", below) |
@@ -119,7 +119,7 @@ Everything else is fixed in the code (the constants in `source_settings.h`, and 
 - Each frame is warped from the pose the game drew it with.
 - The Pimax source runs the slot check while the game is behind ("When the game falls behind", below).
 - The OpenXR source takes the slot and the pose each frame reports.
-- Instant's filter has a 0.5 Hz cutoff, beta 2 and a 0.5° dead zone, at Stabilization Strength 1.
+- Instant's filter has a 0.5 Hz cutoff, beta 2 and a 0.5° dead zone, at Stabilization Strength 5.
 
 ### Stabilization Method
 
@@ -138,17 +138,20 @@ checked in a recording.
 
 ### Stabilization Strength
 
-**Stabilization Strength** sets how strongly the smoothing works. At 1, each smoothing has the tuning described here.
-- **Look-ahead** multiplies the time constants of its path by the strength. It still sees half a second
-  ahead at every strength.
+**Stabilization Strength** sets how strongly the smoothing works, from 0 to 10. At 5, each smoothing has
+the tuning described here. Each level stands for a factor on that tuning: 0.25 at 0, 1 at 5 and 2 at 10.
+Each step below 5 multiplies the factor by about 1.32, and each step above 5 by about 1.15.
+- **Look-ahead** multiplies the time constants of its path by the factor. It still sees half a second
+  ahead at every level.
 - **Instant** divides its filter's cutoff, and how fast the cutoff rises with the head's speed, by the
-  strength.
+  factor.
 
-The view trails the head more as the strength rises. On the e2e suite's racing motion at Zoom 1.25, with
-Look-ahead, it trails by 0.27° at most 99% of the time at 0.25, 1.68° at 1 and 4.4° at 2. Above 2,
-Look-ahead runs into the image's edges: at 3 it stopped the view at an edge on 2.8% of the frames of the
-same motion, and the view shook. Instant changes less, because its catch-up near the edges sets most of
-its lag. This was measured on recorded and made-up head motion, not checked in a recording.
+The view trails the head more as the level rises. On the e2e suite's racing motion at Zoom 1.25, with
+Look-ahead, it trails by 0.27° at most 99% of the time at 0, 1.68° at 5 and 4.4° at 10. A factor above
+2 runs Look-ahead into the image's edges: at 3 it stopped the view at an edge on 2.8% of the frames of
+the same motion, and the view shook. So 10 is a factor of 2. Instant changes less, because its catch-up
+near the edges sets most of its lag. This was measured on recorded and made-up head motion, not checked
+in a recording.
 
 **The delay costs video memory,** because the source keeps a copy of every game frame within it. With
 the Pimax source that is about 1.1 GB at Render Quality 1.0, and about 1.7 GB at 1.25.

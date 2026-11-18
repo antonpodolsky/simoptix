@@ -223,7 +223,7 @@ namespace {
     }
 
     // Stabilization Method changed in the dialog: Stabilization Strength is hidden while it is Off (OBS
-    // greys out only the number box of a decimal slider, not the slider).
+    // greys out only the number box of a slider, not the slider).
     bool FollowMethod(obs_properties_t* props, obs_property_t*, obs_data_t* settings) {
         return Guarded("settings in the dialog", [&] {
             obs_property_set_visible(obs_properties_get(props, kStrengthKey), MethodOn(settings));
@@ -353,22 +353,23 @@ namespace {
         obs_data_release(settings);
         obs_property_set_modified_callback(method, FollowMethod);
 
-        obs_property_t* strength = obs_properties_add_float_slider(
+        obs_property_t* strength = obs_properties_add_int_slider(
             p,
             kStrengthKey,
             "Stabilization Strength",
-            kMinStrength,
-            kMaxStrength,
-            0.05
+            kMinStrengthLevel,
+            kMaxStrengthLevel,
+            1
         );
 
         obs_property_set_visible(strength, methodOn);
 
         obs_property_set_long_description(
             strength,
-            "How strongly Instant and Look-ahead smooth. 1 is the tuned default.\n"
+            "How strongly Instant and Look-ahead smooth, from 0 to 10. 5 is the tuned default.\n"
             "Higher: calmer, the view follows the head less closely.\n"
-            "Lower: the view follows the head more closely."
+            "Lower: the view follows the head more closely.\n"
+            "0 still smooths. For none, set Stabilization Method to Off."
         );
 
         obs_properties_add_float_slider(p, "zoom", "Zoom", 1.0, 3.0, 0.01);
