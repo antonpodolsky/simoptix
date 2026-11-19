@@ -9,34 +9,22 @@ namespace source_settings {
 
     namespace {
 
-        // The strength at `level`: below the default, even steps on a log scale from 1 down to kMinStrength;
-        // above it, from 1 up to kMaxStrength.
+        // The strength at `level`: 0 at kNoSmoothingLevel; below the default, even steps on a log scale from
+        // 1 down to kMinStrength at kLightestStrengthLevel; above it, from 1 up to kMaxStrength.
         float StrengthOfLevel(int level) {
+            if (level <= kNoSmoothingLevel) {
+                return 0;
+            }
+
             const int steps = level - kDefaultStrengthLevel;
 
             if (steps < 0) {
-                const float stepsDown = static_cast<float>(kDefaultStrengthLevel - kMinStrengthLevel);
+                const float stepsDown = static_cast<float>(kDefaultStrengthLevel - kLightestStrengthLevel);
                 return std::pow(kMinStrength, static_cast<float>(-steps) / stepsDown);
             }
 
             const float stepsUp = static_cast<float>(kMaxStrengthLevel - kDefaultStrengthLevel);
             return std::pow(kMaxStrength, static_cast<float>(steps) / stepsUp);
-        }
-
-        // The level nearest `strength` on StrengthOfLevel's scale.
-        int LevelOfStrength(float strength) {
-            const float clamped = std::clamp(strength, kMinStrength, kMaxStrength);
-            float steps = 0;
-
-            if (clamped < 1) {
-                const float stepsDown = static_cast<float>(kDefaultStrengthLevel - kMinStrengthLevel);
-                steps = -std::log(clamped) / std::log(kMinStrength) * stepsDown;
-            } else {
-                const float stepsUp = static_cast<float>(kMaxStrengthLevel - kDefaultStrengthLevel);
-                steps = std::log(clamped) / std::log(kMaxStrength) * stepsUp;
-            }
-
-            return kDefaultStrengthLevel + static_cast<int>(std::lround(steps));
         }
 
     }
@@ -50,14 +38,6 @@ namespace source_settings {
         if (obs_data_get_int(s, kMethodKey) > MirrorSettings::kSmoothingLookahead) {
             obs_data_set_int(s, kMethodKey, MirrorSettings::kSmoothingLookahead);
         }
-
-        for (const char* strengthKey : {"smoothing_strength", "stabilization_strength"}) {
-            if (obs_data_has_user_value(s, strengthKey)) {
-                const float strength = static_cast<float>(obs_data_get_double(s, strengthKey));
-                obs_data_set_int(s, kStrengthKey, LevelOfStrength(strength));
-                obs_data_erase(s, strengthKey);
-            }
-        }
     }
 
     MirrorSettings MirrorSettingsOf(obs_data_t* s, bool* debug) {
@@ -70,7 +50,7 @@ namespace source_settings {
 
         const int level = std::clamp(
             static_cast<int>(obs_data_get_int(s, kStrengthKey)),
-            kMinStrengthLevel,
+            kNoSmoothingLevel,
             kMaxStrengthLevel
         );
         st.strength = StrengthOfLevel(level);

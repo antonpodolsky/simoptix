@@ -17,10 +17,12 @@ namespace source_settings {
     constexpr float kDefaultZoom = 1.25f;
     constexpr int kDrawnPose = 2;  // the slot check plus the cockpit correction below 90 fps
 
-    // Stabilization Strength is a level from 0 to 10, 5 in the middle by default. Each level gives the
-    // core's strength (MirrorSettings::strength, 1 each smoothing's own tuning), in even steps on a log scale
-    // on each side of the default: 0 is kMinStrength, 5 is 1 and 10 is kMaxStrength.
-    constexpr int kMinStrengthLevel = 0, kDefaultStrengthLevel = 5, kMaxStrengthLevel = 10;
+    // Stabilization Strength is a level from 0 to 10, 5 in the middle by default. Each level gives the core's
+    // strength (MirrorSettings::strength, 1 each smoothing's own tuning). 0 smooths nothing (strength 0): the
+    // horizon is still levelled, and the method keeps its delay. From 1 up the steps are even on a log scale
+    // on each side of the default: 1 is kMinStrength, 5 is 1 and 10 is kMaxStrength.
+    constexpr int kNoSmoothingLevel = 0, kLightestStrengthLevel = 1;
+    constexpr int kDefaultStrengthLevel = 5, kMaxStrengthLevel = 10;
     // Measured with stage_replay at zoom 1.25: at strength 2 Look-ahead still never stopped at an edge on the
     // racing motion; at 3 it did on 2.8% of its frames, and its jitter rose from 0.001 to 0.33 deg, because
     // it sees only half a second ahead (findings\obs_plugin.md).
@@ -29,11 +31,10 @@ namespace source_settings {
     // The settings' keys: Stabilization Method (MirrorSettings::kSmoothing*) and Stabilization Strength's
     // level.
     constexpr const char* kMethodKey = "stabilization_method";
-    constexpr const char* kStrengthKey = "stabilization_strength_level";
+    constexpr const char* kStrengthKey = "stabilization_strength";
 
-    // A scene saved by an older build keeps its values. "smoothing" moves to kMethodKey, and one saved with
-    // the dropped Smoothest (3) shows Look-ahead in the list, not an empty choice. The strength itself,
-    // saved as "smoothing_strength" or "stabilization_strength" (0.25 to 2), becomes the nearest level.
+    // A scene saved before the method was renamed keeps it: "smoothing" moves to kMethodKey. One saved with
+    // the dropped Smoothest (3) shows Look-ahead in the list, not an empty choice.
     void UpgradeSavedSettings(obs_data_t* s);
 
     // kMethodKey, kStrengthKey. "zoom": the crop factor (1 to 3). "debug": the frame-number stamp and the

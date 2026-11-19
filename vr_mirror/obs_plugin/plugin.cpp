@@ -357,7 +357,7 @@ namespace {
             p,
             kStrengthKey,
             "Stabilization Strength",
-            kMinStrengthLevel,
+            kNoSmoothingLevel,
             kMaxStrengthLevel,
             1
         );
@@ -369,7 +369,7 @@ namespace {
             "How strongly Instant and Look-ahead smooth, from 0 to 10. 5 is the tuned default.\n"
             "Higher: calmer, the view follows the head less closely.\n"
             "Lower: the view follows the head more closely.\n"
-            "0 still smooths. For none, set Stabilization Method to Off."
+            "0: no smoothing. The horizon is still kept level."
         );
 
         obs_properties_add_float_slider(p, "zoom", "Zoom", 1.0, 3.0, 0.01);
