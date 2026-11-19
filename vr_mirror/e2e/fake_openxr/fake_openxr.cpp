@@ -301,8 +301,8 @@ namespace {
             if (delta.w < 0) {
                 delta = {-delta.x, -delta.y, -delta.z, -delta.w};
             }
-            const float angle = 2 * std::acos(std::min(1.0f, delta.w));
-            const float s = std::sqrt(std::max(0.0f, 1 - delta.w * delta.w));
+            const float angle = static_cast<float>(RotationAngle(prev, q));
+            const float s = std::sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
             if (angle < 1e-7f || s < 1e-7f) {
                 return q;
             }

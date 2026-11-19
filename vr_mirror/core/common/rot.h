@@ -48,7 +48,7 @@ inline Vec3 Rotate(const Quat& q, const Vec3& v) {
 
 // The angle between two directions (radians): atan2 of the cross product's length over the dot, which
 // holds to float rounding where they nearly match (acos of the dot reads about 0.05 deg apart there).
-// The measures in vr_mirror\e2e use it and RotationAngle, and no other.
+// Every angle in the core and in vr_mirror\e2e (its measures and fakes) comes from it or RotationAngle.
 inline double DirectionAngle(const Vec3& a, const Vec3& b) {
     const double cx = double(a.y) * b.z - double(a.z) * b.y;
     const double cy = double(a.z) * b.x - double(a.x) * b.z;
@@ -63,12 +63,6 @@ inline double RotationAngle(const Quat& a, const Quat& b) {
     const Quat r = Mul(Conj(a), b);
     const double v = std::sqrt(double(r.x) * r.x + double(r.y) * r.y + double(r.z) * r.z);
     return 2 * std::atan2(v, std::fabs(double(r.w)));
-}
-
-// Angle in radians of the rotation taking a to b.
-inline float AngleBetween(const Quat& a, const Quat& b) {
-    const float d = std::fabs(Dot(a, b));
-    return 2.0f * std::acos(std::min(1.0f, d));
 }
 
 inline Quat Slerp(const Quat& a, Quat b, float t) {

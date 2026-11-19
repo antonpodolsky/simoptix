@@ -74,7 +74,7 @@ public:
 
         // Each moment's time constant, from the fastest turn within kSpeedSpan of it.
         for (int i = 0; i < m; i++) {
-            speed_[i] = i ? AngleBetween(poses[i - 1], poses[i]) / dt : 0;
+            speed_[i] = i ? RotationAngle(poses[i - 1], poses[i]) / dt : 0;
         }
         const int span = int(std::lround(kSpeedSpan / dt));
         const double deg = 3.14159265358979 / 180;

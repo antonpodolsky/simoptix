@@ -468,6 +468,32 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
   - The plugin does the same once per start (30–35 ms on the traces).
   - The slot timeline kept the view from jumping there, but not the image.
 
+## Stage 4: smoothing
+
+### One exact angle
+
+The smoothings measured the head's speed and lag with `2 acos(dot)` of two quaternions, and the image room
+the view's lag with `2 acos(w)`. In float that reads about 0.02–0.05° where the poses nearly match, so a
+frame-to-frame turn of a fraction of a degree read larger and noisier than it was. Both now use
+`RotationAngle` (`vr_mirror\core\common\rot.h`, 2 atan2(|v|, |w|)). `stage_replay --pipeline` at zoom
+1.5, before and after, with the build of the pull request that changed it:
+
+| Input | Look-ahead: jitter still / small | Instant: lag p99 / max |
+|---|---|---|
+| queued_late_frames | 0.0013 → 0.0009°, 0.0013 → 0.0007° | 4.57 → 4.66°, 4.65 → 4.75° |
+| false_retiming_head_turns | 0.0013 → 0.0002°, 0.0015 → 0.0003° | 3.35 → 3.51°, 3.55 → 3.70° |
+| false_retiming_short_hiccup | 0.0016 → 0.0009°, 0.0019 → 0.0003° | 4.25 → 4.25°, 4.64 → 4.64° |
+| false_retiming_featureless_cockpit | 0.0014 → 0.0008°, 0.0021 → 0.0018° | 5.22 → 5.25°, 5.48 → 5.52° |
+
+- **Look-ahead is calmer on the real heads:** each moment's time constant follows the head's speed, which
+  the noise had made jumpy. Its lag stayed the same or fell by 0.01°.
+- **Instant trails a little more on the real heads,** up to 0.16° at p99. The noise had read small turns
+  as faster, which raised its cutoff (`kBeta`). Its jitter stayed the same.
+- **The synthetic motions** (`edge_test+heartbeat`, `racing+heartbeat`) changed by under 0.01° in every
+  score. Black, edge limit, planned and wrong pose stayed 0 on every input.
+- The fakes' pose predictions (`fake_pvr`, `fake_openxr`) took the head's turn over 4 ms with `2 acos(w)`
+  too, about 0.4° at 100°/s, and now use `RotationAngle`.
+
 ## Stage 5: warp
 
 - The image is warped from the pose the game drew it with, not from the measured head
