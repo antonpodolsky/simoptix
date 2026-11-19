@@ -2,15 +2,14 @@
 
 ## The dev workflow
 
-The workflow is written down, and every agent follows it.
+The workflow is tailored to a wide type of coding agents.
 - **The dev skill** (`.agents\skills\dev\SKILL.md`) holds the rules for the whole repo and the order
   to work in. The rules cover using only the game's official interfaces, a minimal footprint beside the
   game, and the code's layers and which way they depend. `AGENTS.md` points every coding agent at the
   skills.
 - **The code style skill** (`.agents\skills\code-style\SKILL.md`) holds the rules for how the code
   reads, with examples from the repo and a review checklist.
-- **The docs skill** (`.agents\skills\docs\SKILL.md`) holds the rules for the docs: who reads each
-  level, plain words, and only what exists.
+- **The docs skill** (`.agents\skills\docs\SKILL.md`) holds the rules for writing docs.
 - Each change is made in its own git worktree, built, tested, and committed as one small commit. Its
   subject says what changed, and its body says why.
 - Docs change in the same commit as the code they describe.
