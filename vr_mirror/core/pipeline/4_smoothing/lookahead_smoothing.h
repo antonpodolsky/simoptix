@@ -208,7 +208,8 @@ public:
     void Reset() override {}  // no state between frames
     double DelayS() const override { return LookaheadOutputDelayS(); }
     // Multiplies the path's time constants (tauStillS, tauMoveS). The delay stays: the path sees as far
-    // ahead at every strength, and the window behind grows with the time constant.
+    // ahead at every strength, and the window behind grows with the time constant. At 0 there is no path:
+    // the view is the image's own pose, levelled.
     void SetStrength(float strength) override;
     void Window(double period, int* behind, int* ahead) const override;
     Smoothed Smooth(const SmoothingInput& in) override;

@@ -110,7 +110,8 @@ public:
 
     void Reset() override { filter_.Reset(); }  // not headSpeed_
     double DelayS() const override { return 0; }
-    // Divides the cutoff while still and its rise with the head's speed (kMinCutoffHz, kBeta).
+    // Divides the cutoff while still and its rise with the head's speed (kMinCutoffHz, kBeta). At 0 the
+    // filter is bypassed.
     void SetStrength(float strength) override { strength_ = strength; }
     void Window(double, int* behind, int* ahead) const override { *behind = *ahead = 0; }
     Smoothed Smooth(const SmoothingInput& in) override;

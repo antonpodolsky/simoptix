@@ -18,6 +18,14 @@ namespace {
 }
 
 Smoothed InstantSmoothing::Smooth(const SmoothingInput& in) {
+    // Strength 0: no smoothing, the image's own pose levelled. The filter starts afresh once it smooths
+    // again.
+    if (strength_ <= 0) {
+        filter_.Reset();
+        const EdgeStop stop = StopAtEdge(in.shown, LevelHorizon(in.followed), in.geometry);
+        return {stop.view, false, stop.stopped, stop.movedDeg};
+    }
+
     // How close the previous view is to running out of room against the new head pose:
     // the closer, the faster the smoothing catches up.
     float extraHz = 0;
