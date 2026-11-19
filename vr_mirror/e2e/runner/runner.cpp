@@ -376,6 +376,13 @@ namespace {
         );
 
         Check(r, "max lag behind head", maxLag, sc.limits.maxLagDeg, "deg");
+        Check(
+            r,
+            "max view from its image",
+            MaxViewFromImageDeg(d.tools),
+            sc.limits.maxViewFromImageDeg,
+            "deg"
+        );
     }
 
     // Exactly which pose each game frame was warped from, against the one it was rendered with.

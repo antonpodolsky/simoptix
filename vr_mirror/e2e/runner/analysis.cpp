@@ -20,6 +20,20 @@ void IntendedSeries(const ToolTrace& tt, const FakeLog& log, double delay, Serie
     }
 }
 
+double MaxViewFromImageDeg(const ToolTrace& tt) {
+    double most = 0;
+
+    for (size_t i = 0; i < tt.presented.size(); i++) {
+        if (tt.presented[i] < tt.presented.front() + 1.0) {
+            continue;
+        }
+
+        most = std::max(most, SmallAngleDeg(Forward(tt.view[i]), Forward(tt.raw[i])));
+    }
+
+    return most;
+}
+
 Matched MatchCaptures(
     const std::vector<ViewSample>& caps,
     const FakeLog& log,

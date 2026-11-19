@@ -136,6 +136,10 @@ struct Result {
 // eye pointed at those moments: at presented - `delay`: how long after its own moment the tool presents a
 // frame beyond the usual few ms (its look-ahead delay, lookahead_smoothing.h; 0 for Instant).
 void IntendedSeries(const ToolTrace& tt, const FakeLog& log, double delay, Series* intended, Series* eye);
+// The most the tool's view looks away from its image (the pose the image was drawn with) at its frames
+// after the first second, along the head's own look direction (degrees). Levelling keeps that direction
+// and removes only the roll, so where nothing is smoothed it is 0 but for float rounding.
+double MaxViewFromImageDeg(const ToolTrace& tt);
 Matched MatchCaptures(
     const std::vector<ViewSample>& caps,
     const FakeLog& log,
