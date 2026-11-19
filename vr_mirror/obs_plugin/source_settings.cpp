@@ -9,21 +9,21 @@ namespace source_settings {
 
     namespace {
 
-        // The strength at `level`: 0 at kNoSmoothingLevel; below the default, even steps on a log scale from
-        // 1 down to kMinStrength at kLightestStrengthLevel; above it, from 1 up to kMaxStrength.
+        // The strength at `level`: 0 at kNoSmoothingLevel; below kTunedStrengthLevel, even steps on a log
+        // scale from 1 down to kMinStrength at kLightestStrengthLevel; above it, from 1 up to kMaxStrength.
         float StrengthOfLevel(int level) {
             if (level <= kNoSmoothingLevel) {
                 return 0;
             }
 
-            const int steps = level - kDefaultStrengthLevel;
+            const int steps = level - kTunedStrengthLevel;
 
             if (steps < 0) {
-                const float stepsDown = static_cast<float>(kDefaultStrengthLevel - kLightestStrengthLevel);
+                const float stepsDown = static_cast<float>(kTunedStrengthLevel - kLightestStrengthLevel);
                 return std::pow(kMinStrength, static_cast<float>(-steps) / stepsDown);
             }
 
-            const float stepsUp = static_cast<float>(kMaxStrengthLevel - kDefaultStrengthLevel);
+            const float stepsUp = static_cast<float>(kMaxStrengthLevel - kTunedStrengthLevel);
             return std::pow(kMaxStrength, static_cast<float>(steps) / stepsUp);
         }
 
@@ -62,7 +62,7 @@ namespace source_settings {
     }
 
     void SetDefaults(obs_data_t* s) {
-        obs_data_set_default_int(s, kMethodKey, MirrorSettings::kSmoothingLookahead);
+        obs_data_set_default_int(s, kMethodKey, kDefaultMethod);
         obs_data_set_default_int(s, kStrengthKey, kDefaultStrengthLevel);
         obs_data_set_default_double(s, "zoom", kDefaultZoom);
         obs_data_set_default_bool(s, "auto_record", false);

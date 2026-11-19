@@ -437,7 +437,7 @@ One convention, everywhere. Check every new name against it, and rename what bre
   - The OBS settings Stabilization Method (`stabilization_method`) and Stabilization Strength
     (`stabilization_strength`) were called Smoothing (`smoothing`) and Strength
     (`smoothing_strength`) before. The plugin moves a scene's old method key to the new one.
-    Stabilization Strength is a level from 0 to 10, 5 by default, that
+    Stabilization Strength is a level from 0 to 10, 3 by default, that
     `vr_mirror\obs_plugin\source_settings.cpp` turns into the core's strength (0 at 0: no smoothing,
     0.25 at 1, 1 at 5, 2 at 10). In older builds the OBS setting was the strength itself (0.25 to 2),
     and findings from those builds quote that ("Strength 2"). The core's own settings,

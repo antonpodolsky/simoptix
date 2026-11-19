@@ -99,9 +99,9 @@ Both sources have the same five settings:
 
 | Setting | What it does |
 |---|---|
-| **Stabilization Method** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). The list says each one's delay and how much video memory it takes ("no delay, low VRAM usage", "0.5s delay, higher VRAM usage"). Look-ahead is the default |
-| **Stabilization Strength** | A slider from 0 to 10, 5 by default: how strongly Instant and Look-ahead smooth. Hidden while Stabilization Method is Off. Higher is calmer, and the view follows the head less closely. Lower follows the head more closely. At 0 nothing is smoothed, and the horizon is still kept level ("Stabilization Strength", below) |
-| **Zoom** | A slider from 1 to 3, 1.25 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
+| **Stabilization Method** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). The list says each one's delay and how much video memory it takes ("no delay, low VRAM usage", "0.5s delay, higher VRAM usage"). Instant is the default |
+| **Stabilization Strength** | A slider from 0 to 10, 3 by default: how strongly Instant and Look-ahead smooth. At 5 each method has its own tuning. Hidden while Stabilization Method is Off. Higher is calmer, and the view follows the head less closely. Lower follows the head more closely. At 0 nothing is smoothed, and the horizon is still kept level ("Stabilization Strength", below) |
+| **Zoom** | A slider from 1 to 3, 1.2 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
 | **Record races automatically** | OBS records each race by itself, from the start lights to 5 s after the car stops past the finish ("Recording races automatically", below). Off by default |
 | **Debug** | Stamps frame numbers on the view and writes a frame trace, for checking a recording frame by frame ("Debug: stamp and frame trace", below) |
 
@@ -123,11 +123,11 @@ Everything else is fixed in the code (the constants in `source_settings.h`, and 
 
 ### Stabilization Method
 
-- **Look-ahead** (the default): the view runs about half a second behind the game. The source uses
+- **Look-ahead:** the view runs about half a second behind the game. The source uses
   that half second to see where the head goes next, so it follows each look closely. It removes tremor
   and the headset's tracking noise completely, without the floaty lag of a filter that can't see ahead.
   For recording.
-- **Instant:** no delay. A filter that has to trail the head to stay smooth. For live streaming,
+- **Instant** (the default): no delay. A filter that has to trail the head to stay smooth. For live streaming,
   where every bit of delay counts.
 - **Off:** no stabilization. The view is the headset's view as it is, with no delay. Switching
   the stabilization on or off starts the smoothing afresh.
@@ -138,8 +138,8 @@ checked in a recording.
 
 ### Stabilization Strength
 
-**Stabilization Strength** sets how strongly the smoothing works, from 0 to 10. At 5, each smoothing has
-the tuning described here.
+**Stabilization Strength** sets how strongly the smoothing works, from 0 to 10, 3 by default. At 5,
+each smoothing has the tuning described here.
 - **At 0 nothing is smoothed.** The view looks where the game's image looks, and the horizon is still
   kept level. The method keeps its delay, so Look-ahead still runs half a second behind the game.
 - **From 1 to 10,** each level stands for a factor on the tuning: 0.25 at 1, 1 at 5 and 2 at 10. Each
