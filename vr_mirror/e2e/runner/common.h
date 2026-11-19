@@ -28,19 +28,14 @@ inline Vec3 Normalized(Vec3 v) {
     return n > 1e-9 ? Vec3{float(v.x / n), float(v.y / n), float(v.z / n)} : v;
 }
 
+// The angle between two directions in degrees (common/rot.h: DirectionAngle).
 inline double AngleDeg(Vec3 a, Vec3 b) {
-    const double d = a.x * b.x + a.y * b.y + a.z * b.z;
-    return std::acos(std::clamp(d, -1.0, 1.0)) / kDeg;
+    return DirectionAngle(a, b) / kDeg;
 }
 
-// AngleDeg for nearly equal directions: acos of a dot from float vectors reads about 0.05 deg where they
-// are the same. atan2 of the cross product's length over the dot holds to float rounding.
-inline double SmallAngleDeg(Vec3 a, Vec3 b) {
-    const double cx = double(a.y) * b.z - double(a.z) * b.y;
-    const double cy = double(a.z) * b.x - double(a.x) * b.z;
-    const double cz = double(a.x) * b.y - double(a.y) * b.x;
-    const double d = double(a.x) * b.x + double(a.y) * b.y + double(a.z) * b.z;
-    return std::atan2(std::sqrt(cx * cx + cy * cy + cz * cz), d) / kDeg;
+// The angle of the rotation taking a to b in degrees (common/rot.h: RotationAngle).
+inline double RotationDeg(const Quat& a, const Quat& b) {
+    return RotationAngle(a, b) / kDeg;
 }
 
 inline Vec3 Forward(const Quat& q) {

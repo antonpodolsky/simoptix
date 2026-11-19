@@ -713,7 +713,9 @@ build, then fix.
 
   Every replay in the repo has its sources there.
 - **Pitfalls met:** for angles between nearly equal quaternions, use `2 atan2(|v|, |w|)` of the
-  relative rotation and not `2 acos(dot)` (7-digit values read 0.05 deg apart). Never leave a shell's
+  relative rotation and not `2 acos(dot)` (7-digit values read 0.05 deg apart). The measures in
+  `vr_mirror\e2e\` use `RotationAngle` and `DirectionAngle` (`vr_mirror\core\common\rot.h`) for every
+  angle, and no other. Never leave a shell's
   working directory inside `vr_mirror\e2e\out\<scenario>\`, because the runner deletes it and aborts.
 
 ## 5b. Check the overlays and race auto-record without the game

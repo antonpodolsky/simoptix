@@ -298,6 +298,11 @@ window at zoom 1.5, by smoothing. Lower is better in every column.
 - `--drawn_pose measured`: 98.15%, because the measured head is never exactly the pose a frame was
   drawn with. The measured drawn pose has since been removed.
 - Instant's dead zone holds a slow view still, so it reads lowest while still, as in e2e.
+- **One angle for every measure.** When the scores' direction angle moved from `acos` of the dot to
+  `DirectionAngle` (atan2, `vr_mirror\core\common\rot.h`), the pipeline's default run (Look-ahead, zoom
+  1.5) changed only in jitter, by at most 0.0005°: still 0.0018 → 0.0013° on `queued_late_frames`,
+  0.0010 → 0.0013° on `false_retiming_head_turns`, small 0.0859 → 0.0873° on `edge_test+heartbeat`. Lag,
+  black, edge limit, planned and wrong pose stayed the same on every input.
 - **Not explained:** on the synthetic motions the look-ahead reads higher than Instant in small moves
   (`racing+heartbeat` 0.034° against 0.007°), where e2e's shake measure, on the presented frames, finds
   it far calmer. The two measures differ in what they see: here the intended view per frame, with exact
