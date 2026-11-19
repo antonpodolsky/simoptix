@@ -10,6 +10,25 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 17: strength 0 smooths nothing (`no_smoothing`), and every angle comes from `RotationAngle` or
+`DirectionAngle`.** LMU, OBS and Pimax Play were closed. The 40 runs took 594 s. All 40 passed, and 19
+of 20 comparisons with Instant. Every `stage_replay --golden` run changed, as the smoothings' and the
+image room's angles did (`findings\pipeline.md`, "One exact angle").
+- `openxr_black_borders` failed its comparison on the worst horizon tilt: 0.135° at Instant, 0.257°
+  with Look-ahead (allowed 0.185°). Three reruns of the pair failed it twice (Instant 0.180 / 0.197 /
+  0.198°, Look-ahead 0.204 / 0.257 / 0.257°). The same pair failed it on `main` (69ace06) once in three
+  runs (Instant 0.150 / 0.216 / 0.207°, Look-ahead 0.245 / 0.257 / 0.245°), and on the branch before the
+  core's angles changed (d5173be) twice in three. Look-ahead's worst tilt stays near 0.25° on every
+  build, while Instant's varies from run to run, so the comparison's margin is the limit.
+- `no_smoothing` 0.103 / 0.103° worst horizon tilt, the view at its image's direction (0.000°).
+- `stabilization` 0.40 / 0.014 of the head's shake, `dropped_frames` 0.51 / 0.024,
+  `replay_queued_late_frames` 7.6 / 4.3% from the wrong pose, the featureless replay 1.70 / 0.21%,
+  and `game_starts_late` 4.8 runtime calls/s idle.
+- Recorded view jitter: `stabilization` 0.128 / 0.116°, `dropped_frames` 0.187 / 0.159°.
+- Worst horizon tilt: `openxr_stabilization` 0.187 / 0.173°, `openxr_dropped_frames` 0.207 / 0.146°,
+  `openxr_game_behind` 0.141 / 0.149°, `stabilization` 0.120 / 0.112°.
+- `openxr_stall`: image/pose mismatch 0.053 / 0.052° rms.
+
 **Run 16: the forecast told of each frame as it arrives, so only the frames it can't tell yet are
 held.** LMU, OBS and Pimax Play were closed. All 38 runs passed, and 18 of 19 comparisons with
 Instant. `stage_replay --golden` is unchanged. The mirror app, which e2e runs, uses neither the fixed
