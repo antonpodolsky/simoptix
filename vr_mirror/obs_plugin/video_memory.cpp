@@ -3,6 +3,7 @@
 #include "video_memory.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "frame_ring.h"
 #include "pipeline/3_frame_picker/fixed_delay_picker.h"
@@ -23,6 +24,15 @@ MemoryFacts ReportedFacts(const HeadsetReport& report) {
     f.imageHeight = report.imageHeight;
     f.period = report.period;
     return f;
+}
+
+bool SameHeadset(const MemoryFacts& reading, const MemoryFacts& facts) {
+    // A rate measured from the game's frames needn't match the reported one to the last digit. Refresh
+    // rates a headset offers lie further apart (72, 80, 90, 120 Hz).
+    constexpr double kPeriodTolerance = 0.01;  // a fraction of the period
+
+    return reading.imageWidth == facts.imageWidth && reading.imageHeight == facts.imageHeight
+           && std::fabs(reading.period - facts.period) <= kPeriodTolerance * facts.period;
 }
 
 bool StoreSize(

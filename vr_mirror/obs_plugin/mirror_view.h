@@ -80,7 +80,8 @@ public:
     // from any thread, and kept by them as long as they need it. With none, a view waiting for the game draws
     // nothing.
     std::shared_ptr<std::atomic<int>> EmptyStateViewers() const { return emptyViewers_; }
-    // The properties dialog opened: the game source reads the headset if it isn't known yet. Any thread.
+    // The properties dialog opened: the game source reads the headset again, if no game frames come. Any
+    // thread.
     void DialogOpened() { dialogOpened_ = true; }
     // The headset is found: the size of the game's eye image is known, as the source's runtime reported it
     // or as the game's frames showed it. Kept once found. Any thread.

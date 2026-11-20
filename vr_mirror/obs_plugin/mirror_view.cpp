@@ -418,8 +418,9 @@ void MirrorView::FollowLap() {
 }
 
 // What the game source's runtime reported as it started, until the game is measured: the empty state has
-// the headset before the game has run with the source. The game's stay: they are what it really did.
-// Graphics thread.
+// the headset before the game has run with the source. The game's stay while the headset reads alike:
+// they are what it really did. A reading that differs replaces them, because the headset's resolution or
+// refresh rate was changed since, and the game would get the new ones. Graphics thread.
 void MirrorView::KeepReportedFacts() {
     if (frameSource_ != gameSource_.get()) {
         return;
@@ -430,25 +431,18 @@ void MirrorView::KeepReportedFacts() {
     headsetUnread_ = report.failed;
     std::lock_guard<std::mutex> lock(factsMutex_);
 
-    if (facts.imageWidth > 0 && !facts_.measured) {
+    if (facts.imageWidth > 0 && (!facts_.measured || !SameHeadset(facts, facts_))) {
         facts_ = facts;
         headsetFound_ = true;
     }
 }
 
-// The properties dialog opened (DialogOpened) with the headset not known yet and no game frames coming:
-// the game source reads it, by starting again (OpenXR's headset test). Graphics thread, every tick.
+// The properties dialog opened (DialogOpened) with no game frames coming: the game source reads the
+// headset again, by starting again (OpenXR's headset test), so the facts show what its VR software is set
+// to now, also after a change since the last reading. Graphics thread, every tick.
 void MirrorView::FollowDialogOpened() {
     if (!dialogOpened_.exchange(false) || frameSource_ != gameSource_.get() || !WaitsForGame()) {
         return;
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(factsMutex_);
-
-        if (facts_.measured || facts_.imageWidth > 0) {
-            return;
-        }
     }
 
     gameSource_->RequestHeadsetTest();

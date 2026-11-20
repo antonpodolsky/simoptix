@@ -219,9 +219,9 @@ recorded, it says how to record one. Under a divider it shows one thing:
     has run with the source, they are what the runtime reports when the source starts, without the game.
     Pimax reports the refresh rate, the eye, and the size it renders the eye at with Pimax Play's Render
     Quality, and the client mirror is half that size. OpenXR tells the refresh rate and the eye only to
-    an app in VR. So when the properties window opens, with no game in VR and the headset not read yet,
-    the OpenXR source is one for about a second: the headset shows "Collecting headset info" on black,
-    and the source reads what a game would get. It gives up after 5 s. Meanwhile every row shows a softly
+    an app in VR. So each time the properties window opens with no game in VR, the OpenXR source is one
+    for about a second: the headset shows "Collecting headset info" on black, and the source reads what
+    a game would get. It gives up after 5 s. Meanwhile every row shows a softly
     pulsing bar where its value will be, Canvas too, and the values come in together. When the headset
     can't be read (it is off, or its VR software isn't running), the error takes the setup's place, with
     the steps for the source: Pimax Mirror asks for Pimax Play to be started. OpenXR Mirror asks for the
@@ -236,8 +236,10 @@ recorded, it says how to record one. Under a divider it shows one thing:
     there: "Yes. Native up to zoom 1.45, canvas up to 4224 × 2376", "No. Lower zoom to 1.31 or canvas
     to 2560 × 1440", a Yes in green and a No in amber. It follows Zoom as you change it.
 
-Once the game runs, what it measures replaces what the runtime reported, until OBS closes. Nothing is
-saved with the scene.
+Once the game runs, what it measures replaces what the runtime reported. Each opening of the properties
+window with no game frames coming reads the headset again, so a resolution or refresh rate changed in the
+headset's VR software shows at once. The game's measurements stay while the headset reads the same image
+size and refresh rate, until OBS closes. Nothing is saved with the scene.
 
 **Record a lap** records the lap the demo plays:
 1. With the game running and the source shown, press **Record a lap** in the source's properties, and
