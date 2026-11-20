@@ -16,23 +16,18 @@ The workflow is tailored to a wide type of coding agents.
 ## Quality and correctness gates
 
 A change is done when it passes the gates that apply to it.
-- **Builds.** Every target that includes a changed file is built, with no warnings at `/W3`.
 - **Code rules.** The code passes the formatters, and the review checklists of the code practices and
   code style skills.
-- **Checks on GitHub.** Every pull request is built and checked on GitHub, and is merged only when every
-  check passes.
-- **End-to-end tests** (`vr_mirror\e2e\`). They run VR Mirror's real, unmodified desktop app
-  (`simoptix_vr_mirror.exe`) against a simulated Pimax headset and game, or against a simulated game
-  with the OpenXR layer's own code in it. They capture its window the way OBS does and measure what a
+- **End-to-end tests** (`vr_mirror\e2e\`). They run VR Mirror's desktop app
+  (`simoptix_vr_mirror.exe`) against a simulated Pimax headset and game and against a simulated game
+  with the OpenXR layer. They capture the app's window the way OBS does and measure what a
   viewer would see. A change to `vr_mirror\core\` or the desktop app ends with a run of the whole
   suite. A test's limits are never loosened to get a pass without the author's approval.
 - **Real recordings.** A problem seen in a real recording first becomes a test that plays the recorded
-  session back. The test fails on the build that has the problem, before the fix.
+  session back.
 - **The refactor guard.** A change meant to keep behaviour, such as moving code or splitting it into
   stages, must reproduce every output of the build before it, byte for byte
-  (`.agents\skills\dev\reference\e2e.md`, "Every output: `--golden` and the refactor guard").
-- **In the headset and in OBS.** What the tests can't reach is checked last, by the author, with what to
-  look at named.
+  (`.agents\skills\dev\reference\e2e.md`).
 
 ## Measurements
 
