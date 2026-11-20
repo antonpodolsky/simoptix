@@ -11,7 +11,7 @@ The workflow is tailored to a wide type of coding agents.
   code is built, with examples from the repo and a review checklist.
 - **The code style skill** (`.agents\skills\code-style\SKILL.md`) holds the rules for how the code
   reads, with examples from the repo and a review checklist.
-- Each change is made in its own git worktree, built, tested, and committed as one small commit.
+- Each change is made in its own git worktree, built and tested.
 
 ## Quality and correctness gates
 
