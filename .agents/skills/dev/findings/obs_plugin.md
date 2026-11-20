@@ -454,6 +454,16 @@ Pimax Play's Render Quality at 1.0.
     a time rather than for a count of frames.
   - An image written into a swapchain needs the context flushed before it is released: the compositor
     reads it on a device of its own.
+- **Meta's runtime, with a Quest 3 on Link** (Meta Horizon Link, OpenXR 1.1.63). The test gave up about
+  30 ms after it began, and the empty state showed no facts.
+  - The runtime refused the loader handshake with `XR_ERROR_API_VERSION_UNSUPPORTED` (−4). The test
+    offered API versions 1.0.0 to 1.0.34, the version of the headers in `third_party\openxr`. Offering
+    every 1.x version fixed it, and the instance still asks for 1.0. Pimax's runtime accepts both ranges.
+  - After that, the runtime reported "Meta Quest 3", a recommended 2720 × 2976 eye image, and the
+    sRGB swapchain formats the test uses.
+  - With the headset off the head, the session stayed idle (`XR_SESSION_STATE_IDLE`) for 30 s and never
+    became ready, so the test still gives up after 5 s. With the headset on, it was ready at once and ran
+    at 90 Hz with the views located.
 - **The warm-up's jump.** The frame picker assumed a 40 ms copy delay until it fixed the one it
   measured. On the recorded lap that was 4 ms (copies at most 1.8 ms at the 95th percentile), so after
   2 s the output delay fell by 36 ms at once and the view jumped about 3 frames. The lap now starts at
