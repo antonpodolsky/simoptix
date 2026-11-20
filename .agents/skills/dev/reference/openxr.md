@@ -28,9 +28,11 @@ near the game.
   - the layer's clock reading matches the runtime's own conversion
 - It carries the game's file name only because the layer wakes up for no other name. It touches no game
   file.
-- It needs the headset on, with its VR software running as the active OpenXR runtime. Without them, it
-  stops at `xrGetSystem` (−35, `XR_ERROR_FORM_FACTOR_UNAVAILABLE`: no headset available) and says so.
-  The log then shows only the handshake and the instance.
+- It needs the headset on, with its VR software running as the active OpenXR runtime.
+  - Measured with Pimax's runtime and no headset: it stopped at `xrGetSystem` (−35,
+    `XR_ERROR_FORM_FACTOR_UNAVAILABLE`) and said so. The log then showed only the handshake and the
+    instance (`findings\openxr.md`, "The check program").
+  - Other runtimes without a headset haven't been tried.
 
 Afterwards the layer's log, which the check names in its last line (the newest
 `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`), should show the runtime, the time
