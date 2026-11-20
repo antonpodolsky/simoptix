@@ -49,12 +49,13 @@ namespace source_settings {
             MirrorSettings::kSmoothingLookahead
         );
 
-        source.strengthLevel = std::clamp(
+        const int level = std::clamp(
             static_cast<int>(obs_data_get_int(s, kStrengthKey)),
             kNoSmoothingLevel,
             kMaxStrengthLevel
         );
-        st.strength = StrengthOfLevel(source.strengthLevel);
+        source.strengthLevel = level;
+        st.strength = StrengthOfLevel(level);
 
         st.zoom = std::clamp(float(obs_data_get_double(s, "zoom")), 1.0f, 3.0f);
         st.drawnPose = Stabilizes(st) ? kDrawnPose : 0;  // off: no slot check, no thumbnails

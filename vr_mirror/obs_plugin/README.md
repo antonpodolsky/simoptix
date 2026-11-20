@@ -371,7 +371,7 @@ When a source starts, the OBS log gives its stabilization settings in one line. 
 gives them again, once the new settings have held for 1 s, so a drag of a slider gives one line:
 
 ```
-stabilization settings: Stabilization Method Look-ahead, Stabilization Strength 3 (strength 0.50), Zoom 1.30, drawn pose from the slot check and the cockpit correction
+stabilization settings: Stabilization Method Look-ahead, Stabilization Strength 3.0 (strength 0.50), Zoom 1.30, drawn pose from the slot check and the cockpit correction
 ```
 
 The strength in brackets is how strongly the level smooths, 1 being each method's own tuning: 0 at 0,

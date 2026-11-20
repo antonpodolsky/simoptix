@@ -38,7 +38,7 @@ namespace source_settings {
     // their strength (for the log), and Debug.
     struct SourceSettings {
         MirrorSettings mirror;
-        int strengthLevel = kDefaultStrengthLevel;
+        double strengthLevel = kDefaultStrengthLevel;
         bool debug = false;  // the frame-number stamp and the frame trace together
     };
 

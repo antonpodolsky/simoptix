@@ -28,7 +28,7 @@ private:
     // What the line says.
     struct Logged {
         int method = -1;  // MirrorSettings::smoothing; -1: none yet
-        int strengthLevel = 0;
+        double strengthLevel = 0;
         float strength = 0, zoom = 0;
         DrawnPoseKind drawnPose = DrawnPoseKind::kArrivalSlot;
 

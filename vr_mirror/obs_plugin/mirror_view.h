@@ -144,7 +144,9 @@ private:
     uint64_t framesAtStart_ = 0;  // graphics thread: FrameSource::FramesArrived() when it started
 
     MirrorSettings settings_;
-    std::atomic<int> strengthLevel_{source_settings::kDefaultStrengthLevel};  // the level settings_ came from
+    std::atomic<double> strengthLevel_{
+        source_settings::kDefaultStrengthLevel
+    };  // the level settings_ came from
     // The OBS canvas's base size: written each tick on the graphics thread (FollowVideoSettings), read
     // by OBS from any thread (Width, Height).
     std::atomic<uint32_t> width_{2560}, height_{1440};

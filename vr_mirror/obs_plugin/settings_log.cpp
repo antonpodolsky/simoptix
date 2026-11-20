@@ -61,7 +61,7 @@ void SettingsLog::Format(const Logged& logged) {
     std::snprintf(
         line_,
         sizeof(line_),
-        "stabilization settings: Stabilization Method %s, Stabilization Strength %d (strength %.2f), "
+        "stabilization settings: Stabilization Method %s, Stabilization Strength %.1f (strength %.2f), "
         "Zoom %.2f, drawn pose from %s",
         MethodName(logged.method),
         logged.strengthLevel,
