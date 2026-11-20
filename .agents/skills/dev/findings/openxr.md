@@ -199,3 +199,20 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
     per second.
   - Pimax's log for the same game says 89.97–90.07 per second, with nothing missed or stale.
   - Measured in the game's menu, not on track.
+
+## LMU on a Meta Quest 3
+
+One recording, on Meta Horizon Link over USB 3, with the Oculus Debug Tool's Pixels Per Display Pixel
+Override at 1.5, OpenXR Mirror on Look-ahead and a 4K canvas at 90 fps. The layer was the signed build
+`e9776fe`.
+- **The layer loaded, joined the chain and worked** on Meta's runtime ("Oculus 1.210.0"). The loader
+  offered OpenXR 1.0.0 to 1.1023.4095, and LMU made its instance for 1.0.34. The layer added the time
+  conversion extension, which LMU didn't ask for.
+- **The game's buffers:** two, one per eye, 4080×4448 in format 29 (usage 0x11), one projection layer and
+  no depth. That is 1.5× the 2720 width the runtime recommends at the default setting (the headset
+  test's reading). The height is 4448, against 4464 for 1.5× of 2976.
+- **The field of view per eye** was 54° outward, 40° inward, 44° up and 55° down.
+- **The copy** took 0.039–0.046 ms on the GPU at the median in each 10 s, at most 0.058 ms, with every
+  frame copied after the first 10 s. The three shared textures took 218 MB.
+- **The game's rate** was 90.0 frames per second once it settled, in step with VR Mirror's 10 s stats.
+  Before that, LMU ran at 41–89 per second for about a minute.

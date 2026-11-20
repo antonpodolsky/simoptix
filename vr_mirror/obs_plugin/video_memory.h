@@ -15,9 +15,9 @@
 #include "common/game_frame.h"
 #include "common/settings.h"
 
-// What the empty state's facts need of the game: measured while it runs, and kept until OBS closes.
-// Before the game has run with the source, what the source's runtime reported of the headset
-// (FrameSource::Reported), which is less: never the copy delay.
+// What the empty state's facts need of the game: measured while it runs, and kept until OBS closes or the
+// headset reads otherwise (SameHeadset). Before the game has run with the source, what the source's runtime
+// reported of the headset (FrameSource::Reported), which is less: never the copy delay.
 struct MemoryFacts {
     bool measured = false;  // all of the below measured with the game
     double copyDelay = 0;   // the frame picker's copy delay (s, FramePicker::CopyDelayS); 0: not known
@@ -29,6 +29,10 @@ struct MemoryFacts {
 
 // The facts a runtime's report gives; none known if it reported nothing.
 MemoryFacts ReportedFacts(const HeadsetReport& report);
+
+// Whether `reading` and `facts` show the headset alike: the same eye image size and refresh rate. A
+// resolution or refresh rate changed in the headset's VR software changes one of them.
+bool SameHeadset(const MemoryFacts& reading, const MemoryFacts& facts);
 
 // OBS's video now: the canvas (pixels) and the frame period (s; 0: unknown).
 struct ObsVideo {

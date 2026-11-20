@@ -35,6 +35,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "adapters/system/trace_writer.h"
 #include "common/clock_sync.h"
@@ -49,8 +50,14 @@
 
 class MirrorView {
 public:
-    // `game`: the game's frames (the Pimax session or the OpenXR layer's reader).
-    MirrorView(std::unique_ptr<FrameSource> game, const MirrorSettings& settings, bool debug);
+    // `game`: the game's frames (the Pimax session or the OpenXR layer's reader). `headsetSteps`: what the
+    // empty state asks for when that source can't read the headset (EmptyStateTextInput::headsetSteps).
+    MirrorView(
+        std::unique_ptr<FrameSource> game,
+        std::vector<std::wstring> headsetSteps,
+        const MirrorSettings& settings,
+        bool debug
+    );
     ~MirrorView();
 
     // Core's settings, and Debug (the frame-number stamp and the frame trace together).
@@ -73,7 +80,8 @@ public:
     // from any thread, and kept by them as long as they need it. With none, a view waiting for the game draws
     // nothing.
     std::shared_ptr<std::atomic<int>> EmptyStateViewers() const { return emptyViewers_; }
-    // The properties dialog opened: the game source reads the headset if it isn't known yet. Any thread.
+    // The properties dialog opened: the game source reads the headset again, if no game frames come. Any
+    // thread.
     void DialogOpened() { dialogOpened_ = true; }
     // The headset is found: the size of the game's eye image is known, as the source's runtime reported it
     // or as the game's frames showed it. Kept once found. Any thread.
@@ -129,8 +137,9 @@ private:
     std::atomic<bool> demoWanted_{false}, lapWanted_{false};
     std::atomic<bool> telemetryHeld_{false};  // for the lap recorder (Telemetry::Acquire)
     LapRecorder recorder_;
-    std::atomic<bool> lapRecorded_{false};  // a lap is recorded (FindLap)
-    EmptyState emptyState_;                 // graphics thread
+    std::atomic<bool> lapRecorded_{false};          // a lap is recorded (FindLap)
+    EmptyState emptyState_;                         // graphics thread
+    const std::vector<std::wstring> headsetSteps_;  // the constructor's
     std::shared_ptr<std::atomic<int>> emptyViewers_ = std::make_shared<std::atomic<int>>(0);
     std::atomic<bool> dialogOpened_{false};  // DialogOpened
     std::atomic<bool> headsetFound_{false};  // HeadsetFound: set on the graphics thread with facts_
