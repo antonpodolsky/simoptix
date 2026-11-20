@@ -35,7 +35,7 @@ A change is done when it passes the gates that apply to it.
 - **Real recordings.** A problem seen in a real recording first becomes a test that plays the recorded
   session back. The test fails on the build that has the problem, before the fix.
 - **The pipeline's expected output.** The repo holds a fingerprint of every output of the pipeline,
-  in 52 offline runs over a fixed set of inputs and settings. The check on GitHub fails on any change
+  in offline runs over a fixed set of inputs and settings. The check on GitHub fails on any change
   to them. A change meant to change the output commits the new fingerprints, and says which runs
   changed and why.
 - **The refactor guard.** A change meant to keep behaviour, such as moving code or splitting it into
