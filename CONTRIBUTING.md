@@ -62,7 +62,7 @@ project settings set `context.fileName` to `AGENTS.md`.
 |---|---|
 | Every build | 64-bit Windows. Visual Studio 2019 or later, or its Build Tools, with "Desktop development with C++". The builds find it with `shared\build\vs_env.bat`. Only 2019 has been tried |
 | Reading LMU's telemetry | LMU installed through Steam, or `LMU_SDK` set to the game's `Support\SharedMemoryInterface` folder. The build finds that folder in any Steam library. Without it, both plugins build, the build says so, and they read no game. The fake LMU isn't built |
-| Trying the plugins | OBS Studio 32.2.2. For VR Mirror's Pimax source, a Pimax headset with Pimax Play running |
+| Trying the plugins | OBS Studio 32.2.2. For VR Mirror's Pimax source, a Pimax headset with Pimax Play running. For its OpenXR source, a headset whose VR software is the active OpenXR runtime, and the API layer installed |
 | The layout check of `pvr_interface.h` | Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`, or `PVR_SDK` naming its `Include` folder. Nothing else needs it |
 | Signing the OpenXR layer | A code signing certificate of your own that Windows trusts, and `signtool`, which comes with the Visual Studio C++ workload. The repo builds the layer unsigned. Sign `bin\XR_APILAYER_SIMOPTIX_frame_source.dll` with SHA-256 and a timestamp, then install it with `install.ps1` |
 | The e2e tests | A Windows SDK with the C++/WinRT headers (the Visual Studio C++ workload has one), Windows 10 1903 or later, and a D3D11 graphics card |

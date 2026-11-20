@@ -29,12 +29,12 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
 | Other games | Pimax Mirror should work, not tested. OpenXR Mirror's API layer currently loads only in LMU by design. | Not supported |
 
 ### Headsets
-| Headset | Pimax Mirror | OpenXR Mirror |
+| Headset | Sources | Status |
 |---|---|---|
-| Pimax Dream Air | Supported | Supported |
-| Meta Quest 3 (Meta Horizon Link) | Not supported | Supported |
-| Other Pimax headsets | Should work, not tested | Should work, not tested |
-| Other OpenXR headsets | Should work, not tested | Should work, not tested |
+| Pimax Dream Air | Pimax Mirror, OpenXR Mirror | Supported |
+| Meta Quest 3 | OpenXR Mirror | Supported |
+| Other Pimax headsets | Pimax Mirror, OpenXR Mirror | Should work, not tested |
+| Other OpenXR headsets | OpenXR Mirror | Should work, not tested |
 
 ## Recording in OBS
 To record at the source's native resolution, set OBS's canvas and output to the suggested size
@@ -80,7 +80,9 @@ To run:
 - 64-bit Windows (developed on Windows 11)
 - OBS Studio 32 (built against 32.2.2)
 - For Pimax Mirror: a Pimax headset with Pimax Play running
-- For OpenXR Mirror: the API layer installed. If unsigned, LMU needs to be started without EAC (with a `+XR` flag).
+- For OpenXR Mirror: a headset whose VR software is the active OpenXR runtime, such as Pimax Play or
+  Meta Horizon Link, and the API layer installed. If unsigned, LMU needs to be started without EAC
+  (with a `+XR` flag).
 
 To build:
 - Visual Studio 2019 or later, or its Build Tools, with the C++ tools. Only 2019 has been tried.
