@@ -19,7 +19,7 @@ A change is done when it passes the gates that apply to it.
 - **Code rules.** The code passes the formatters, and the review checklists of the code practices and
   code style skills.
 - **End-to-end tests** (`vr_mirror\e2e\`). They run VR Mirror's desktop app
-  (`simoptix_vr_mirror.exe`) against a simulated Pimax headset and game and against a simulated game
+  (`simoptix_vr_mirror.exe`) against a simulated Pimax headset and game, and against a simulated game
   with the OpenXR layer. They capture the app's window the way OBS does and measure what a
   viewer would see. A change to `vr_mirror\core\` or the desktop app ends with a run of the whole
   suite. A test's limits are never loosened to get a pass without the author's approval.
