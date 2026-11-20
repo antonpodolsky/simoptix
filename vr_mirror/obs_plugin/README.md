@@ -348,9 +348,9 @@ at the end. Every scaling step in between softens the image. Set OBS's frame rat
 refresh rate, which you choose in the headset's software, such as Pimax Play. While the game keeps up,
 it draws one frame per refresh, so the source shows every game frame exactly once and motion is even.
 
-The canvas that is native depends on the headset, its Render Quality and the zoom. The root
-`README.md` ("Headsets and games") suggests a canvas for each measured headset, and the highest zoom at
-which it stays native. Above that zoom, the image is enlarged, and the video gets softer.
+The canvas that is native depends on the headset, its resolution setting (Pimax Play's Render Quality,
+for one) and the zoom. The root `README.md` ("Recording in OBS") suggests a canvas for each measured
+headset and setting, and the highest zoom at which it stays native. Above that zoom, the image is enlarged, and the video gets softer.
 
 **The OpenXR source** keeps each frame's image at the game's own size when the canvas shows it at 83%
 of that size or more. Otherwise it keeps the image at the size the canvas shows it 1:1. Each

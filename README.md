@@ -1,7 +1,7 @@
 # SimOptix
 
 SimOptix is a suite of sim racing tools for capturing stabilized VR footage and overlays.  
-The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both currently work with `Le Mans Ultimate` and `Pimax` headsets.
+The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both currently work with `Le Mans Ultimate`, `Pimax` headsets and the `Meta Quest 3`.
 
 ## What's included
 
@@ -32,6 +32,7 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
 | Headset | Pimax Mirror | OpenXR Mirror |
 |---|---|---|
 | Pimax Dream Air | Supported | Supported |
+| Meta Quest 3 (Meta Horizon Link) | Not supported | Supported |
 | Other Pimax headsets | Should work, not tested | Should work, not tested |
 | Other OpenXR headsets | Should work, not tested | Should work, not tested |
 
@@ -41,11 +42,15 @@ To record at the source's native resolution, set OBS's canvas and output to the 
 highest Zoom setting at which the recording stays native. Above it, the image is enlarged, and the
 video gets softer.
 
-| Headset | Source | Render Quality | Left eye image | Suggested canvas | Max zoom for native |
+| Headset | Source | Resolution setting | Left eye image | Suggested canvas | Max zoom for native |
 |---|---|---|---|---|---|
-| Pimax Dream Air | Pimax Mirror | 1.0 | 2508×2084 | 1920×1080 | 1.31 |
-| Pimax Dream Air | Pimax Mirror | 1.25 | 3134×2604 | 2560×1440 | 1.22 |
-| Pimax Dream Air | OpenXR Mirror | 1.0 | 5084×4168 | 3840×2160 | 1.32 |
+| Pimax Dream Air | Pimax Mirror | Render Quality 1.0 | 2508×2084 | 1920×1080 | 1.31 |
+| Pimax Dream Air | Pimax Mirror | Render Quality 1.25 | 3134×2604 | 2560×1440 | 1.22 |
+| Pimax Dream Air | OpenXR Mirror | Render Quality 1.0 | 5084×4168 | 3840×2160 | 1.32 |
+| Meta Quest 3 | OpenXR Mirror | Pixels Per Display Pixel Override 0 (the default) | 2720×2976 | 1920×1080 | 1.37 |
+| Meta Quest 3 | OpenXR Mirror | Pixels Per Display Pixel Override 1.5 | 4080×4448 | 2560×1440 | 1.54 |
+
+The Meta Quest 3's setting is in the Oculus Debug Tool.
 
 `vr_mirror\obs_plugin\README.md` ("Recording at the source's
 native resolution") has more canvases and zooms.
