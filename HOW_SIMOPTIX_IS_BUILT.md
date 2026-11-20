@@ -35,7 +35,6 @@ A change is done when it passes the gates that apply to it.
   measured by script. A new method becomes the default only when its measurements are better.
 - What was measured, and every approach tried and dropped with the measured reason, is recorded per
   part in `.agents\skills\dev\findings\`.
-- The docs say what was not checked, such as which headsets and OBS versions have not been tried.
 
 ## Review
 
