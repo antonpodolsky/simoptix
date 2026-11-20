@@ -216,7 +216,7 @@ void Pipeline::Record(
 
     rec.img = poses.image, rec.raw = poses.raw, rec.view = poses.view;
     rec.drawnPose = NameOf(config_.drawnPose);
-    rec.zoom = s.zoom;
+    rec.smoothing = s.smoothing, rec.strength = s.strength, rec.zoom = s.zoom;
     rec.edgeClamps = stops_, rec.edgePlanned = planned_;
     rec.viewTime = r.image ? f.poseTime : 0;
     rec.followedSerial = f.serial;

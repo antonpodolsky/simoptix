@@ -9,14 +9,18 @@ Tick formats (`_ticks.csv`, one row per OBS tick; vr_mirror\core\pipeline\observ
 - 26 columns: then picture_pose, draw, presented, zoom, edge_clamps, slot_lead,
   edge_planned, view_time; `slot` is the slot the frame arrived for.
 - 31 columns, for a short time: then followed_serial, edge_repeat_clamps, edge_shift, aspect, picture_notes.
-- 30 columns, the newest: as 31 without edge_repeat_clamps. In newer traces two of them are named
-  drawn_pose and pose_notes (picture_pose and picture_notes in older ones), at the same places.
+- 30 columns: as 31 without edge_repeat_clamps.
+- 31 columns: as 30 with drawn_slot before the notes.
+- 33 columns, the newest: as 31 with smoothing and smoothing_strength after the notes.
+In newer traces two of them are named drawn_pose and pose_notes (picture_pose and picture_notes in older
+ones). The columns are read by the names in the trace's header.
 
 The numeric layout (`num`), column by column:
   0 stamp, 1 tick, 2 serial, 3 arrival, 4 smooth, 5 slot, 6-9 img, 10-13 raw, 14-17 view (x, y, z, w),
   18 draw, 19 presented, 20 zoom, 21 edge_clamps, 22 slot_lead, 23 edge_planned, 24 view_time,
-  25 followed_serial, 26 edge_repeat_clamps, 27 edge_shift, 28 aspect
-NaN where the trace's format has no such column (18-26 in the 18-column format), -1 for 25-28 where it has
+  25 followed_serial, 26 edge_repeat_clamps, 27 edge_shift, 28 aspect, 29 smoothing (the Stabilization
+  Method: 0 off, 1 Instant, 2 Look-ahead), 30 smoothing_strength (the strength its level gives)
+NaN where the trace's format has no such column (18-24 in the 18-column format), -1 for 25-30 where it has
 none since. `kind` is the drawn_pose column, `notes` the drawn pose stage's notes (text). Times in PVR
 seconds.
 """
@@ -27,48 +31,91 @@ import numpy as np
 
 from trace_common import CACHE, SourceTrace
 
-N_COLUMNS = 29
+# The numeric layout above, as the trace's header names its columns.
+NUM_NAMES = [
+    "stamp",
+    "tick",
+    "serial",
+    "arrival",
+    "smooth",
+    "slot",
+    *(f"{pose}_{axis}" for pose in ("img", "raw", "view") for axis in "xyzw"),
+    "draw",
+    "presented",
+    "zoom",
+    "edge_clamps",
+    "slot_lead",
+    "edge_planned",
+    "view_time",
+    "followed_serial",
+    "edge_repeat_clamps",
+    "edge_shift",
+    "aspect",
+    "smoothing",
+    "smoothing_strength",
+]
+N_COLUMNS = len(NUM_NAMES)
+FIRST_LATER = NUM_NAMES.index("followed_serial")  # a column missing from here on reads -1, before it NaN
+OLDER_NAMES = {"display_slot": "slot", "picture_pose": "drawn_pose", "picture_notes": "pose_notes"}
+# The columns of a trace that has no header before its first row: the newest
+# (StampTraceObserver::kColumns, vr_mirror\core\pipeline\observer\stamp_trace_observer.cpp).
+NEWEST_HEADER = (
+    "stamp,tick,serial,arrival,smooth,slot,img_x,img_y,img_z,img_w,raw_x,raw_y,raw_z,raw_w,view_x,view_y,"
+    "view_z,view_w,drawn_pose,draw,presented,zoom,edge_clamps,slot_lead,edge_planned,view_time,"
+    "followed_serial,edge_shift,aspect,drawn_slot,pose_notes,smoothing,smoothing_strength"
+)
 
 
-def Row(v):
-    """One tick row's fields -> (numbers, drawn_pose, notes) in the layout above."""
-    n = len(v)
-    if n < 26:  # the 18-column format
-        return [float(x) for x in v[:18]] + [np.nan] * 7 + [-1.0] * 4, "", ""
+def Columns(header):
+    """A trace's header line -> (the place in a row of each numeric column, -1 where the trace has
+    none; the place of drawn_pose; the place of pose_notes)."""
+    names = [OLDER_NAMES.get(name, name) for name in header.rstrip("\r\n").split(",")]
+    place = {name: i for i, name in enumerate(names)}
+    return (
+        [place.get(name, -1) for name in NUM_NAMES],
+        place.get("drawn_pose", -1),
+        place.get("pose_notes", -1),
+    )
 
-    nums = [float(x) for x in v[:18]] + [float(x) for x in v[19:26]]
-    if n >= 31:  # with edge_repeat_clamps
-        extra, note = [float(x) for x in v[26:30]], v[30]
-    elif n == 30:  # edge_repeat_clamps dropped
-        extra, note = [float(v[26]), -1.0, float(v[27]), float(v[28])], v[29]
-    else:
-        extra, note = [-1.0] * 4, ""
 
-    return nums + extra, v[18], note
+def Row(v, columns):
+    """One tick row's fields -> (numbers, drawn_pose, notes) in the layout above. `columns`: Columns() of
+    the trace's header."""
+    num, kind, notes = columns
+    nums = [
+        float(v[c]) if 0 <= c < len(v) else (np.nan if i < FIRST_LATER else -1.0) for i, c in enumerate(num)
+    ]
+
+    return nums, v[kind] if 0 <= kind < len(v) else "", v[notes] if 0 <= notes < len(v) else ""
 
 
 def Load(prefix):
     """{'num', 'kind', 'notes', 'S', 'columns'} of the trace at `prefix` (without '_pimax.csv'). S rows:
     time asked, slot, q (x, y, z, w), the last prediction for each slot, sorted by slot. 'columns': the
-    trace's own column count (18, 26, 30 or 31)."""
+    trace's own column count (18, 26, 30, 31 or 33)."""
 
     size = os.path.getsize(prefix + "_ticks.csv")
     os.makedirs(CACHE, exist_ok=True)
-    cache = os.path.join(CACHE, f"{os.path.basename(prefix)}_whole_{size}.npz")
+    # The layout's width in the name: a trace cached in an older layout is read again.
+    cache = os.path.join(CACHE, f"{os.path.basename(prefix)}_whole{N_COLUMNS}_{size}.npz")
     if os.path.exists(cache):
         d = np.load(cache)
         return {k: d[k] for k in d.files}
 
     num, kind, notes, columns = [], [], [], 0
+    places = Columns(NEWEST_HEADER)
     with open(prefix + "_ticks.csv") as f:
         for line in f:
+            if line.startswith("stamp,"):
+                places = Columns(line)
+                continue
             if not line[0].isdigit():
                 continue
             v = line.rstrip("\r\n").split(",")
             if len(v) < 18:
                 continue  # a row cut short where the trace was closed
             columns = max(columns, len(v))
-            a, b, c = Row(v)
+            a, b, c = Row(v, places)
             num.append(a)
             kind.append(b)
             notes.append(c)

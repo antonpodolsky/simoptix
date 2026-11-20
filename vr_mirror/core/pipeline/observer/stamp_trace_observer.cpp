@@ -14,11 +14,12 @@
 // followed_serial: the game frame the view followed (serial unless an older image is shown again);
 // edge_shift: how far the last resort moved this frame's view (degrees); aspect: the output's width /
 // height; drawn_slot: the display slot the frame source says the frame was drawn for (0: it doesn't say);
-// pose_notes: the drawn pose stage's own name=value pairs (space-separated; no commas).
+// pose_notes: the drawn pose stage's own name=value pairs (space-separated; no commas); smoothing: the
+// smoothing setting (0 off, 1 Instant, 2 Look-ahead); smoothing_strength: its strength (1 its own tuning).
 const char* const StampTraceObserver::kColumns =
     "stamp,tick,serial,arrival,smooth,slot,img_x,img_y,img_z,img_w,raw_x,raw_y,raw_z,raw_w,view_x,view_y,"
     "view_z,view_w,drawn_pose,draw,presented,zoom,edge_clamps,slot_lead,edge_planned,view_time,"
-    "followed_serial,edge_shift,aspect,drawn_slot,pose_notes";
+    "followed_serial,edge_shift,aspect,drawn_slot,pose_notes,smoothing,smoothing_strength";
 
 void StampTraceObserver::SetSink(TraceSink* sink) {
     if (sink == sink_) {
@@ -71,7 +72,7 @@ void StampTraceObserver::Flush() {
         row,
         sizeof(row),
         "%u,%.6f,%llu,%.6f,%.6f,%.6f,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,"
-        "%.7f,%s,%.6f,%.6f,%.4f,%u,%.6f,%u,%.6f,%llu,%.4f,%.4f,%.6f,%s",
+        "%.7f,%s,%.6f,%.6f,%.4f,%u,%.6f,%u,%.6f,%llu,%.4f,%.4f,%.6f,%s,%d,%.4f",
         pendingStamp_,
         r.tick,
         static_cast<unsigned long long>(r.serial),
@@ -102,7 +103,9 @@ void StampTraceObserver::Flush() {
         r.edgeShiftDeg,
         r.aspect,
         r.drawnSlot,
-        r.poseNotes
+        r.poseNotes,
+        r.smoothing,
+        r.strength
     );
 
     sink_->Line(row);

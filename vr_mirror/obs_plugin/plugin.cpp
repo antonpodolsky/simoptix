@@ -400,9 +400,7 @@ namespace {
             s->source = source;
             s->weak = obs_source_get_weak_source(source);
             UpgradeSavedSettings(settings);
-            bool debug = false;
-            const MirrorSettings st = MirrorSettingsOf(settings, &debug);
-            s->view = std::make_unique<MirrorView>(std::make_unique<Frames>(), st, debug);
+            s->view = std::make_unique<MirrorView>(std::make_unique<Frames>(), SourceSettingsOf(settings));
             FollowAutoRecord(s.get(), obs_data_get_bool(settings, "auto_record"));
             return s.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });
@@ -419,9 +417,7 @@ namespace {
     void Update(void* data, obs_data_t* settings) {
         Guarded("update", [&] {
             Source* s = static_cast<Source*>(data);
-            bool debug = false;
-            const MirrorSettings st = MirrorSettingsOf(settings, &debug);
-            s->view->SetSettings(st, debug);
+            s->view->SetSettings(SourceSettingsOf(settings));
             FollowAutoRecord(s, obs_data_get_bool(settings, "auto_record"));
         });
     }

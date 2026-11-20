@@ -38,6 +38,8 @@ struct FrameRecord {
     Quat raw;                    // the pose the view followed (the frame's, or a tick's own moment's)
     Quat view;                   // the view shown
     const char* drawnPose = "";  // how the image's pose was found (PipelineConfig's name)
+    int smoothing = 0;           // MirrorSettings::smoothing: 0 off, 1 Instant, 2 Look-ahead
+    float strength = 0;          // MirrorSettings::strength
     float zoom = 0;
     // so far: the smoothing's last resort stopped the view; it steered
     unsigned edgeClamps = 0, edgePlanned = 0;

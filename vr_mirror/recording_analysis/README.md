@@ -88,8 +88,12 @@ should miss.
 - 18 columns, the oldest: no zoom, edge counters or view time, so `shake_traced.py` is skipped
 - 26 columns
 - 31 columns, with `edge_repeat_clamps`, for a short time
-- 30 columns, the newest, with `pose_notes` last (`picture_notes` in older ones, and `drawn_pose`
+- 30 columns, with `pose_notes` last (`picture_notes` in older ones, and `drawn_pose`
   `picture_pose`)
+- 31 columns, with `drawn_slot` before `pose_notes`
+- 33 columns, the newest, with `smoothing` and `smoothing_strength` after `pose_notes`
+
+`trace_ticks.py` finds each column by its name in the trace's header, whatever the column count.
 
 ## Known limits
 

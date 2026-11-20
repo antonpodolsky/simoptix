@@ -45,16 +45,19 @@
 #include "lap_recorder/lap_recorder.h"
 #include "pipeline/pipeline.h"
 #include "session_worker.h"
+#include "settings_log.h"
+#include "source_settings.h"
 #include "video_memory.h"
 
 class MirrorView {
 public:
     // `game`: the game's frames (the Pimax session or the OpenXR layer's reader).
-    MirrorView(std::unique_ptr<FrameSource> game, const MirrorSettings& settings, bool debug);
+    MirrorView(std::unique_ptr<FrameSource> game, const source_settings::SourceSettings& settings);
     ~MirrorView();
 
-    // Core's settings, and Debug (the frame-number stamp and the frame trace together).
-    void SetSettings(const MirrorSettings& settings, bool debug);
+    // Core's settings, the Stabilization Strength level, and Debug (the frame-number stamp and the frame
+    // trace together).
+    void SetSettings(const source_settings::SourceSettings& settings);
 
     // Plays the newest recorded lap in place of the game (not saved: off when OBS starts).
     void SetDemo(bool on) { demoWanted_ = on; }
@@ -108,6 +111,7 @@ private:
     void StartStop();
     void Prepare(uint64_t tickNs);
     void ApplySettingChanges(const PipelineConfig& config);
+    void LogSettings(double t);
     void ApplyFixedDelay(FramePicker& picker);
     void SizeRing();
     void OpenSlotTexture(const FrameRing::SlotInfo& slot);
@@ -140,6 +144,7 @@ private:
     uint64_t framesAtStart_ = 0;  // graphics thread: FrameSource::FramesArrived() when it started
 
     MirrorSettings settings_;
+    std::atomic<int> strengthLevel_{source_settings::kDefaultStrengthLevel};  // the level settings_ came from
     // The OBS canvas's base size: written each tick on the graphics thread (FollowVideoSettings), read
     // by OBS from any thread (Width, Height).
     std::atomic<uint32_t> width_{2560}, height_{1440};
@@ -164,6 +169,7 @@ private:
     int delaySmoothing_ = -1;      // the SmoothingKind the frame picker and ring are set for
     double delayTickPeriod_ = -1;  // ...and OBS's frame period
     bool loggedStabilize_ = true;  // Stabilizes(settings) as last logged (a change is logged once)
+    SettingsLog settingsLog_;
     const DrawnPose* fedDrawnPose_ = nullptr;  // the pipeline's drawn pose the ring was handed last
     double outDelay_ = 0;                      // the frame picker's output delay as last logged (s)
     FrameRing::SlotInfo snapshot_[FrameRing::kMaxSlots];  // this tick's ring (Prepare)

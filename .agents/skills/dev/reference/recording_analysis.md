@@ -167,6 +167,9 @@ The columns are in `vr_mirror\core\pipeline\observer\README.md`, and the formats
   only. On 1 Nov 2026 a column `edge_repeat_clamps` stood before `edge_shift`, counting the clip against
   the shown image apart.
 - **In older traces** the columns `drawn_pose` and `pose_notes` are named `picture_pose` and
-  `picture_notes`, at the same places. The scripts read the columns by place, so both read the same.
+  `picture_notes`, at the same places. `trace_ticks.py` reads the columns by their names, the older
+  ones too, and the other scripts read only the first 18 columns, by place.
+- **Traces before `smoothing` and `smoothing_strength`** hold no Stabilization Method or Strength.
+  `trace_ticks.py` reads -1 for both there.
 - **The mirror app's trace** had its own columns in older builds (`reference\mirror_app.md`). The e2e
   runner reads the pose the image was warped from as `img`, else as `raw` in older builds.

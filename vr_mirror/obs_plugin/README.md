@@ -367,6 +367,18 @@ mirrors, so Render Quality is the only way to a larger game eye.
 
 ### The OBS log
 
+When a source starts, the OBS log gives its stabilization settings in one line. After each change it
+gives them again, once the new settings have held for 1 s, so a drag of a slider gives one line:
+
+```
+stabilization settings: Stabilization Method Look-ahead, Stabilization Strength 3 (strength 0.50), Zoom 1.30, drawn pose from the slot check and the cockpit correction
+```
+
+The strength in brackets is how strongly the level smooths, 1 being each method's own tuning: 0 at 0,
+0.25 at 1, 1 at 5 and 2 at 10. With the Pimax source the drawn pose comes from the slot check and the
+cockpit correction, or from the slot each frame arrived for when the Stabilization Method is Off. With
+the OpenXR source and the recorded lap it is the pose each frame comes with.
+
 Every 10 s while a source is shown, also while no game runs, the OBS log (Help → Log Files) shows:
 - how many output ticks showed a new game frame, a repeat, or held the last image
 - how many game frames weren't copied because no tick would show them (the OpenXR source with
@@ -503,6 +515,8 @@ For checking a recording frame by frame, the **Debug** setting does two things:
     - how often and how far the smoothing had to stop the view at the edge of the image, as a last
       resort
     - the output's shape
+    - the Zoom, the Stabilization Method, and the strength the Stabilization Strength gives (as in
+      "The OBS log" above)
     - the slot check's own notes on each frame, for example how many slots back it judged the frame,
       and how far the cockpit correction turned it
     - every 10 s, the stages' log lines, as `#stats,` rows

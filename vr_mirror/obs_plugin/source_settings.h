@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The settings of a VR Mirror source as OBS saves them in the scene: their keys, their defaults, the
-// keys of scenes saved by older builds, and the core's MirrorSettings they give. Knows nothing about the
-// properties dialog, the view or threads.
+// keys of scenes saved by older builds, and the core's MirrorSettings they give (SourceSettings). Knows
+// nothing about the properties dialog, the view or threads.
 #pragma once
 
 #include <obs-data.h>
@@ -34,13 +34,21 @@ namespace source_settings {
     constexpr const char* kMethodKey = "stabilization_method";
     constexpr const char* kStrengthKey = "stabilization_strength";
 
+    // A source's settings as its view takes them: the core's, the Stabilization Strength level that gave
+    // their strength (for the log), and Debug.
+    struct SourceSettings {
+        MirrorSettings mirror;
+        int strengthLevel = kDefaultStrengthLevel;
+        bool debug = false;  // the frame-number stamp and the frame trace together
+    };
+
     // A scene saved before the method was renamed keeps it: "smoothing" moves to kMethodKey. One saved with
     // the dropped Smoothest (3) shows Look-ahead in the list, not an empty choice.
     void UpgradeSavedSettings(obs_data_t* s);
 
     // kMethodKey, kStrengthKey. "zoom": the crop factor (1 to 3). "debug": the frame-number stamp and the
     // frame trace together.
-    MirrorSettings MirrorSettingsOf(obs_data_t* s, bool* debug);
+    SourceSettings SourceSettingsOf(obs_data_t* s);
 
     void SetDefaults(obs_data_t* s);
 

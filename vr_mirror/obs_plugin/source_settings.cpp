@@ -40,25 +40,26 @@ namespace source_settings {
         }
     }
 
-    MirrorSettings MirrorSettingsOf(obs_data_t* s, bool* debug) {
-        MirrorSettings st;
+    SourceSettings SourceSettingsOf(obs_data_t* s) {
+        SourceSettings source;
+        MirrorSettings& st = source.mirror;
         st.smoothing = std::clamp(
             static_cast<int>(obs_data_get_int(s, kMethodKey)),
             MirrorSettings::kSmoothingOff,
             MirrorSettings::kSmoothingLookahead
         );
 
-        const int level = std::clamp(
+        source.strengthLevel = std::clamp(
             static_cast<int>(obs_data_get_int(s, kStrengthKey)),
             kNoSmoothingLevel,
             kMaxStrengthLevel
         );
-        st.strength = StrengthOfLevel(level);
+        st.strength = StrengthOfLevel(source.strengthLevel);
 
         st.zoom = std::clamp(float(obs_data_get_double(s, "zoom")), 1.0f, 3.0f);
         st.drawnPose = Stabilizes(st) ? kDrawnPose : 0;  // off: no slot check, no thumbnails
-        *debug = obs_data_get_bool(s, "debug");
-        return st;
+        source.debug = obs_data_get_bool(s, "debug");
+        return source;
     }
 
     void SetDefaults(obs_data_t* s) {

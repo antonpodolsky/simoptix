@@ -38,12 +38,12 @@ namespace {
 
 }
 
-MirrorView::MirrorView(std::unique_ptr<FrameSource> game, const MirrorSettings& settings, bool debug)
+MirrorView::MirrorView(std::unique_ptr<FrameSource> game, const source_settings::SourceSettings& settings)
     : gameSource_(std::move(game)),
       demoSource_(std::make_unique<DemoSource>()),
       frameSource_(gameSource_.get()) {
     FollowVideoSettings();
-    SetSettings(settings, debug);
+    SetSettings(settings);
     session_.SetSource(frameSource_);
 
     // Before any Start.
@@ -82,10 +82,11 @@ MirrorView::~MirrorView() {
     obs_leave_graphics();
 }
 
-void MirrorView::SetSettings(const MirrorSettings& settings, bool debug) {
-    settings_ = settings;
-    stamp_ = debug;
-    trace_ = debug;
+void MirrorView::SetSettings(const source_settings::SourceSettings& settings) {
+    settings_ = settings.mirror;
+    strengthLevel_ = settings.strengthLevel;
+    stamp_ = settings.debug;
+    trace_ = settings.debug;
 }
 
 // Whether a lap is recorded, for the empty state: it lists the laps' folder, so not per frame.
@@ -392,6 +393,7 @@ void MirrorView::StartStop() {
         statStart_ = 0;  // a new 10 s stretch of stats (LogStats)
         statTicks_ = statRepeats_ = statJumps_ = statNoFrame_ = statHeld_ = 0;
         KeepReportedFacts();
+        settingsLog_.Restart();
         blog(LOG_INFO, "[simoptix_vr_mirror] started (source shown): %s", frameSource_->Name());
     } else if (!run && state == SessionWorker::kRunning) {
         StopSession(wanted_ ? "switching between the game and the demo" : "source hidden");
@@ -570,6 +572,7 @@ void MirrorView::Prepare(uint64_t tickNs) {
     }
     const double tick = Seconds(tickNs) + clock_.Offset();  // this tick on the frame source's clock
     ApplySettingChanges(ConfigOf());
+    LogSettings(Seconds(tickNs));
 
     // The ring as the frame picker sees it (fixed arrays: nothing allocated per tick).
     ring_.Snapshot(snapshot_);
@@ -665,6 +668,18 @@ void MirrorView::ApplySettingChanges(const PipelineConfig& config) {
 
     ReconfigurePipeline(config, &pipeline_);  // e.g. the debug switch
     FeedDrawnPose();                          // the copy thread switches at its next pass
+}
+
+// The source's stabilization settings in OBS's log, as the pipeline runs them: when it starts and after
+// each change (SettingsLog). `t`: this tick (s). Graphics thread.
+void MirrorView::LogSettings(double t) {
+    source_settings::SourceSettings settings;
+    settings.mirror = settings_;
+    settings.strengthLevel = strengthLevel_;
+
+    if (settingsLog_.Due(settings, pipeline_.Config().drawnPose, t)) {
+        blog(LOG_INFO, "[simoptix_vr_mirror] %s", settingsLog_.Line());
+    }
 }
 
 void MirrorView::ApplyFixedDelay(FramePicker& picker) {

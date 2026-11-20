@@ -20,6 +20,7 @@ stamp shows.
 | frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | slot check | A way to find the drawn pose: it judges from thumbnails which display slot a frame was really drawn for |
+| look-ahead | The method behind the Look-ahead smoothing. The view runs half a second behind the game, and the smoothing plans a calm path from the head's movement in that time |
 | cockpit correction | A refinement of the drawn pose. It measures how the fixed cockpit moved between two frames and corrects the pose by what the head poses don't explain |
 
 A new method's numbers reach the trace through its `Report`, with no host changes. A new kind of
@@ -75,6 +76,8 @@ x, y, z, w.
 | `aspect` | The output's width divided by its height |
 | `drawn_slot` | The display slot the frame source says the frame was drawn for. It is the OpenXR source's, and 0 for the Pimax source, whose frames don't say |
 | `pose_notes` | The drawn pose stage's own account of how it found this frame's pose (`DrawnPose::Describe`): space-separated `name=value` pairs in its own terms. Examples are the slot check's `slots_before_arrival=2 judged=1 own_judgement=1` and the cockpit correction's `looked_at=1 corrected=1 correction_deg=0.312` |
+| `smoothing` | The smoothing setting: 0 off, 1 Instant, 2 Look-ahead (`MirrorSettings::smoothing`) |
+| `smoothing_strength` | The smoothing's strength, 1 for each smoothing's own tuning (`MirrorSettings::strength`). The OBS plugin's Stabilization Strength gives it: 0 at 0, 0.25 at 1, 1 at 5, 2 at 10 |
 
 The stages' report lines follow as `#stats,<line>`.
 
