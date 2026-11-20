@@ -24,8 +24,8 @@ It runs every scenario. Name some to run only those (`e2e_runner.exe stabilizati
 list them with `--list`. A name that matches no scenario stops the run with exit code 2.
 
 - Each scenario opens a small window (320×180) on top of everything, for about 15 s.
-- With every scenario at both smoothings, that is 38 runs. They took 558 s (about 9 minutes) in
-  run 8 (`reference\e2e_results.md`).
+- With every scenario at both smoothings, that is 40 runs. They took 594 s (about 10 minutes) in
+  run 17 (`reference\e2e_results.md`).
 - Don't use the PC meanwhile. For consistent timing, close LMU, the mirror app, Pimax Play and other
   heavy apps first.
 - A run stopped midway (Ctrl+C, or its window closed) ends the mirror app and the fake game it started
@@ -160,8 +160,11 @@ pose, the view and image pose, and the edge counters. It runs over a fixed matri
   plugin's 60 Hz ticks (each tick's own moment, with an older frame standing in as the image, which e2e
   never sees)
 - then single runs with stabilization switched off and on
+- then strength 0, nothing smoothed, at zoom 1.2: on `queued_late_frames`, whose ticks show an older
+  image standing in, and on `edge_test+heartbeat`, whose fast turns reach the image's edges, at both
+  smoothings and as both hosts
 
-That is 52 runs and about 26 MB.
+That is 60 runs and about 29 MB.
 
 **Refactor guard.** A change that must not change behaviour (moving code, splitting the pipeline into
 stages) must reproduce the build before it byte for byte. Write `golden_main.txt` with that build, then

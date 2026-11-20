@@ -20,6 +20,20 @@ void IntendedSeries(const ToolTrace& tt, const FakeLog& log, double delay, Serie
     }
 }
 
+double MaxViewFromImageDeg(const ToolTrace& tt) {
+    double most = 0;
+
+    for (size_t i = 0; i < tt.presented.size(); i++) {
+        if (tt.presented[i] < tt.presented.front() + 1.0) {
+            continue;
+        }
+
+        most = std::max(most, AngleDeg(Forward(tt.view[i]), Forward(tt.raw[i])));
+    }
+
+    return most;
+}
+
 Matched MatchCaptures(
     const std::vector<ViewSample>& caps,
     const FakeLog& log,
@@ -235,20 +249,6 @@ void RepeatSkipPct(const FakeLog& log, const ToolTrace& tt, double* repeatPct, d
 // Frames the tool re-projected from a different head pose than the fake game rendered them with
 // (matched by arrival time; more than 0.02 deg apart). Exact in replays, where the fake renders
 // with the runtime's recorded predictions, which are also what the tool looks up.
-namespace {
-
-    // Angle of a rotation in degrees, robust for nearly no rotation: 2 atan2(|v|, |w|).
-    double RotationDeg(const Quat& d) {
-        return 2
-               * std::atan2(
-                   std::sqrt(double(d.x) * d.x + double(d.y) * d.y + double(d.z) * d.z),
-                   std::fabs(double(d.w))
-               )
-               / kDeg;
-    }
-
-}
-
 std::vector<Quat> PoseErrors(const FakeLog& log, const ToolTrace& tt) {
     std::vector<Quat> errors;
     for (size_t i = 0; i < tt.arrival.size(); i++) {
@@ -270,7 +270,7 @@ std::vector<Quat> PoseErrors(const FakeLog& log, const ToolTrace& tt) {
 std::vector<double> PoseErrorsDeg(const FakeLog& log, const ToolTrace& tt) {
     std::vector<double> degs;
     for (const Quat& d : PoseErrors(log, tt)) {
-        degs.push_back(RotationDeg(d));
+        degs.push_back(RotationDeg(Quat{}, d));
     }
     return degs;
 }
@@ -279,7 +279,7 @@ std::vector<double> PoseJumpsDeg(const FakeLog& log, const ToolTrace& tt) {
     const std::vector<Quat> errors = PoseErrors(log, tt);
     std::vector<double> jumps;
     for (size_t i = 1; i < errors.size(); i++) {
-        jumps.push_back(RotationDeg(Mul(Conj(errors[i - 1]), errors[i])));
+        jumps.push_back(RotationDeg(errors[i - 1], errors[i]));
     }
 
     return jumps;

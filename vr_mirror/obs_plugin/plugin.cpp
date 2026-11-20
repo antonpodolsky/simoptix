@@ -16,7 +16,6 @@
 #include <obs-module.h>
 #include <shellapi.h>
 
-#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <string>
@@ -31,12 +30,15 @@
 #include "shared/log.h"
 #include "shared/telemetry/telemetry.h"
 #include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
+#include "source_settings.h"
 #include "video_memory.h"
 #include "vr_mirror/frame_sources/demo/recorded_lap.h"
 #include "vr_mirror/frame_sources/openxr/openxr_source.h"
 #include "vr_mirror/frame_sources/pimax/pimax_source.h"
 
 OBS_DECLARE_MODULE()
+
+using namespace source_settings;
 
 MODULE_EXPORT const char* obs_module_name(void) {
     return "SimOptix: VR Mirror";
@@ -63,13 +65,14 @@ namespace {
         int shownDemo = -1;                 // graphics thread: DemoKey as the properties were last refreshed
     };
 
-    // What the demo's buttons and status line show, as one number: a change refreshes the properties.
+    // What the demo's buttons show, as one number: a change refreshes the properties, once. The recorder's
+    // own states (waiting, recording, saving) change nothing there, so they don't refresh it.
     int DemoKey(const MirrorView& view) {
-        return static_cast<int>(view.LapState()) * 4 + (view.RecordingLap() ? 2 : 0)
+        return (view.LapRecorded() ? 8 : 0) + (view.HeadsetFound() ? 4 : 0) + (view.RecordingLap() ? 2 : 0)
                + (view.DemoOn() ? 1 : 0);
     }
 
-    // UI thread: shows the demo's buttons and status as they are now. `data`: a weak reference, released
+    // UI thread: shows the demo's buttons as they are now. `data`: a weak reference, released
     // here.
     void RefreshProperties(void* data) {
         obs_weak_source_t* weak = static_cast<obs_weak_source_t*>(data);
@@ -81,43 +84,6 @@ namespace {
 
         obs_weak_source_release(weak);
     }
-
-    // The demo's status line, while a lap is asked for or just after: where the recording stands; null
-    // otherwise.
-    const char* LapStatus(const MirrorView& view) {
-        switch (view.LapState()) {
-            case LapRecorder::State::kWaiting:
-                return "Drive to the start/finish line: leave the pits, and the lap records from the next "
-                       "crossing.";
-            case LapRecorder::State::kRecording:
-                return "Recording the lap: drive on to the start/finish line.";
-            case LapRecorder::State::kSaving:
-                return "Saving the lap.";
-            case LapRecorder::State::kSaved:
-                return "Lap saved: \"Play recorded lap\" plays it.";
-            case LapRecorder::State::kFailed:
-                return "The lap wasn't recorded: the OBS log says why.";
-            default:
-                break;
-        }
-
-        if (view.RecordingLap()) {
-            return "The lap records once the game's frames come (the source shown, the recorded lap "
-                   "stopped).";
-        }
-
-        return nullptr;  // no recording asked for: the view's empty state says whether a lap is recorded
-    }
-
-    // The source's core settings are the smoothing, its strength and the zoom; the drawn pose method is
-    // fixed here. 1920x1080 a little above native at Render Quality 1.0 (README.md, "Recording at the
-    // source's native resolution")
-    constexpr float kDefaultZoom = 1.25f;
-    // Strength: 1 is each smoothing's own tuning. Measured with stage_replay at zoom 1.25: at 2 Look-ahead
-    // still never stopped at an edge on the racing motion; at 3 it did on 2.8% of its frames, and its jitter
-    // rose from 0.001 to 0.33 deg, because it sees only half a second ahead (findings\obs_plugin.md).
-    constexpr float kMinStrength = 0.25f, kMaxStrength = 2.0f;
-    constexpr int kDrawnPose = 2;  // the slot check plus the cockpit correction below 90 fps
 
     // Race auto-record is on while at least one VR Mirror source has it ticked. UI thread.
     void FollowAutoRecord(Source* s, bool on) {
@@ -132,50 +98,6 @@ namespace {
         }
     }
 
-    // The settings' keys: Stabilization Method (MirrorSettings::kSmoothing*) and Stabilization Strength.
-    constexpr const char* kMethodKey = "stabilization_method";
-    constexpr const char* kStrengthKey = "stabilization_strength";
-
-    // A scene saved before the two settings were renamed keeps its values: "smoothing" and
-    // "smoothing_strength" move to the new keys. One saved with the dropped Smoothest (3) shows
-    // Look-ahead in the list, not an empty choice.
-    void UpgradeSavedSettings(obs_data_t* s) {
-        if (obs_data_has_user_value(s, "smoothing")) {
-            obs_data_set_int(s, kMethodKey, obs_data_get_int(s, "smoothing"));
-            obs_data_erase(s, "smoothing");
-        }
-
-        if (obs_data_has_user_value(s, "smoothing_strength")) {
-            obs_data_set_double(s, kStrengthKey, obs_data_get_double(s, "smoothing_strength"));
-            obs_data_erase(s, "smoothing_strength");
-        }
-
-        if (obs_data_get_int(s, kMethodKey) > MirrorSettings::kSmoothingLookahead) {
-            obs_data_set_int(s, kMethodKey, MirrorSettings::kSmoothingLookahead);
-        }
-    }
-
-    // kMethodKey, kStrengthKey. "zoom": the crop factor (1 to 3). "debug": the frame-number stamp and the
-    // frame trace together.
-    MirrorSettings MirrorSettingsOf(obs_data_t* s, bool* debug) {
-        MirrorSettings st;
-        st.smoothing = std::clamp(
-            static_cast<int>(obs_data_get_int(s, kMethodKey)),
-            MirrorSettings::kSmoothingOff,
-            MirrorSettings::kSmoothingLookahead
-        );
-        st.strength = std::clamp(
-            static_cast<float>(obs_data_get_double(s, kStrengthKey)),
-            kMinStrength,
-            kMaxStrength
-        );
-
-        st.zoom = std::clamp(float(obs_data_get_double(s, "zoom")), 1.0f, 3.0f);
-        st.drawnPose = Stabilizes(st) ? kDrawnPose : 0;  // off: no slot check, no thumbnails
-        *debug = obs_data_get_bool(s, "debug");
-        return st;
-    }
-
     const char* GetPimaxName(void*) {
         return "SimOptix: Pimax Mirror";
     }
@@ -184,13 +106,7 @@ namespace {
     }
 
     void GetDefaults(obs_data_t* s) {
-        Guarded("defaults", [&] {
-            obs_data_set_default_int(s, kMethodKey, MirrorSettings::kSmoothingLookahead);
-            obs_data_set_default_double(s, kStrengthKey, 1.0);
-            obs_data_set_default_double(s, "zoom", kDefaultZoom);
-            obs_data_set_default_bool(s, "auto_record", false);
-            obs_data_set_default_bool(s, "debug", false);
-        });
+        Guarded("defaults", [&] { SetDefaults(s); });
     }
 
     // Asks `question`, Yes or No (No by default), in a box over the properties dialog: the buttons' callbacks
@@ -200,8 +116,8 @@ namespace {
                == IDYES;
     }
 
-    // UI thread: records the next lap, or gives up the one asked for. The demo stops: a lap is the game's.
-    // Recording over a recorded lap asks first.
+    // UI thread: records the next lap, or gives up the one asked for. Greyed out while the demo plays (a lap
+    // is the game's). Recording over a recorded lap asks first.
     bool ToggleRecordLap(obs_properties_t*, obs_property_t*, void* data) {
         return Guarded("record lap button", [&]() -> bool {
             MirrorView& view = *static_cast<Source*>(data)->view;
@@ -217,12 +133,7 @@ namespace {
             }
 
             view.SetRecordLap(on);
-
-            if (on) {
-                view.SetDemo(false);
-            }
-
-            return true;  // the properties again, with the buttons as they are now
+            return false;  // the source's refresh (DemoKey) redraws the buttons, once
         });
     }
 
@@ -261,7 +172,7 @@ namespace {
             );
             blog(LOG_INFO, "[simoptix_vr_mirror] recorded lap deleted (%d)", deleted);
             static_cast<Source*>(data)->view->FindLap();
-            return true;  // the properties again, with the buttons as they are now
+            return false;  // the source's refresh (DemoKey) redraws the buttons, once
         });
     }
 
@@ -276,17 +187,12 @@ namespace {
                 view.SetRecordLap(false);
             }
 
-            return true;  // the properties again, with the buttons as they are now
+            return false;  // the source's refresh (DemoKey) redraws the buttons, once
         });
     }
 
-    // Whether the method in the dialog (`settings`) stabilizes; true without settings (the default does).
-    bool MethodOn(obs_data_t* settings) {
-        return !settings || obs_data_get_int(settings, kMethodKey) != MirrorSettings::kSmoothingOff;
-    }
-
     // Stabilization Method changed in the dialog: Stabilization Strength is hidden while it is Off (OBS
-    // greys out only the number box of a decimal slider, not the slider).
+    // greys out only the number box of a slider, not the slider).
     bool FollowMethod(obs_properties_t* props, obs_property_t*, obs_data_t* settings) {
         return Guarded("settings in the dialog", [&] {
             obs_property_set_visible(obs_properties_get(props, kStrengthKey), MethodOn(settings));
@@ -294,36 +200,45 @@ namespace {
         });
     }
 
-    // The demo's buttons, in the settings' column under a rule, and the recording's status line under them
-    // while there is one, for source `s`. No group: OBS lays a group out on a grid of its own, out of line
-    // with the settings, and puts each button on a row of its own anyway.
+    // The demo's buttons, in the settings' column under a rule, for source `s`. Without a recorded lap only
+    // Record a lap shows: there is nothing to play, open or delete. No group: OBS lays a group out on a grid
+    // of its own, out of line with the settings, and puts each button on a row of its own anyway.
     void AddDemoProperties(obs_properties_t* p, Source* s) {
         std::wstring stem;
-        const bool lapRecorded = NewestRecordedLap(&stem);
         const bool recording = s->view->RecordingLap();
         const bool demo = s->view->DemoOn();
+        const bool hasLap = NewestRecordedLap(&stem) || demo;
 
         // OBS has no separator property; its text lines are rich text, stretched across the settings' column.
-        obs_properties_add_text(p, "demo_rule", "<hr>", OBS_TEXT_INFO);
-
-        obs_property_t* play = obs_properties_add_button2(
+        // An <hr> takes the text's own colour, so the rule is a 1 px block in Yami's border colour
+        // (--border_color, #3C404D), a step above the dialog's background, with an empty 6 px line above and
+        // below it for space.
+        obs_properties_add_text(
             p,
-            "demo",
-            demo ? "Stop playing" : "Play recorded lap",
-            ToggleDemo,
-            s
+            "demo_rule",
+            "<div style=\"font-size:6px;\">&nbsp;</div>"
+            "<div style=\"background-color:#3c404d; font-size:1px;\">&nbsp;</div>"
+            "<div style=\"font-size:6px;\">&nbsp;</div>",
+            OBS_TEXT_INFO
         );
 
-        obs_property_set_long_description(
-            play,
-            lapRecorded || demo ? "Plays the recorded lap in a loop, in place of the game.\n"
-                                  "The settings above apply as it plays."
-                                : "No lap recorded yet: record one with \"Record a lap\"."
-        );
+        if (hasLap) {
+            obs_property_t* play = obs_properties_add_button2(
+                p,
+                "demo",
+                demo ? "Stop playing" : "Play recorded lap",
+                ToggleDemo,
+                s
+            );
 
-        obs_property_set_enabled(play, demo || lapRecorded);
+            obs_property_set_long_description(
+                play,
+                "Plays the recorded lap in a loop, in place of the game.\n"
+                "The settings above apply as it plays."
+            );
+        }
 
-        const char* recordLabel = lapRecorded ? "Record a new lap" : "Record a lap";
+        const char* recordLabel = hasLap ? "Record a new lap" : "Record a lap";
         obs_property_t* record = obs_properties_add_button2(
             p,
             "record_lap",
@@ -332,51 +247,62 @@ namespace {
             s
         );
 
-        obs_property_set_long_description(
-            record,
-            "Drive one full lap in LMU, in practice.\n"
-            "It records from a crossing of the start/finish line to the next.\n"
-            "Entering the pits or pausing the game starts the lap over at the next start/finish line."
-        );
+        // Without a headset found there is no game to record, and while the lap plays the game isn't shown. A
+        // recording asked for still gets its Cancel.
+        const bool headset = s->view->HeadsetFound();
+        const bool canRecord = recording || (headset && !demo);
+        obs_property_set_enabled(record, canRecord);
 
-        obs_property_t* open = obs_properties_add_button2(
-            p,
-            "open_lap_folder",
-            "Open recording location",
-            OpenLapFolder,
-            s
-        );
-        obs_property_set_long_description(open, "Opens the folder the recorded lap is kept in.");
+        const char* recordHint = "Drive one full lap in LMU, in practice.\n"
+                                 "It records from a crossing of the start/finish line to the next.\n"
+                                 "Entering the pits or pausing the game starts the lap over at the next "
+                                 "start/finish line.";
 
-        obs_property_t*
-            remove = obs_properties_add_button2(p, "delete_lap", "Delete recorded lap", DeleteLap, s);
-        obs_property_set_long_description(
-            remove,
-            demo || recording ? "Stop playing the lap, or cancel the recording, first."
-                              : "Deletes the recorded lap. Asks first."
-        );
-        obs_property_set_enabled(remove, lapRecorded && !demo && !recording);
+        if (!canRecord) {
+            recordHint = demo ? "Stop playing the lap first."
+                              : "No headset found yet.\n"
+                                "Turn the headset on and start its VR software, then open this window again.";
+        }
 
-        if (const char* status = LapStatus(*s->view)) {
-            obs_property_text_set_info_word_wrap(
-                obs_properties_add_text(p, "lap_status", status, OBS_TEXT_INFO),
-                true
+        obs_property_set_long_description(record, recordHint);
+
+        if (hasLap) {
+            obs_property_t*
+                remove = obs_properties_add_button2(p, "delete_lap", "Delete recorded lap", DeleteLap, s);
+            obs_property_set_long_description(
+                remove,
+                demo || recording ? "Stop playing the lap, or cancel the recording, first."
+                                  : "Deletes the recorded lap. Asks first."
             );
+            obs_property_set_enabled(remove, !demo && !recording);
+
+            obs_property_t* open = obs_properties_add_button2(
+                p,
+                "open_lap_folder",
+                "Open recording location",
+                OpenLapFolder,
+                s
+            );
+            obs_property_set_long_description(open, "Opens the folder the recorded lap is kept in.");
         }
     }
 
     // The view draws its empty state only while a properties dialog shows it, never only in the recording. A
     // dialog holds the list it asked for, and OBS destroys the list when the dialog closes, or when it asks
     // for a new one: the list counts the dialog in while it lives (OBS calls `destroy` with the parameter).
-    void CountDialog(obs_properties_t* p, const MirrorView& view) {
+    // True when it is the only one: a dialog opened. A refresh asks for the new list before it drops the old
+    // (the properties view's ReloadProperties), so the count goes from 1 to 2 and back, and it is false.
+    bool CountDialog(obs_properties_t* p, const MirrorView& view) {
         using Viewers = std::shared_ptr<std::atomic<int>>;
         Viewers* viewers = new Viewers(view.EmptyStateViewers());  // owned by the list from here
-        ++**viewers;
+        const bool opened = ++**viewers == 1;
 
         obs_properties_set_param(p, viewers, [](void* param) {
             const std::unique_ptr<Viewers> owned(static_cast<Viewers*>(param));
             --**owned;
         });
+
+        return opened;
     }
 
     // `s`: the source, or null for OBS's defaults (no demo buttons then).
@@ -416,22 +342,24 @@ namespace {
         obs_data_release(settings);
         obs_property_set_modified_callback(method, FollowMethod);
 
-        obs_property_t* strength = obs_properties_add_float_slider(
+        obs_property_t* strength = obs_properties_add_int_slider(
             p,
             kStrengthKey,
             "Stabilization Strength",
-            kMinStrength,
-            kMaxStrength,
-            0.05
+            kNoSmoothingLevel,
+            kMaxStrengthLevel,
+            1
         );
 
         obs_property_set_visible(strength, methodOn);
 
         obs_property_set_long_description(
             strength,
-            "How strongly Instant and Look-ahead smooth. 1 is the tuned default.\n"
+            "How strongly Instant and Look-ahead smooth, from 0 to 10. 3 by default.\n"
+            "5: each method's own tuning.\n"
             "Higher: calmer, the view follows the head less closely.\n"
-            "Lower: the view follows the head more closely."
+            "Lower: the view follows the head more closely.\n"
+            "0: no smoothing. The horizon is still kept level."
         );
 
         obs_properties_add_float_slider(p, "zoom", "Zoom", 1.0, 3.0, 0.01);
@@ -449,8 +377,11 @@ namespace {
 
         if (s) {
             AddDemoProperties(p, s);
-            CountDialog(p, *s->view);
-            s->view->DialogOpened();
+
+            // Only an opening reads the headset: a refresh restarted the source, which refreshed it again.
+            if (CountDialog(p, *s->view)) {
+                s->view->DialogOpened();
+            }
         }
 
         return p;
@@ -520,7 +451,7 @@ namespace {
             Source* s = static_cast<Source*>(data);
             s->view->Tick();
 
-            // The lap recorder moves on by itself: its buttons and status follow in the properties, if open.
+            // The lap recorder moves on by itself: its buttons follow in the properties, if open.
             const int key = DemoKey(*s->view);
 
             if (key != s->shownDemo && s->weak) {

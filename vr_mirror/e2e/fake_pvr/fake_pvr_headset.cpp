@@ -233,8 +233,8 @@ namespace fake_pvr {
             delta = {-delta.x, -delta.y, -delta.z, -delta.w};
         }
 
-        const float angle = 2 * std::acos(std::min(1.0f, delta.w));
-        const float sinHalf = std::sqrt(std::max(0.0f, 1 - delta.w * delta.w));
+        const float angle = static_cast<float>(RotationAngle(previous, q));
+        const float sinHalf = std::sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
 
         if (angle < 1e-7f || sinHalf < 1e-7f) {
             return q;

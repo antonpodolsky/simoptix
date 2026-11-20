@@ -441,6 +441,12 @@ void MirrorView::StopSession(const char* why) {
 // Runs the lap recorder while a lap is asked for and the game's frames come; once it has saved the lap or
 // failed, the request is done. Graphics thread, every tick.
 void MirrorView::FollowLap() {
+    // The properties window closed: the lap asked for there is given up, unless it is being saved.
+    if (lapWanted_ && *emptyViewers_ == 0 && recorder_.Get() != LapRecorder::State::kSaving) {
+        lapWanted_ = false;
+        blog(LOG_INFO, "[simoptix_vr_mirror] recorded lap: cancelled, the properties window closed");
+    }
+
     const bool want = lapWanted_ && started_ && frameSource_ == gameSource_.get();
 
     if (want && !lapStarted_) {
@@ -477,6 +483,7 @@ void MirrorView::KeepReportedFacts() {
 
     if (facts.imageWidth > 0 && !facts_.measured) {
         facts_ = facts;
+        headsetFound_ = true;
     }
 }
 
@@ -528,6 +535,7 @@ void MirrorView::KeepMemoryFacts(const FramePicker& picker) {
         return;
     }
 
+    headsetFound_ = true;
     std::unique_lock<std::mutex> lock(factsMutex_, std::try_to_lock);
 
     if (lock.owns_lock()) {

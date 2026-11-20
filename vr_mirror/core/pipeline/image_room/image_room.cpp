@@ -38,8 +38,8 @@ EdgeRoom RoomIn(const Quat& image, const Quat& view, const ViewGeometry& g) {
     if (delta.w < 0) {
         delta = {-delta.x, -delta.y, -delta.z, -delta.w};
     }
-    r.lag = 2 * std::acos(std::min(1.0f, delta.w));
-    const float sinHalf = std::sqrt(std::max(0.0f, 1 - delta.w * delta.w));
+    r.lag = static_cast<float>(RotationAngle(image, view));
+    const float sinHalf = std::sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
     const float kSearch = 60 * 3.14159265f / 180;
     if (r.lag < 1e-5f || sinHalf < 1e-6f) {
         r.room = kSearch;
@@ -78,8 +78,8 @@ bool Within(const Quat& image, const Quat& view, float fraction, const ViewGeome
     if (d.w < 0) {
         d = {-d.x, -d.y, -d.z, -d.w};
     }
-    const float lag = 2 * std::acos(std::min(1.0f, d.w));
-    const float sinHalf = std::sqrt(std::max(0.0f, 1 - d.w * d.w));
+    const float lag = static_cast<float>(RotationAngle(image, view));
+    const float sinHalf = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
     if (lag < 1e-4f || sinHalf < 1e-6f) {
         return true;
     }
@@ -107,12 +107,7 @@ EdgeStop StopAtEdge(const Quat& image, const Quat& view, const ViewGeometry& g) 
     s.keep = r.lag > 0 ? allowed / r.lag : 0;
     s.view = TrailingView(image, r.axis, allowed);
 
-    // How far the stop moved the view (2 atan2(|v|, |w|): exact for small angles, unlike acos of the
-    // dot product).
-    const Quat d = Mul(Conj(view), s.view);
-    s.movedDeg = float(
-        2 * std::atan2(std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z), std::fabs(d.w)) * 180 / 3.14159265358979
-    );
+    s.movedDeg = static_cast<float>(RotationAngle(view, s.view) * 180 / 3.14159265358979);
 
     return s;
 }

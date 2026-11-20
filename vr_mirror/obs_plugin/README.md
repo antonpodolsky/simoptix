@@ -99,36 +99,35 @@ Both sources have the same five settings:
 
 | Setting | What it does |
 |---|---|
-| **Stabilization Method** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). The list says each one's delay and how much video memory it takes ("no delay, low VRAM usage", "0.5s delay, higher VRAM usage"). Look-ahead is the default |
-| **Stabilization Strength** | A slider from 0.25 to 2, 1 by default: how strongly Instant and Look-ahead smooth. Hidden while Stabilization Method is Off. Higher is calmer, and the view follows the head less closely. Lower follows the head more closely ("Stabilization Strength", below) |
-| **Zoom** | A slider from 1 to 3, 1.25 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
+| **Stabilization Method** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). The list says each one's delay and how much video memory it takes ("no delay, low VRAM usage", "0.5s delay, higher VRAM usage"). Instant is the default |
+| **Stabilization Strength** | A slider from 0 to 10, 3 by default: how strongly Instant and Look-ahead smooth. At 5 each method has its own tuning. Hidden while Stabilization Method is Off. Higher is calmer, and the view follows the head less closely. Lower follows the head more closely. At 0 nothing is smoothed, and the horizon is still kept level ("Stabilization Strength", below) |
+| **Zoom** | A slider from 1 to 3, 1.3 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
 | **Record races automatically** | OBS records each race by itself, from the start lights to 5 s after the car stops past the finish ("Recording races automatically", below). Off by default |
 | **Debug** | Stamps frame numbers on the view and writes a frame trace, for checking a recording frame by frame ("Debug: stamp and frame trace", below) |
 
 Below them, under a line, four buttons run the demo ("The demo", below): **Play recorded lap**, **Record
 a lap** (**Record a new lap** once one is recorded), **Open recording location** and **Delete recorded
-lap**. While a lap is being
-recorded, a status line under them says where it stands. The buttons aren't saved, so both are off when OBS starts.
+lap**. Until a lap is recorded, only **Record a lap** shows. It is greyed out until the source has found
+the headset, from its VR software or the game's frames. The buttons aren't saved, so both are off when OBS starts.
 
 The source is always the size of the OBS canvas (Settings → Video → Base resolution), so it fills the
 canvas at 1:1. When the canvas changes, the source follows at once.
 
-Everything else is fixed in the code (`plugin.cpp`, the constants above `MirrorSettingsOf`, and the
-core's own):
+Everything else is fixed in the code (the constants in `source_settings.h`, and the core's own):
 - The horizon is kept level.
 - The filtering is sharp (bicubic).
 - Each frame is warped from the pose the game drew it with.
 - The Pimax source runs the slot check while the game is behind ("When the game falls behind", below).
 - The OpenXR source takes the slot and the pose each frame reports.
-- Instant's filter has a 0.5 Hz cutoff, beta 2 and a 0.5° dead zone, at Stabilization Strength 1.
+- Instant's filter has a 0.5 Hz cutoff, beta 2 and a 0.5° dead zone, at Stabilization Strength 5.
 
 ### Stabilization Method
 
-- **Look-ahead** (the default): the view runs about half a second behind the game. The source uses
+- **Look-ahead:** the view runs about half a second behind the game. The source uses
   that half second to see where the head goes next, so it follows each look closely. It removes tremor
   and the headset's tracking noise completely, without the floaty lag of a filter that can't see ahead.
   For recording.
-- **Instant:** no delay. A filter that has to trail the head to stay smooth. For live streaming,
+- **Instant** (the default): no delay. A filter that has to trail the head to stay smooth. For live streaming,
   where every bit of delay counts.
 - **Off:** no stabilization. The view is the headset's view as it is, with no delay. Switching
   the stabilization on or off starts the smoothing afresh.
@@ -139,17 +138,23 @@ checked in a recording.
 
 ### Stabilization Strength
 
-**Stabilization Strength** sets how strongly the smoothing works. At 1, each smoothing has the tuning described here.
-- **Look-ahead** multiplies the time constants of its path by the strength. It still sees half a second
-  ahead at every strength.
-- **Instant** divides its filter's cutoff, and how fast the cutoff rises with the head's speed, by the
-  strength.
+**Stabilization Strength** sets how strongly the smoothing works, from 0 to 10, 3 by default. At 5,
+each smoothing has the tuning described here.
+- **At 0 nothing is smoothed.** The view looks where the game's image looks, and the horizon is still
+  kept level. The method keeps its delay, so Look-ahead still runs half a second behind the game.
+- **From 1 to 10,** each level stands for a factor on the tuning: 0.25 at 1, 1 at 5 and 2 at 10. Each
+  step below 5 multiplies the factor by about 1.41, and each step above 5 by about 1.15.
+  - **Look-ahead** multiplies the time constants of its path by the factor. It still sees half a second
+    ahead at every level.
+  - **Instant** divides its filter's cutoff, and how fast the cutoff rises with the head's speed, by the
+    factor.
 
-The view trails the head more as the strength rises. On the e2e suite's racing motion at Zoom 1.25, with
-Look-ahead, it trails by 0.27° at most 99% of the time at 0.25, 1.68° at 1 and 4.4° at 2. Above 2,
-Look-ahead runs into the image's edges: at 3 it stopped the view at an edge on 2.8% of the frames of the
-same motion, and the view shook. Instant changes less, because its catch-up near the edges sets most of
-its lag. This was measured on recorded and made-up head motion, not checked in a recording.
+The view trails the head more as the level rises. On the e2e suite's racing motion at Zoom 1.25, with
+Look-ahead, it trails by 0.27° at most 99% of the time at 1, 1.68° at 5 and 4.4° at 10. A factor above
+2 runs Look-ahead into the image's edges: at 3 it stopped the view at an edge on 2.8% of the frames of
+the same motion, and the view shook. So 10 is a factor of 2. Instant changes less, because its catch-up
+near the edges sets most of its lag. This was measured on recorded and made-up head motion, not checked
+in a recording.
 
 **The delay costs video memory,** because the source keeps a copy of every game frame within it. With
 the Pimax source that is about 1.1 GB at Render Quality 1.0, and about 1.7 GB at 1.25.
@@ -233,16 +238,18 @@ Once the game runs, what it measures replaces what the runtime reported, until O
 saved with the scene.
 
 **Record a lap** records the lap the demo plays:
-1. With the game running and the source shown, press **Record a lap** in the source's properties.
+1. With the game running and the source shown, press **Record a lap** in the source's properties, and
+   keep them open.
 2. In an LMU practice session, leave the pits and drive. The recording starts when the car crosses the
    start/finish line, and stops when it crosses it again. So it holds one full lap, which ends where it
    starts.
-3. A status line under the buttons says where it stands: waiting for the start/finish line, recording,
-   saved, or why it wasn't recorded. The OBS log has the same in lines that start "recorded lap:".
+3. The OBS log says where it stands, in lines that start "recorded lap:": waiting for the start/finish
+   line, recording, saved, or why it wasn't recorded.
 
 The lap is thrown away if, before the start/finish line, the car goes into the pits, the player leaves
 the car, the game pauses or a new session starts. The recording then waits for the next crossing. **Cancel lap
-recording** gives it up.
+recording** gives it up, and so does closing the source's properties, unless the lap is already being
+saved.
 
 With a lap recorded, the button reads **Record a new lap**, and asks before it starts: once the new lap is
 saved, it replaces the recorded one. Until then the recorded lap stays, so a lap thrown away or cancelled
@@ -282,8 +289,8 @@ is kept: the one before is deleted when a new one is saved.
   few frames when the warm-up fixes it.
 - Windows decodes the video on the graphics card. That needs Windows' HEVC Video Extension. Without it,
   the OBS log says the video can't be decoded, and the source goes back to the game.
-- **Play recorded lap** is greyed out until a lap is recorded. Playing it gives up a lap being recorded,
-  and recording a lap stops the demo.
+- **Play recorded lap** shows once a lap is recorded. Playing it gives up a lap being recorded,
+  and **Record a new lap** is greyed out while it plays.
 
 ## Recording races automatically
 

@@ -240,7 +240,7 @@ for the agents that read those files. Change the rules here, never in those file
   fake PVR runtime (`vr_mirror\e2e\fake_pvr`), with its window captured like OBS. The suite covers the
   `vr_mirror\core\` pipeline: frames, smoothing, lag, horizon, black borders.
   - Run it once at the end of a change to `vr_mirror\core\` or `vr_mirror\mirror_app\`.
-  - Its 38 runs take about 9 minutes (558 s in run 8, `reference\e2e_results.md`). LMU and
+  - Its 40 runs take about 10 minutes (594 s in run 17, `reference\e2e_results.md`). LMU and
     the mirror app must be closed, and nobody should use the PC meanwhile, so ask the user before
     running it.
   - Only one test of the OpenXR layer may run on the PC at a time, from any session or worktree. Two
@@ -436,8 +436,13 @@ One convention, everywhere. Check every new name against it, and rename what bre
     and e2e results from before keep the old names.
   - The OBS settings Stabilization Method (`stabilization_method`) and Stabilization Strength
     (`stabilization_strength`) were called Smoothing (`smoothing`) and Strength
-    (`smoothing_strength`) before. The plugin moves a scene's old keys to the new ones. The core's
-    own settings, and the mirror app's ini file, keep `smoothing` and `smoothing_strength`.
+    (`smoothing_strength`) before. The plugin moves a scene's old method key to the new one.
+    Stabilization Strength is a level from 0 to 10, 3 by default, that
+    `vr_mirror\obs_plugin\source_settings.cpp` turns into the core's strength (0 at 0: no smoothing,
+    0.25 at 1, 1 at 5, 2 at 10). In older builds the OBS setting was the strength itself (0.25 to 2),
+    and findings from those builds quote that ("Strength 2"). The core's own settings,
+    `stage_replay --strength` and the mirror app's ini file keep the strength itself, as `smoothing`
+    and `smoothing_strength`.
   - "Mirror" in a name ("VR Mirror", "Pimax Mirror", `MirrorView`, `vr_mirror\`) is our plugin and its
     sources. "The mirror" or "client mirror" in a sentence means only Pimax's client mirror
     (`PvrMirror`). A sentence that means the plugin says "VR Mirror".
@@ -597,8 +602,8 @@ the size, place and colour of every live part.
 
 - **Behaviour in `vr_mirror\core\` or `vr_mirror\mirror_app\`:** run `vr_mirror\e2e\bin\e2e_runner.exe`
   once, at the end.
-  - LMU and the mirror app must be closed, and the PC must not be used meanwhile. The 38 runs take
-    about 9 minutes. Close Pimax Play too for runs that are compared, because its compositor disturbs
+  - LMU and the mirror app must be closed, and the PC must not be used meanwhile. The 40 runs take
+    about 10 minutes. Close Pimax Play too for runs that are compared, because its compositor disturbs
     the timing (`reference\e2e_results.md`).
   - How to run it, its options and `stage_replay` are in `reference\e2e.md`.
   - Compare the numbers with the ones in `reference\e2e_results.md`, and update them there when they
@@ -708,7 +713,9 @@ build, then fix.
 
   Every replay in the repo has its sources there.
 - **Pitfalls met:** for angles between nearly equal quaternions, use `2 atan2(|v|, |w|)` of the
-  relative rotation and not `2 acos(dot)` (7-digit values read 0.05 deg apart). Never leave a shell's
+  relative rotation and not `2 acos(dot)` (7-digit values read 0.05 deg apart). The core and
+  `vr_mirror\e2e\` (its measures and fakes) use `RotationAngle` and `DirectionAngle`
+  (`vr_mirror\core\common\rot.h`) for every angle, and no other. Never leave a shell's
   working directory inside `vr_mirror\e2e\out\<scenario>\`, because the runner deletes it and aborts.
 
 ## 5b. Check the overlays and race auto-record without the game

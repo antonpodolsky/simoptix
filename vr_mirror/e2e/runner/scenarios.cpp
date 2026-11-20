@@ -90,6 +90,22 @@ namespace {
             c.limits.maxStalls = 0;
             AddEverySmoothing(c, out);
         }
+
+        {
+            // Stabilization Strength 0: nothing is smoothed, and the horizon is still levelled. The view
+            // looks where the image does, shake and all, and the head's 2 deg roll is gone.
+            Scenario c{
+                "no_smoothing",
+                "stabilization's motion at strength 0: the view follows the head, the horizon level",
+                "racing+heartbeat"
+            };
+
+            c.seconds = 15;
+            c.settings["smoothing_strength"] = "0";
+            c.limits.maxViewFromImageDeg = 0.001;  // float rounding: 0.00002 deg
+            c.limits.maxRollDeg = 0.2;
+            AddEverySmoothing(c, out);
+        }
     }
 
     void AddEdgeScenarios(std::vector<Scenario>* out) {
