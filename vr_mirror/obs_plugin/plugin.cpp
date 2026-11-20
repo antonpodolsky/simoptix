@@ -232,35 +232,42 @@ namespace {
     }
 
     // The demo's buttons, in the settings' column under a rule, and the recording's status line under them
-    // while there is one, for source `s`. No group: OBS lays a group out on a grid of its own, out of line
-    // with the settings, and puts each button on a row of its own anyway.
+    // while there is one, for source `s`. Without a recorded lap only Record a lap shows: there is nothing to
+    // play, open or delete. No group: OBS lays a group out on a grid of its own, out of line with the
+    // settings, and puts each button on a row of its own anyway.
     void AddDemoProperties(obs_properties_t* p, Source* s) {
         std::wstring stem;
-        const bool lapRecorded = NewestRecordedLap(&stem);
         const bool recording = s->view->RecordingLap();
         const bool demo = s->view->DemoOn();
+        const bool hasLap = NewestRecordedLap(&stem) || demo;
 
         // OBS has no separator property; its text lines are rich text, stretched across the settings' column.
-        obs_properties_add_text(p, "demo_rule", "<hr>", OBS_TEXT_INFO);
-
-        obs_property_t* play = obs_properties_add_button2(
+        // An <hr> takes the text's own colour, so the rule is a 1 px block in Yami's border colour
+        // (--border_color, #3C404D), a step above the dialog's background.
+        obs_properties_add_text(
             p,
-            "demo",
-            demo ? "Stop playing" : "Play recorded lap",
-            ToggleDemo,
-            s
+            "demo_rule",
+            "<div style=\"background-color:#3c404d; font-size:1px;\">&nbsp;</div>",
+            OBS_TEXT_INFO
         );
 
-        obs_property_set_long_description(
-            play,
-            lapRecorded || demo ? "Plays the recorded lap in a loop, in place of the game.\n"
-                                  "The settings above apply as it plays."
-                                : "No lap recorded yet: record one with \"Record a lap\"."
-        );
+        if (hasLap) {
+            obs_property_t* play = obs_properties_add_button2(
+                p,
+                "demo",
+                demo ? "Stop playing" : "Play recorded lap",
+                ToggleDemo,
+                s
+            );
 
-        obs_property_set_enabled(play, demo || lapRecorded);
+            obs_property_set_long_description(
+                play,
+                "Plays the recorded lap in a loop, in place of the game.\n"
+                "The settings above apply as it plays."
+            );
+        }
 
-        const char* recordLabel = lapRecorded ? "Record a new lap" : "Record a lap";
+        const char* recordLabel = hasLap ? "Record a new lap" : "Record a lap";
         obs_property_t* record = obs_properties_add_button2(
             p,
             "record_lap",
@@ -276,23 +283,25 @@ namespace {
             "Entering the pits or pausing the game starts the lap over at the next start/finish line."
         );
 
-        obs_property_t* open = obs_properties_add_button2(
-            p,
-            "open_lap_folder",
-            "Open recording location",
-            OpenLapFolder,
-            s
-        );
-        obs_property_set_long_description(open, "Opens the folder the recorded lap is kept in.");
+        if (hasLap) {
+            obs_property_t* open = obs_properties_add_button2(
+                p,
+                "open_lap_folder",
+                "Open recording location",
+                OpenLapFolder,
+                s
+            );
+            obs_property_set_long_description(open, "Opens the folder the recorded lap is kept in.");
 
-        obs_property_t*
-            remove = obs_properties_add_button2(p, "delete_lap", "Delete recorded lap", DeleteLap, s);
-        obs_property_set_long_description(
-            remove,
-            demo || recording ? "Stop playing the lap, or cancel the recording, first."
-                              : "Deletes the recorded lap. Asks first."
-        );
-        obs_property_set_enabled(remove, lapRecorded && !demo && !recording);
+            obs_property_t*
+                remove = obs_properties_add_button2(p, "delete_lap", "Delete recorded lap", DeleteLap, s);
+            obs_property_set_long_description(
+                remove,
+                demo || recording ? "Stop playing the lap, or cancel the recording, first."
+                                  : "Deletes the recorded lap. Asks first."
+            );
+            obs_property_set_enabled(remove, !demo && !recording);
+        }
 
         if (const char* status = LapStatus(*s->view)) {
             obs_property_text_set_info_word_wrap(
