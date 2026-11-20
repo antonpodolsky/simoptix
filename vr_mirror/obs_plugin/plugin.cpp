@@ -19,6 +19,7 @@
 #include <atomic>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "audio_sync.h"
 #include "common/settings.h"
@@ -103,6 +104,24 @@ namespace {
     }
     const char* GetOpenXrName(void*) {
         return "SimOptix: OpenXR Mirror";
+    }
+
+    // What the empty state asks for when the source on frame source `Frames` can't read the headset
+    // (MirrorView's `headsetSteps`).
+    template <class Frames>
+    std::vector<std::wstring> HeadsetSteps();
+
+    // Pimax Mirror reads the headset through Pimax Play.
+    template <>
+    std::vector<std::wstring> HeadsetSteps<PimaxSource>() {
+        return {L"Turn the headset on", L"Start Pimax Play"};
+    }
+
+    // OpenXR Mirror reads it through whichever VR software is the active OpenXR runtime. Meta's runs the
+    // headset test only while the headset is worn (findings\obs_plugin.md, "The empty state's facts").
+    template <>
+    std::vector<std::wstring> HeadsetSteps<OpenXrSource>() {
+        return {L"Turn the headset on and start its VR software", L"Put the headset on"};
     }
 
     void GetDefaults(obs_data_t* s) {
@@ -402,7 +421,12 @@ namespace {
             UpgradeSavedSettings(settings);
             bool debug = false;
             const MirrorSettings st = MirrorSettingsOf(settings, &debug);
-            s->view = std::make_unique<MirrorView>(std::make_unique<Frames>(), st, debug);
+            s->view = std::make_unique<MirrorView>(
+                std::make_unique<Frames>(),
+                HeadsetSteps<Frames>(),
+                st,
+                debug
+            );
             FollowAutoRecord(s.get(), obs_data_get_bool(settings, "auto_record"));
             return s.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });

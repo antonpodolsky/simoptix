@@ -223,8 +223,10 @@ recorded, it says how to record one. Under a divider it shows one thing:
     the OpenXR source is one for about a second: the headset shows "Collecting headset info" on black,
     and the source reads what a game would get. It gives up after 5 s. Meanwhile every row shows a softly
     pulsing bar where its value will be, Canvas too, and the values come in together. When the headset
-    can't be read (it is off, or its VR software isn't running), the error takes the setup's place.
-    Opening the properties window again tries again.
+    can't be read (it is off, or its VR software isn't running), the error takes the setup's place, with
+    the steps for the source: Pimax Mirror asks for Pimax Play to be started. OpenXR Mirror asks for the
+    headset's VR software to be started and the headset to be worn, because some VR software runs the
+    headset test only while the headset is worn. Opening the properties window again tries again.
   - **Canvas:** OBS's canvas and frame rate.
   - **VRAM usage:** the expected VRAM usage at the current settings. Before the game has run, it is the
     most the store can take ("Up to"): the time a copy takes is measured with the game, and until then

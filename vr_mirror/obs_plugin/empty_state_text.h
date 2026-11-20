@@ -6,12 +6,19 @@
 // only; knows nothing about OBS, threads or drawing (EmptyState draws it).
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "adapters/d3d/frame_source.h"
 #include "empty_state.h"
 #include "setup_facts.h"
 
-// What the text is made from: the demo's and the lap recorder's states, and the setup's facts.
+// What the text is made from: the source's steps for an unread headset, the demo's and the lap recorder's
+// states, and the setup's facts.
 struct EmptyStateTextInput {
+    // The steps that get the headset read, before "Close this window and open it again": the source's
+    // own, since what to start differs (Pimax Play for Pimax Mirror, any VR software for OpenXR Mirror).
+    const std::vector<std::wstring>* headsetSteps = nullptr;
     bool lapWanted = false;    // a lap is asked for (Record a lap)
     bool lapRecorded = false;  // a recorded lap can be played
     bool lapFailed = false;    // the last lap asked for wasn't recorded

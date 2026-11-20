@@ -4,16 +4,17 @@
 
 namespace {
 
-    // The messages the empty state shows under its rule in place of the facts.
-    EmptyMessage HeadsetUnreadMessage() {
-        return {
-            L"The headset didn't answer",
-            FactTone::kWarning,
-            {L"Turn the headset on",
-             L"Start its VR software (Pimax Play)",
-             L"Close this window and open it again"},
-            L""
-        };
+    // The messages the empty state shows under its rule in place of the facts. `steps`: the source's own
+    // (EmptyStateTextInput::headsetSteps).
+    EmptyMessage HeadsetUnreadMessage(const std::vector<std::wstring>* steps) {
+        EmptyMessage message = {L"The headset didn't answer", FactTone::kWarning, {}, L""};
+
+        if (steps) {
+            message.steps = *steps;
+        }
+
+        message.steps.push_back(L"Close this window and open it again");
+        return message;
     }
 
     EmptyMessage LapFailedMessage() {
@@ -52,7 +53,7 @@ EmptyText EmptyStateText(const EmptyStateTextInput& in, const FrameSource& game)
     }
 
     if (in.setup.headsetUnread && in.setup.facts.imageWidth == 0) {
-        text.message = HeadsetUnreadMessage();
+        text.message = HeadsetUnreadMessage(in.headsetSteps);
     } else if (in.lapFailed) {
         text.message = LapFailedMessage();
     } else if (in.lapWanted) {

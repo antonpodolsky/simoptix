@@ -38,10 +38,16 @@ namespace {
 
 }
 
-MirrorView::MirrorView(std::unique_ptr<FrameSource> game, const MirrorSettings& settings, bool debug)
+MirrorView::MirrorView(
+    std::unique_ptr<FrameSource> game,
+    std::vector<std::wstring> headsetSteps,
+    const MirrorSettings& settings,
+    bool debug
+)
     : gameSource_(std::move(game)),
       demoSource_(std::make_unique<DemoSource>()),
-      frameSource_(gameSource_.get()) {
+      frameSource_(gameSource_.get()),
+      headsetSteps_(std::move(headsetSteps)) {
     FollowVideoSettings();
     SetSettings(settings, debug);
     session_.SetSource(frameSource_);
@@ -108,6 +114,7 @@ bool MirrorView::WaitsForGame() const {
 // The empty state's text, from the view's state now (empty_state_text.h). Graphics thread.
 EmptyText MirrorView::EmptyTextNow() {
     EmptyStateTextInput in;
+    in.headsetSteps = &headsetSteps_;
     in.lapWanted = lapWanted_;
     in.lapRecorded = lapRecorded_;
     in.lapFailed = recorder_.Get() == LapRecorder::State::kFailed;
