@@ -32,7 +32,10 @@ near the game.
   - Measured with Pimax's runtime and no headset: it stopped at `xrGetSystem` (−35,
     `XR_ERROR_FORM_FACTOR_UNAVAILABLE`) and said so. The log then showed only the handshake and the
     instance (`findings\openxr.md`, "The check program").
-  - Other runtimes without a headset haven't been tried.
+  - Measured with Meta's runtime and a Quest 3 connected but not worn, through the same OpenXR calls in
+    VR Mirror's headset test: `xrGetSystem` found the headset, and the session then stayed idle for
+    30 s (`findings\obs_plugin.md`, "The empty state's facts"). The check program itself hasn't been
+    run with a Quest 3, nor has a Quest 3 disconnected or with Link not running.
 
 Afterwards the layer's log, which the check names in its last line (the newest
 `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`), should show the runtime, the time
