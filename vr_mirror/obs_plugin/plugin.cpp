@@ -116,8 +116,8 @@ namespace {
                == IDYES;
     }
 
-    // UI thread: records the next lap, or gives up the one asked for. The demo stops: a lap is the game's.
-    // Recording over a recorded lap asks first.
+    // UI thread: records the next lap, or gives up the one asked for. Greyed out while the demo plays (a lap
+    // is the game's). Recording over a recorded lap asks first.
     bool ToggleRecordLap(obs_properties_t*, obs_property_t*, void* data) {
         return Guarded("record lap button", [&]() -> bool {
             MirrorView& view = *static_cast<Source*>(data)->view;
@@ -133,11 +133,6 @@ namespace {
             }
 
             view.SetRecordLap(on);
-
-            if (on) {
-                view.SetDemo(false);
-            }
-
             return false;  // the source's refresh (DemoKey) redraws the buttons, once
         });
     }
@@ -252,19 +247,24 @@ namespace {
             s
         );
 
-        // Without a headset found there is no game to record. A recording asked for still gets its Cancel.
+        // Without a headset found there is no game to record, and while the lap plays the game isn't shown. A
+        // recording asked for still gets its Cancel.
         const bool headset = s->view->HeadsetFound();
-        obs_property_set_enabled(record, recording || headset);
+        const bool canRecord = recording || (headset && !demo);
+        obs_property_set_enabled(record, canRecord);
 
-        obs_property_set_long_description(
-            record,
-            recording || headset
-                ? "Drive one full lap in LMU, in practice.\n"
-                  "It records from a crossing of the start/finish line to the next.\n"
-                  "Entering the pits or pausing the game starts the lap over at the next start/finish line."
-                : "No headset found yet.\n"
-                  "Turn the headset on and start its VR software, then open this window again."
-        );
+        const char* recordHint = "Drive one full lap in LMU, in practice.\n"
+                                 "It records from a crossing of the start/finish line to the next.\n"
+                                 "Entering the pits or pausing the game starts the lap over at the next "
+                                 "start/finish line.";
+
+        if (!canRecord) {
+            recordHint = demo ? "Stop playing the lap first."
+                              : "No headset found yet.\n"
+                                "Turn the headset on and start its VR software, then open this window again.";
+        }
+
+        obs_property_set_long_description(record, recordHint);
 
         if (hasLap) {
             obs_property_t*

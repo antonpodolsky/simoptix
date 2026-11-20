@@ -290,7 +290,7 @@ is kept: the one before is deleted when a new one is saved.
 - Windows decodes the video on the graphics card. That needs Windows' HEVC Video Extension. Without it,
   the OBS log says the video can't be decoded, and the source goes back to the game.
 - **Play recorded lap** shows once a lap is recorded. Playing it gives up a lap being recorded,
-  and recording a lap stops the demo.
+  and **Record a new lap** is greyed out while it plays.
 
 ## Recording races automatically
 
