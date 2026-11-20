@@ -7,11 +7,10 @@ The workflow is tailored to a wide type of coding agents.
   to work in. The rules cover using only the game's official interfaces, a minimal footprint beside the
   game, and the code's layers and which way they depend. `AGENTS.md` points every coding agent at the
   skills.
+- **The code practices skill** (`.agents\skills\code-practices\SKILL.md`) holds the rules for how the
+  code is built, with examples from the repo and a review checklist.
 - **The code style skill** (`.agents\skills\code-style\SKILL.md`) holds the rules for how the code
   reads, with examples from the repo and a review checklist.
-- **The code practices skill** (`.agents\skills\code-practices\SKILL.md`) holds the rules for how the
-  code is built: functions, `const`, one owner for each resource, errors across C APIs, and threads. It
-  has a review checklist too.
 - Each change is made in its own git worktree, built, tested, and committed as one small commit.
 
 ## Quality and correctness gates
