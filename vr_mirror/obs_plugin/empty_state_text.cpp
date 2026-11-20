@@ -7,7 +7,7 @@ namespace {
     // The messages the empty state shows under its rule in place of the facts. `steps`: the source's own
     // (EmptyStateTextInput::headsetSteps).
     EmptyMessage HeadsetUnreadMessage(const std::vector<std::wstring>* steps) {
-        EmptyMessage message = {L"Couldn't show headset stats", FactTone::kWarning, {}, L""};
+        EmptyMessage message = {L"Couldn't show headset info", FactTone::kWarning, {}, L""};
 
         if (steps) {
             message.steps = *steps;
