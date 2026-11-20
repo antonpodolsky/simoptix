@@ -477,6 +477,7 @@ void MirrorView::KeepReportedFacts() {
 
     if (facts.imageWidth > 0 && !facts_.measured) {
         facts_ = facts;
+        headsetFound_ = true;
     }
 }
 
@@ -528,6 +529,7 @@ void MirrorView::KeepMemoryFacts(const FramePicker& picker) {
         return;
     }
 
+    headsetFound_ = true;
     std::unique_lock<std::mutex> lock(factsMutex_, std::try_to_lock);
 
     if (lock.owns_lock()) {

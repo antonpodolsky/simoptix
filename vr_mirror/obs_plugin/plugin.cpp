@@ -67,8 +67,8 @@ namespace {
 
     // What the demo's buttons and status line show, as one number: a change refreshes the properties.
     int DemoKey(const MirrorView& view) {
-        return static_cast<int>(view.LapState()) * 4 + (view.RecordingLap() ? 2 : 0)
-               + (view.DemoOn() ? 1 : 0);
+        return static_cast<int>(view.LapState()) * 8 + (view.HeadsetFound() ? 4 : 0)
+               + (view.RecordingLap() ? 2 : 0) + (view.DemoOn() ? 1 : 0);
     }
 
     // UI thread: shows the demo's buttons and status as they are now. `data`: a weak reference, released
@@ -279,11 +279,18 @@ namespace {
             s
         );
 
+        // Without a headset found there is no game to record. A recording asked for still gets its Cancel.
+        const bool headset = s->view->HeadsetFound();
+        obs_property_set_enabled(record, recording || headset);
+
         obs_property_set_long_description(
             record,
-            "Drive one full lap in LMU, in practice.\n"
-            "It records from a crossing of the start/finish line to the next.\n"
-            "Entering the pits or pausing the game starts the lap over at the next start/finish line."
+            recording || headset
+                ? "Drive one full lap in LMU, in practice.\n"
+                  "It records from a crossing of the start/finish line to the next.\n"
+                  "Entering the pits or pausing the game starts the lap over at the next start/finish line."
+                : "No headset found yet.\n"
+                  "Turn the headset on and start its VR software, then open this window again."
         );
 
         if (hasLap) {
@@ -317,15 +324,19 @@ namespace {
     // The view draws its empty state only while a properties dialog shows it, never only in the recording. A
     // dialog holds the list it asked for, and OBS destroys the list when the dialog closes, or when it asks
     // for a new one: the list counts the dialog in while it lives (OBS calls `destroy` with the parameter).
-    void CountDialog(obs_properties_t* p, const MirrorView& view) {
+    // True when it is the only one: a dialog opened. A refresh asks for the new list before it drops the old
+    // (the properties view's ReloadProperties), so the count goes from 1 to 2 and back, and it is false.
+    bool CountDialog(obs_properties_t* p, const MirrorView& view) {
         using Viewers = std::shared_ptr<std::atomic<int>>;
         Viewers* viewers = new Viewers(view.EmptyStateViewers());  // owned by the list from here
-        ++**viewers;
+        const bool opened = ++**viewers == 1;
 
         obs_properties_set_param(p, viewers, [](void* param) {
             const std::unique_ptr<Viewers> owned(static_cast<Viewers*>(param));
             --**owned;
         });
+
+        return opened;
     }
 
     // `s`: the source, or null for OBS's defaults (no demo buttons then).
@@ -400,8 +411,11 @@ namespace {
 
         if (s) {
             AddDemoProperties(p, s);
-            CountDialog(p, *s->view);
-            s->view->DialogOpened();
+
+            // Only an opening reads the headset: a refresh restarted the source, which refreshed it again.
+            if (CountDialog(p, *s->view)) {
+                s->view->DialogOpened();
+            }
         }
 
         return p;

@@ -107,7 +107,8 @@ Both sources have the same five settings:
 
 Below them, under a line, four buttons run the demo ("The demo", below): **Play recorded lap**, **Record
 a lap** (**Record a new lap** once one is recorded), **Open recording location** and **Delete recorded
-lap**. Until a lap is recorded, only **Record a lap** shows. While a lap is being
+lap**. Until a lap is recorded, only **Record a lap** shows. It is greyed out until the source has found
+the headset, from its VR software or the game's frames. While a lap is being
 recorded, a status line under them says where it stands. The buttons aren't saved, so both are off when OBS starts.
 
 The source is always the size of the OBS canvas (Settings → Video → Base resolution), so it fills the

@@ -73,6 +73,9 @@ public:
     std::shared_ptr<std::atomic<int>> EmptyStateViewers() const { return emptyViewers_; }
     // The properties dialog opened: the game source reads the headset if it isn't known yet. Any thread.
     void DialogOpened() { dialogOpened_ = true; }
+    // The headset is found: the size of the game's eye image is known, as the source's runtime reported it
+    // or as the game's frames showed it. Kept once found. Any thread.
+    bool HeadsetFound() const { return headsetFound_; }
 
     // OBS's show and hide: the frame source starts and stops with them.
     void Show() { wanted_ = true; }
@@ -128,6 +131,7 @@ private:
     EmptyState emptyState_;                 // graphics thread
     std::shared_ptr<std::atomic<int>> emptyViewers_ = std::make_shared<std::atomic<int>>(0);
     std::atomic<bool> dialogOpened_{false};  // DialogOpened
+    std::atomic<bool> headsetFound_{false};  // HeadsetFound: set on the graphics thread with facts_
     bool headsetUnread_ = false;  // graphics thread: the game source couldn't read the headset (or start)
     bool lapStarted_ = false;     // graphics thread: the recorder was started for this run of the source
     bool started_ = false;        // graphics thread: the session runs and its per-start state is set up
