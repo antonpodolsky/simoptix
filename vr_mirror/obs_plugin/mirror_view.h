@@ -59,14 +59,16 @@ public:
     // Plays the newest recorded lap in place of the game (not saved: off when OBS starts).
     void SetDemo(bool on) { demoWanted_ = on; }
     bool DemoOn() const { return demoWanted_; }
-    // Records the next full lap the game's frames show, while the source is shown; off again once it is
-    // saved.
+    // Records the next full lap the game's frames show, while the source is shown and its properties are
+    // open; off again once it is saved, or when the last properties window closes before it is saving.
     void SetRecordLap(bool on);
     bool RecordingLap() const { return lapWanted_; }
     // Looks for the recorded lap again (after it was deleted), for the empty state. Any thread: it lists the
     // laps' folder, so not per frame.
     void FindLap();
     LapRecorder::State LapState() const { return recorder_.Get(); }
+    // A lap is recorded, as FindLap last saw it.
+    bool LapRecorded() const { return lapRecorded_; }
     // How many places show the empty state while the view waits for the game: counted up and down by them,
     // from any thread, and kept by them as long as they need it. With none, a view waiting for the game draws
     // nothing.

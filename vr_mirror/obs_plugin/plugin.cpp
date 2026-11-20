@@ -65,13 +65,14 @@ namespace {
         int shownDemo = -1;                 // graphics thread: DemoKey as the properties were last refreshed
     };
 
-    // What the demo's buttons and status line show, as one number: a change refreshes the properties.
+    // What the demo's buttons show, as one number: a change refreshes the properties, once. The recorder's
+    // own states (waiting, recording, saving) change nothing there, so they don't refresh it.
     int DemoKey(const MirrorView& view) {
-        return static_cast<int>(view.LapState()) * 8 + (view.HeadsetFound() ? 4 : 0)
-               + (view.RecordingLap() ? 2 : 0) + (view.DemoOn() ? 1 : 0);
+        return (view.LapRecorded() ? 8 : 0) + (view.HeadsetFound() ? 4 : 0) + (view.RecordingLap() ? 2 : 0)
+               + (view.DemoOn() ? 1 : 0);
     }
 
-    // UI thread: shows the demo's buttons and status as they are now. `data`: a weak reference, released
+    // UI thread: shows the demo's buttons as they are now. `data`: a weak reference, released
     // here.
     void RefreshProperties(void* data) {
         obs_weak_source_t* weak = static_cast<obs_weak_source_t*>(data);
@@ -82,33 +83,6 @@ namespace {
         }
 
         obs_weak_source_release(weak);
-    }
-
-    // The demo's status line, while a lap is asked for or just after: where the recording stands; null
-    // otherwise.
-    const char* LapStatus(const MirrorView& view) {
-        switch (view.LapState()) {
-            case LapRecorder::State::kWaiting:
-                return "Drive to the start/finish line: leave the pits, and the lap records from the next "
-                       "crossing.";
-            case LapRecorder::State::kRecording:
-                return "Recording the lap: drive on to the start/finish line.";
-            case LapRecorder::State::kSaving:
-                return "Saving the lap.";
-            case LapRecorder::State::kSaved:
-                return "Lap saved: \"Play recorded lap\" plays it.";
-            case LapRecorder::State::kFailed:
-                return "The lap wasn't recorded: the OBS log says why.";
-            default:
-                break;
-        }
-
-        if (view.RecordingLap()) {
-            return "The lap records once the game's frames come (the source shown, the recorded lap "
-                   "stopped).";
-        }
-
-        return nullptr;  // no recording asked for: the view's empty state says whether a lap is recorded
     }
 
     // Race auto-record is on while at least one VR Mirror source has it ticked. UI thread.
@@ -164,7 +138,7 @@ namespace {
                 view.SetDemo(false);
             }
 
-            return true;  // the properties again, with the buttons as they are now
+            return false;  // the source's refresh (DemoKey) redraws the buttons, once
         });
     }
 
@@ -203,7 +177,7 @@ namespace {
             );
             blog(LOG_INFO, "[simoptix_vr_mirror] recorded lap deleted (%d)", deleted);
             static_cast<Source*>(data)->view->FindLap();
-            return true;  // the properties again, with the buttons as they are now
+            return false;  // the source's refresh (DemoKey) redraws the buttons, once
         });
     }
 
@@ -218,7 +192,7 @@ namespace {
                 view.SetRecordLap(false);
             }
 
-            return true;  // the properties again, with the buttons as they are now
+            return false;  // the source's refresh (DemoKey) redraws the buttons, once
         });
     }
 
@@ -231,10 +205,9 @@ namespace {
         });
     }
 
-    // The demo's buttons, in the settings' column under a rule, and the recording's status line under them
-    // while there is one, for source `s`. Without a recorded lap only Record a lap shows: there is nothing to
-    // play, open or delete. No group: OBS lays a group out on a grid of its own, out of line with the
-    // settings, and puts each button on a row of its own anyway.
+    // The demo's buttons, in the settings' column under a rule, for source `s`. Without a recorded lap only
+    // Record a lap shows: there is nothing to play, open or delete. No group: OBS lays a group out on a grid
+    // of its own, out of line with the settings, and puts each button on a row of its own anyway.
     void AddDemoProperties(obs_properties_t* p, Source* s) {
         std::wstring stem;
         const bool recording = s->view->RecordingLap();
@@ -294,15 +267,6 @@ namespace {
         );
 
         if (hasLap) {
-            obs_property_t* open = obs_properties_add_button2(
-                p,
-                "open_lap_folder",
-                "Open recording location",
-                OpenLapFolder,
-                s
-            );
-            obs_property_set_long_description(open, "Opens the folder the recorded lap is kept in.");
-
             obs_property_t*
                 remove = obs_properties_add_button2(p, "delete_lap", "Delete recorded lap", DeleteLap, s);
             obs_property_set_long_description(
@@ -311,13 +275,15 @@ namespace {
                                   : "Deletes the recorded lap. Asks first."
             );
             obs_property_set_enabled(remove, !demo && !recording);
-        }
 
-        if (const char* status = LapStatus(*s->view)) {
-            obs_property_text_set_info_word_wrap(
-                obs_properties_add_text(p, "lap_status", status, OBS_TEXT_INFO),
-                true
+            obs_property_t* open = obs_properties_add_button2(
+                p,
+                "open_lap_folder",
+                "Open recording location",
+                OpenLapFolder,
+                s
             );
+            obs_property_set_long_description(open, "Opens the folder the recorded lap is kept in.");
         }
     }
 
@@ -485,7 +451,7 @@ namespace {
             Source* s = static_cast<Source*>(data);
             s->view->Tick();
 
-            // The lap recorder moves on by itself: its buttons and status follow in the properties, if open.
+            // The lap recorder moves on by itself: its buttons follow in the properties, if open.
             const int key = DemoKey(*s->view);
 
             if (key != s->shownDemo && s->weak) {

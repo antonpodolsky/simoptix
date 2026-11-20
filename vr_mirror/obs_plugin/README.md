@@ -101,15 +101,14 @@ Both sources have the same five settings:
 |---|---|
 | **Stabilization Method** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). The list says each one's delay and how much video memory it takes ("no delay, low VRAM usage", "0.5s delay, higher VRAM usage"). Instant is the default |
 | **Stabilization Strength** | A slider from 0 to 10, 3 by default: how strongly Instant and Look-ahead smooth. At 5 each method has its own tuning. Hidden while Stabilization Method is Off. Higher is calmer, and the view follows the head less closely. Lower follows the head more closely. At 0 nothing is smoothed, and the horizon is still kept level ("Stabilization Strength", below) |
-| **Zoom** | A slider from 1 to 3, 1.2 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
+| **Zoom** | A slider from 1 to 3, 1.3 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
 | **Record races automatically** | OBS records each race by itself, from the start lights to 5 s after the car stops past the finish ("Recording races automatically", below). Off by default |
 | **Debug** | Stamps frame numbers on the view and writes a frame trace, for checking a recording frame by frame ("Debug: stamp and frame trace", below) |
 
 Below them, under a line, four buttons run the demo ("The demo", below): **Play recorded lap**, **Record
 a lap** (**Record a new lap** once one is recorded), **Open recording location** and **Delete recorded
 lap**. Until a lap is recorded, only **Record a lap** shows. It is greyed out until the source has found
-the headset, from its VR software or the game's frames. While a lap is being
-recorded, a status line under them says where it stands. The buttons aren't saved, so both are off when OBS starts.
+the headset, from its VR software or the game's frames. The buttons aren't saved, so both are off when OBS starts.
 
 The source is always the size of the OBS canvas (Settings → Video → Base resolution), so it fills the
 canvas at 1:1. When the canvas changes, the source follows at once.
@@ -239,16 +238,18 @@ Once the game runs, what it measures replaces what the runtime reported, until O
 saved with the scene.
 
 **Record a lap** records the lap the demo plays:
-1. With the game running and the source shown, press **Record a lap** in the source's properties.
+1. With the game running and the source shown, press **Record a lap** in the source's properties, and
+   keep them open.
 2. In an LMU practice session, leave the pits and drive. The recording starts when the car crosses the
    start/finish line, and stops when it crosses it again. So it holds one full lap, which ends where it
    starts.
-3. A status line under the buttons says where it stands: waiting for the start/finish line, recording,
-   saved, or why it wasn't recorded. The OBS log has the same in lines that start "recorded lap:".
+3. The OBS log says where it stands, in lines that start "recorded lap:": waiting for the start/finish
+   line, recording, saved, or why it wasn't recorded.
 
 The lap is thrown away if, before the start/finish line, the car goes into the pits, the player leaves
 the car, the game pauses or a new session starts. The recording then waits for the next crossing. **Cancel lap
-recording** gives it up.
+recording** gives it up, and so does closing the source's properties, unless the lap is already being
+saved.
 
 With a lap recorded, the button reads **Record a new lap**, and asks before it starts: once the new lap is
 saved, it replaces the recorded one. Until then the recorded lap stays, so a lap thrown away or cancelled

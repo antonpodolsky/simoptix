@@ -12,9 +12,9 @@
 namespace source_settings {
 
     // The source's core settings are the smoothing, its strength and the zoom; the drawn pose method is
-    // fixed here. A new source starts on Instant at Stabilization Strength 3 and Zoom 1.2.
+    // fixed here. A new source starts on Instant at Stabilization Strength 3 and Zoom 1.3.
     constexpr int kDefaultMethod = MirrorSettings::kSmoothingInstant;
-    constexpr float kDefaultZoom = 1.2f;
+    constexpr float kDefaultZoom = 1.3f;
     constexpr int kDrawnPose = 2;  // the slot check plus the cockpit correction below 90 fps
 
     // Stabilization Strength is a level from 0 to 10. Each level gives the core's strength
