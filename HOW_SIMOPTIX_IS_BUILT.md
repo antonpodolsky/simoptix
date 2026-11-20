@@ -7,19 +7,20 @@ The workflow is tailored to a wide type of coding agents.
   to work in. The rules cover using only the game's official interfaces, a minimal footprint beside the
   game, and the code's layers and which way they depend. `AGENTS.md` points every coding agent at the
   skills.
+- **The code practices skill** (`.agents\skills\code-practices\SKILL.md`) holds the rules for how the
+  code is built, with examples from the repo and a review checklist.
 - **The code style skill** (`.agents\skills\code-style\SKILL.md`) holds the rules for how the code
   reads, with examples from the repo and a review checklist.
-- **The docs skill** (`.agents\skills\docs\SKILL.md`) holds the rules for writing docs.
-- Each change is made in its own git worktree, built, tested, and committed as one small commit. Its
-  subject says what changed, and its body says why.
-- Docs change in the same commit as the code they describe.
+- Each change is made in its own git worktree, built and tested.
 
 ## Quality and correctness gates
 
 A change is done when it passes the gates that apply to it.
 - **Builds.** Every target that includes a changed file is built, with no warnings at `/W3`.
-- **Check scripts.** The code style and docs skills each have a script that checks their rules before a
-  commit.
+- **Code rules.** The code passes the formatters, and the review checklists of the code practices and
+  code style skills.
+- **Checks on GitHub.** Every pull request is built and checked on GitHub, and is merged only when every
+  check passes.
 - **End-to-end tests** (`vr_mirror\e2e\`). They run VR Mirror's real, unmodified desktop app
   (`simoptix_vr_mirror.exe`) against a simulated Pimax headset and game, or against a simulated game
   with the OpenXR layer's own code in it. They capture its window the way OBS does and measure what a
@@ -44,5 +45,5 @@ A change is done when it passes the gates that apply to it.
 ## Review
 
 - The author reviews the code.
-- The code and the docs are also reviewed as a whole against the same rules. The author decides which
-  findings are acted on.
+- The code is also reviewed as a whole against the same rules. The author decides which findings are
+  acted on.
