@@ -45,7 +45,7 @@ public:
             return filtered_;
         }
 
-        const float rawSpeed = AngleBetween(prevRaw_, raw) / dt;
+        const float rawSpeed = static_cast<float>(RotationAngle(prevRaw_, raw)) / dt;
         speed_ += Alpha(dt, 1.0f) * (rawSpeed - speed_);
         prevRaw_ = raw;
         const float a = Alpha(dt, minCutoffHz + beta * speed_ + extraCutoffHz);
@@ -53,7 +53,7 @@ public:
         // Soft dead zone: barely follow while the head stays within deadzoneRad of the view.
         float follow = a;
         if (deadzoneRad > 0) {
-            const float x = std::min(1.0f, AngleBetween(stage1_, raw) / deadzoneRad);
+            const float x = std::min(1.0f, static_cast<float>(RotationAngle(stage1_, raw)) / deadzoneRad);
             follow *= x * x * (3 - 2 * x);
         }
 
@@ -78,7 +78,7 @@ private:
     // Lag up to 60% of the limit passes unchanged; beyond that it is compressed smoothly
     // so it approaches, but never exceeds, maxLag, without a sudden change in speed.
     static Quat LimitLag(const Quat& raw, const Quat& q, float maxLag) {
-        const float lag = AngleBetween(raw, q);
+        const float lag = static_cast<float>(RotationAngle(raw, q));
         const float knee = 0.6f * maxLag;
         if (maxLag <= 0 || lag <= knee) {
             return q;
@@ -110,7 +110,8 @@ public:
 
     void Reset() override { filter_.Reset(); }  // not headSpeed_
     double DelayS() const override { return 0; }
-    // Divides the cutoff while still and its rise with the head's speed (kMinCutoffHz, kBeta).
+    // Divides the cutoff while still and its rise with the head's speed (kMinCutoffHz, kBeta). At 0 the
+    // filter is bypassed.
     void SetStrength(float strength) override { strength_ = strength; }
     void Window(double, int* behind, int* ahead) const override { *behind = *ahead = 0; }
     Smoothed Smooth(const SmoothingInput& in) override;

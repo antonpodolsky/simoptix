@@ -39,17 +39,14 @@ namespace stage_replay {
             return Rotate(q, {0, 0, -1});
         }
 
-        // The rotation between two orientations (degrees), exact for nearly equal ones (2 acos(dot) reads
-        // identical 7-digit quaternions 0.02 deg apart).
+        // The rotation between two orientations (degrees; common/rot.h: RotationAngle).
         double RotationDeg(const Quat& a, const Quat& b) {
-            const Quat r = Mul(Conj(a), b);
-            const double v = std::sqrt(double(r.x) * r.x + double(r.y) * r.y + double(r.z) * r.z);
-            return 2 * std::atan2(v, std::fabs(double(r.w))) * kDeg;
+            return RotationAngle(a, b) * kDeg;
         }
 
+        // The angle between two directions (degrees; common/rot.h: DirectionAngle).
         double AngleDeg(Vec3 a, Vec3 b) {
-            const double d = std::clamp(double(a.x) * b.x + double(a.y) * b.y + double(a.z) * b.z, -1.0, 1.0);
-            return std::acos(d) * kDeg;
+            return DirectionAngle(a, b) * kDeg;
         }
 
         // The prediction recorded for display slot `slot` (within a quarter period), if any.

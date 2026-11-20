@@ -28,12 +28,13 @@ struct Limits {
     double maxPoseDriftDeg = -1;  // the pose error's mean over the run: no drift
     // the view's width on screen against the one its zoom asks for (degrees between the quarter patches)
     double maxViewWidthErrorDeg = 0.2;
-    double maxBlackEdgePct = 0;   // captured frames with black at an edge (view outside the game image)
-    double maxEdgeClampPct = -1;  // frames where the last-resort edge limit acted
-    int maxStalls = -1;           // view slowing to a near stop and speeding up again mid-turn
-    double maxLagDeg = -1;        // how far the view may trail the head
-    double minToolFps = 85;       // the tool must keep up with the game (90 fps)
-    double maxMissedPct = 1;      // game frames the tool never showed
+    double maxBlackEdgePct = 0;       // captured frames with black at an edge (view outside the game image)
+    double maxEdgeClampPct = -1;      // frames where the last-resort edge limit acted
+    int maxStalls = -1;               // view slowing to a near stop and speeding up again mid-turn
+    double maxLagDeg = -1;            // how far the view may trail the head
+    double maxViewFromImageDeg = -1;  // how far the view may look from its image (no smoothing: ~0)
+    double minToolFps = 85;           // the tool must keep up with the game (90 fps)
+    double maxMissedPct = 1;          // game frames the tool never showed
     // longest gap between the tool's frames (informational: the fake can be late too)
     double maxToolGapMs = -1;
     double maxObsRepeatPct = -1;   // 60 fps window-capture repeats (a Windows capture limit; informational)

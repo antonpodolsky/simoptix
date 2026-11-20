@@ -55,7 +55,7 @@ file.
 | Key | What |
 |---|---|
 | `frame_source` | Where the frames come from: `pimax` (the default, Pimax's client mirror) or `openxr` (the OpenXR layer in the game, `vr_mirror\frame_sources\openxr\`) |
-| `smoothing` | 0 Off, 1 Instant, 2 Look-ahead (the default), as in the OBS plugin |
+| `smoothing` | 0 Off, 1 Instant, 2 Look-ahead (the default), the values of the OBS plugin's Stabilization Method |
 | `zoom` | The crop factor (default 1.5). The spare image around the view is how far the view may trail the head |
 | `drawn_pose` | How the head pose a frame was drawn with is found: 0 off, 1 the slot check (the default), 2 the slot check plus the cockpit correction (the OBS plugin's choice) |
 | `output_width`, `output_height` | The window's client size at start (default 2560×1440) |
