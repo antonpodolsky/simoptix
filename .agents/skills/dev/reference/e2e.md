@@ -160,8 +160,11 @@ pose, the view and image pose, and the edge counters. It runs over a fixed matri
   plugin's 60 Hz ticks (each tick's own moment, with an older frame standing in as the image, which e2e
   never sees)
 - then single runs with stabilization switched off and on
+- then strength 0, nothing smoothed, at zoom 1.2: on `queued_late_frames`, whose ticks show an older
+  image standing in, and on `edge_test+heartbeat`, whose fast turns reach the image's edges, at both
+  smoothings and as both hosts
 
-That is 52 runs and about 26 MB.
+That is 60 runs and about 29 MB.
 
 **Refactor guard.** A change that must not change behaviour (moving code, splitting the pipeline into
 stages) must reproduce the build before it byte for byte. Write `golden_main.txt` with that build, then
