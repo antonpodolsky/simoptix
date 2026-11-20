@@ -243,11 +243,14 @@ namespace {
 
         // OBS has no separator property; its text lines are rich text, stretched across the settings' column.
         // An <hr> takes the text's own colour, so the rule is a 1 px block in Yami's border colour
-        // (--border_color, #3C404D), a step above the dialog's background.
+        // (--border_color, #3C404D), a step above the dialog's background, with an empty 6 px line above and
+        // below it for space.
         obs_properties_add_text(
             p,
             "demo_rule",
-            "<div style=\"background-color:#3c404d; font-size:1px;\">&nbsp;</div>",
+            "<div style=\"font-size:6px;\">&nbsp;</div>"
+            "<div style=\"background-color:#3c404d; font-size:1px;\">&nbsp;</div>"
+            "<div style=\"font-size:6px;\">&nbsp;</div>",
             OBS_TEXT_INFO
         );
 
