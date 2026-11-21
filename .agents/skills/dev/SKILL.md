@@ -715,10 +715,12 @@ build, then fix.
 
   Every replay in the repo has its sources there.
 - **Pitfalls met:** for angles between nearly equal quaternions, use `2 atan2(|v|, |w|)` of the
-  relative rotation and not `2 acos(dot)` (7-digit values read 0.05 deg apart). The core and
-  `vr_mirror\e2e\` (its measures and fakes) use `RotationAngle` and `DirectionAngle`
-  (`vr_mirror\core\common\rot.h`) for every angle, and no other. Never leave a shell's
-  working directory inside `vr_mirror\e2e\out\<scenario>\`, because the runner deletes it and aborts.
+  relative rotation and not `2 acos(dot)` (7-digit values read 0.05 deg apart). The measures and
+  fakes in `vr_mirror\e2e\` use `RotationAngleAtan2` and `DirectionAngle`
+  (`vr_mirror\core\common\rot.h`) for every angle, and no other. The core's smoothings use
+  `RotationAngleAcos` and its image room `RotationAngleAxisAcos`, which the pipeline's expected output
+  is made with (`findings\pipeline.md`, "One exact angle"). Never leave a shell's working directory
+  inside `vr_mirror\e2e\out\<scenario>\`, because the runner deletes it and aborts.
 
 ## 5b. Check the overlays and race auto-record without the game
 

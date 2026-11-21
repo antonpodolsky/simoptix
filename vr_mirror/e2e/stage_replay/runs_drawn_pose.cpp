@@ -62,9 +62,9 @@ namespace {
         const replay::Replay& replay_;
     };
 
-    // The rotation between two orientations (degrees; common/rot.h: RotationAngle).
+    // The rotation between two orientations (degrees; common/rot.h: RotationAngleAtan2).
     double RotationDeg(const Quat& a, const Quat& b) {
-        return RotationAngle(a, b) * 180 / 3.14159265358979;
+        return RotationAngleAtan2(a, b) * 180 / 3.14159265358979;
     }
 
     const int kD45 = 45, kD92 = 92;

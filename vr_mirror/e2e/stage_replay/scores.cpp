@@ -39,9 +39,9 @@ namespace stage_replay {
             return Rotate(q, {0, 0, -1});
         }
 
-        // The rotation between two orientations (degrees; common/rot.h: RotationAngle).
+        // The rotation between two orientations (degrees; common/rot.h: RotationAngleAtan2).
         double RotationDeg(const Quat& a, const Quat& b) {
-            return RotationAngle(a, b) * kDeg;
+            return RotationAngleAtan2(a, b) * kDeg;
         }
 
         // The angle between two directions (degrees; common/rot.h: DirectionAngle).

@@ -472,11 +472,32 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 
 ### One exact angle
 
-The smoothings measured the head's speed and lag with `2 acos(dot)` of two quaternions, and the image room
-the view's lag with `2 acos(w)`. In float that reads about 0.02–0.05° where the poses nearly match, so a
-frame-to-frame turn of a fraction of a degree read larger and noisier than it was. Both now use
-`RotationAngle` (`vr_mirror\core\common\rot.h`, 2 atan2(|v|, |w|)). `stage_replay --pipeline` at zoom
-1.5, before and after, with the build of the pull request that changed it:
+The smoothings measure the head's speed and lag with `RotationAngleAcos` (`vr_mirror\core\common\rot.h`,
+2 acos of the float dot), and the image room the view's lag and its axis with `RotationAngleAxisAcos`
+(`2 acos(w)` and `sqrt(1 - w²)`). Both read a small turn as
+a gap from 1 in the cosine of half the turn, which a float holds in steps of 6e-8.
+`RotationAngleAtan2` (2 atan2(|v|, |w|)) reads the sine of half the turn instead. A head pose turned by
+a known amount reads:
+
+| True turn | `RotationAngleAcos` | `RotationAngleAtan2` |
+|---|---|---|
+| 0.01° | 0 | 0.0100° |
+| 0.04° | 0.0396° | 0.0400° |
+| 0.06° | 0.0396° | 0.0600° |
+| 0.1° | 0.1047° | 0.1000° |
+| 0.5° | 0.5020° | 0.5000° |
+
+At 90 Hz a head turning 3°/s moves 0.033° per frame, which `RotationAngleAcos` reads as 0 or 0.04°.
+
+#54 moved the core to `RotationAngleAtan2` (then `RotationAngle`, from `AngleBetween`), which changed
+every run of `stage_replay --golden`. The core went back to `RotationAngleAcos` and `2 acos(w)` after
+it, the image room's now as `RotationAngleAxisAcos`: `stage_replay --golden` is byte for byte the build
+before #54 again in its 52 runs, with one local compiler. Between the two, the view differed by at most 0.28° with Instant (`false_retiming_head_turns`,
+zoom 1.5, window), 0.023° with Look-ahead, and the edge stops were the same on every run. Of the 8 runs at
+strength 0 that #54 added, only `edge_test+heartbeat` on ticks changed, at both smoothings: the 31 outputs
+stopped at the edge, by at most 0.0002°. The fakes keep `RotationAngleAtan2`.
+
+`stage_replay --pipeline` at zoom 1.5, before and after #54's change:
 
 | Input | Look-ahead: jitter still / small | Instant: lag p99 / max |
 |---|---|---|
@@ -485,14 +506,14 @@ frame-to-frame turn of a fraction of a degree read larger and noisier than it wa
 | false_retiming_short_hiccup | 0.0016 → 0.0009°, 0.0019 → 0.0003° | 4.25 → 4.25°, 4.64 → 4.64° |
 | false_retiming_featureless_cockpit | 0.0014 → 0.0008°, 0.0021 → 0.0018° | 5.22 → 5.25°, 5.48 → 5.52° |
 
-- **Look-ahead is calmer on the real heads:** each moment's time constant follows the head's speed, which
-  the noise had made jumpy. Its lag stayed the same or fell by 0.01°.
-- **Instant trails a little more on the real heads,** up to 0.16° at p99. The noise had read small turns
-  as faster, which raised its cutoff (`kBeta`). Its jitter stayed the same.
+- **Look-ahead was calmer on the real heads:** each moment's time constant follows the head's speed, which
+  the noise makes jumpy. Its lag stayed the same or fell by 0.01°.
+- **Instant trailed a little more on the real heads,** up to 0.16° at p99. The noise reads small turns
+  as faster, which raises its cutoff (`kBeta`). Its jitter stayed the same.
 - **The synthetic motions** (`edge_test+heartbeat`, `racing+heartbeat`) changed by under 0.01° in every
   score. Black, edge limit, planned and wrong pose stayed 0 on every input.
 - The fakes' pose predictions (`fake_pvr`, `fake_openxr`) took the head's turn over 4 ms with `2 acos(w)`
-  too, about 0.4° at 100°/s, and now use `RotationAngle`.
+  too, about 0.4° at 100°/s, and use `RotationAngleAtan2` since #54.
 
 ## Stage 5: warp
 
