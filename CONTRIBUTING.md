@@ -87,6 +87,7 @@ and fail on any warning, run
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`, which checks the declarations against Pimax's headers. Without the SDK it says so and skips | Yes |
 | `vr_mirror\frame_sources\openxr\` | Its `build.bat`, then its check program, then signed if the layer goes into the game | The local files test for the layer's log. Otherwise no |
 | `vr_mirror\recording_analysis\` | Its `build.bat` (`patch_shift.exe`, `grid_shift.exe`) | No |
+| `game\`, `vr_mirror\frame_sources\openxr\openxr_d3d11.h` | `game\build.bat` (`simoptix_game.exe`) | No. Run it with the headset on, and look at the grid in each eye |
 | `setup\` | Its `build.bat`, after the layer's `build.bat` (and signing). It builds both plugins too | No. Check its window and what it installs |
 
 The two plugins are `vr_mirror\obs_plugin\build.bat` and `overlays\obs_plugin\build.bat`. With the

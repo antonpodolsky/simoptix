@@ -131,6 +131,7 @@ its Uninstall removes everything. `setup\README.md` describes setup.
 | `vr_mirror\mirror_app\` | VR Mirror in a desktop window, which the end-to-end tests run |
 | `vr_mirror\e2e\` | End-to-end tests: the desktop window against a simulated Pimax headset and game, or a simulated game with the API layer |
 | `vr_mirror\recording_analysis\` | Scripts that check a recording frame by frame, and turn a moment of it into a test |
+| `game\` | A test game for the headset with a grid for judging sharpness, to try ways of drawing each eye without LMU |
 | `overlays\` | SimOptix: Overlays: the G-meter (`gmeter\`, its image layers in `gmeter\design\`) and what any overlay can reuse (`common\`) |
 | `shared\` | Code shared between all plugins |
 | `setup\` | SimOptix Setup: one program that installs and removes both plugins and the layer |
