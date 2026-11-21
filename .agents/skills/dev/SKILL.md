@@ -449,7 +449,8 @@ One convention, everywhere. Check every new name against it, and rename what bre
     (`PvrMirror`). A sentence that means the plugin says "VR Mirror".
   - "Source time" is the frame source's clock that the pipeline runs on.
   - The two angles of a rotation are named for their formula, `RotationAngleAcos` (2 acos of the float
-    dot, coarse below about 0.1°) and `RotationAngleAtan2` (exact at any size). They were
+    dot, coarse below about 0.1°) and `RotationAngleAtan2` (exact at any size).
+    `RotationAngleAxisAcos` gives the angle by acos with its axis. The first two were
     `AngleBetween` and `RotationAngle` in older builds, and findings and e2e results from before keep
     those names.
 - **Exceptions, fixed from outside:** the OpenXR layer's name (`XR_APILAYER_SIMOPTIX_frame_source`:
@@ -721,10 +722,10 @@ build, then fix.
 - **Pitfalls met:** for angles between nearly equal quaternions, use `2 atan2(|v|, |w|)` of the
   relative rotation and not `2 acos(dot)` (7-digit values read 0.05 deg apart). The measures and
   fakes in `vr_mirror\e2e\` use `RotationAngleAtan2` and `DirectionAngle`
-  (`vr_mirror\core\common\rot.h`) for every angle, and no other. The core's smoothings and image room
-  use `RotationAngleAcos` and `2 acos(w)`, which the pipeline's expected output is made with (`findings\pipeline.md`, "One exact
-  angle"). Never leave a shell's
-  working directory inside `vr_mirror\e2e\out\<scenario>\`, because the runner deletes it and aborts.
+  (`vr_mirror\core\common\rot.h`) for every angle, and no other. The core's smoothings use
+  `RotationAngleAcos` and its image room `RotationAngleAxisAcos`, which the pipeline's expected output
+  is made with (`findings\pipeline.md`, "One exact angle"). Never leave a shell's working directory
+  inside `vr_mirror\e2e\out\<scenario>\`, because the runner deletes it and aborts.
 
 ## 5b. Check the overlays and race auto-record without the game
 

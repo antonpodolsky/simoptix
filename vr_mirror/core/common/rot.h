@@ -84,6 +84,35 @@ inline float RotationAngleAcos(const Quat& a, const Quat& b) {
     return 2.0f * std::acos(std::min(1.0f, d));
 }
 
+// The rotation taking a to b as an angle (radians) and a unit axis.
+struct AngleAxis {
+    float angle = 0;
+    Vec3 axis;             // zero without hasAxis
+    bool hasAxis = false;  // the sine of half the angle is at least 1e-6, so the axis can be read
+};
+
+// The angle and axis by acos, like RotationAngleAcos: 2 acos(w) of the normalized relative rotation, and
+// the axis from sqrt(1 - w^2), in float. Below about 0.1 deg the angle is as coarse as RotationAngleAcos's,
+// and the axis loses its digits too. The image room uses it, and stage_replay --golden's expected output
+// is made with it.
+inline AngleAxis RotationAngleAxisAcos(const Quat& a, const Quat& b) {
+    Quat r = Normalize(Mul(Conj(a), b));
+    if (r.w < 0) {
+        r = {-r.x, -r.y, -r.z, -r.w};
+    }
+
+    AngleAxis turn;
+    turn.angle = 2 * std::acos(std::min(1.0f, r.w));
+    const float sinHalf = std::sqrt(std::max(0.0f, 1 - r.w * r.w));
+
+    if (sinHalf >= 1e-6f) {
+        turn.axis = {r.x / sinHalf, r.y / sinHalf, r.z / sinHalf};
+        turn.hasAxis = true;
+    }
+
+    return turn;
+}
+
 inline Quat Slerp(const Quat& a, Quat b, float t) {
     float d = Dot(a, b);
     if (d < 0) {

@@ -473,7 +473,8 @@ An offline bench of the e2e fake's cockpit and queue, 15 s, measured in visible 
 ### One exact angle
 
 The smoothings measure the head's speed and lag with `RotationAngleAcos` (`vr_mirror\core\common\rot.h`,
-2 acos of the float dot), and the image room the view's lag with `2 acos(w)`. Both read a small turn as
+2 acos of the float dot), and the image room the view's lag and its axis with `RotationAngleAxisAcos`
+(`2 acos(w)` and `sqrt(1 - w²)`). Both read a small turn as
 a gap from 1 in the cosine of half the turn, which a float holds in steps of 6e-8.
 `RotationAngleAtan2` (2 atan2(|v|, |w|)) reads the sine of half the turn instead. A head pose turned by
 a known amount reads:
@@ -489,9 +490,9 @@ a known amount reads:
 At 90 Hz a head turning 3°/s moves 0.033° per frame, which `RotationAngleAcos` reads as 0 or 0.04°.
 
 #54 moved the core to `RotationAngleAtan2` (then `RotationAngle`, from `AngleBetween`), which changed
-every run of `stage_replay --golden`. The core went back to `RotationAngleAcos` and `2 acos(w)` after it:
-`stage_replay --golden` is byte for byte the build before #54 again in its 52 runs, with one local
-compiler. Between the two, the view differed by at most 0.28° with Instant (`false_retiming_head_turns`,
+every run of `stage_replay --golden`. The core went back to `RotationAngleAcos` and `2 acos(w)` after
+it, the image room's now as `RotationAngleAxisAcos`: `stage_replay --golden` is byte for byte the build
+before #54 again in its 52 runs, with one local compiler. Between the two, the view differed by at most 0.28° with Instant (`false_retiming_head_turns`,
 zoom 1.5, window), 0.023° with Look-ahead, and the edge stops were the same on every run. Of the 8 runs at
 strength 0 that #54 added, only `edge_test+heartbeat` on ticks changed, at both smoothings: the 31 outputs
 stopped at the edge, by at most 0.0002°. The fakes keep `RotationAngleAtan2`.
