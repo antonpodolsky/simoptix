@@ -38,6 +38,9 @@ EdgeRoom RoomIn(const Quat& image, const Quat& view, const ViewGeometry& g) {
     if (delta.w < 0) {
         delta = {-delta.x, -delta.y, -delta.z, -delta.w};
     }
+
+    // 2 acos(w), as coarse below about 0.1 deg as RotationAngleAcos (common/rot.h). The golden output is
+    // made with it, here and in Within.
     r.lag = 2 * std::acos(std::min(1.0f, delta.w));
     const float sinHalf = std::sqrt(std::max(0.0f, 1 - delta.w * delta.w));
     const float kSearch = 60 * 3.14159265f / 180;
