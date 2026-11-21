@@ -336,7 +336,8 @@ read, without decoding.
 - Before each push, run `git fetch origin` again. If GitHub's `main` has moved, merge it into the
   branch (`git merge origin/main`), so the pull request has no conflicts.
 - When done, bring `main` up to it as step 7 says. Install the OBS plugins from the worktree with the
-  finished code (step 4).
+  finished code (step 4). After the merge, remove the worktree and its branch (step 7, "After the
+  merge").
 
 ## 1. Before editing
 
@@ -826,6 +827,28 @@ Record what each start of the game showed in `findings\openxr.md`.
 
   The pull-requests skill ("The issues it closes") has the form GitHub needs, and the check after
   posting.
+- **After the merge, an agent cleans up without being asked.** An agent that watches its pull request
+  with Auto-fix (pull-requests skill, "Opening a pull request", step 6) gets a message from Claude
+  Code's desktop app when the pull request is merged. Then it cleans up, in this order:
+  1. Check that GitHub merged it: `gh pr view <number> --json state,headRefOid` says `MERGED`. The
+     branch's tip must be that `headRefOid`. If the branch has commits the pull request doesn't have,
+     stop and tell the user.
+  2. Leave the worktree. The shell moves to the main folder. A worktree that Claude Code made is left
+     with Claude Code's own tool.
+  3. Remove the worktree: `git worktree remove .claude/worktrees/<name>`. Its build output goes with
+     it. The installed plugins and the installed layer are copies, so they stay (steps 4 and 5d). If
+     git refuses because of changed or new files, leave the worktree and tell the user which files.
+  4. Delete the branch: `git branch -D <name>`. GitHub squashes each pull request into one commit on
+     `main`, so git doesn't count the branch as merged and `git branch -d` refuses.
+  5. Run `git fetch origin --prune`. The repo's GitHub setting "Automatically delete head branches"
+     is on, so GitHub deletes the pull request's branch at the merge. Each fetch keeps a local copy
+     of the branch, the remote-tracking branch `origin/<name>`. The copy stays after GitHub deletes
+     the branch, until a fetch with `--prune` deletes it.
+  6. Bring the local `main` up. If `main` is checked out in the main folder and that folder's tracked
+     files are clean, run `git -C <main folder> merge --ff-only origin/main`. Otherwise leave it.
+  7. Stop watching the pull request: turn Auto-fix off for it.
+
+  Then tell the user what was removed, and anything left in place with the reason.
 - Until the remote exists, there are two cases:
   - If `main` isn't checked out anywhere, run `git push . <branch>:main` (fast-forward only).
   - If `main` is checked out in the main folder and that folder's tracked files are clean, run
