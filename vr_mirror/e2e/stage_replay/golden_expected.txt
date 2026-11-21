@@ -57,6 +57,6 @@ a1f0a574608f693a937271d040fbafe2cf6b7d9376a637520ec58af07b29559c queued_late_fra
 16904ad4d7f9aa26d6ad47f56e1ac618b7f4f29ee00862c7eaafb5034c9dd6a0 queued_late_frames smoothing=2 zoom=1.20 host=window strength 0
 37dcc3848207512f7e0e61d165a1c46163be06ff7afca9dfbf6801b13052f493 queued_late_frames smoothing=2 zoom=1.20 host=ticks strength 0
 30ddc89c5ceef612de676a9f396050a34e11a06eac15c57b20153c1183313957 edge_test+heartbeat smoothing=1 zoom=1.20 host=window strength 0
-91bf5e33015f81c3d7c3aadab0f94876343a43e6062998dd11f54c876b5c4980 edge_test+heartbeat smoothing=1 zoom=1.20 host=ticks strength 0
+14ae1d8be8d078b250ad8d5c23de9e9d0a1a92bcb4a37f9635793495b8c03901 edge_test+heartbeat smoothing=1 zoom=1.20 host=ticks strength 0
 0758acc0c5690997f9ce219b3887ba814c106921a08b0a87ee8ee4e50ef682f9 edge_test+heartbeat smoothing=2 zoom=1.20 host=window strength 0
-91bf5e33015f81c3d7c3aadab0f94876343a43e6062998dd11f54c876b5c4980 edge_test+heartbeat smoothing=2 zoom=1.20 host=ticks strength 0
+14ae1d8be8d078b250ad8d5c23de9e9d0a1a92bcb4a37f9635793495b8c03901 edge_test+heartbeat smoothing=2 zoom=1.20 host=ticks strength 0
