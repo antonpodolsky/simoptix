@@ -828,8 +828,8 @@ Record what each start of the game showed in `findings\openxr.md`.
   The pull-requests skill ("The issues it closes") has the form GitHub needs, and the check after
   posting.
 - **After the merge, an agent cleans up without being asked.** An agent that watches its pull request
-  with Auto-fix (pull-requests skill, "Opening a pull request", step 6) hears from Claude Code's
-  desktop app when the pull request is merged. Then it cleans up, in this order:
+  with Auto-fix (pull-requests skill, "Opening a pull request", step 6) gets a message from Claude
+  Code's desktop app when the pull request is merged. Then it cleans up, in this order:
   1. Check that GitHub merged it: `gh pr view <number> --json state,headRefOid` says `MERGED`. The
      branch's tip must be that `headRefOid`. If the branch has commits the pull request doesn't have,
      stop and tell the user.
