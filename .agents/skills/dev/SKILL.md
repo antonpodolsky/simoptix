@@ -448,11 +448,6 @@ One convention, everywhere. Check every new name against it, and rename what bre
     sources. "The mirror" or "client mirror" in a sentence means only Pimax's client mirror
     (`PvrMirror`). A sentence that means the plugin says "VR Mirror".
   - "Source time" is the frame source's clock that the pipeline runs on.
-  - The two angles of a rotation are named for their formula, `RotationAngleAcos` (2 acos of the float
-    dot, coarse below about 0.1°) and `RotationAngleAtan2` (exact at any size).
-    `RotationAngleAxisAcos` gives the angle by acos with its axis. The first two were
-    `AngleBetween` and `RotationAngle` in older builds, and findings and e2e results from before keep
-    those names.
 - **Exceptions, fixed from outside:** the OpenXR layer's name (`XR_APILAYER_SIMOPTIX_frame_source`:
   OpenXR asks for the `XR_APILAYER_<VENDOR>_` form), OBS's own names (`obs-studio`, `obs64.exe`), the
   skills' folders and names (`code-style`: the Agent Skills format asks for lower case and hyphens),
