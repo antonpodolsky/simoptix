@@ -840,8 +840,9 @@ Record what each start of the game showed in `findings\openxr.md`.
      git refuses because of changed or new files, leave the worktree and tell the user which files.
   4. Delete the branch: `git branch -D <name>`. GitHub squashes each pull request into one commit on
      `main`, so git doesn't count the branch as merged and `git branch -d` refuses.
-  5. Run `git fetch origin --prune`. GitHub deletes the pull request's branch at the merge, and this
-     removes the copy of it here.
+  5. Run `git fetch origin --prune`. The repo's GitHub setting "Automatically delete head branches"
+     is on, so GitHub deletes the pull request's branch at the merge. The prune deletes its
+     remote-tracking branch, `origin/<name>`.
   6. Bring the local `main` up. If `main` is checked out in the main folder and that folder's tracked
      files are clean, run `git -C <main folder> merge --ff-only origin/main`. Otherwise leave it.
   7. Stop watching the pull request: turn Auto-fix off for it.
