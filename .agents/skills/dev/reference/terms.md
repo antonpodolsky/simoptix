@@ -56,6 +56,7 @@ A new term goes here, and into the table of every README that uses it.
 | pi_server | The Pimax runtime's compositor process (`pi_server.exe`). Every call through PVR goes to it |
 | API layer | A DLL that the OpenXR loader puts between a game and the runtime. It sees every OpenXR call the game makes |
 | performance counter | The Windows high-resolution clock (`QueryPerformanceCounter`). All times in the code are seconds on it |
+| headroom | OpenXR Toolkit's measure of the time a frame leaves on the CPU or the GPU: 100 × (budget − time) / budget, in percent, where the budget is one frame's time at the target rate. Negative when a frame takes longer than its budget |
 | sRGB encoding | The usual way images store brightness, with a curve that gives dark tones more values. Maths on encoded values without undoing the curve gives wrong results. Pimax's client mirror encodes the eye image twice |
 
 ## Words with a narrow meaning

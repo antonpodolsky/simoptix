@@ -7,6 +7,7 @@
 #include <cstdint>
 
 #include "vr_mirror/frame_sources/openxr/openxr_layer_frames.h"
+#include "vr_mirror/frame_sources/openxr/openxr_layer_timing.h"
 
 namespace {
 
@@ -80,6 +81,7 @@ bool FakeOpenXrLayer::Start(
     XrSessionCreateInfo session = {XR_TYPE_SESSION_CREATE_INFO};
     session.next = &binding;
     FramesSessionCreated(kInstance, session, CounterToTime);
+    TimingSessionCreated(session);
 
     XrSwapchainCreateInfo swapchain = {XR_TYPE_SWAPCHAIN_CREATE_INFO};
     swapchain.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
@@ -95,6 +97,7 @@ bool FakeOpenXrLayer::Start(
 
     FramesSwapchainImages(kSwapchain, kImages, reinterpret_cast<const XrSwapchainImageBaseHeader*>(images));
     FramesDisplayPeriod(displayPeriodNs);
+    displayPeriodNs_ = displayPeriodNs;
     nextImage_ = 0;
     started_ = true;
     return true;
@@ -107,7 +110,18 @@ void FakeOpenXrLayer::Stop() {
 
     FramesSwapchainDestroyed(kSwapchain);
     FramesSessionDestroyed();
+    TimingSessionDestroyed();
     started_ = false;
+}
+
+void FakeOpenXrLayer::WaitFrame(const std::function<void()>& inRuntime) {
+    TimingWaitCalled();
+    inRuntime();
+    TimingWaitReturned(displayPeriodNs_);
+}
+
+void FakeOpenXrLayer::BeginFrame() {
+    TimingFrameBegun();
 }
 
 ID3D11RenderTargetView* FakeOpenXrLayer::Acquire() {
@@ -146,7 +160,9 @@ void FakeOpenXrLayer::EndFrame(const FrameEnd& frame, const std::function<void()
     info.layers = layers;
 
     const FrameImage image = FramesEnding(info);
+    TimingFrameEnding();
     inRuntime();
+    TimingFrameEnded(true);
     FramesEnded(info, image, Counter());
 }
 

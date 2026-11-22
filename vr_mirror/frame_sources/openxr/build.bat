@@ -2,7 +2,8 @@
 rem Copyright (C) 2026 Anton Podolsky
 rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds the OpenXR layer XR_APILAYER_SIMOPTIX_frame_source.dll into bin\, with its manifest next to it,
-rem and the check program bin\check\Le Mans Ultimate.exe (check\openxr_check.cpp). The check program
+rem and the check program bin\check\Le Mans Ultimate.exe (check\openxr_check.cpp, which also reads the
+rem performance overlay's frame times with ..\..\..\shared\performance\). The check program
 rem carries the game's file name because the layer only wakes up in a program of that name; it is
 rem not the game.
 rem The DLL links the C runtime in (/MT), so it needs nothing else to load.
@@ -22,7 +23,7 @@ rc /nologo /i ..\..\.. /i obj /fo obj\openxr_layer_version.res openxr_layer_vers
 cl/nologo /std:c++17 /EHsc /O2 /W3 /MT /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Fo:obj\ ^
    /I..\..\.. /I..\..\..\third_party\openxr /Iobj ^
    openxr_layer_entry.cpp openxr_layer_calls.cpp openxr_layer_frames.cpp openxr_publisher.cpp ^
-   openxr_layer_log.cpp openxr_frame_layout.cpp ^
+   openxr_layer_timing.cpp openxr_frame_timing.cpp openxr_layer_log.cpp openxr_frame_layout.cpp ^
    ..\..\..\shared\log.cpp ..\..\..\shared\local_files.cpp ^
    /LD /Fe:bin\XR_APILAYER_SIMOPTIX_frame_source.dll ^
    /link /DEF:frame_source.def obj\openxr_layer_version.res d3d11.lib dxgi.lib || exit /b 1
@@ -31,5 +32,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ..\..\..\shared\build\fill_v
 cl /nologo /std:c++17 /EHsc /O2 /W3 /MT /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS ^
    /Fo:obj\check\ ^
    /I. /I..\..\.. /I..\..\..\third_party\openxr check\openxr_check.cpp check\openxr_check_copies.cpp ^
-   ..\..\..\shared\local_files.cpp ^
+   ..\..\..\shared\local_files.cpp ..\..\..\shared\log.cpp ^
+   ..\..\..\shared\performance\performance_reader.cpp ..\..\..\shared\performance\performance_reading.cpp ^
    /Fe:"bin\check\Le Mans Ultimate.exe" /link d3d11.lib dxgi.lib || exit /b 1

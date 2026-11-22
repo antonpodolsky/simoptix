@@ -72,9 +72,11 @@ for the agents that read those files. Change the rules here, never in those file
   - It passes every call on unchanged, with one exception. When the game makes its OpenXR instance, it
     asks for the time conversion extension (`XR_KHR_win32_convert_performance_counter_time`) if the game
     didn't and the runtime offers it.
-  - It reads only what the game hands the headset. It copies the left eye's image, and only while VR
-    Mirror reads it. It never makes the game wait, and the footprint rules below apply to it twice
-    over.
+  - It reads only what the game hands the headset, and when the game makes its frame calls. It copies
+    the left eye's image, and only while VR Mirror reads it. It times the game's frames, and only while
+    the performance overlay reads them. For that it puts two GPU timestamps per frame in the game's
+    immediate context, on the thread its copies use. It never makes the game wait, and the footprint
+    rules below apply to it twice over.
   - Nothing else goes into the game process. Every build of the layer that goes into the game is
     signed with a code signing certificate Windows trusts. Easy Anti-Cheat keeps an unsigned layer
     out, and online play is disabled while it is installed. Unsigned, the layer runs only in LMU

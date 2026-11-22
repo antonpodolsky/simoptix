@@ -286,7 +286,7 @@ in `out\local_files\<case>\`.
 | `build.bat` | Builds the fake runtime, the fake OpenXR game, the runner, the local files test with its fake game, and `stage_replay` into `bin\` |
 | `fake_game\` | What `fake_pvr\` and `fake_openxr\` share: the head motion (`fake_game_motion.h`) and the game's image (`fake_game_image.*`: the direction codes or the cockpit, stored as the faked source stores it) |
 | `fake_layer_game\` | `Le Mans Ultimate.exe`: the fake game that loads the real OpenXR layer's DLL, for the local files test |
-| `fake_openxr\` | `fake_openxr.exe`: the fake game with the OpenXR layer's frames, through the layer's own frame code (`fake_openxr_layer.*` makes the game's calls into it) |
+| `fake_openxr\` | `fake_openxr.exe`: the fake game with the OpenXR layer's frames, through the layer's own frame code (`fake_openxr_layer.*` makes the game's calls into it). Without its render thread, the layer also times its frames for the performance overlay while the overlay reads |
 | `local_files\` | `local_files_e2e.exe`: the local files test. Its cases (`local_files_e2e.cpp`), its copy of OBS (`local_files_obs.*`), and the older files it makes and the files it reads (`local_files_folder.*`) |
 | `fake_pvr\` | `libPVRClient64.dll`: the fake PVR runtime and game, with replays of real sessions (`fake_pvr_replay.h`) and their real thumbnails (`fake_pvr_thumbs.h`) |
 | `runner\` | `e2e_runner.exe`: the scenarios (`scenarios.*`), running the mirror app (`tool_process.*`), capturing its window (`capture.h`, `patches.h`), the measures (`analysis.*`), and the comparison with Instant (`compare.*`) |
