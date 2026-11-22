@@ -13,7 +13,7 @@ each, or with `#preview` to see both over a backdrop. The OBS plugin embeds `gme
 
 Both are 960 × 960 px, which is the 480 × 480 design at 2×. Below, sizes are in design pixels (1×),
 relative to the meter's centre at (240, 240). Angles are degrees clockwise from straight up, as in
-`overlays\gmeter\meter_draw.h`.
+`overlays\common\meter_draw.h`.
 
 ## Fixed geometry (in the base layer)
 

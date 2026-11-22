@@ -26,8 +26,8 @@ this out from the delay alone, not by looking at the view. Without VR Mirror the
 | Folder | What |
 |---|---|
 | `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources), the DLL's version resource (`version.rc`) and `build.bat` |
-| `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its Chrono look (`meter_chrono.*`), shapes (`meter_draw.*`) and labels (`meter_text.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
-| `common\` | What any overlay can reuse: images (`meter_image.*`) and the 1:1 properties preview (`properties_preview.*`). Text is rasterised by `shared\text_raster.*`, which VR Mirror uses too |
+| `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its Chrono look (`meter_chrono.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
+| `common\` | What any overlay can reuse: shapes (`meter_draw.*`), labels (`meter_text.*`), image layers (`meter_image.*`), the box on the canvas that keeps an overlay drawn at its shown size and places a new one (`overlay_box.*`), and the 1:1 properties preview (`properties_preview.*`). Text is rasterised by `shared\text_raster.*`, which VR Mirror uses too |
 
 The demo lap that the G-meter can play without the game is in `shared\telemetry\demo_lap.*`, beside the
 telemetry it stands in for.
@@ -133,8 +133,8 @@ Add it to the scene above the VR Mirror source.
   1920x1080 and 400 on 2560x1440. At 1080 its box sits 16 px from the right edge and 11 from the
   bottom. Move or resize it like any overlay.
 - It always draws itself at the size it is shown on the canvas, so it stays sharp at any size. When the
-  canvas changes, OBS keeps it in proportion. The OBS log says the size it draws at ("drawn at 400
-  px").
+  canvas changes, OBS keeps it in proportion. The OBS log says the size it draws at ("drawn at 400 x
+  400 px").
 - While you drag its size, it shows the last build stretched and rebuilds 0.3 s after the drag stops.
 - Leave its scale filtering at **Disable** and leave it uncropped. OBS draws a cropped or filtered item
   at its base size first (300 px) and then stretches that.

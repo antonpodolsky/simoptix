@@ -212,6 +212,7 @@ namespace {
 
         if (keep) {
             Measure(r, &ix, &iy, true);
+            ink_->advance = r.advance;
 
             // The texture's centre is the label's, wherever the ink's own centre is.
             ink_->cx += *cx - ix;
@@ -390,9 +391,10 @@ void DrawLabelCentred(
     float y,
     uint32_t rgb,
     bool tabular,
-    float align
+    float align,
+    float tracking
 ) {
-    WantLabel(l, text, size, face, opacity, rgb);
+    WantLabel(l, text, size, face, opacity, rgb, tracking);
     PlaceLabel(l, x, y, 0);
     l.tabular = tabular;
     l.anchor = align;
