@@ -10,6 +10,38 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 18: the core's angles from before #54 (#62), and the horizon comparison with 2% of Instant's
+tilt.** The build was `main` at a9c36f6. LMU, OBS, the mirror app and Pimax Play were closed. The 40 runs
+took 594 s. All 40 passed, and 18 of 20 comparisons with Instant. `stage_replay --golden` gives the
+output from before #54 in its 52 runs (`findings\pipeline.md`, "One exact angle").
+- Both failures were the worst horizon tilt, with the 0.05° margin of the time:
+  - `black_borders`: 1.117° at Instant, 1.174° with Look-ahead (allowed 1.167°). A rerun gave 1.115 /
+    1.174°.
+  - `openxr_black_borders`: 0.204 / 0.257° (allowed 0.254°). A rerun gave 0.158 / 0.204° and passed
+    (#3).
+- `black_borders`' pair on the builds before, two runs each:
+
+  | Build | Instant | Look-ahead |
+  |---|---|---|
+  | `main` before #54 (69ace06) | 1.156°, 1.127° | 1.124°, 1.174° |
+  | `main` before #62 (78c9b3e, #54's angles) | 1.197°, 1.196° | 1.114°, 1.125° |
+  | a9c36f6 | 1.117°, 1.115° | 1.174°, 1.174° |
+
+  Look-ahead read 1.174° before #54 too. Instant tilts less with the angles from before #54, so the
+  0.05° left less room. Up to 0.059° apart over these runs, against a tilt of 1.1° that the
+  scenario's head makes. The comparison takes 2% of Instant's tilt on top of the 0.05° since.
+- With the 2%, the two pairs twice:
+  - `black_borders`: 1.117 / 1.113° and 1.100 / 1.150° (allowed 1.172°), both passed.
+  - `openxr_black_borders`: 0.138 / 0.202° (allowed 0.190°) failed, as in #3, and 0.206 / 0.245°
+    (allowed 0.260°) passed.
+- `stabilization` 0.42 / 0.014 of the head's shake, `dropped_frames` 0.53 / 0.025,
+  `replay_queued_late_frames` 7.3 / 4.1% from the wrong pose, the featureless replay 1.61 / 0.21%,
+  and `game_starts_late` 4.8 runtime calls/s idle.
+- Recorded view jitter: `stabilization` 0.130 / 0.116°, `dropped_frames` 0.178 / 0.159°.
+- Worst horizon tilt: `openxr_stabilization` 0.181 / 0.172°, `openxr_dropped_frames` 0.205 / 0.146°,
+  `openxr_game_behind` 0.121 / 0.148°, `stabilization` 0.122 / 0.108°, `no_smoothing` 0.085 / 0.103°.
+- `openxr_stall`: image/pose mismatch 0.053 / 0.051° rms.
+
 **Run 17: strength 0 smooths nothing (`no_smoothing`), and every angle comes from `RotationAngle` or
 `DirectionAngle`.** LMU, OBS and Pimax Play were closed. The 40 runs took 594 s. All 40 passed, and 19
 of 20 comparisons with Instant. Every `stage_replay --golden` run changed, as the smoothings' and the
