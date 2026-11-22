@@ -126,8 +126,8 @@ namespace {
 }
 
 void ChronoMeter::Tick(int size, double now) {
-    base_.Build(size);
-    glass_.Build(size);
+    base_.Build(size, size);
+    glass_.Build(size, size);
     UpdateLabels(labels_, kLabels, now);
 }
 
