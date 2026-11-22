@@ -176,6 +176,9 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 
   The details are in `.agents\skills\dev\SKILL.md`, "1b. Names".
 - **Logging.** Log state changes once. Periodic stats go out at most every 10 s.
+- **Overlay size.** An overlay covers the same share of every canvas. Its size in OBS is its size on a
+  1920x1080 canvas, and a new one's scene item gets only the canvas's scale, canvas height / 1080, as
+  the G-meter does. The details are in `.agents\skills\dev\SKILL.md`, "Overlay size".
 - **Style.** clang-format (`.clang-format`) lays out the C++ and HLSL, and ruff (`ruff.toml`) the
   Python. Run both on the files you changed before committing:
   `clang-format -i <files>` and `ruff format <files>`. The rules they can't apply (paragraphs, names,

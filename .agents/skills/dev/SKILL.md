@@ -226,6 +226,19 @@ for the agents that read those files. Change the rules here, never in those file
   - Settings that only one host uses stay in that host.
   - Setting keys are saved in user scenes and config, so never rename them.
 - **Logging.** Log state changes once, not every frame. Periodic stats go out at most every 10 s.
+- **Overlay size.** An overlay covers the same share of the canvas on every canvas size, so a canvas
+  change leaves its size relative to the canvas as it was. Every overlay is sized the way the G-meter
+  is:
+  - Its size in OBS, the source's width and height before the scene item's scale, is its size on a
+    1920x1080 canvas. The G-meter's is 300 x 300. The overlay scales its own design into that size (the
+    G-meter's 480 px design board into 300 px).
+  - A new overlay's scene item gets the canvas's scale only, canvas height / 1080, at its place on a
+    1080-pixel canvas scaled the same way (`overlays\common\overlay_box.*`). A smaller or larger default
+    size is a smaller or larger size in OBS, never another item scale.
+  - When the canvas changes, OBS keeps the scene item in proportion. The overlay never sets its own size
+    from the canvas's.
+  - It draws itself at the size it is shown on the canvas, read from the scene item's scale while
+    drawing, so it stays sharp at any size.
 - **libobs pitfalls (OBS 32).**
   - `gs_color4v` is an empty stub. Use `gs_color` or effect parameters.
   - Immediate mode (`gs_render_start`) with vertex colours crashed OBS. Use a vertex buffer of the
