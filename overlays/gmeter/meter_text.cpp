@@ -37,6 +37,7 @@ namespace {
 
         const Suffix suffixes[] = {
             {L" SemiBold", 600},
+            {L" Medium", 500},
             {L" Bold", 700},
             {L" SemiLight", 350},
             {L" Light", 300},

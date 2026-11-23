@@ -30,6 +30,13 @@ DirectWrite against the GDI+ text it replaced, measured at 1:1 on a 300 px Chron
   screenshot), it still looked 1 px left of centre. 1.6 design px right (1 px at 300) looked shifted
   right. So it sits halfway, 0.8 design px right of the window's centre.
 
+- **Bahnschrift Medium (500):** Bahnschrift's named weights are Light, SemiLight, Regular, SemiBold
+  and Bold. Asked for 500, DirectWrite took SemiBold: "2.62" at 15 px rasterised to the same coverage
+  as at 600 (sum 29294). With the weight axis set on the text format (`shared\text_raster.cpp`), 500
+  gives its own outlines (sum 26799, between Regular's 25332 and SemiBold's 29294). Every other weight
+  (300, 350, 400, 600, 700) at 5.6–20 px rasterised byte for byte as before, so Chrono's labels and
+  VR Mirror's empty state are unchanged.
+
 ## Telemetry checks
 
 - **A recorded session played on LMU's telemetry interface.** The fake LMU then had a
