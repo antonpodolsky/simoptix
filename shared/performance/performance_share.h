@@ -15,8 +15,9 @@
 // written), so a reader never takes half of one.
 //
 // Times: the CPU time runs from the moment xrWaitFrame returned to the game to its next call of
-// xrWaitFrame. The GPU time is the time on the GPU between two timestamps the layer puts in the game's immediate context, at xrBeginFrame and at xrEndFrame.
-// Microseconds; kUnknown when the layer couldn't time it.
+// xrWaitFrame. The GPU time is the time on the GPU between two timestamps the layer puts in the game's
+// immediate context, at xrBeginFrame and at xrEndFrame. Microseconds; kUnknown when the layer couldn't time
+// it.
 #pragma once
 
 #include <atomic>

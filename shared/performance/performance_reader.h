@@ -3,8 +3,9 @@
 // PerformanceReader: the game's frame rate and CPU and GPU headroom for a plugin, read from what the
 // OpenXR layer shares (performance_share.h) and worked out by performance_reading.h. Each call signs that
 // a reader is there, which is what makes the layer time the game's frames; a reader that stops calling
-// stops the timing 1.5 s later. A new reading comes once a second, from the second that ended 0.1 s before (a frame's GPU time comes in a few frames after it ended). A
-// second the layer didn't time all of (the first after the reader came, or the game's first) is unknown.
+// stops the timing 1.5 s later. A new reading comes once a second, from the second that ended 0.1 s before (a
+// frame's GPU time comes in a few frames after it ended). A second the layer didn't time all of (the first
+// after the reader came, or the game's first) is unknown.
 //
 // Without the layer (no game, the Pimax source alone, or a layer of another build) every reading is
 // unknown. It looks for the layer's memory at most once a second and keeps it open once found, so a

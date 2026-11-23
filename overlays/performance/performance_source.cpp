@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // SimOptix: Performance Overlay: an OBS source that shows the game's frame rate and how much of each
-// frame's time is left on the GPU and on the CPU (shared\performance\performance_reading.h). The OpenXR layer times the game's frames while this source
-// is shown, and the source reads them once a second (shared\performance\performance_reader.h). Without the
-// layer in the game, the readings are left out.
+// frame's time is left on the GPU and on the CPU (shared\performance\performance_reading.h). The OpenXR layer
+// times the game's frames while this source is shown, and the source reads them once a second
+// (shared\performance\performance_reader.h). Without the layer in the game, the readings are left out.
 //
 // Its properties hold the theme: Chrono or OLED (performance_look.h). Always drawn at the size it is shown
 // on the canvas (overlay_box.h). In OBS it is 208 x 109, its size on a 1080-pixel canvas: two thirds of the
