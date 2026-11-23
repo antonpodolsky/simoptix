@@ -18,10 +18,12 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
     recording.
 - Auto-record option:
   - Race is recorded from the starting lights to 5s after the car stops past the finish line.
-- OBS Overlays plugin adds the **SimOptix: G-Meter Overlay** source, and the **SimOptix: Performance
-  Overlay** source:
-  - It shows the game's frame rate and its GPU and CPU headroom, as OpenXR Toolkit works them out.
-  - It needs the SimOptix OpenXR layer in the game.
+- OBS Overlays plugin which adds two sources:
+  - **SimOptix: G-Meter Overlay** shows the car's G-forces, brake and throttle.
+    - No OpenXR layer is required.
+  - **SimOptix: Performance Overlay** shows the game's FPS and its GPU and CPU headroom, as OpenXR
+    Toolkit does.
+    - It reads them from the SimOptix OpenXR layer.
 
 ## Supported VR headsets and games
 
