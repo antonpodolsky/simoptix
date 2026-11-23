@@ -4,7 +4,7 @@
 // 1 px clear border, and placed by their ink, so gaps between a label and what it labels are exact to the
 // pixel (centred and rotated labels, to a fraction of one). Every label is drawn 1:1, unfiltered: a
 // turned one is rasterised turned. A label is asked for while drawing (WantLabel, DrawLabel...) and its
-// texture is rebuilt on the next tick when the text, its look or its placement changed, at most 10 times
+// texture is rebuilt on the next tick when the text, its style or its placement changed, at most 10 times
 // a second (UpdateLabels).
 //
 // Knows nothing about what a meter shows or about OBS sources: only text rasterising and libobs graphics.
@@ -48,7 +48,7 @@ struct MeterLabel {
     int w = 0, h = 0;  // the texture: the ink is at (1, 1) to (w - 1, h - 1)
 };
 
-// Builds the textures of labels whose text, look or placement changed (outside drawing; enters graphics).
+// Builds the textures of labels whose text, style or placement changed (outside drawing; enters graphics).
 void UpdateLabels(MeterLabel* labels, int count, double now);
 
 // Asks for `text` in `l` without drawing it (so it is ready when it is first drawn). Keeps the label's

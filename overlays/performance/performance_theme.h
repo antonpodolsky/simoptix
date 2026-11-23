@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The performance overlay's look, in its two themes (design\README.md): Chrono, a dark bezel with a sunken
+// The performance overlay's two themes (design\README.md): Chrono, a dark bezel with a sunken
 // face under glass, and OLED, a black display with segmented bars. The static parts are the design's image
 // layers (meter_image.h): the theme's base under the live parts, and in Chrono the glass over them. Drawn
 // live between them, at the overlay's size: each cell's label, reading, % and bar fill. Sizes follow the
@@ -17,20 +17,20 @@
 #include "meter_text.h"
 #include "performance_view.h"
 
-enum class PerformanceTheme { kChrono, kOled };
+enum class ThemeChoice { kChrono, kOled };
 
-class PerformanceLook {
+class PerformanceTheme {
 public:
     // The design's box, design pixels (canvas pixels on a 1080-pixel canvas).
     static constexpr int kBoxWidth = 312, kBoxHeight = 164;
 
     // Outside drawing: builds the theme's image layers at the box's size times k, and the labels' textures.
-    void Tick(PerformanceTheme theme, float k, double now);
+    void Tick(ThemeChoice choice, float k, double now);
     // Draws into `batch` (cleared and submitted here) with `shapes` as the drawing buffer, between the
     // image layers, k screen pixels to a design pixel. Blending is set by the caller.
     void Draw(
         const PerformanceView& view,
-        PerformanceTheme theme,
+        ThemeChoice choice,
         float k,
         MeterBatch& batch,
         std::vector<float>& shapes
@@ -40,12 +40,12 @@ public:
 private:
     void DrawBars(
         const PerformanceView& view,
-        PerformanceTheme theme,
+        ThemeChoice choice,
         float k,
         MeterBatch& batch,
         std::vector<float>& shapes
     );
-    void DrawText(const PerformanceView& view, PerformanceTheme theme, float k);
+    void DrawText(const PerformanceView& view, ThemeChoice choice, float k);
 
     MeterImage chronoBase_{L"PERF_CHRONO_BASE"}, chronoGlass_{L"PERF_CHRONO_GLASS"};
     MeterImage oledBase_{L"PERF_OLED_BASE"};

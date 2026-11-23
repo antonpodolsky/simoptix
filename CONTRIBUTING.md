@@ -165,7 +165,10 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   what it deliberately doesn't know. Split files past about 500 lines.
 - **Threads.** Comment which thread owns each member. Share only through `std::atomic` or a briefly
   held mutex. Threads catch everything, log it and stop cleanly.
-- **Setting keys are saved in users' scenes.** Never rename them.
+- **Consistency comes first.** One thing has one name everywhere: in the code, the comments, the docs
+  and what OBS shows. Parts that do the same kind of job do it the same way, with the same names. A name
+  that breaks the pattern is renamed everywhere in the same change, even a setting key saved in users'
+  scenes (`.agents\skills\dev\SKILL.md`, "Consistency comes first").
 - **Names.**
   - A part's name is its folder's: `frame_sources\pimax\` holds `pimax_source.*` and `PimaxSource`.
   - File names and the names programs see are snake_case with `simoptix_`, and never have hyphens.

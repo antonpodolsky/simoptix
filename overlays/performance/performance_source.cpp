@@ -5,7 +5,7 @@
 // times the game's frames while this source is shown, and the source reads them once a second
 // (shared\performance\performance_reader.h). Without the layer in the game, the readings are left out.
 //
-// Its properties hold the theme: Chrono or OLED (performance_look.h). Always drawn at the size it is shown
+// Its properties hold the theme: Chrono or OLED (performance_theme.h). Always drawn at the size it is shown
 // on the canvas (overlay_box.h). In OBS it is 208 x 109, its size on a 1080-pixel canvas: two thirds of the
 // design's 312 x 164 box, which it scales into that size. A new one starts at the top right, with its
 // bezel's right edge in line with the G-meter's rim.
@@ -20,7 +20,7 @@
 
 #include "meter_draw.h"
 #include "overlay_box.h"
-#include "performance_look.h"
+#include "performance_theme.h"
 #include "performance_view.h"
 #include "shared/guarded.h"
 #include "shared/log.h"
@@ -42,20 +42,20 @@ namespace {
     struct PerformanceOverlay {
         obs_source_t* source = nullptr;
         std::atomic<bool> wanted{false};
-        std::atomic<int> theme{static_cast<int>(PerformanceTheme::kChrono)};  // set by the UI thread
+        std::atomic<int> choice{static_cast<int>(ThemeChoice::kChrono)};  // set by the UI thread
         OverlayBox box{kLayoutWidth, kLayoutHeight, "Performance Overlay"};
 
         // Graphics thread.
         PerformanceReader reader;
         PerformanceView view;
-        PerformanceLook look;
+        PerformanceTheme theme;
         MeterBatch batch;           // everything drawn this frame, uploaded once
         std::vector<float> shapes;  // drawing buffer, kept across frames
     };
 
-    PerformanceTheme ThemeOf(obs_data_t* settings) {
-        return strcmp(obs_data_get_string(settings, "theme"), "oled") == 0 ? PerformanceTheme::kOled
-                                                                           : PerformanceTheme::kChrono;
+    ThemeChoice ThemeOf(obs_data_t* settings) {
+        return strcmp(obs_data_get_string(settings, "theme"), "oled") == 0 ? ThemeChoice::kOled
+                                                                           : ThemeChoice::kChrono;
     }
 
     vec2 DefaultPosition(uint32_t canvasW, uint32_t canvasH) {
@@ -98,7 +98,7 @@ namespace {
 
     void Update(void* data, obs_data_t* settings) {
         Guarded("update", [&] {
-            static_cast<PerformanceOverlay*>(data)->theme = static_cast<int>(ThemeOf(settings));
+            static_cast<PerformanceOverlay*>(data)->choice = static_cast<int>(ThemeOf(settings));
         });
     }
 
@@ -106,7 +106,7 @@ namespace {
         return Guarded("create", [&]() -> void* {
             auto o = std::make_unique<PerformanceOverlay>();
             o->source = source;
-            o->theme = static_cast<int>(ThemeOf(settings));
+            o->choice = static_cast<int>(ThemeOf(settings));
             o->shapes.reserve(1 << 12);
             return o.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });
@@ -117,7 +117,7 @@ namespace {
             // the one place that frees a PerformanceOverlay
             std::unique_ptr<PerformanceOverlay> o(static_cast<PerformanceOverlay*>(data));
             obs_enter_graphics();
-            o->look.Destroy();
+            o->theme.Destroy();
             o->batch.Destroy();
             obs_leave_graphics();
         });
@@ -151,8 +151,8 @@ namespace {
             o->view = ViewOf(o->reader.Read());
 
             if (o->box.DrawHeight() > 0) {
-                const PerformanceTheme theme = static_cast<PerformanceTheme>(o->theme.load());
-                o->look.Tick(theme, DesignScale(o->box.DrawHeight()), now);
+                const ThemeChoice choice = static_cast<ThemeChoice>(o->choice.load());
+                o->theme.Tick(choice, DesignScale(o->box.DrawHeight()), now);
             }
         });
     }
@@ -165,11 +165,11 @@ namespace {
                 return;
             }
 
-            const PerformanceTheme theme = static_cast<PerformanceTheme>(o->theme.load());
+            const ThemeChoice choice = static_cast<ThemeChoice>(o->choice.load());
             gs_blend_state_push();
             gs_enable_blending(true);
             gs_blend_function(GS_BLEND_SRCALPHA, GS_BLEND_INVSRCALPHA);
-            o->look.Draw(o->view, theme, DesignScale(o->box.DrawHeight()), o->batch, o->shapes);
+            o->theme.Draw(o->view, choice, DesignScale(o->box.DrawHeight()), o->batch, o->shapes);
             gs_blend_state_pop();
             gs_matrix_pop();
         });

@@ -6,10 +6,11 @@
 // rings at every whole G. A comet tail (the dot's recent positions, shrinking and fading) shows how
 // braking blends into cornering, and the highest G reached in each of the four directions stands
 // outside the outer ring (reset when a new driving session starts). Two bars just inside the outer
-// ring show the brake (left) and throttle (right), each darker while ABS or TC intervenes. One look,
-// Chrono (meter_chrono.h: a black bezel around a face under domed glass).
+// ring show the brake (left) and throttle (right), each darker while ABS or TC intervenes. Two themes:
+// Chrono (meter_chrono.h: a black bezel around a face under domed glass) and OLED (meter_oled.h: a
+// self-lit black display with dotted rings and segmented bars).
 //
-// Its properties hold only the meter type (Chrono, the one look) and the demo lap's button; the rest is
+// Its properties hold only the theme and the demo lap's button; the rest is
 // fixed here (the constants below). The dot moves the way the driver is pushed (braking: forward, a
 // left turn: right), as those in-car meters do. Drawn on OBS's frame clock from the telemetry of the
 // moment the view shows, lightly smoothed (raw acceleration is noisy over kerbs). Only holds
@@ -20,9 +21,9 @@
 // it is 300 px (its layout size) under the scene item's scale (overlay_box.h). Its Properties window is
 // sized so the preview shows it at that size too (properties_preview.h).
 //
-// This file is the source: settings and values. The look is drawn in meter_chrono.*, from the values
-// in meter_view.h; shapes and batching are in meter_draw.*, labels in meter_text.*, images in
-// meter_image.*.
+// This file is the source: settings and values. The themes are drawn by meter_chrono.* and meter_oled.*
+// (each a MeterTheme, meter_theme.h), from the values in meter_view.h; shapes and batching are in
+// meter_draw.*, labels in meter_text.*, images in meter_image.*.
 
 #include <graphics/vec2.h>
 #include <obs-module.h>
@@ -37,6 +38,8 @@
 
 #include "meter_chrono.h"
 #include "meter_draw.h"
+#include "meter_oled.h"
+#include "meter_theme.h"
 #include "meter_view.h"
 #include "overlay_box.h"
 #include "properties_preview.h"
@@ -56,6 +59,22 @@ namespace {
     // The dot's smoothing: the time constant of its exponential filter, seconds. The tail's length, seconds.
     constexpr float kSmoothingS = 0.080f;
     constexpr float kTailS = 1;
+
+    // The themes, as the Theme setting saves them ("chrono", "oled").
+    enum class ThemeChoice { kChrono, kOled };
+
+    ThemeChoice ThemeOf(obs_data_t* settings) {
+        return strcmp(obs_data_get_string(settings, "theme"), "oled") == 0 ? ThemeChoice::kOled
+                                                                           : ThemeChoice::kChrono;
+    }
+
+    std::unique_ptr<MeterTheme> MakeTheme(ThemeChoice choice) {
+        if (choice == ThemeChoice::kOled) {
+            return std::make_unique<OledTheme>();
+        }
+
+        return std::make_unique<ChronoTheme>();
+    }
 
     struct GMeter {
         obs_source_t* source = nullptr;
@@ -85,7 +104,9 @@ namespace {
         Trail trail;
         float maxRight = 0, maxLeft = 0, maxForward = 0, maxBack = 0;  // highest G reached each way
         unsigned session = 0;  // driving session of the last sample: a new one resets the maxima
-        ChronoMeter look;
+        std::atomic<ThemeChoice> wantedChoice{ThemeChoice::kChrono};  // set from the settings (UI thread)
+        ThemeChoice choice = ThemeChoice::kChrono;  // graphics thread: which theme `theme` is
+        std::unique_ptr<MeterTheme> theme = MakeTheme(ThemeChoice::kChrono);  // graphics thread
         MeterBatch batch;  // everything drawn this frame, uploaded once
         // new telemetry each frame: sized once, so nothing is allocated per frame
         std::vector<CarSample> samples;
@@ -172,7 +193,7 @@ namespace {
     }
 
     void GetDefaults(obs_data_t* s) {
-        Guarded("defaults", [&] { obs_data_set_default_string(s, "meter_type", "chrono"); });
+        Guarded("defaults", [&] { obs_data_set_default_string(s, "theme", "chrono"); });
     }
 
     // UI thread: starts or stops the demo lap, and names the button for what it does next.
@@ -193,15 +214,16 @@ namespace {
                 static_cast<GMeter*>(data)->fitWanted = true;
             }
             obs_properties_t* p = obs_properties_create();
-            obs_property_t* type = obs_properties_add_list(
+            obs_property_t* theme = obs_properties_add_list(
                 p,
-                "meter_type",
-                "Meter type",
+                "theme",
+                "Theme",
                 OBS_COMBO_TYPE_LIST,
                 OBS_COMBO_FORMAT_STRING
             );
 
-            obs_property_list_add_string(type, "Chrono", "chrono");
+            obs_property_list_add_string(theme, "Chrono", "chrono");
+            obs_property_list_add_string(theme, "OLED", "oled");
             obs_properties_add_button2(
                 p,
                 "demo",
@@ -214,12 +236,19 @@ namespace {
         });
     }
 
-    void* Create(obs_data_t*, obs_source_t* source) {
+    // UI thread: the theme the settings ask for. The graphics thread makes it on its next tick (SwitchTheme).
+    void UpdateSettings(void* data, obs_data_t* settings) {
+        Guarded("update", [&] { static_cast<GMeter*>(data)->wantedChoice = ThemeOf(settings); });
+    }
+
+    void* Create(obs_data_t* settings, obs_source_t* source) {
         return Guarded("create", [&]() -> void* {
             auto m = std::make_unique<GMeter>();
             m->samples.resize(Telemetry::kRing);
             m->shapes.reserve(1 << 16);
             m->source = source;
+            m->wantedChoice = m->choice = ThemeOf(settings);
+            m->theme = MakeTheme(m->choice);
             return m.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });
     }
@@ -231,7 +260,7 @@ namespace {
                 Telemetry::Release();
             }
             obs_enter_graphics();
-            m->look.Destroy();
+            m->theme->Destroy();
             m->batch.Destroy();
             obs_leave_graphics();
         });
@@ -248,6 +277,23 @@ namespace {
     }
     void Hide(void* data) {
         static_cast<GMeter*>(data)->wanted = false;
+    }
+
+    // Graphics thread: replaces the theme when the setting changed, freeing the old one's textures. The
+    // new one builds its images and labels on this tick, before it is first drawn.
+    void SwitchTheme(GMeter* m) {
+        const ThemeChoice wanted = m->wantedChoice;
+        if (wanted == m->choice) {
+            return;
+        }
+
+        obs_enter_graphics();
+        m->theme->Destroy();
+        obs_leave_graphics();
+
+        m->theme = MakeTheme(wanted);
+        m->choice = wanted;
+        CoreLog("G-Meter Overlay: theme %s", wanted == ThemeChoice::kOled ? "OLED" : "Chrono");
     }
 
     // UI thread: one step of fitting the meter's Properties preview (properties_preview.h). Holds a
@@ -328,8 +374,9 @@ namespace {
             }
 
             StepPreviewFit(m, now);
+            SwitchTheme(m);
             if (m->wanted && m->box.DrawHeight() > 0) {
-                m->look.Tick(m->box.DrawHeight(), now);
+                m->theme->Tick(m->box.DrawHeight(), now);
             }
 
             m->box.Place(m->source, now, DefaultPosition);
@@ -362,7 +409,7 @@ namespace {
             gs_blend_state_push();
             gs_enable_blending(true);
             gs_blend_function(GS_BLEND_SRCALPHA, GS_BLEND_INVSRCALPHA);
-            m->look.Draw(view, m->batch, m->shapes);
+            m->theme->Draw(view, m->batch, m->shapes);
             gs_blend_state_pop();
             gs_matrix_pop();
         });
@@ -381,6 +428,7 @@ void RegisterGMeterSource() {
     info.destroy = Destroy;
     info.get_defaults = GetDefaults;
     info.get_properties = GetProperties;
+    info.update = UpdateSettings;
     info.get_width = GetWidth;
     info.get_height = GetHeight;
     info.show = Show;
