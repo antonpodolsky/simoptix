@@ -24,6 +24,7 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /Fo:obj\fake_openxr\ ^
    /I..\.. /I..\core /Ifake_game /I..\..\third_party\openxr ^
    fake_openxr\fake_openxr.cpp fake_openxr\fake_openxr_layer.cpp fake_game\fake_game_image.cpp ^
    ..\frame_sources\openxr\openxr_layer_frames.cpp ..\frame_sources\openxr\openxr_publisher.cpp ^
+   ..\frame_sources\openxr\openxr_layer_timing.cpp ..\frame_sources\openxr\openxr_frame_timing.cpp ^
    ..\..\shared\log.cpp /Fe:bin\fake_openxr.exe ^
    /link d3d11.lib dxgi.lib d3dcompiler.lib winmm.lib || exit /b 1
 

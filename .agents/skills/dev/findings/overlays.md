@@ -88,6 +88,24 @@ artificial, not like real reflections. The closest was a "feathered" crescent ab
 (24 % at the top), whose lower edge fades out instead of ending in a line. It was chosen, and is
 the plugin's glass.
 
+## The performance overlay's design
+
+- **The layers** come from the SimOptix Overlays design system. `overlays\performance\design\perf.html`
+  rendered by Edge at 2× matches the design system's three PNGs pixel for pixel (largest difference 0 in
+  every channel).
+- **The text's places** were measured on that page rendered with sample readings, against the same
+  page without them. The labels' ink starts 10.2–10.5 px into its cell, and the readings' ink 10.7–10.8,
+  which is the pen at 10 plus each glyph's side bearing. So the plugin places each text by its pen at
+  10, as the design's text boxes do.
+- **Sizing it by the scene item's scale was a mistake.** A first build kept the overlay's own size at
+  the design's 312 × 164 and gave a new scene item two thirds of the canvas's scale. The G-meter's size
+  in OBS is its size on 1080p, and its item keeps the canvas's scale. The overlay now does the same at
+  208 × 109 (dev skill, "Overlay size"). Its design scale then came from the box's 109 px height in OBS
+  where the 164 design px belonged, and it drew 1.5× too large, cut off by its box.
+- **Not measured:** sharpness at 1:1 on a recording, and the text's optical centring. Both overlays draw
+  1:1 on a 4K canvas (scale 2, scale filtering off). The performance overlay looked softer than the
+  G-meter there. Its text sits on fractions of a pixel (1.333 screen px per design px), which may be why.
+
 ## Tried and removed: tyre grip learning and ideal pedals
 
 The G-meter once learned how close each tyre is to its limit, and worked out the ideal brake and

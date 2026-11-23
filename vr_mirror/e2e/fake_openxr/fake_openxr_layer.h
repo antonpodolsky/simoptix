@@ -1,10 +1,12 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // FakeOpenXrLayer: the OpenXR layer's own frame code (vr_mirror\frame_sources\openxr\openxr_layer_frames.*)
-// driven as the game's OpenXR calls drive it in LMU: one D3D11 session with the runtime's time
-// conversion, one swapchain of three images for the left eye (LMU's size and format), and per frame the
-// image acquired, drawn into, released, and the frame ended with its display time and both eyes. The
-// layer picks the image a frame shows, copies it and publishes the frame, exactly as in the game.
+// and frame timing (openxr_layer_timing.*) driven as the game's OpenXR calls drive them in LMU: one D3D11
+// session with the runtime's time conversion, one swapchain of three images for the left eye (LMU's size and
+// format), and per frame the image acquired, drawn into, released, and the frame ended with its display time
+// and both eyes. The layer picks the image a frame shows, copies it and publishes the frame, exactly as in
+// the game. While the performance overlay reads, the layer also times the frames that WaitFrame and
+// BeginFrame start.
 //
 // The runtime's side is faked: images are handed out in turn, and what happens while xrEndFrame is in
 // the runtime is the caller's (a runtime that holds the call, a game thread that goes on meanwhile).
@@ -46,6 +48,11 @@ public:
     // The session ends: the layer stops and lets go of the shared memory.
     void Stop();
 
+    // xrWaitFrame, with `inRuntime` the wait in the runtime; then xrBeginFrame, on the thread that ends the
+    // frames.
+    void WaitFrame(const std::function<void()>& inRuntime);
+    void BeginFrame();
+
     // xrAcquireSwapchainImage: the next image in turn, as a render target to draw into.
     ID3D11RenderTargetView* Acquire();
     // xrReleaseSwapchainImage: the oldest image acquired goes back to the runtime.
@@ -60,6 +67,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> images_[kImages];
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> targets_[kImages];
     int width_ = 0, height_ = 0;
+    int64_t displayPeriodNs_ = 0;
     int nextImage_ = 0;  // the image the next acquire hands out
     bool started_ = false;
 };
