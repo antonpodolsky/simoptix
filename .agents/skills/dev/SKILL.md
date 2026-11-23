@@ -271,8 +271,8 @@ for the agents that read those files. Change the rules here, never in those file
 - **Copies kept in step.**
   - `vr_mirror\recording_analysis\replica.py` is a Python copy of the slot check's helpers
     (`vr_mirror\core\pipeline\2_drawn_pose\slot_check_drawn_pose_lag.cpp`). Change both together.
-  - The G-meter's live parts in `overlays\gmeter\meter_chrono.cpp` and the tables in
-    `overlays\gmeter\design\README.md` hold the same numbers. Change both together.
+  - The G-meter's live parts in `overlays\gmeter\meter_chrono.cpp` and `meter_oled.cpp`, and the
+    tables in `overlays\gmeter\design\README.md`, hold the same numbers. Change both together.
 - **Thresholds.** Never loosen a scenario's limits or remove a scenario to get a pass without asking.
   Report failures with their numbers.
 - **The pipeline's expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the
@@ -558,20 +558,23 @@ Crash dumps go to `%LOCALAPPDATA%\simoptix`, and the newest 10 are kept. OBS log
 
 ## 4a. Take a design into the plugin
 
-`overlays\gmeter\design\` holds what the G-meter's look is built from. Its README has the layers and
-the size, place and colour of every live part.
+`overlays\gmeter\design\` holds what the G-meter's looks are built from. Its README has the layers and
+the size, place and colour of every live part, per look.
 
-- **The static parts are images.** `overlays\gmeter\design\meter.html` draws the meter's static parts
-  and its glass reflection. Open it with `#base`, `#glass`, or `#preview` for both over a backdrop. To
-  change them, change `meter.html` (the live parts stay out of it). Then render each layer at 2× with
-  Edge, transparent outside the meter:
+- **The static parts are images.** Each look has an HTML file that draws its static parts:
+  `meter.html` for Chrono (its base and its glass reflection) and `meter_oled.html` for OLED (its base).
+  Open one with `#base`, `#glass` (Chrono), or `#preview` for its layers over a backdrop. To change
+  them, change the HTML (the live parts stay out of it). Then render each layer at 2× with Edge,
+  transparent outside the meter:
 
   ```
   msedge --headless=new --disable-gpu --hide-scrollbars --user-data-dir=<scratch folder>
     --default-background-color=00000000 --force-device-scale-factor=2 --window-size=480,480
     --screenshot=<overlays\gmeter\design\gmeter_<layer>.png>
-    "file:///<repo>/overlays/gmeter/design/meter.html#<layer>"
+    "file:///<repo>/overlays/gmeter/design/<meter.html or meter_oled.html>#<layer>"
   ```
+
+  The OLED base is `gmeter_oled_base.png`.
 
   Edge is at `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`. Check each layer by
   script:
@@ -581,20 +584,25 @@ the size, place and colour of every live part.
 
   Then look at `#preview`.
 - **The plugin embeds the images** by name: `overlays\gmeter\gmeter.rc` (`GMETER_BASE` is
-  `gmeter_base.png` and `GMETER_GLASS` is `gmeter_glass.png`, as RCDATA), read by
-  `overlays\common\meter_image.cpp`. `overlays\obs_plugin\build.bat` compiles the `.rc`. So after
-  re-rendering a layer, rebuild and install (steps 3 and 4). A new layer (another reflection, say)
-  needs its own RCDATA line and its own `MeterImage` in `meter_chrono.h`. If the user picks it, it
-  needs a setting too (`overlays\README.md` as well).
-- **The live parts are code.** `meter_chrono.cpp` draws them from constants in design pixels on the
-  480 px board, centre (240, 240), with angles clockwise from up (as in `meter_draw.h`). Keep those
-  constants and the tables in `overlays\gmeter\design\README.md` the same, and change both together.
+  `gmeter_base.png`, `GMETER_GLASS` is `gmeter_glass.png` and `GMETER_OLED_BASE` is
+  `gmeter_oled_base.png`, as RCDATA), read by `overlays\common\meter_image.cpp`.
+  `overlays\obs_plugin\build.bat` compiles the `.rc`. So after re-rendering a layer, rebuild and
+  install (steps 3 and 4). A new layer (another reflection, say) needs its own RCDATA line and its own
+  `MeterImage` in its look's header (`meter_chrono.h`, `meter_oled.h`). If the user picks it, it needs
+  a setting too (`overlays\README.md` as well).
+- **The live parts are code.** Each look draws them (`meter_chrono.cpp`, `meter_oled.cpp`) from
+  constants in design pixels on the 480 px board, centre (240, 240), with angles clockwise from up (as
+  in `meter_draw.h`). Keep those constants and the tables in `overlays\gmeter\design\README.md` the
+  same, and change both together.
+- **A new look** is a `MeterLook` (`meter_look.h`) in its own `meter_<look>.h/.cpp`, with its layers
+  in the design folder. It adds one choice to the Meter type list and one case in `MakeLook`
+  (`gmeter_source.cpp`), and its `.cpp` in `overlays\obs_plugin\build.bat`.
 - **Text** is drawn live and never put in an image, because it would be shrunk with the image and go
   soft. DirectWrite (`shared\text_raster.cpp`) rasterises it at the size shown. `meter_text.cpp` makes labels
   of it, placed by their ink to a fraction of a pixel, with numbers in the font's tabular figures.
   Measure a label change at 1:1 (sharpness, position) before looking in OBS.
 - **Verify** as for any visual change (step 5). Screenshot the OBS preview at 1:1 and measure it
-  against `meter.html#preview` rendered the same way (positions, gaps, glare strength). Centring and
+  against the look's `#preview` rendered the same way (positions, gaps, glare strength). Centring and
   spacing are then corrected to look right, not to measure right (step 5, "Centring and spacing are
   optical").
 - Go design folder first, then the plugin. Record designs tried and dropped, and why a spec is as it

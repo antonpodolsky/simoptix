@@ -26,7 +26,7 @@ this out from the delay alone, not by looking at the view. Without VR Mirror the
 | Folder | What |
 |---|---|
 | `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources), the DLL's version resource (`version.rc`) and `build.bat` |
-| `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its Chrono look (`meter_chrono.*`), shapes (`meter_draw.*`) and labels (`meter_text.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
+| `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its looks (`meter_look.h`: Chrono in `meter_chrono.*`, OLED in `meter_oled.*`), shapes (`meter_draw.*`) and labels (`meter_text.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
 | `common\` | What any overlay can reuse: images (`meter_image.*`) and the 1:1 properties preview (`properties_preview.*`). Text is rasterised by `shared\text_raster.*`, which VR Mirror uses too |
 
 The demo lap that the G-meter can play without the game is in `shared\telemetry\demo_lap.*`, beside the
@@ -59,11 +59,19 @@ its number (`0.1.0`). Any other build adds the commits since that release and th
 ## G-Meter Overlay
 
 The G-meter is a friction circle (G-G meter) drawn from LMU's telemetry, like the in-car G-meters of
-Porsche's Sport Chrono or the Nissan GT-R. It has one look, **Chrono**:
+Porsche's Sport Chrono or the Nissan GT-R. It has two looks, picked by its **Meter type**.
+
+**Chrono** looks like a physical instrument:
 - a black bezel
 - a dark face with 1G, 2G and 3G rings under domed glass
 - brake and throttle bars just inside the 3G ring
 - a window under the centre that shows the live G
+
+**OLED** looks like a self-lit display:
+- a solid black disc with a thin edge and a soft dark halo
+- 1G and 2G rings of small dots, and a solid 3G ring
+- segmented brake and throttle bars just outside the 3G ring
+- no bezel, glass or live G
 
 ### What it shows
 
@@ -77,26 +85,32 @@ Porsche's Sport Chrono or the Nissan GT-R. It has one look, **Chrono**:
 - **The highest G** reached in each direction (braking, acceleration, left, right) stands outside the
   outer ring. It resets when a new driving session starts (the game's session or track changes, or the
   session restarts), and when the demo starts or stops.
-- **Brake and throttle** fill two faint tracks just inside the 3G ring: brake on the left in red,
-  throttle on the right in green. While ABS or TC intervenes, its bar turns a darker red or green.
+- **Brake and throttle** fill two faint tracks near the 3G ring: brake on the left in red, throttle on
+  the right in green. While ABS or TC intervenes, its bar turns a darker red or green. On OLED the
+  bars light in 40 steps, one segment of the track at a time.
 
 The scale is fixed at 3 G, as the rings are in the image.
 
 ### How it is drawn
 
-The bezel, face, rings, notches, pedal tracks and glass are the design's image layers (`gmeter\design\`, embedded in
-the plugin by `gmeter.rc`). The glass is a crescent-shaped reflection whose lower edge fades out. The
-plugin scales each layer once to the source's size with a high-quality filter and draws it 1:1. Scaling
-takes about 20 ms on OBS's graphics thread, once, when the source is created or its size changes. The
-layers are 960 px, so the meter is sharpest up to that size.
+Everything that never moves is one of the design's image layers (`gmeter\design\`, embedded in the
+plugin by `gmeter.rc`):
+- **Chrono:** a base layer with the bezel, face, rings, notches and pedal tracks, and a glass layer. The
+  glass is a crescent-shaped reflection whose lower edge fades out.
+- **OLED:** one layer with the display, rings, centre point and pedal tracks.
 
-The dot (with a glow), its tail, the bars and all the text are drawn live between the layers. The text
-is the numbers and the 1G, 2G and 3G ring labels.
-- The tail is a slightly warmer orange than the dot, so the dot stands apart from it.
+The plugin scales each layer once to the source's size with a high-quality filter and draws it 1:1.
+Scaling takes about 20 ms on OBS's graphics thread, once, when the source is created, its size changes
+or its Meter type changes. The layers are 960 px, so the meter is sharpest up to that size.
+
+The dot (with a glow), its tail, the bars and all the text are drawn live, over the base layer and
+under Chrono's glass. The text is the numbers and the 1G, 2G and 3G ring labels.
+- On Chrono the tail is a slightly warmer orange than the dot, so the dot stands apart from it. On
+  OLED it is the dot's own orange.
 - The live G and the highest values use the font's tabular digits, placed by their digit cells, so the
   digits don't shift as the values change.
-- The live G is centred on its window to a fraction of a pixel, then 0.8 design px right (half a pixel
-  at size 300), which looks centred.
+- Chrono's live G is centred on its window to a fraction of a pixel, then 0.8 design px right (half a
+  pixel at size 300), which looks centred.
 
 **Text** is rasterised with DirectWrite (`shared\text_raster.cpp`) at the size it is shown and drawn 1:1:
 - grayscale anti-aliasing, because ClearType's colour fringes don't survive a video encode
@@ -108,7 +122,7 @@ Rebuilding the four highest values and the live G at once takes 0.3–0.6 ms on 
 
 ### Properties
 
-- **Meter type:** **Chrono**, the one look.
+- **Meter type:** **Chrono** or **OLED**, the look. Chrono is the default.
 - **Start demo / Stop demo:** the meter plays a made-up 12 s lap instead of the game's telemetry. It
   lets you see the meter or set it up without driving. The lap has:
   - full braking from about 2.4 s, with ABS at about 3 s

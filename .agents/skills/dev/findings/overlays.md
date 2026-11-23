@@ -69,6 +69,20 @@ Why some of the specs are as they are:
   look about 0.5 px higher than its box. On the box, the gap under the digits measured 1 px smaller
   than the one above.
 
+### The OLED look
+
+- **Its layer** is `gmeter_oled_base.png`, rendered from `meter_oled.html` with Edge at 2×. It is
+  identical, byte for byte, to the layer the design was checked with. Its alpha is 0 at the image's
+  edges and beyond r 200 design px from the centre, and 255 at its strongest.
+- **The ring labels** are set in the design as SVG text from x 244 on their baselines, with tabular
+  figures. The plugin places labels by their ink, so their ink was measured with DirectWrite at
+  1000 px: the tabular 1, 2 and 3 start 0.101, 0.054 and 0.044 em right of the pen, and the G ends
+  0.007 em under the baseline. At 9 px that puts the ink at x 244.91, 244.49 and 244.40, with its bottom
+  0.06 under each baseline.
+- **Drawing order:** the bloom, then the tail, then the dot, as Chrono's glow. Both are the accent, the
+  tail at 0.02–0.55 and the bloom at 50 %.
+- Not compared with the design at 1:1 in OBS.
+
 ### Replaced: the "Chrono" board, with the bars in the bezel
 
 Before that, the plugin drew the canvas's "Chrono" board. Its bezel was r 210, with the pedal bars

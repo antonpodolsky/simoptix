@@ -16,17 +16,16 @@
 
 #include "meter_draw.h"
 #include "meter_image.h"
+#include "meter_look.h"
 #include "meter_text.h"
 #include "meter_view.h"
 
-class ChronoMeter {
+class ChronoMeter : public MeterLook {
 public:
-    // Outside drawing: builds the image layers for the source's size and the labels' textures.
-    void Tick(int size, double now);
-    // Draws into `batch` (cleared and submitted here) with `shapes` as the drawing buffer, between the
-    // image layers. Blending is set by the caller.
-    void Draw(const MeterView& m, MeterBatch& batch, std::vector<float>& shapes);
-    void Destroy();  // inside obs_enter_graphics, or on the graphics thread
+    void Tick(int size, double now) override;
+    // Draws the live parts between the image layers.
+    void Draw(const MeterView& m, MeterBatch& batch, std::vector<float>& shapes) override;
+    void Destroy() override;
 
 private:
     // Draw's labels: the highest values, the ring labels and the live G. k scales design pixels to screen

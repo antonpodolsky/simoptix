@@ -6,10 +6,11 @@
 // rings at every whole G. A comet tail (the dot's recent positions, shrinking and fading) shows how
 // braking blends into cornering, and the highest G reached in each of the four directions stands
 // outside the outer ring (reset when a new driving session starts). Two bars just inside the outer
-// ring show the brake (left) and throttle (right), each darker while ABS or TC intervenes. One look,
-// Chrono (meter_chrono.h: a black bezel around a face under domed glass).
+// ring show the brake (left) and throttle (right), each darker while ABS or TC intervenes. Two looks:
+// Chrono (meter_chrono.h: a black bezel around a face under domed glass) and OLED (meter_oled.h: a
+// self-lit black display with dotted rings and segmented bars).
 //
-// Its properties hold only the meter type (Chrono, the one look) and the demo lap's button; the rest is
+// Its properties hold only the meter type (the look) and the demo lap's button; the rest is
 // fixed here (the constants below). The dot moves the way the driver is pushed (braking: forward, a
 // left turn: right), as those in-car meters do. Drawn on OBS's frame clock from the telemetry of the
 // moment the view shows, lightly smoothed (raw acceleration is noisy over kerbs). Only holds
@@ -21,9 +22,9 @@
 // canvas; while drawing, the meter reads that scale and draws itself in canvas pixels (see Fit). Its
 // Properties window is sized so the preview shows it at that size too (properties_preview.h).
 //
-// This file is the source: settings and values. The look is drawn in meter_chrono.*, from the values
-// in meter_view.h; shapes and batching are in meter_draw.*, labels in meter_text.*, images in
-// meter_image.*.
+// This file is the source: settings and values. The looks are drawn in meter_chrono.* and meter_oled.*
+// (both a MeterLook, meter_look.h), from the values in meter_view.h; shapes and batching are in
+// meter_draw.*, labels in meter_text.*, images in meter_image.*.
 
 #include <graphics/matrix4.h>
 #include <graphics/vec2.h>
@@ -39,6 +40,8 @@
 
 #include "meter_chrono.h"
 #include "meter_draw.h"
+#include "meter_look.h"
+#include "meter_oled.h"
 #include "meter_view.h"
 #include "properties_preview.h"
 #include "shared/guarded.h"
@@ -60,6 +63,22 @@ namespace {
     // The dot's smoothing: the time constant of its exponential filter, seconds. The tail's length, seconds.
     constexpr float kSmoothingS = 0.080f;
     constexpr float kTailS = 1;
+
+    // The looks, as the Meter type setting saves them ("chrono", "oled").
+    enum class MeterType { kChrono, kOled };
+
+    MeterType MeterTypeOf(obs_data_t* settings) {
+        return strcmp(obs_data_get_string(settings, "meter_type"), "oled") == 0 ? MeterType::kOled
+                                                                                : MeterType::kChrono;
+    }
+
+    std::unique_ptr<MeterLook> MakeLook(MeterType type) {
+        if (type == MeterType::kOled) {
+            return std::make_unique<OledMeter>();
+        }
+
+        return std::make_unique<ChronoMeter>();
+    }
 
     struct GMeter {
         obs_source_t* source = nullptr;
@@ -95,7 +114,9 @@ namespace {
         Trail trail;
         float maxRight = 0, maxLeft = 0, maxForward = 0, maxBack = 0;  // highest G reached each way
         unsigned session = 0;  // driving session of the last sample: a new one resets the maxima
-        ChronoMeter look;
+        std::atomic<MeterType> wantedType{MeterType::kChrono};           // set from the settings (UI thread)
+        MeterType type = MeterType::kChrono;                             // graphics thread: the look's type
+        std::unique_ptr<MeterLook> look = MakeLook(MeterType::kChrono);  // graphics thread
         MeterBatch batch;  // everything drawn this frame, uploaded once
         // new telemetry each frame: sized once, so nothing is allocated per frame
         std::vector<CarSample> samples;
@@ -278,6 +299,7 @@ namespace {
             );
 
             obs_property_list_add_string(type, "Chrono", "chrono");
+            obs_property_list_add_string(type, "OLED", "oled");
             obs_properties_add_button2(
                 p,
                 "demo",
@@ -290,12 +312,19 @@ namespace {
         });
     }
 
-    void* Create(obs_data_t*, obs_source_t* source) {
+    // UI thread: the look the settings ask for, made by the graphics thread on its next tick (SwitchLook).
+    void UpdateSettings(void* data, obs_data_t* settings) {
+        Guarded("update", [&] { static_cast<GMeter*>(data)->wantedType = MeterTypeOf(settings); });
+    }
+
+    void* Create(obs_data_t* settings, obs_source_t* source) {
         return Guarded("create", [&]() -> void* {
             auto m = std::make_unique<GMeter>();
             m->samples.resize(Telemetry::kRing);
             m->shapes.reserve(1 << 16);
             m->source = source;
+            m->wantedType = m->type = MeterTypeOf(settings);
+            m->look = MakeLook(m->type);
             return m.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });
     }
@@ -307,7 +336,7 @@ namespace {
                 Telemetry::Release();
             }
             obs_enter_graphics();
-            m->look.Destroy();
+            m->look->Destroy();
             m->batch.Destroy();
             obs_leave_graphics();
         });
@@ -344,6 +373,23 @@ namespace {
             m->fitWanted = true;  // an open Properties preview follows
             CoreLog("G-Meter Overlay: drawn at %d px (its size on the canvas)", want);
         }
+    }
+
+    // Graphics thread: replaces the look when the Meter type changed, freeing the old one's textures. The
+    // new one builds its images and labels on this tick, before it is first drawn.
+    void SwitchLook(GMeter* m) {
+        const MeterType wanted = m->wantedType;
+        if (wanted == m->type) {
+            return;
+        }
+
+        obs_enter_graphics();
+        m->look->Destroy();
+        obs_leave_graphics();
+
+        m->look = MakeLook(wanted);
+        m->type = wanted;
+        CoreLog("G-Meter Overlay: meter type %s", wanted == MeterType::kOled ? "OLED" : "Chrono");
     }
 
     // UI thread: one step of fitting the meter's Properties preview (properties_preview.h). Holds a
@@ -420,8 +466,9 @@ namespace {
             const double now = QpcNow();
             FollowShownSize(m, now);
             StepPreviewFit(m, now);
+            SwitchLook(m);
             if (m->wanted && m->drawSize > 0) {
-                m->look.Tick(m->drawSize, now);
+                m->look->Tick(m->drawSize, now);
             }
 
             // A new meter isn't in a scene yet when it's created: look for it twice a second, for 5 s.
@@ -506,7 +553,7 @@ namespace {
             gs_blend_state_push();
             gs_enable_blending(true);
             gs_blend_function(GS_BLEND_SRCALPHA, GS_BLEND_INVSRCALPHA);
-            m->look.Draw(view, m->batch, m->shapes);
+            m->look->Draw(view, m->batch, m->shapes);
             gs_blend_state_pop();
             gs_matrix_pop();
         });
@@ -525,6 +572,7 @@ void RegisterGMeterSource() {
     info.destroy = Destroy;
     info.get_defaults = GetDefaults;
     info.get_properties = GetProperties;
+    info.update = UpdateSettings;
     info.get_width = GetWidth;
     info.get_height = GetHeight;
     info.show = Show;
