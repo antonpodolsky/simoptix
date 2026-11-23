@@ -21,8 +21,8 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
 - OBS Overlays plugin which adds two sources:
   - **SimOptix: G-Meter Overlay** shows the car's G-forces, brake and throttle.
     - No OpenXR layer is required.
-  - **SimOptix: Performance Overlay** shows the game's FPS and its GPU and CPU headroom, as OpenXR
-    Toolkit does.
+  - **SimOptix: Performance Overlay** shows the game's FPS, and how much of each frame's time is left
+    on the GPU and the CPU.
     - It reads them from the SimOptix OpenXR layer.
 
 ## Supported VR headsets and games
