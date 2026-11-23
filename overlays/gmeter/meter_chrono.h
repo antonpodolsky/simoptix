@@ -3,10 +3,10 @@
 // The G-meter's Chrono look (the design canvas's "Chrono Inner", overlays\gmeter\design\README.md): a black
 // bezel, a dark face with 1G/2G/3G rings under domed glass, the pedal bars just inside the 3G ring, and a
 // live-G window. The static parts are the design's two image layers (meter_image.h): the base under the
-// live parts and the glass glare over them. Drawn live between them: the dot with its glow and comet tail,
-// the pedal bars, the highest values, the live G and the ring labels (rasterised at the meter's size, which
-// is sharper than shrinking them with the image). The scale is fixed at 3 G (the rings are in the image).
-// Sizes follow the design's 480 px board, scaled to the source.
+// live parts and the glass glare over them. Drawn live between them: the dot with its glow and comet tail
+// (meter_dot.h), the pedal bars, the highest values, the live G and the ring labels (rasterised at the
+// meter's size, which is sharper than shrinking them with the image). The scale is fixed at 3 G (the rings
+// are in the image). Sizes follow the design's 480 px board, scaled to the source.
 //
 // Knows nothing about OBS sources, settings or telemetry: it draws the MeterView it is given.
 // Graphics thread only.
@@ -14,6 +14,7 @@
 
 #include <vector>
 
+#include "meter_dot.h"
 #include "meter_draw.h"
 #include "meter_image.h"
 #include "meter_look.h"

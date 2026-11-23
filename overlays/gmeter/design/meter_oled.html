@@ -32,9 +32,11 @@ svg { position: absolute; left: 40px; top: 40px; overflow: visible; }
 <circle class="centre" cx="200" cy="200" r="1.6"></circle>
 <!-- Tracks: r 143; brake drawn from 215 deg clockwise to 325, throttle from 145 back to 35. The plugin's
      bars start where these start, with the same 4.9378 on, 1.9751 off, so their segments land on the
-     tracks'. -->
-<path class="track" d="M118.0 317.1A143 143 0 0 1 118.0 82.9"></path>
-<path class="track" d="M282.0 317.1A143 143 0 0 0 282.0 82.9"></path>
+     tracks'. The ends are exact to 0.0001 (rounded to 0.1, the arc spans 109.95 deg), and pathLength
+     is the pattern's length, 40 x 4.9378 + 39 x 1.9751, so the dashes are spread over the arc as drawn
+     and its last segment is whole. -->
+<path class="track" pathLength="274.5409" d="M117.9786 317.1387A143 143 0 0 1 117.9786 82.8613"></path>
+<path class="track" pathLength="274.5409" d="M282.0214 317.1387A143 143 0 0 0 282.0214 82.8613"></path>
 </svg>
 </div>
 <script>

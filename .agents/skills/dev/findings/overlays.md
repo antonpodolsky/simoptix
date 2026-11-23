@@ -79,9 +79,20 @@ Why some of the specs are as they are:
   1000 px: the tabular 1, 2 and 3 start 0.101, 0.054 and 0.044 em right of the pen, and the G ends
   0.007 em under the baseline. At 9 px that puts the ink at x 244.91, 244.49 and 244.40, with its bottom
   0.06 under each baseline.
-- **Drawing order:** the bloom, then the tail, then the dot, as Chrono's glow. Both are the accent, the
-  tail at 0.02–0.55 and the bloom at 50 %.
-- Not compared with the design at 1:1 in OBS.
+- **The dot, its glow and its tail are Chrono's,** from one file (`meter_dot.cpp`). The design's card
+  gives OLED's tail the dot's own colour, `#ff5a1f`, which merged with the dot as it did on Chrono
+  ("Comet tail colour", above).
+- **The waiting dot:** without telemetry the dot waits at the centre at 35 %, and the layer's centre
+  point (white at 50 %) showed through it as a white point. A black disc of the dot's size under it
+  hides the point.
+- **The tracks' last segment:** the design's track arcs had their ends rounded to 0.1 px, so they
+  spanned 109.95°, and the browser's dashes drifted along its own measure of the arc. The top segment
+  of each track measured 4.57 design px against 4.79–5.02 for the others. With the ends exact to 0.0001
+  it measured 4.69. With `pathLength` set to the pattern's length as well, every segment measures
+  4.77–5.02 (4.82 the last), the spread of the pixel grid.
+- **In OBS at 600 px (1:1, the demo lap):** the 3G ring measured r 170.0 px (136 × 1.25). The lit
+  brake segments landed within 0.02° of their places (0.06 px), and the empty top segments within
+  0.04°, the last ending at 324.96°.
 
 ### Replaced: the "Chrono" board, with the bars in the bezel
 

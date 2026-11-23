@@ -26,7 +26,7 @@ this out from the delay alone, not by looking at the view. Without VR Mirror the
 | Folder | What |
 |---|---|
 | `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources), the DLL's version resource (`version.rc`) and `build.bat` |
-| `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its looks (`meter_look.h`: Chrono in `meter_chrono.*`, OLED in `meter_oled.*`), shapes (`meter_draw.*`) and labels (`meter_text.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
+| `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its looks (`meter_look.h`: Chrono in `meter_chrono.*`, OLED in `meter_oled.*`), the dot both draw (`meter_dot.*`), shapes (`meter_draw.*`) and labels (`meter_text.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
 | `common\` | What any overlay can reuse: images (`meter_image.*`) and the 1:1 properties preview (`properties_preview.*`). Text is rasterised by `shared\text_raster.*`, which VR Mirror uses too |
 
 The demo lap that the G-meter can play without the game is in `shared\telemetry\demo_lap.*`, beside the
@@ -105,8 +105,8 @@ or its Meter type changes. The layers are 960 px, so the meter is sharpest up to
 
 The dot (with a glow), its tail, the bars and all the text are drawn live, over the base layer and
 under Chrono's glass. The text is the numbers and the 1G, 2G and 3G ring labels.
-- On Chrono the tail is a slightly warmer orange than the dot, so the dot stands apart from it. On
-  OLED it is the dot's own orange.
+- The dot, its glow and its tail are the same on both looks. The tail is a slightly warmer orange than
+  the dot, so the dot stands apart from it.
 - The live G and the highest values use the font's tabular digits, placed by their digit cells, so the
   digits don't shift as the values change.
 - Chrono's live G is centred on its window to a fraction of a pixel, then 0.8 design px right (half a

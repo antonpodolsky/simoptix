@@ -9,12 +9,11 @@
 namespace {
 
     constexpr float kPi = 3.14159265f;
-    constexpr float kBoard = 480;  // the design's board, design pixels; the meter's centre is at (240, 240)
-    constexpr float kMaxG = 3;
+    constexpr float kBoard = 480;   // the design's board, design pixels; the meter's centre is at (240, 240)
+    constexpr float kMaxG = 3;      // the rings in the base image
     constexpr float kRing3G = 136;  // the 3G ring's radius, design pixels (in the base image)
 
-    // Colours from the design, 0..1 RGB. The tail is the accent itself (Chrono's is a little warmer).
-    constexpr float kAccent[3] = {1.0f, 0.353f, 0.122f};        // #ff5a1f: the dot, its bloom, its tail
+    // Colours from the design, 0..1 RGB. The dot, its glow and its tail are Chrono's (meter_dot.h).
     constexpr float kBrake[3] = {1.0f, 0.353f, 0.306f};         // #ff5a4e
     constexpr float kBrakeAbs[3] = {0.784f, 0.157f, 0.118f};    // #c8281e, while ABS intervenes
     constexpr float kThrottle[3] = {0.239f, 0.863f, 0.518f};    // #3ddc84
@@ -38,9 +37,6 @@ namespace {
     constexpr float kRingInkLeft[3] = {244.91f, 244.49f, 244.40f};
     constexpr float kRingInkBottom[3] = {205.76f, 160.36f, 115.06f};
 
-    // The comet tail's 5 age bands, newest first.
-    constexpr float kTailAlpha[5] = {0.55f, 0.35f, 0.20f, 0.09f, 0.02f};
-
     // The labels' faces: Medium for the highest values and Regular for the ring labels, as the design,
     // SemiBold below 9 px, where strokes get thinner than a pixel and read grey.
     const wchar_t* PeakFaceFor(int px) {
@@ -50,23 +46,7 @@ namespace {
         return px < 9 ? L"Bahnschrift SemiBold" : L"Bahnschrift";
     }
 
-    // The meter's size for a source: k scales design pixels to screen pixels, (cx, cy) is its centre, and
-    // `scale` turns G into screen pixels.
-    struct Dial {
-        float k, cx, cy, scale;
-
-        // Where acceleration (x, y) in G is on screen.
-        void ToScreen(float x, float y, float* sx, float* sy) const {
-            const float len = std::sqrt(x * x + y * y);
-            if (len > kMaxG) {
-                x *= kMaxG / len, y *= kMaxG / len;  // pinned at the 3G ring
-            }
-            *sx = cx + x * scale;
-            *sy = cy - y * scale;  // forward is up
-        }
-    };
-
-    void DrawBars(const MeterView& m, const Dial& d, MeterBatch& batch, std::vector<float>& v) {
+    void DrawBars(const MeterView& m, const MeterDial& d, MeterBatch& batch, std::vector<float>& v) {
         struct Bar {
             float pedal, start, dir;
             const float* rgb;
@@ -91,37 +71,6 @@ namespace {
         }
     }
 
-    // The dot's comet tail, behind the dot of radius dotR.
-    void DrawTail(const MeterView& m, const Dial& d, float dotR, MeterBatch& batch, std::vector<float>& v) {
-        const Trail& trail = *m.trail;
-
-        // A band that narrows with age (0.9 of the dot's radius when new, 0 at the tail's end), with a
-        // ball at each joint, in the design's 5 age bands.
-        const float length = std::max(0.01f, m.trailS);
-        for (int band = 4; band >= 0; band--) {  // oldest (faintest) first
-            v.clear();
-            for (size_t i = 1; i < trail.size(); i++) {
-                const float age = static_cast<float>(std::min(1.0, (m.now - trail[i].t) / length));
-                if (std::min(4, static_cast<int>(age * 5)) != band) {
-                    continue;
-                }
-
-                const float age0 = static_cast<float>(std::min(1.0, (m.now - trail[i - 1].t) / length));
-                float x0, y0, x1, y1;
-                d.ToScreen(trail[i - 1].x, trail[i - 1].y, &x0, &y0);
-                d.ToScreen(trail[i].x, trail[i].y, &x1, &y1);
-
-                const float r0 = dotR * (1 - age0) * 0.9f, r1 = dotR * (1 - age) * 0.9f;
-                AddTaper(v, x0, y0, r0, x1, y1, r1);
-                if (r1 > 0.5f) {
-                    AddDisc(v, x1, y1, r1);
-                }
-            }
-
-            batch.Add(v, kAccent[0], kAccent[1], kAccent[2], kTailAlpha[band]);
-        }
-    }
-
 }
 
 void OledMeter::Tick(int size, double now) {
@@ -131,36 +80,22 @@ void OledMeter::Tick(int size, double now) {
 
 void OledMeter::Draw(const MeterView& m, MeterBatch& batch, std::vector<float>& v) {
     const float S = m.size, k = S / kBoard;
-    const Dial dial = {k, S * 0.5f, S * 0.5f, kRing3G * k / kMaxG};
-    const bool live = m.live;
+    const MeterDial dial = {k, S * 0.5f, S * 0.5f, kRing3G * k / kMaxG};
 
     base_.Draw();
 
     batch.Clear();
-    if (live) {
+    if (m.live) {
         DrawBars(m, dial, batch, v);
+    } else {
+        // Without telemetry the dimmed dot waits at the centre. The display's black under it keeps the
+        // centre point (white at 50 % in the base image) from showing through, so it reads as Chrono's.
+        v.clear();
+        AddDisc(v, dial.cx, dial.cy, kDotR * k);
+        batch.Add(v, 0, 0, 0, 1);
     }
 
-    // The bloom first, so the tail crosses it in its own colour; without telemetry, the dot and bloom
-    // are dimmed at the centre.
-    float dx = dial.cx, dy = dial.cy;
-    if (live) {
-        dial.ToScreen(m.gx, m.gy, &dx, &dy);
-    }
-
-    const float dim = live ? 1.0f : 0.35f;
-    v.clear();
-    AddBlurredDisc(v, dx, dy, 19.2f * k, 6.4f * k);
-    batch.Add(v, kAccent[0], kAccent[1], kAccent[2], 0.5f * dim);
-
-    const float dotR = 12.5f * k;
-    if (live && m.trail->size() > 1) {
-        DrawTail(m, dial, dotR, batch, v);
-    }
-
-    v.clear();
-    AddDisc(v, dx, dy, dotR);
-    batch.Add(v, kAccent[0], kAccent[1], kAccent[2], dim);
+    AddMeterDot(m, dial, batch, v);
     batch.Submit();
 
     DrawValues(m, k);

@@ -271,8 +271,9 @@ for the agents that read those files. Change the rules here, never in those file
 - **Copies kept in step.**
   - `vr_mirror\recording_analysis\replica.py` is a Python copy of the slot check's helpers
     (`vr_mirror\core\pipeline\2_drawn_pose\slot_check_drawn_pose_lag.cpp`). Change both together.
-  - The G-meter's live parts in `overlays\gmeter\meter_chrono.cpp` and `meter_oled.cpp`, and the
-    tables in `overlays\gmeter\design\README.md`, hold the same numbers. Change both together.
+  - The G-meter's live parts in `overlays\gmeter\meter_chrono.cpp`, `meter_oled.cpp` and
+    `meter_dot.cpp`, and the tables in `overlays\gmeter\design\README.md`, hold the same numbers.
+    Change both together.
 - **Thresholds.** Never loosen a scenario's limits or remove a scenario to get a pass without asking.
   Report failures with their numbers.
 - **The pipeline's expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the
