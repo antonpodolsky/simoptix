@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Meter view: what the G-meter's look (meter_chrono.h) draws in one frame, in plain values: the
+// Meter view: what a look of the G-meter (meter_look.h) draws in one frame, in plain values: the
 // smoothed G, its recent trail, the highest values, the pedals. The source (gmeter_source.cpp) fills it from
 // telemetry; the look only reads it.
 //

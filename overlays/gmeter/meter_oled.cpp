@@ -74,7 +74,7 @@ namespace {
 }
 
 void OledMeter::Tick(int size, double now) {
-    base_.Build(size);
+    base_.Build(size, size);
     UpdateLabels(labels_, kLabels, now);
 }
 

@@ -72,9 +72,11 @@ for the agents that read those files. Change the rules here, never in those file
   - It passes every call on unchanged, with one exception. When the game makes its OpenXR instance, it
     asks for the time conversion extension (`XR_KHR_win32_convert_performance_counter_time`) if the game
     didn't and the runtime offers it.
-  - It reads only what the game hands the headset. It copies the left eye's image, and only while VR
-    Mirror reads it. It never makes the game wait, and the footprint rules below apply to it twice
-    over.
+  - It reads only what the game hands the headset, and when the game makes its frame calls. It copies
+    the left eye's image, and only while VR Mirror reads it. It times the game's frames, and only while
+    the performance overlay reads them. For that it puts two GPU timestamps per frame in the game's
+    immediate context, on the thread its copies use. It never makes the game wait, and the footprint
+    rules below apply to it twice over.
   - Nothing else goes into the game process. Every build of the layer that goes into the game is
     signed with a code signing certificate Windows trusts. Easy Anti-Cheat keeps an unsigned layer
     out, and online play is disabled while it is installed. Unsigned, the layer runs only in LMU
@@ -224,6 +226,19 @@ for the agents that read those files. Change the rules here, never in those file
   - Settings that only one host uses stay in that host.
   - Setting keys are saved in user scenes and config, so never rename them.
 - **Logging.** Log state changes once, not every frame. Periodic stats go out at most every 10 s.
+- **Overlay size.** An overlay covers the same share of the canvas on every canvas size, so a canvas
+  change leaves its size relative to the canvas as it was. Every overlay is sized the way the G-meter
+  is:
+  - Its size in OBS, the source's width and height before the scene item's scale, is its size on a
+    1920x1080 canvas. The G-meter's is 300 x 300. The overlay scales its own design into that size (the
+    G-meter's 480 px design board into 300 px).
+  - A new overlay's scene item gets the canvas's scale only, canvas height / 1080, at its place on a
+    1080-pixel canvas scaled the same way (`overlays\common\overlay_box.*`). A smaller or larger default
+    size is a smaller or larger size in OBS, never another item scale.
+  - When the canvas changes, OBS keeps the scene item in proportion. The overlay never sets its own size
+    from the canvas's.
+  - It draws itself at the size it is shown on the canvas, read from the scene item's scale while
+    drawing, so it stays sharp at any size.
 - **libobs pitfalls (OBS 32).**
   - `gs_color4v` is an empty stub. Use `gs_color` or effect parameters.
   - Immediate mode (`gs_render_start`) with vertex colours crashed OBS. Use a vertex buffer of the
@@ -560,7 +575,10 @@ Crash dumps go to `%LOCALAPPDATA%\simoptix`, and the newest 10 are kept. OBS log
 ## 4a. Take a design into the plugin
 
 `overlays\gmeter\design\` holds what the G-meter's looks are built from. Its README has the layers and
-the size, place and colour of every live part, per look.
+the size, place and colour of every live part, per look. `overlays\performance\design\` holds the
+performance overlay's in the same way: `perf.html` draws its layers (`#chrono-base`, `#chrono-glass`,
+`#oled-base`, rendered with `--window-size=312,164`), and its README has the live parts. The steps below
+are the G-meter's, and apply to it the same way.
 
 - **The static parts are images.** Each look has an HTML file that draws its static parts:
   `meter.html` for Chrono (its base and its glass reflection) and `meter_oled.html` for OLED (its base).

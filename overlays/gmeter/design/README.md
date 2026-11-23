@@ -16,7 +16,7 @@ layer, or with `#preview` to see them over a backdrop. The OBS plugin embeds the
 
 Every layer is 960 × 960 px, which is the 480 × 480 design at 2×. Below, sizes are in design pixels
 (1×), relative to the meter's centre at (240, 240). Angles are degrees clockwise from straight up, as
-in `overlays\gmeter\meter_draw.h`.
+in `overlays\common\meter_draw.h`.
 
 ## Chrono
 

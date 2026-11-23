@@ -1,0 +1,7 @@
+// Copyright (C) 2026 Anton Podolsky
+// SPDX-License-Identifier: GPL-2.0-or-later
+// The performance overlay's image layers (design\README.md), embedded in the plugin as PNG data and read
+// by name in performance_look.cpp.
+PERF_CHRONO_BASE RCDATA "design\\perf_chrono_base.png"
+PERF_CHRONO_GLASS RCDATA "design\\perf_chrono_glass.png"
+PERF_OLED_BASE RCDATA "design\\perf_oled_base.png"

@@ -26,6 +26,8 @@ near the game.
   - nearly every frame after the first copy was copied
   - every copy read back shows its own frame
   - the layer's clock reading matches the runtime's own conversion
+  - after three seconds of frames, the frame times read as the performance overlay reads them hold the
+    frame rate, the target rate, and the CPU and GPU time
 - It carries the game's file name only because the layer wakes up for no other name. It touches no game
   file.
 - It needs the headset on, with its VR software running as the active OpenXR runtime.
