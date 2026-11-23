@@ -3,7 +3,10 @@ rem Copyright (C) 2026 Anton Podolsky
 rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds SimOptix: Overlays, simoptix_overlays.dll: plugin.cpp registers the G-meter
 rem (..\gmeter\gmeter_source.cpp: SimOptix: G-Meter Overlay, drawn by meter_chrono.cpp, its image layers
-rem embedded by gmeter.rc from its design folder). What any overlay uses is in ..\common: shapes
+rem embedded by gmeter.rc from its design folder) and the performance overlay
+rem (..\performance\performance_source.cpp: SimOptix: Performance Overlay, drawn by
+rem performance_look.cpp, its image layers embedded by performance.rc, the frame times it reads from
+rem ..\..\shared\performance). What any overlay uses is in ..\common: shapes
 rem (meter_draw.cpp), labels (meter_text.cpp, their text rasterised by ..\..\shared\text_raster.cpp with
 rem DirectWrite), image layers (meter_image.cpp), the box on the canvas (overlay_box.cpp) and the
 rem Properties preview (properties_preview.cpp).
@@ -30,20 +33,24 @@ call ..\..\shared\build\version.bat obj || exit /b 1
 lib /nologo /def:..\..\shared\obs_lib\obs.def /machine:x64 /out:obj\obs.lib >nul || exit /b 1
 call ..\..\shared\telemetry\sources.bat
 rc /nologo /i ..\gmeter /fo obj\gmeter.res ..\gmeter\gmeter.rc || exit /b 1
+rc /nologo /i ..\performance /fo obj\performance.res ..\performance\performance.rc || exit /b 1
 rc /nologo /i ..\.. /i obj /fo obj\version.res version.rc || exit /b 1
 set "G=..\gmeter"
 set "C=..\common"
+set "P=..\performance"
 cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Fo:obj\ ^
-   /I..\.. /I%G% /I%C% /Iobj ^
+   /I..\.. /I%G% /I%C% /I%P% /Iobj ^
    /I..\..\third_party\obs-32.2.2\libobs %TELEMETRY_FLAGS% ^
    plugin.cpp %TELEMETRY_FILES% ..\..\shared\telemetry\demo_lap.cpp ^
    %G%\gmeter_source.cpp %G%\meter_chrono.cpp ^
+   %P%\performance_source.cpp %P%\performance_look.cpp %P%\performance_view.cpp ^
+   ..\..\shared\performance\performance_reader.cpp ..\..\shared\performance\performance_reading.cpp ^
    %C%\meter_draw.cpp %C%\meter_text.cpp %C%\meter_image.cpp %C%\overlay_box.cpp ^
    %C%\properties_preview.cpp ..\..\shared\text_raster.cpp ^
    ..\..\shared\log.cpp ..\..\shared\shared_memory.cpp ..\..\shared\program_delay.cpp ^
    ..\..\shared\crash_dump.cpp ..\..\shared\local_files.cpp ^
    /LD /Fe:bin\%NAME%.dll ^
-   /link obj\gmeter.res obj\version.res obj\obs.lib shlwapi.lib dwrite.lib d3d11.lib user32.lib ^
+   /link obj\gmeter.res obj\performance.res obj\version.res obj\obs.lib shlwapi.lib dwrite.lib d3d11.lib user32.lib ^
    gdi32.lib gdiplus.lib dbghelp.lib || exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\..\shared\build\fill_version.ps1 ^
    manifest.json bin\manifest.json || exit /b 1

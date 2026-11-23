@@ -574,7 +574,10 @@ Crash dumps go to `%LOCALAPPDATA%\simoptix`, and the newest 10 are kept. OBS log
 ## 4a. Take a design into the plugin
 
 `overlays\gmeter\design\` holds what the G-meter's look is built from. Its README has the layers and
-the size, place and colour of every live part.
+the size, place and colour of every live part. `overlays\performance\design\` holds the performance
+overlay's in the same way: `perf.html` draws its layers (`#chrono-base`, `#chrono-glass`, `#oled-base`,
+rendered with `--window-size=312,164`), and its README has the live parts. The steps below are the
+G-meter's, and apply to it the same way.
 
 - **The static parts are images.** `overlays\gmeter\design\meter.html` draws the meter's static parts
   and its glass reflection. Open it with `#base`, `#glass`, or `#preview` for both over a backdrop. To

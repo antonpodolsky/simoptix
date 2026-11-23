@@ -18,7 +18,10 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
     recording.
 - Auto-record option:
   - Race is recorded from the starting lights to 5s after the car stops past the finish line.
-- OBS Overlays plugin adds the **SimOptix: G-Meter Overlay** source.
+- OBS Overlays plugin adds the **SimOptix: G-Meter Overlay** source, and the **SimOptix: Performance
+  Overlay** source:
+  - It shows the game's frame rate and its GPU and CPU headroom, as OpenXR Toolkit works them out.
+  - It needs the SimOptix OpenXR layer in the game.
 
 ## Supported VR headsets and games
 
@@ -62,7 +65,8 @@ native resolution") has more canvases and zooms.
   poses. The G-meter and race auto-record read the telemetry that LMU publishes for outside tools.
 - **OpenXR Mirror** needs an API layer that OpenXR loads into LMU when the game starts. The layer
   copies the left eye image after each frame has gone to the headset, and only while an OpenXR Mirror
-  source is shown in OBS. It passes every OpenXR call on unchanged, except that it asks the runtime for
+  source is shown in OBS. While a Performance Overlay source is shown, it also times the game's frames
+  on the CPU and the GPU. It passes every OpenXR call on unchanged, except that it asks the runtime for
   one time-conversion extension. More details in the README (`vr_mirror\frame_sources\openxr\README.md`).
 
 **The unsigned OpenXR layer is blocked by EAC.**
