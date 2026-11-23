@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The G-meter's Chrono look (the design canvas's "Chrono Inner", overlays\gmeter\design\README.md): a black
+// The G-meter's Chrono theme (the design canvas's "Chrono Inner", overlays\gmeter\design\README.md): a black
 // bezel, a dark face with 1G/2G/3G rings under domed glass, the pedal bars just inside the 3G ring, and a
 // live-G window. The static parts are the design's two image layers (meter_image.h): the base under the
 // live parts and the glass glare over them. Drawn live between them: the dot with its glow and comet tail

@@ -57,19 +57,19 @@ Why some of the specs are as they are:
 - **1G and 2G rings:** white at 8 % at first. They faded out in compressed video, so they are 16 %.
 - **Comet tail colour:** in the accent it merged with the dot. In amber `#ffb020` it stood out too
   much, and `#ff7c1f` still a bit. `#ff6b1f` is the one kept.
-- **The look is the canvas's "Chrono Inner" board**, with its ABS and TC labels
+- **The Chrono theme is the canvas's "Chrono Inner" board**, with its ABS and TC labels
   removed: the bars sit just inside the 3G ring, and the bezel is r 190. The maintainer chose it over
   the "Chrono" board below. Its glass is the same feathered crescent, so `gmeter_glass.png` stayed
   identical, pixel for pixel.
 - **The pedal bars' edges:** the bars are drawn with their soft edges centred on their outline, so a
-  5 px bar covers as much as the design's 5 px stroke. The round-ended bars of the earlier look had
+  5 px bar covers as much as the design's 5 px stroke. The round-ended bars of the earlier design had
   their soft edges outside the outline, 1 px wider than the design.
 - **Live G:** centred by measurement it looked 1 px left at size 300, and 1.6 design px right looked
   shifted right, so it is 0.8 right. Vertically, the window's inner shadow (offset 1 px down) makes it
   look about 0.5 px higher than its box. On the box, the gap under the digits measured 1 px smaller
   than the one above.
 
-### The OLED look
+### The OLED theme
 
 - **Its layer** is `gmeter_oled_base.png`, rendered from `meter_oled.html` with Edge at 2×. It is
   identical, byte for byte, to the layer the design was checked with. Its alpha is 0 at the image's
@@ -141,7 +141,7 @@ the plugin's glass.
 ## Tried and removed: tyre grip learning and ideal pedals
 
 The G-meter once learned how close each tyre is to its limit, and worked out the ideal brake and
-throttle from it, to draw as arcs and ticks on the meter. The Chrono look draws neither. So it was
+throttle from it, to draw as arcs and ticks on the meter. The Chrono theme draws neither. So it was
 switched off, then removed, with its spec and a tool that replayed it over recorded
 telemetry. How it worked:
 

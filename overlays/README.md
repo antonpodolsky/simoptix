@@ -28,8 +28,8 @@ this out from the delay alone, not by looking at the view. Without VR Mirror the
 | Folder | What |
 |---|---|
 | `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources), the DLL's version resource (`version.rc`) and `build.bat` |
-| `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its looks (`meter_look.h`: Chrono in `meter_chrono.*`, OLED in `meter_oled.*`), the dot both draw (`meter_dot.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
-| `performance\` | The performance overlay: the source (`performance_source.cpp`), its Chrono and OLED looks (`performance_look.*`), what each cell shows (`performance_view.*`), and its image layers, embedded by `performance.rc` from `design\`. The frame times it reads are in `shared\performance\` |
+| `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its two themes (Chrono in `meter_chrono.*`, OLED in `meter_oled.*`, each a `MeterLook`, `meter_look.h`), the dot both draw (`meter_dot.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
+| `performance\` | The performance overlay: the source (`performance_source.cpp`), its Chrono and OLED themes (`performance_look.*`), what each cell shows (`performance_view.*`), and its image layers, embedded by `performance.rc` from `design\`. The frame times it reads are in `shared\performance\` |
 | `common\` | What any overlay can reuse: shapes (`meter_draw.*`), labels (`meter_text.*`), image layers (`meter_image.*`), the box on the canvas that keeps an overlay drawn at its shown size and places a new one (`overlay_box.*`), and the 1:1 properties preview (`properties_preview.*`). Text is rasterised by `shared	ext_raster.*`, which VR Mirror uses too |
 
 The demo lap that the G-meter can play without the game is in `shared\telemetry\demo_lap.*`, beside the
@@ -62,7 +62,7 @@ its number (`0.1.0`). Any other build adds the commits since that release and th
 ## G-Meter Overlay
 
 The G-meter is a friction circle (G-G meter) drawn from LMU's telemetry, like the in-car G-meters of
-Porsche's Sport Chrono or the Nissan GT-R. It has two looks, picked by its **Theme**.
+Porsche's Sport Chrono or the Nissan GT-R. It has two themes, picked by its **Theme**.
 
 **Chrono** looks like a physical instrument:
 - a black bezel
@@ -108,7 +108,7 @@ or its Theme changes. The layers are 960 px, so the meter is sharpest up to that
 
 The dot (with a glow), its tail, the bars and all the text are drawn live, over the base layer and
 under Chrono's glass. The text is the numbers and the 1G, 2G and 3G ring labels.
-- The dot, its glow and its tail are the same on both looks. The tail is a slightly warmer orange than
+- The dot, its glow and its tail are the same in both themes. The tail is a slightly warmer orange than
   the dot, so the dot stands apart from it.
 - The live G and the highest values use the font's tabular digits, placed by their digit cells, so the
   digits don't shift as the values change.
@@ -165,7 +165,7 @@ Add it to the scene above the VR Mirror source.
 ## Performance Overlay
 
 The performance overlay shows the game's frame rate and how much of each frame's time is left on the
-GPU and on the CPU. It has two looks, **Chrono** (a dark bezel with a sunken face under glass) and **OLED** (a black display with
+GPU and on the CPU. It has two themes, **Chrono** (a dark bezel with a sunken face under glass) and **OLED** (a black display with
 segmented bars). Three cells sit side by side:
 
 | Cell | Reading | Bar and colour |

@@ -1,10 +1,11 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Meter look: what every look of the G-meter does, so the source can draw any of them (the Theme
-// setting): build its images and labels for a size outside drawing, draw a MeterView, and free what it
-// holds on the GPU. The looks are ChronoMeter (meter_chrono.h) and OledMeter (meter_oled.h).
+// Meter look: what the code that draws the G-meter in one theme does, so the source can draw any theme
+// (the Theme setting): build its images and labels for a size outside drawing, draw a MeterView, and free
+// what it holds on the GPU. The looks are ChronoMeter (meter_chrono.h, the Chrono theme) and OledMeter
+// (meter_oled.h, the OLED theme).
 //
-// Knows nothing about OBS sources, settings or telemetry, nor about any one look.
+// Knows nothing about OBS sources, settings or telemetry, nor about any one theme.
 // Graphics thread only.
 #pragma once
 

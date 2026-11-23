@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Meter dot: the G-meter's dot, the same on every look (meter_chrono.h, meter_oled.h): a glow under it,
+// Meter dot: the G-meter's dot, the same in every theme (meter_chrono.h, meter_oled.h): a glow under it,
 // its comet tail (the dot's recent positions, shrinking and fading), and the dot, in design pixels of the
-// 480 px board. Where the dot goes is the look's: its dial says where 1 G is on screen.
+// 480 px board. Where the dot goes is the theme's: its dial says where 1 G is on screen.
 //
-// Knows nothing about OBS sources, settings, telemetry or a look's rings, bars and labels.
+// Knows nothing about OBS sources, settings, telemetry or a theme's rings, bars and labels.
 // Graphics thread only.
 #pragma once
 

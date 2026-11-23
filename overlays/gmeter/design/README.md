@@ -1,6 +1,6 @@
 # G-meter: static layers
 
-This folder is the source of the G-meter's image layers, for its two looks, Chrono and OLED. Each look
+This folder is the source of the G-meter's image layers, for its two themes, Chrono and OLED. Each theme
 has an HTML file that draws its layers. Open it with `#base` (and `#glass` for Chrono) to see each
 layer, or with `#preview` to see them over a backdrop. The OBS plugin embeds the PNGs
 (`overlays\gmeter\gmeter.rc`) and draws the live parts from the tables below

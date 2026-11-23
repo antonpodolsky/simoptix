@@ -6,11 +6,11 @@
 // rings at every whole G. A comet tail (the dot's recent positions, shrinking and fading) shows how
 // braking blends into cornering, and the highest G reached in each of the four directions stands
 // outside the outer ring (reset when a new driving session starts). Two bars just inside the outer
-// ring show the brake (left) and throttle (right), each darker while ABS or TC intervenes. Two looks:
+// ring show the brake (left) and throttle (right), each darker while ABS or TC intervenes. Two themes:
 // Chrono (meter_chrono.h: a black bezel around a face under domed glass) and OLED (meter_oled.h: a
 // self-lit black display with dotted rings and segmented bars).
 //
-// Its properties hold only the theme (the look) and the demo lap's button; the rest is
+// Its properties hold only the theme and the demo lap's button; the rest is
 // fixed here (the constants below). The dot moves the way the driver is pushed (braking: forward, a
 // left turn: right), as those in-car meters do. Drawn on OBS's frame clock from the telemetry of the
 // moment the view shows, lightly smoothed (raw acceleration is noisy over kerbs). Only holds
@@ -21,8 +21,8 @@
 // it is 300 px (its layout size) under the scene item's scale (overlay_box.h). Its Properties window is
 // sized so the preview shows it at that size too (properties_preview.h).
 //
-// This file is the source: settings and values. The looks are drawn in meter_chrono.* and meter_oled.*
-// (both a MeterLook, meter_look.h), from the values in meter_view.h; shapes and batching are in
+// This file is the source: settings and values. The themes are drawn by meter_chrono.* and meter_oled.*
+// (each a MeterLook, meter_look.h), from the values in meter_view.h; shapes and batching are in
 // meter_draw.*, labels in meter_text.*, images in meter_image.*.
 
 #include <graphics/vec2.h>
@@ -60,7 +60,7 @@ namespace {
     constexpr float kSmoothingS = 0.080f;
     constexpr float kTailS = 1;
 
-    // The looks, as the Theme setting saves them ("chrono", "oled").
+    // The themes, as the Theme setting saves them ("chrono", "oled").
     enum class GMeterTheme { kChrono, kOled };
 
     GMeterTheme ThemeOf(obs_data_t* settings) {
@@ -105,7 +105,7 @@ namespace {
         float maxRight = 0, maxLeft = 0, maxForward = 0, maxBack = 0;  // highest G reached each way
         unsigned session = 0;  // driving session of the last sample: a new one resets the maxima
         std::atomic<GMeterTheme> wantedTheme{GMeterTheme::kChrono};  // set from the settings (UI thread)
-        GMeterTheme theme = GMeterTheme::kChrono;                    // graphics thread: the look's theme
+        GMeterTheme theme = GMeterTheme::kChrono;  // graphics thread: the theme `look` draws
         std::unique_ptr<MeterLook> look = MakeLook(GMeterTheme::kChrono);  // graphics thread
         MeterBatch batch;  // everything drawn this frame, uploaded once
         // new telemetry each frame: sized once, so nothing is allocated per frame
@@ -236,7 +236,8 @@ namespace {
         });
     }
 
-    // UI thread: the look the settings ask for, made by the graphics thread on its next tick (SwitchLook).
+    // UI thread: the theme the settings ask for. The graphics thread makes its look on its next tick
+    // (SwitchLook).
     void UpdateSettings(void* data, obs_data_t* settings) {
         Guarded("update", [&] { static_cast<GMeter*>(data)->wantedTheme = ThemeOf(settings); });
     }
@@ -279,7 +280,7 @@ namespace {
         static_cast<GMeter*>(data)->wanted = false;
     }
 
-    // Graphics thread: replaces the look when the Theme changed, freeing the old one's textures. The
+    // Graphics thread: replaces the look when the theme changed, freeing the old one's textures. The
     // new one builds its images and labels on this tick, before it is first drawn.
     void SwitchLook(GMeter* m) {
         const GMeterTheme wanted = m->wantedTheme;
