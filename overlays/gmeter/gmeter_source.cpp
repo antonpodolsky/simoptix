@@ -22,7 +22,7 @@
 // sized so the preview shows it at that size too (properties_preview.h).
 //
 // This file is the source: settings and values. The themes are drawn by meter_chrono.* and meter_oled.*
-// (each a MeterLook, meter_look.h), from the values in meter_view.h; shapes and batching are in
+// (each a MeterTheme, meter_theme.h), from the values in meter_view.h; shapes and batching are in
 // meter_draw.*, labels in meter_text.*, images in meter_image.*.
 
 #include <graphics/vec2.h>
@@ -38,8 +38,8 @@
 
 #include "meter_chrono.h"
 #include "meter_draw.h"
-#include "meter_look.h"
 #include "meter_oled.h"
+#include "meter_theme.h"
 #include "meter_view.h"
 #include "overlay_box.h"
 #include "properties_preview.h"
@@ -61,19 +61,19 @@ namespace {
     constexpr float kTailS = 1;
 
     // The themes, as the Theme setting saves them ("chrono", "oled").
-    enum class GMeterTheme { kChrono, kOled };
+    enum class ThemeChoice { kChrono, kOled };
 
-    GMeterTheme ThemeOf(obs_data_t* settings) {
-        return strcmp(obs_data_get_string(settings, "theme"), "oled") == 0 ? GMeterTheme::kOled
-                                                                           : GMeterTheme::kChrono;
+    ThemeChoice ThemeOf(obs_data_t* settings) {
+        return strcmp(obs_data_get_string(settings, "theme"), "oled") == 0 ? ThemeChoice::kOled
+                                                                           : ThemeChoice::kChrono;
     }
 
-    std::unique_ptr<MeterLook> MakeLook(GMeterTheme theme) {
-        if (theme == GMeterTheme::kOled) {
-            return std::make_unique<OledMeter>();
+    std::unique_ptr<MeterTheme> MakeTheme(ThemeChoice choice) {
+        if (choice == ThemeChoice::kOled) {
+            return std::make_unique<OledTheme>();
         }
 
-        return std::make_unique<ChronoMeter>();
+        return std::make_unique<ChronoTheme>();
     }
 
     struct GMeter {
@@ -104,9 +104,9 @@ namespace {
         Trail trail;
         float maxRight = 0, maxLeft = 0, maxForward = 0, maxBack = 0;  // highest G reached each way
         unsigned session = 0;  // driving session of the last sample: a new one resets the maxima
-        std::atomic<GMeterTheme> wantedTheme{GMeterTheme::kChrono};  // set from the settings (UI thread)
-        GMeterTheme theme = GMeterTheme::kChrono;  // graphics thread: the theme `look` draws
-        std::unique_ptr<MeterLook> look = MakeLook(GMeterTheme::kChrono);  // graphics thread
+        std::atomic<ThemeChoice> wantedChoice{ThemeChoice::kChrono};  // set from the settings (UI thread)
+        ThemeChoice choice = ThemeChoice::kChrono;  // graphics thread: which theme `theme` is
+        std::unique_ptr<MeterTheme> theme = MakeTheme(ThemeChoice::kChrono);  // graphics thread
         MeterBatch batch;  // everything drawn this frame, uploaded once
         // new telemetry each frame: sized once, so nothing is allocated per frame
         std::vector<CarSample> samples;
@@ -236,10 +236,9 @@ namespace {
         });
     }
 
-    // UI thread: the theme the settings ask for. The graphics thread makes its look on its next tick
-    // (SwitchLook).
+    // UI thread: the theme the settings ask for. The graphics thread makes it on its next tick (SwitchTheme).
     void UpdateSettings(void* data, obs_data_t* settings) {
-        Guarded("update", [&] { static_cast<GMeter*>(data)->wantedTheme = ThemeOf(settings); });
+        Guarded("update", [&] { static_cast<GMeter*>(data)->wantedChoice = ThemeOf(settings); });
     }
 
     void* Create(obs_data_t* settings, obs_source_t* source) {
@@ -248,8 +247,8 @@ namespace {
             m->samples.resize(Telemetry::kRing);
             m->shapes.reserve(1 << 16);
             m->source = source;
-            m->wantedTheme = m->theme = ThemeOf(settings);
-            m->look = MakeLook(m->theme);
+            m->wantedChoice = m->choice = ThemeOf(settings);
+            m->theme = MakeTheme(m->choice);
             return m.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });
     }
@@ -261,7 +260,7 @@ namespace {
                 Telemetry::Release();
             }
             obs_enter_graphics();
-            m->look->Destroy();
+            m->theme->Destroy();
             m->batch.Destroy();
             obs_leave_graphics();
         });
@@ -280,21 +279,21 @@ namespace {
         static_cast<GMeter*>(data)->wanted = false;
     }
 
-    // Graphics thread: replaces the look when the theme changed, freeing the old one's textures. The
+    // Graphics thread: replaces the theme when the setting changed, freeing the old one's textures. The
     // new one builds its images and labels on this tick, before it is first drawn.
-    void SwitchLook(GMeter* m) {
-        const GMeterTheme wanted = m->wantedTheme;
-        if (wanted == m->theme) {
+    void SwitchTheme(GMeter* m) {
+        const ThemeChoice wanted = m->wantedChoice;
+        if (wanted == m->choice) {
             return;
         }
 
         obs_enter_graphics();
-        m->look->Destroy();
+        m->theme->Destroy();
         obs_leave_graphics();
 
-        m->look = MakeLook(wanted);
-        m->theme = wanted;
-        CoreLog("G-Meter Overlay: theme %s", wanted == GMeterTheme::kOled ? "OLED" : "Chrono");
+        m->theme = MakeTheme(wanted);
+        m->choice = wanted;
+        CoreLog("G-Meter Overlay: theme %s", wanted == ThemeChoice::kOled ? "OLED" : "Chrono");
     }
 
     // UI thread: one step of fitting the meter's Properties preview (properties_preview.h). Holds a
@@ -375,9 +374,9 @@ namespace {
             }
 
             StepPreviewFit(m, now);
-            SwitchLook(m);
+            SwitchTheme(m);
             if (m->wanted && m->box.DrawHeight() > 0) {
-                m->look->Tick(m->box.DrawHeight(), now);
+                m->theme->Tick(m->box.DrawHeight(), now);
             }
 
             m->box.Place(m->source, now, DefaultPosition);
@@ -410,7 +409,7 @@ namespace {
             gs_blend_state_push();
             gs_enable_blending(true);
             gs_blend_function(GS_BLEND_SRCALPHA, GS_BLEND_INVSRCALPHA);
-            m->look->Draw(view, m->batch, m->shapes);
+            m->theme->Draw(view, m->batch, m->shapes);
             gs_blend_state_pop();
             gs_matrix_pop();
         });

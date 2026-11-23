@@ -3,7 +3,7 @@
 `perf.html` is the source of the performance overlay's three image layers. Open it with
 `#chrono-base`, `#chrono-glass` or `#oled-base` to see each, add `-preview` to see it over a backdrop,
 and add `-text` for sample readings. The OBS plugin embeds the PNGs (`overlays\performance\performance.rc`)
-and draws the live parts from the tables below (`overlays\performance\performance_look.cpp`).
+and draws the live parts from the tables below (`overlays\performance\performance_theme.cpp`).
 
 | File | What it holds |
 |---|---|

@@ -17,11 +17,11 @@
 #include "meter_dot.h"
 #include "meter_draw.h"
 #include "meter_image.h"
-#include "meter_look.h"
 #include "meter_text.h"
+#include "meter_theme.h"
 #include "meter_view.h"
 
-class ChronoMeter : public MeterLook {
+class ChronoTheme : public MeterTheme {
 public:
     void Tick(int size, double now) override;
     // Draws the live parts between the image layers.

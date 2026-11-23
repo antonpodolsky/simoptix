@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Meter view: what the G-meter's look (meter_look.h) draws in one frame, in any theme, in plain values:
+// Meter view: what the G-meter's theme (meter_theme.h) draws in one frame, in plain values:
 // the smoothed G, its recent trail, the highest values, the pedals. The source (gmeter_source.cpp) fills it
-// from telemetry; the look only reads it.
+// from telemetry; the theme only reads it.
 //
 // Knows nothing about OBS sources, settings storage, telemetry reading or drawing.
 #pragma once

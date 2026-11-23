@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "performance_look.h"
+#include "performance_theme.h"
 
 #include <algorithm>
 #include <cmath>
@@ -67,11 +67,11 @@ namespace {
 
 }
 
-void PerformanceLook::Tick(PerformanceTheme theme, float k, double now) {
+void PerformanceTheme::Tick(ThemeChoice choice, float k, double now) {
     const int width = static_cast<int>(std::lround(kBoxWidth * k));
     const int height = static_cast<int>(std::lround(kBoxHeight * k));
 
-    if (theme == PerformanceTheme::kChrono) {
+    if (choice == ThemeChoice::kChrono) {
         chronoBase_.Build(width, height);
         chronoGlass_.Build(width, height);
     } else {
@@ -83,27 +83,27 @@ void PerformanceLook::Tick(PerformanceTheme theme, float k, double now) {
     UpdateLabels(units_, PerformanceView::kCells, now);
 }
 
-void PerformanceLook::Draw(
+void PerformanceTheme::Draw(
     const PerformanceView& view,
-    PerformanceTheme theme,
+    ThemeChoice choice,
     float k,
     MeterBatch& batch,
     std::vector<float>& shapes
 ) {
-    const bool chrono = theme == PerformanceTheme::kChrono;
+    const bool chrono = choice == ThemeChoice::kChrono;
 
     (chrono ? chronoBase_ : oledBase_).Draw();
-    DrawBars(view, theme, k, batch, shapes);
-    DrawText(view, theme, k);
+    DrawBars(view, choice, k, batch, shapes);
+    DrawText(view, choice, k);
 
     if (chrono) {
         chronoGlass_.Draw();
     }
 }
 
-void PerformanceLook::DrawBars(
+void PerformanceTheme::DrawBars(
     const PerformanceView& view,
-    PerformanceTheme theme,
+    ThemeChoice choice,
     float k,
     MeterBatch& batch,
     std::vector<float>& v
@@ -121,7 +121,7 @@ void PerformanceLook::DrawBars(
             continue;
         }
 
-        if (theme == PerformanceTheme::kChrono) {
+        if (choice == ThemeChoice::kChrono) {
             AddTaper(v, left * k, y, half, (left + fill) * k, y, half);
         } else {
             for (float s = 0; s < fill; s += kSegment + kSegmentGap) {
@@ -136,8 +136,8 @@ void PerformanceLook::DrawBars(
     batch.Submit();
 }
 
-void PerformanceLook::DrawText(const PerformanceView& view, PerformanceTheme theme, float k) {
-    const int labelOpacity = theme == PerformanceTheme::kChrono ? kLabelOpacityChrono : kLabelOpacityOled;
+void PerformanceTheme::DrawText(const PerformanceView& view, ThemeChoice choice, float k) {
+    const int labelOpacity = choice == ThemeChoice::kChrono ? kLabelOpacityChrono : kLabelOpacityOled;
     const int labelPx = static_cast<int>(std::round(kLabelSize * k));
     const int valuePx = static_cast<int>(std::round(kValueSize * k));
     const int unitPx = static_cast<int>(std::round(kUnitSize * k));
@@ -199,7 +199,7 @@ void PerformanceLook::DrawText(const PerformanceView& view, PerformanceTheme the
     }
 }
 
-void PerformanceLook::Destroy() {
+void PerformanceTheme::Destroy() {
     for (int i = 0; i < PerformanceView::kCells; i++) {
         DestroyLabel(labels_[i]);
         DestroyLabel(values_[i]);

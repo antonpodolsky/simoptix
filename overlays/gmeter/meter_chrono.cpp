@@ -69,13 +69,13 @@ namespace {
 
 }
 
-void ChronoMeter::Tick(int size, double now) {
+void ChronoTheme::Tick(int size, double now) {
     base_.Build(size, size);
     glass_.Build(size, size);
     UpdateLabels(labels_, kLabels, now);
 }
 
-void ChronoMeter::Draw(const MeterView& m, MeterBatch& batch, std::vector<float>& v) {
+void ChronoTheme::Draw(const MeterView& m, MeterBatch& batch, std::vector<float>& v) {
     const float S = m.size, k = S / kBoard;
     const MeterDial dial = {k, S * 0.5f, S * 0.5f, kRing3G * k / kMaxG};
 
@@ -93,7 +93,7 @@ void ChronoMeter::Draw(const MeterView& m, MeterBatch& batch, std::vector<float>
     glass_.Draw();
 }
 
-void ChronoMeter::DrawValues(const MeterView& m, float k) {
+void ChronoTheme::DrawValues(const MeterView& m, float k) {
     // The highest G reached each way, in tabular figures placed by their advance (as the design's
     // tabular-nums text boxes), so their digits stay in place as they change: braking above,
     // acceleration below, right from x 364 and left up to x 116, all with their ink's middle on the line.
@@ -155,7 +155,7 @@ void ChronoMeter::DrawValues(const MeterView& m, float k) {
     );
 }
 
-void ChronoMeter::Destroy() {
+void ChronoTheme::Destroy() {
     for (MeterLabel& l : labels_) {
         DestroyLabel(l);
     }

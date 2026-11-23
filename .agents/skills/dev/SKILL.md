@@ -224,7 +224,9 @@ for the agents that read those files. Change the rules here, never in those file
   - VR Mirror's settings live in `vr_mirror\core\common\settings.h` and are walked with
     `VisitSettings`.
   - Settings that only one host uses stay in that host.
-  - Setting keys are saved in user scenes and config, so never rename them.
+  - Setting keys are saved in user scenes and config. A key that breaks "Consistency comes first"
+    (below) is renamed all the same, and no code reads the old one: a scene saved before keeps the
+    default for that setting.
 - **Logging.** Log state changes once, not every frame. Periodic stats go out at most every 10 s.
 - **Overlay size.** An overlay covers the same share of the canvas on every canvas size, so a canvas
   change leaves its size relative to the canvas as it was. Every overlay is sized the way the G-meter
@@ -323,6 +325,22 @@ for the agents that read those files. Change the rules here, never in those file
   Effort is not a criterion. If the correct solution is a lot of work, say so and do it.
 - When options are compared, judge them only on correctness, the user's request, the rules above, and
   measured results. Don't list an easier but worse option as the recommended one.
+
+## Consistency comes first
+
+Consistency outranks every other concern of naming and structure: a smaller change, a name that is
+already merged, and settings saved with an older name.
+- **One thing has one name, everywhere.** The same word in the code, its comments, the READMEs, the
+  skills, what OBS shows, the design system and the pull request. Chrono and OLED are themes in all of
+  them: the setting is Theme (key `theme`), and the code that draws one is a theme too (`MeterTheme`,
+  `PerformanceTheme`). No second word for the same thing, such as "look" beside "theme".
+- **One concept, one way.** Parts that do the same kind of job do it the same way, with the same names:
+  both overlays pick their theme with the same setting, the same choices and the same names in the
+  code.
+- **A new name follows the names already there.** When the name already there breaks the pattern,
+  don't copy it: rename it everywhere, in the same change.
+- **A rename is complete.** Search the whole repo for the old word and each form of it (types, files,
+  members, comments, docs, the build lists) and leave none, except where it means something else.
 
 ## Talk in plain words
 
@@ -574,7 +592,7 @@ Crash dumps go to `%LOCALAPPDATA%\simoptix`, and the newest 10 are kept. OBS log
 
 ## 4a. Take a design into the plugin
 
-`overlays\gmeter\design\` holds what the G-meter's looks are built from. Its README has the layers and
+`overlays\gmeter\design\` holds what the G-meter's themes are built from. Its README has the layers and
 the size, place and colour of every live part, per theme. `overlays\performance\design\` holds the
 performance overlay's in the same way: `perf.html` draws its layers (`#chrono-base`, `#chrono-glass`,
 `#oled-base`, rendered with `--window-size=312,164`), and its README has the live parts. The steps below
@@ -609,12 +627,12 @@ are the G-meter's, and apply to it the same way.
   install (steps 3 and 4). A new layer (another reflection, say) needs its own RCDATA line and its own
   `MeterImage` in its theme's header (`meter_chrono.h`, `meter_oled.h`). If the user picks it, it needs
   a setting too (`overlays\README.md` as well).
-- **The live parts are code.** Each theme's look draws them (`meter_chrono.cpp`, `meter_oled.cpp`) from
+- **The live parts are code.** Each theme draws them (`meter_chrono.cpp`, `meter_oled.cpp`) from
   constants in design pixels on the 480 px board, centre (240, 240), with angles clockwise from up (as
   in `meter_draw.h`). Keep those constants and the tables in `overlays\gmeter\design\README.md` the
   same, and change both together.
-- **A new theme** is drawn by a `MeterLook` (`meter_look.h`) in its own `meter_<theme>.h/.cpp`, with
-  its layers in the design folder. It adds one choice to the Theme list and one case in `MakeLook`
+- **A new theme** is a `MeterTheme` (`meter_theme.h`) in its own `meter_<theme>.h/.cpp`, with its
+  layers in the design folder. It adds one choice to the Theme list and one case in `MakeTheme`
   (`gmeter_source.cpp`), and its `.cpp` in `overlays\obs_plugin\build.bat`.
 - **Text** is drawn live and never put in an image, because it would be shrunk with the image and go
   soft. DirectWrite (`shared\text_raster.cpp`) rasterises it at the size shown. `meter_text.cpp` makes labels

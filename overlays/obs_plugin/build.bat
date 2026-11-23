@@ -6,7 +6,7 @@ rem (..\gmeter\gmeter_source.cpp: SimOptix: G-Meter Overlay, drawn by meter_chro
 rem meter_oled.cpp with meter_dot.cpp, its image layers embedded by gmeter.rc from its design folder)
 rem and the performance overlay
 rem (..\performance\performance_source.cpp: SimOptix: Performance Overlay, drawn by
-rem performance_look.cpp, its image layers embedded by performance.rc, the frame times it reads from
+rem performance_theme.cpp, its image layers embedded by performance.rc, the frame times it reads from
 rem ..\..\shared\performance). What any overlay uses is in ..\common: shapes
 rem (meter_draw.cpp), labels (meter_text.cpp, their text rasterised by ..\..\shared\text_raster.cpp with
 rem DirectWrite), image layers (meter_image.cpp), the box on the canvas (overlay_box.cpp) and the
@@ -44,7 +44,7 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_S
    /I..\..\third_party\obs-32.2.2\libobs %TELEMETRY_FLAGS% ^
    plugin.cpp %TELEMETRY_FILES% ..\..\shared\telemetry\demo_lap.cpp ^
    %G%\gmeter_source.cpp %G%\meter_chrono.cpp %G%\meter_oled.cpp %G%\meter_dot.cpp ^
-   %P%\performance_source.cpp %P%\performance_look.cpp %P%\performance_view.cpp ^
+   %P%\performance_source.cpp %P%\performance_theme.cpp %P%\performance_view.cpp ^
    ..\..\shared\performance\performance_reader.cpp ..\..\shared\performance\performance_reading.cpp ^
    %C%\meter_draw.cpp %C%\meter_text.cpp %C%\meter_image.cpp %C%\overlay_box.cpp ^
    %C%\properties_preview.cpp ..\..\shared\text_raster.cpp ^

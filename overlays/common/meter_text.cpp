@@ -282,15 +282,15 @@ namespace {
 void UpdateLabels(MeterLabel* labels, int count, double now) {
     for (int i = 0; i < count; i++) {
         MeterLabel& l = labels[i];
-        const bool look = l.text == l.shownText && l.size == l.shownSize && l.face == l.shownFace
-                          && l.opacity == l.shownOpacity && l.rgb == l.shownRgb
-                          && l.tracking == l.shownTracking && l.tabular == l.shownTabular;
+        const bool style = l.text == l.shownText && l.size == l.shownSize && l.face == l.shownFace
+                           && l.opacity == l.shownOpacity && l.rgb == l.shownRgb
+                           && l.tracking == l.shownTracking && l.tabular == l.shownTabular;
 
         const bool place = l.angle == l.shownAngle && l.anchor == l.shownAnchor
                            && std::fabs(l.centreX - l.shownCentreX) < 0.01f
                            && std::fabs(l.centreY - l.shownCentreY) < 0.01f;
 
-        if (look && place) {
+        if (style && place) {
             continue;
         }
         if (now - l.updated < 0.1) {

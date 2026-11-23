@@ -28,8 +28,8 @@ this out from the delay alone, not by looking at the view. Without VR Mirror the
 | Folder | What |
 |---|---|
 | `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources), the DLL's version resource (`version.rc`) and `build.bat` |
-| `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its two themes (Chrono in `meter_chrono.*`, OLED in `meter_oled.*`, each a `MeterLook`, `meter_look.h`), the dot both draw (`meter_dot.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
-| `performance\` | The performance overlay: the source (`performance_source.cpp`), its Chrono and OLED themes (`performance_look.*`), what each cell shows (`performance_view.*`), and its image layers, embedded by `performance.rc` from `design\`. The frame times it reads are in `shared\performance\` |
+| `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its two themes (`meter_theme.h`: Chrono in `meter_chrono.*`, OLED in `meter_oled.*`), the dot both draw (`meter_dot.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
+| `performance\` | The performance overlay: the source (`performance_source.cpp`), its Chrono and OLED themes (`performance_theme.*`), what each cell shows (`performance_view.*`), and its image layers, embedded by `performance.rc` from `design\`. The frame times it reads are in `shared\performance\` |
 | `common\` | What any overlay can reuse: shapes (`meter_draw.*`), labels (`meter_text.*`), image layers (`meter_image.*`), the box on the canvas that keeps an overlay drawn at its shown size and places a new one (`overlay_box.*`), and the 1:1 properties preview (`properties_preview.*`). Text is rasterised by `shared	ext_raster.*`, which VR Mirror uses too |
 
 The demo lap that the G-meter can play without the game is in `shared\telemetry\demo_lap.*`, beside the

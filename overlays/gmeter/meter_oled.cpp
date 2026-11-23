@@ -73,12 +73,12 @@ namespace {
 
 }
 
-void OledMeter::Tick(int size, double now) {
+void OledTheme::Tick(int size, double now) {
     base_.Build(size, size);
     UpdateLabels(labels_, kLabels, now);
 }
 
-void OledMeter::Draw(const MeterView& m, MeterBatch& batch, std::vector<float>& v) {
+void OledTheme::Draw(const MeterView& m, MeterBatch& batch, std::vector<float>& v) {
     const float S = m.size, k = S / kBoard;
     const MeterDial dial = {k, S * 0.5f, S * 0.5f, kRing3G * k / kMaxG};
 
@@ -101,7 +101,7 @@ void OledMeter::Draw(const MeterView& m, MeterBatch& batch, std::vector<float>& 
     DrawValues(m, k);
 }
 
-void OledMeter::DrawValues(const MeterView& m, float k) {
+void OledTheme::DrawValues(const MeterView& m, float k) {
     // The highest G reached each way, in tabular figures placed by their advance (as the design's
     // tabular-nums text boxes), so their digits stay in place as they change: braking above the display,
     // acceleration below it, right from x 400 and left up to x 80, all with their ink's middle on the line.
@@ -145,7 +145,7 @@ void OledMeter::DrawValues(const MeterView& m, float k) {
     }
 }
 
-void OledMeter::Destroy() {
+void OledTheme::Destroy() {
     for (MeterLabel& l : labels_) {
         DestroyLabel(l);
     }
