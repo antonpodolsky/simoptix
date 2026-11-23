@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Meter look: what every look of the G-meter does, so the source can draw any of them (the Meter type
+// Meter look: what every look of the G-meter does, so the source can draw any of them (the Theme
 // setting): build its images and labels for a size outside drawing, draw a MeterView, and free what it
 // holds on the GPU. The looks are ChronoMeter (meter_chrono.h) and OledMeter (meter_oled.h).
 //

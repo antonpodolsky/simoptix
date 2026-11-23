@@ -62,7 +62,7 @@ its number (`0.1.0`). Any other build adds the commits since that release and th
 ## G-Meter Overlay
 
 The G-meter is a friction circle (G-G meter) drawn from LMU's telemetry, like the in-car G-meters of
-Porsche's Sport Chrono or the Nissan GT-R. It has two looks, picked by its **Meter type**.
+Porsche's Sport Chrono or the Nissan GT-R. It has two looks, picked by its **Theme**.
 
 **Chrono** looks like a physical instrument:
 - a black bezel
@@ -104,7 +104,7 @@ plugin by `gmeter.rc`):
 
 The plugin scales each layer once to the source's size with a high-quality filter and draws it 1:1.
 Scaling takes about 20 ms on OBS's graphics thread, once, when the source is created, its size changes
-or its Meter type changes. The layers are 960 px, so the meter is sharpest up to that size.
+or its Theme changes. The layers are 960 px, so the meter is sharpest up to that size.
 
 The dot (with a glow), its tail, the bars and all the text are drawn live, over the base layer and
 under Chrono's glass. The text is the numbers and the 1G, 2G and 3G ring labels.
@@ -125,7 +125,7 @@ Rebuilding the four highest values and the live G at once takes 0.3–0.6 ms on 
 
 ### Properties
 
-- **Meter type:** **Chrono** or **OLED**, the look. Chrono is the default.
+- **Theme:** **Chrono** or **OLED**. Chrono is the default.
 - **Start demo / Stop demo:** the meter plays a made-up 12 s lap instead of the game's telemetry. It
   lets you see the meter or set it up without driving. The lap has:
   - full braking from about 2.4 s, with ABS at about 3 s
@@ -208,7 +208,7 @@ so they don't shift as the numbers change.
 
 ### Properties
 
-- **Theme:** **Chrono** or **OLED**.
+- **Theme:** **Chrono** or **OLED**. Chrono is the default.
 
 ### Placing it in a scene
 

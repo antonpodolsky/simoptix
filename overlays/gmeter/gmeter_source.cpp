@@ -10,7 +10,7 @@
 // Chrono (meter_chrono.h: a black bezel around a face under domed glass) and OLED (meter_oled.h: a
 // self-lit black display with dotted rings and segmented bars).
 //
-// Its properties hold only the meter type (the look) and the demo lap's button; the rest is
+// Its properties hold only the theme (the look) and the demo lap's button; the rest is
 // fixed here (the constants below). The dot moves the way the driver is pushed (braking: forward, a
 // left turn: right), as those in-car meters do. Drawn on OBS's frame clock from the telemetry of the
 // moment the view shows, lightly smoothed (raw acceleration is noisy over kerbs). Only holds
@@ -60,16 +60,16 @@ namespace {
     constexpr float kSmoothingS = 0.080f;
     constexpr float kTailS = 1;
 
-    // The looks, as the Meter type setting saves them ("chrono", "oled").
-    enum class MeterType { kChrono, kOled };
+    // The looks, as the Theme setting saves them ("chrono", "oled").
+    enum class GMeterTheme { kChrono, kOled };
 
-    MeterType MeterTypeOf(obs_data_t* settings) {
-        return strcmp(obs_data_get_string(settings, "meter_type"), "oled") == 0 ? MeterType::kOled
-                                                                                : MeterType::kChrono;
+    GMeterTheme ThemeOf(obs_data_t* settings) {
+        return strcmp(obs_data_get_string(settings, "theme"), "oled") == 0 ? GMeterTheme::kOled
+                                                                           : GMeterTheme::kChrono;
     }
 
-    std::unique_ptr<MeterLook> MakeLook(MeterType type) {
-        if (type == MeterType::kOled) {
+    std::unique_ptr<MeterLook> MakeLook(GMeterTheme theme) {
+        if (theme == GMeterTheme::kOled) {
             return std::make_unique<OledMeter>();
         }
 
@@ -104,9 +104,9 @@ namespace {
         Trail trail;
         float maxRight = 0, maxLeft = 0, maxForward = 0, maxBack = 0;  // highest G reached each way
         unsigned session = 0;  // driving session of the last sample: a new one resets the maxima
-        std::atomic<MeterType> wantedType{MeterType::kChrono};           // set from the settings (UI thread)
-        MeterType type = MeterType::kChrono;                             // graphics thread: the look's type
-        std::unique_ptr<MeterLook> look = MakeLook(MeterType::kChrono);  // graphics thread
+        std::atomic<GMeterTheme> wantedTheme{GMeterTheme::kChrono};  // set from the settings (UI thread)
+        GMeterTheme theme = GMeterTheme::kChrono;                    // graphics thread: the look's theme
+        std::unique_ptr<MeterLook> look = MakeLook(GMeterTheme::kChrono);  // graphics thread
         MeterBatch batch;  // everything drawn this frame, uploaded once
         // new telemetry each frame: sized once, so nothing is allocated per frame
         std::vector<CarSample> samples;
@@ -193,7 +193,7 @@ namespace {
     }
 
     void GetDefaults(obs_data_t* s) {
-        Guarded("defaults", [&] { obs_data_set_default_string(s, "meter_type", "chrono"); });
+        Guarded("defaults", [&] { obs_data_set_default_string(s, "theme", "chrono"); });
     }
 
     // UI thread: starts or stops the demo lap, and names the button for what it does next.
@@ -214,16 +214,16 @@ namespace {
                 static_cast<GMeter*>(data)->fitWanted = true;
             }
             obs_properties_t* p = obs_properties_create();
-            obs_property_t* type = obs_properties_add_list(
+            obs_property_t* theme = obs_properties_add_list(
                 p,
-                "meter_type",
-                "Meter type",
+                "theme",
+                "Theme",
                 OBS_COMBO_TYPE_LIST,
                 OBS_COMBO_FORMAT_STRING
             );
 
-            obs_property_list_add_string(type, "Chrono", "chrono");
-            obs_property_list_add_string(type, "OLED", "oled");
+            obs_property_list_add_string(theme, "Chrono", "chrono");
+            obs_property_list_add_string(theme, "OLED", "oled");
             obs_properties_add_button2(
                 p,
                 "demo",
@@ -238,7 +238,7 @@ namespace {
 
     // UI thread: the look the settings ask for, made by the graphics thread on its next tick (SwitchLook).
     void UpdateSettings(void* data, obs_data_t* settings) {
-        Guarded("update", [&] { static_cast<GMeter*>(data)->wantedType = MeterTypeOf(settings); });
+        Guarded("update", [&] { static_cast<GMeter*>(data)->wantedTheme = ThemeOf(settings); });
     }
 
     void* Create(obs_data_t* settings, obs_source_t* source) {
@@ -247,8 +247,8 @@ namespace {
             m->samples.resize(Telemetry::kRing);
             m->shapes.reserve(1 << 16);
             m->source = source;
-            m->wantedType = m->type = MeterTypeOf(settings);
-            m->look = MakeLook(m->type);
+            m->wantedTheme = m->theme = ThemeOf(settings);
+            m->look = MakeLook(m->theme);
             return m.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });
     }
@@ -279,11 +279,11 @@ namespace {
         static_cast<GMeter*>(data)->wanted = false;
     }
 
-    // Graphics thread: replaces the look when the Meter type changed, freeing the old one's textures. The
+    // Graphics thread: replaces the look when the Theme changed, freeing the old one's textures. The
     // new one builds its images and labels on this tick, before it is first drawn.
     void SwitchLook(GMeter* m) {
-        const MeterType wanted = m->wantedType;
-        if (wanted == m->type) {
+        const GMeterTheme wanted = m->wantedTheme;
+        if (wanted == m->theme) {
             return;
         }
 
@@ -292,8 +292,8 @@ namespace {
         obs_leave_graphics();
 
         m->look = MakeLook(wanted);
-        m->type = wanted;
-        CoreLog("G-Meter Overlay: meter type %s", wanted == MeterType::kOled ? "OLED" : "Chrono");
+        m->theme = wanted;
+        CoreLog("G-Meter Overlay: theme %s", wanted == GMeterTheme::kOled ? "OLED" : "Chrono");
     }
 
     // UI thread: one step of fitting the meter's Properties preview (properties_preview.h). Holds a

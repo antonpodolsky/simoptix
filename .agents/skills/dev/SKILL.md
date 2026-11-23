@@ -614,7 +614,7 @@ are the G-meter's, and apply to it the same way.
   in `meter_draw.h`). Keep those constants and the tables in `overlays\gmeter\design\README.md` the
   same, and change both together.
 - **A new look** is a `MeterLook` (`meter_look.h`) in its own `meter_<look>.h/.cpp`, with its layers
-  in the design folder. It adds one choice to the Meter type list and one case in `MakeLook`
+  in the design folder. It adds one choice to the Theme list and one case in `MakeLook`
   (`gmeter_source.cpp`), and its `.cpp` in `overlays\obs_plugin\build.bat`.
 - **Text** is drawn live and never put in an image, because it would be shrunk with the image and go
   soft. DirectWrite (`shared\text_raster.cpp`) rasterises it at the size shown. `meter_text.cpp` makes labels
