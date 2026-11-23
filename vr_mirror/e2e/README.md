@@ -222,7 +222,7 @@ measure the look-ahead made worse fails, beyond the spread of repeated runs of o
 | jitter ratio smoothed/head | 0.005, and never while the smoothed jitter is at most 0.005° |
 | recorded view jitter | 10% + 0.005° (repeated runs: within 0.003°) |
 | frames from the wrong pose | 40% + 0.3 points (Instant alone: 6.9–9.5% in `queued_late_frames`) |
-| max horizon tilt | 0.05° |
+| max horizon tilt | 2% + 0.05° (`black_borders`, whose head tilts 1.1° by design: up to 0.059° apart over repeated runs) |
 
 The rest is shown beside them: frame rates, delay and its spread, frame gaps, OBS repeats, lag,
 mismatch, on-screen jitter, pose error and edge limit. These differ by design (the delay, the lag) or
