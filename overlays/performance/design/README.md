@@ -34,7 +34,7 @@ boxes are. Its ink's middle is on the line given, measured on `perf.html#chrono-
 
 | Part | Spec |
 |---|---|
-| Label | FPS, GPU HR, CPU HR. Bahnschrift Regular 9 px, letter spacing 0.1 em. White at 60 % (Chrono), 40 % (OLED). Ink 55.5 to 62.0, middle 58.75 |
+| Label | FPS, GPU HR, CPU HR. Bahnschrift Regular 9 px, letter spacing 0.1 em. White at 85 % in both themes. Ink 55.5 to 62.0, middle 58.75 |
 | Reading | Bahnschrift SemiBold 20 px, white, tabular figures, whole numbers. The critical red when critical. Digits' ink 67.0 to 81.0, middle 74.0 |
 | % | After GPU HR and CPU HR, 1 px after the reading's advance. Bahnschrift Regular 11 px, the label's colour. Ink 73.0 to 81.0, middle 77.0 |
 | Bar fill | Over the track, the headroom over 100, clamped 0 to 1. Good `#3ddc84` from 10 %, warning `#ffb020` from 5 %, critical `#ff5a4e` below 5 %. OLED's is cut into the track's segments |
