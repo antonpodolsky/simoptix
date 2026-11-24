@@ -36,8 +36,8 @@ namespace {
     constexpr float kGood[3] = {0.239f, 0.863f, 0.518f};    // #3ddc84, the G-meter's throttle
     constexpr float kWarning[3] = {1.0f, 0.690f, 0.125f};   // #ffb020
     constexpr float kCritical[3] = {1.0f, 0.353f, 0.306f};  // #ff5a4e, the G-meter's brake
-    // The labels and the %: white at 60 % in Chrono, 40 % in OLED.
-    constexpr int kLabelOpacityChrono = 60, kLabelOpacityOled = 40;
+    // The labels and the %: white at 85 % in both themes, a shade darker than the readings.
+    constexpr int kLabelOpacity = 85;
 
     // HR: headroom.
     const char* const kLabelText[PerformanceView::kCells] = {"FPS", "GPU HR", "CPU HR"};
@@ -94,7 +94,7 @@ void PerformanceTheme::Draw(
 
     (chrono ? chronoBase_ : oledBase_).Draw();
     DrawBars(view, choice, k, batch, shapes);
-    DrawText(view, choice, k);
+    DrawText(view, k);
 
     if (chrono) {
         chronoGlass_.Draw();
@@ -136,8 +136,7 @@ void PerformanceTheme::DrawBars(
     batch.Submit();
 }
 
-void PerformanceTheme::DrawText(const PerformanceView& view, ThemeChoice choice, float k) {
-    const int labelOpacity = choice == ThemeChoice::kChrono ? kLabelOpacityChrono : kLabelOpacityOled;
+void PerformanceTheme::DrawText(const PerformanceView& view, float k) {
     const int labelPx = static_cast<int>(std::round(kLabelSize * k));
     const int valuePx = static_cast<int>(std::round(kValueSize * k));
     const int unitPx = static_cast<int>(std::round(kUnitSize * k));
@@ -154,7 +153,7 @@ void PerformanceTheme::DrawText(const PerformanceView& view, ThemeChoice choice,
             kLabelText[i],
             labelPx,
             RegularFace(labelPx),
-            labelOpacity,
+            kLabelOpacity,
             x,
             kLabelInkMiddleY * k,
             kInk,
@@ -188,7 +187,7 @@ void PerformanceTheme::DrawText(const PerformanceView& view, ThemeChoice choice,
                 "%",
                 unitPx,
                 RegularFace(unitPx),
-                labelOpacity,
+                kLabelOpacity,
                 x + values_[i].ink.advance + kUnitGap * k,
                 kUnitInkMiddleY * k,
                 kInk,

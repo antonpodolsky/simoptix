@@ -19,7 +19,7 @@
   --face-light: #1d2024;
   --face-dark: #0b0c0e;
   --ink: #ffffff;
-  --label-dim: rgba(255, 255, 255, 0.6);
+  --label-bright: rgba(255, 255, 255, 0.85);
   --track: rgba(255, 255, 255, 0.07);
   --axis: rgba(255, 255, 255, 0.06);
   --glass-soft: rgba(255, 255, 255, 0.16);
@@ -32,7 +32,6 @@
   --bezel-bottom: #000000;
   --face-light: #000000;
   --face-dark: #000000;
-  --label-dim: rgba(255, 255, 255, 0.4);
   --track: rgba(255, 255, 255, 0.1);
   --axis: rgba(255, 255, 255, 0.1);
   --glass-soft: rgba(255, 255, 255, 0);
@@ -61,9 +60,9 @@ body.preview #box { background: linear-gradient(180deg, #7f93a8 0%, #aab6c0 44%,
 .perf__face { position: relative; height: 100%; border-radius: var(--radius-perf-face); background: radial-gradient(120% 160% at 50% 20%, var(--face-light) 0%, var(--face-dark) 70%); box-shadow: var(--shadow-face); display: grid; grid-template-columns: repeat(3, 1fr); overflow: hidden; }
 .perf__cell { position: relative; }
 .perf__cell + .perf__cell::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 0.8px; background: var(--axis); }
-.perf__label { position: absolute; left: var(--space-cell-pad); top: 8px; font-size: 9px; line-height: 11px; letter-spacing: 0.1em; color: var(--label-dim); }
+.perf__label { position: absolute; left: var(--space-cell-pad); top: 8px; font-size: 9px; line-height: 11px; letter-spacing: 0.1em; color: var(--label-bright); }
 .perf__value { position: absolute; left: var(--space-cell-pad); top: 19px; font-size: 20px; line-height: 20px; font-weight: 600; font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums; }
-.perf__unit { font-size: 11px; font-weight: 400; color: var(--label-dim); margin-left: 1px; }
+.perf__unit { font-size: 11px; font-weight: 400; color: var(--label-bright); margin-left: 1px; }
 .perf__track { position: absolute; left: var(--space-cell-pad); right: var(--space-cell-pad); top: 45px; height: 3px; background: var(--track); }
 .perf__glass { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, var(--glass-soft) 0%, rgba(255, 255, 255, 0.06) 25%, rgba(255, 255, 255, 0) 50%); clip-path: ellipse(80% 45% at 50% 0%); filter: blur(1.5px); }
 [data-theme="oled"] .perf__track {

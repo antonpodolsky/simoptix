@@ -45,7 +45,7 @@ private:
         MeterBatch& batch,
         std::vector<float>& shapes
     );
-    void DrawText(const PerformanceView& view, ThemeChoice choice, float k);
+    void DrawText(const PerformanceView& view, float k);
 
     MeterImage chronoBase_{L"PERF_CHRONO_BASE"}, chronoGlass_{L"PERF_CHRONO_GLASS"};
     MeterImage oledBase_{L"PERF_OLED_BASE"};
