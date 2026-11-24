@@ -80,7 +80,10 @@ python -I aligned_diff.py "<recording>.mp4" 7:39.50 0.2 [--cockpit ... --road ..
 python -I frozen_check.py "<output folder>"
 ```
 
-- `moment.py` prints the trace's rows and the runtime's arrival rows, frame by frame.
+- `moment.py` prints the trace's rows and the frame source's rows, frame by frame. With the Pimax
+  source these are the runtime's arrival rows. With the OpenXR source they are the layer's rows of
+  the frames that became those game frames: when the game ended each frame, and the slot it was drawn
+  for.
 - `aligned_diff.py` says how much the road changed between frames once the cockpit is lined up: about
   1 on a frozen game frame, about 6 on a normal one, and double on a skipped one. Its default regions
   fit the car of the recordings analysed so far, at 2560x1440. Pick new ones for another car.
