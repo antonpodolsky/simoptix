@@ -6,8 +6,14 @@
 
 VR_MIRROR_DLL RCDATA "..\\vr_mirror\\obs_plugin\\bin\\simoptix_vr_mirror.dll"
 VR_MIRROR_MANIFEST RCDATA "..\\vr_mirror\\obs_plugin\\bin\\manifest.json"
+VR_MIRROR_ICON_VR_HEADSET_DARK RCDATA "..\\vr_mirror\\obs_plugin\\data\\icons\\vr_headset_dark.svg"
+VR_MIRROR_ICON_VR_HEADSET_LIGHT RCDATA "..\\vr_mirror\\obs_plugin\\data\\icons\\vr_headset_light.svg"
 OVERLAYS_DLL RCDATA "..\\overlays\\obs_plugin\\bin\\simoptix_overlays.dll"
 OVERLAYS_MANIFEST RCDATA "..\\overlays\\obs_plugin\\bin\\manifest.json"
+OVERLAYS_ICON_GMETER_DARK RCDATA "..\\overlays\\obs_plugin\\data\\icons\\gmeter_dark.svg"
+OVERLAYS_ICON_GMETER_LIGHT RCDATA "..\\overlays\\obs_plugin\\data\\icons\\gmeter_light.svg"
+OVERLAYS_ICON_PERFORMANCE_DARK RCDATA "..\\overlays\\obs_plugin\\data\\icons\\performance_dark.svg"
+OVERLAYS_ICON_PERFORMANCE_LIGHT RCDATA "..\\overlays\\obs_plugin\\data\\icons\\performance_light.svg"
 OPENXR_LAYER_DLL RCDATA "..\\vr_mirror\\frame_sources\\openxr\\bin\\XR_APILAYER_SIMOPTIX_frame_source.dll"
 OPENXR_LAYER_MANIFEST RCDATA "..\\vr_mirror\\frame_sources\\openxr\\bin\\XR_APILAYER_SIMOPTIX_frame_source.json"
 

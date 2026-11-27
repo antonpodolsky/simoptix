@@ -33,9 +33,9 @@ inline double AngleDeg(Vec3 a, Vec3 b) {
     return DirectionAngle(a, b) / kDeg;
 }
 
-// The angle of the rotation taking a to b in degrees (common/rot.h: RotationAngle).
+// The angle of the rotation taking a to b in degrees (common/rot.h: RotationAngleAtan2).
 inline double RotationDeg(const Quat& a, const Quat& b) {
-    return RotationAngle(a, b) / kDeg;
+    return RotationAngleAtan2(a, b) / kDeg;
 }
 
 inline Vec3 Forward(const Quat& q) {

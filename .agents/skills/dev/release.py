@@ -5,13 +5,14 @@ GitHub Release's notes. reference\release.md, beside this script, has the whole 
 
 The release is the version in version.txt. Its changes are the pull requests merged into the commits since
 the newest release tag (v<version>) before HEAD, on the first-parent line, so a patch branch gets only
-its own. Each pull request carries exactly one type label:
-  added, changed, fixed, removed, security   a change users notice. The lines of its description's
-                                              "Changelog" section go under that heading.
-  internal                                    a change only contributors notice. It is left out.
+its own. Each pull request carries exactly one type label, the labels issues take too:
+  feature, change, bug, deprecation,        a change users notice. The lines of its description's
+  removal, security                          "Changelog" section go under the label's heading (Added,
+                                             Changed, Fixed, Deprecated, Removed, Security).
+  documentation, maintenance                 a change only contributors notice. It is left out.
 The script refuses, and changes nothing, when a pull request has no type label or more than one, when
-a user-facing one has no Changelog lines or more than three, when an internal one has some, when no
-pull request has a change for users, or when CHANGELOG.md already has a section for this version.
+a user-facing one has no Changelog lines or more than three, when another one has some, when no pull
+request has a change for users, or when CHANGELOG.md already has a section for this version.
 Commits that came from no pull request are listed, and left out.
 
 Usage, from anywhere inside the repo:
@@ -28,9 +29,10 @@ Usage, from anywhere inside the repo:
                  number,title,body,labels,mergeCommit,url` wrote, instead of asking GitHub
   --notes        print the notes of the version in version.txt from CHANGELOG.md again, changing nothing
   --notes-file   also write the notes to this file, in UTF-8 (for `gh release create --notes-file`)
-  --check-pr     check one pull request's label and Changelog section as a release would, and print
-                 the lines a release takes from it, changing nothing. The checks on GitHub run it on
-                 each pull request
+  --check-pr     check one pull request's label and Changelog section as a release would, and that its
+                 title is type(scope): what changed with a type its label allows. Print the lines a
+                 release takes from it, changing nothing. The checks on GitHub run it on each pull
+                 request
 
 Asking GitHub needs the GitHub CLI (gh), signed in.
 """
@@ -49,14 +51,29 @@ VERSION_FILE = os.path.join(ROOT, "version.txt")
 
 # The headings of a release's section, in this order, by the label that puts a pull request there.
 TYPES = {
-    "added": "Added",
-    "changed": "Changed",
-    "fixed": "Fixed",
-    "removed": "Removed",
+    "feature": "Added",
+    "change": "Changed",
+    "bug": "Fixed",
+    "deprecation": "Deprecated",
+    "removal": "Removed",
     "security": "Security",
 }
-INTERNAL = "internal"
+# The labels of changes only contributors notice. Their pull requests are left out.
+INTERNAL = ("documentation", "maintenance")
 MAX_ENTRIES = 3
+
+# The Conventional Commits types a pull request's title may start with, by its label.
+TITLE_TYPES = {
+    "feature": ("feat",),
+    "change": ("feat", "perf", "docs"),
+    "bug": ("fix",),
+    "deprecation": ("feat",),
+    "removal": ("feat", "refactor"),
+    "security": ("fix",),
+    "documentation": ("docs",),
+    "maintenance": ("refactor", "test", "build", "ci", "chore", "perf", "style"),
+}
+TITLE_FORM = re.compile(r"^([a-z]+)\(([a-z0-9_.-]+)\): \S")
 
 # gh lists at most this many pull requests. More than that since one release means the list was cut.
 PR_LIMIT = 1000
@@ -222,16 +239,18 @@ def collect_entries(prs):
         labels = [
             label["name"]
             for label in pr.get("labels", [])
-            if label["name"] in TYPES or label["name"] == INTERNAL
+            if label["name"] in TYPES or label["name"] in INTERNAL
         ]
         lines = changelog_lines(pr.get("body"))
         found, bad_line = entries_of(lines or [])
 
         if len(labels) != 1:
-            problems.append(f"{name}: needs exactly one of the labels {', '.join(list(TYPES) + [INTERNAL])}")
-        elif labels[0] == INTERNAL:
+            problems.append(
+                f"{name}: needs exactly one of the labels {', '.join(list(TYPES) + list(INTERNAL))}"
+            )
+        elif labels[0] in INTERNAL:
             if found or bad_line:
-                problems.append(f"{name}: is labelled internal, but its Changelog section has text")
+                problems.append(f"{name}: is labelled {labels[0]}, but its Changelog section has text")
         elif bad_line:
             problems.append(f"{name}: its Changelog section has {bad_line}")
         elif not found:
@@ -348,10 +367,33 @@ def make_release(args):
     print(f"## [{version}] - {args.date}\n\n{notes}", end="")
 
 
+def title_problems(pr):
+    """The problems of a pull request's title: the form type(scope): what changed, and a type its label allows."""
+    name = f"#{pr['number']} {pr['title']}"
+    match = TITLE_FORM.match(pr["title"])
+
+    if not match:
+        return [f"{name}: the title must be type(scope): what changed, such as fix(telemetry): ..."]
+
+    # A wrong number of type labels is collect_entries' problem. The type is checked against one label.
+    labels = [label["name"] for label in pr.get("labels", []) if label["name"] in TITLE_TYPES]
+
+    if len(labels) != 1:
+        return []
+
+    allowed = TITLE_TYPES[labels[0]]
+
+    if match.group(1) not in allowed:
+        return [f"{name}: the label {labels[0]} takes a title of type {', '.join(allowed)}"]
+
+    return []
+
+
 def check_pull_request(number):
     """Checks one pull request's label and Changelog section the way a release will."""
     pr = json.loads(run(["gh", "pr", "view", str(number), "--json", "number,title,body,labels"]))
     entries, problems = collect_entries([pr])
+    problems += title_problems(pr)
 
     if problems:
         raise ReleaseError("A release would refuse this pull request:\n  " + "\n  ".join(problems))

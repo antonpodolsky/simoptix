@@ -8,13 +8,15 @@
 // grey. Meanwhile it reads what the layer publishes, as VR Mirror does, on a device of its own
 // (openxr_check_copies.h): every frame's record must hold what was submitted, nearly every frame's image
 // must be copied, and every copy read back must show its own frame; the layer's clock reading must match the
-// runtime's conversion. The layer only wakes up in a program called "Le Mans Ultimate.exe", which is why
-// build.bat gives this program that name. It is not the game and touches no game file. Then read the
-// layer's log it names at the end, the newest %LOCALAPPDATA%\simoptix\openxr_frame_source_<time>.log: it
-// should hold the runtime, the session, both swapchains, the frame layout, the frame source's lines and no
-// errors. If the headset isn't ready (asleep, Pimax Play
-// closed), the session never starts its frames; the check says so and still makes and destroys everything
-// else.
+// runtime's conversion. It also reads the frame times the layer gives the performance overlay, as the
+// overlay does (shared\performance\performance_reader.h): after the first seconds of frames, the frame
+// rate, the target and both the CPU and the GPU time must be known. The layer only wakes up in a program
+// called "Le Mans Ultimate.exe", which is why build.bat gives this program that name. It is not the game and
+// touches no game file. Then read the layer's log it names at the end, the newest
+// %LOCALAPPDATA%\simoptix\openxr_frame_source_<time>.log: it should hold the runtime, the session, both
+// swapchains, the frame layout, the frame source's lines and no errors. If the headset isn't ready (asleep,
+// Pimax Play closed), the session never starts its frames; the check says so and still makes and destroys
+// everything else.
 //
 // Usage: "Le Mans Ultimate.exe" [--loader <path to openxr_loader.dll>] [--frames <count>] [--installed]
 // (--frames 1100 runs past the layer's first 10 s frame-rate and frame source lines. --installed checks
@@ -31,11 +33,15 @@
 #include "openxr_check_copies.h"
 #include "openxr_d3d11.h"
 #include "shared/local_files.h"
+#include "shared/performance/performance_reader.h"
 
 namespace {
 
     constexpr int64_t kGameFormat = 29;  // DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, what LMU asks for
     constexpr int kDefaultFrames = 450;  // five seconds at 90 Hz (the layer makes its textures in the first)
+    // Frames before the performance reading must be known: the layer starts timing at the reader's first
+    // sign, and a reading comes once a second (three seconds at 90 Hz).
+    constexpr int kPerformanceFrames = 270;
 
     PFN_xrGetInstanceProcAddr g_gipa = nullptr;
     int g_failures = 0;
@@ -413,7 +419,32 @@ namespace {
         return true;
     }
 
+    // The last reading the performance overlay would show.
+    void ReportPerformance(const PerformanceReading& r, int framesEnded) {
+        printf(
+            "  performance: %s, %d fps of %.1f, CPU %s %.2f ms (headroom %d%%), GPU %s %.2f ms (headroom "
+            "%d%%)\n",
+            r.known ? "read" : "no reading",
+            r.fps,
+            r.targetFps,
+            r.cpuKnown ? "known" : "unknown",
+            r.cpuMs,
+            r.cpuHeadroom,
+            r.gpuKnown ? "known" : "unknown",
+            r.gpuMs,
+            r.gpuHeadroom
+        );
+
+        const bool complete = r.known && r.fps > 0 && r.targetFps > 0 && r.cpuKnown && r.gpuKnown;
+
+        if (framesEnded >= kPerformanceFrames && !complete) {
+            printf("  performance: FAILED: the frame rate, target, CPU and GPU time should all be known\n");
+            g_failures++;
+        }
+    }
+
     void RunFrames(const Run& run, int frameCount, OpenXrCheckCopies& copies) {
+        PerformanceReader performance;
         int framesEnded = 0;
         if (!WaitForState(run.instance, run.pollEvent, XR_SESSION_STATE_READY, 5.0)) {
             printf(
@@ -437,7 +468,10 @@ namespace {
             }
             framesEnded++;
             copies.Poll();
+            performance.Read();
         }
+
+        ReportPerformance(performance.Read(), framesEnded);
 
         printf("  frames ended: %d of %d\n", framesEnded, frameCount);
         for (int i = 0; i < 20; i++) {  // the last copies' markers are only checked at later frames

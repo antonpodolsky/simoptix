@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Anton Podolsky -->
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>G-meter OLED static layer</title>
+<style>
+html, body { margin: 0; background: transparent; }
+/* The OLED theme's one layer, .base: the display, the rings, the centre point and the empty pedal
+   tracks. The plugin draws the live parts on top; there is no glass. #preview shows it over a
+   backdrop, for checking only. */
+#board { width: 480px; height: 480px; position: relative; overflow: hidden; }
+body.preview #board { background: linear-gradient(180deg, #7f93a8 0%, #aab6c0 44%, #6a6e72 45%, #3c3f43 100%); }
+.display { position: absolute; left: 90px; top: 90px; width: 300px; height: 300px; border-radius: 50%; background: #000000; box-shadow: inset 0 0 0 1px #1f1f1f, 0 0 0 5px rgba(0,0,0,0.28), 0 12px 30px rgba(0,0,0,0.4); }
+svg { position: absolute; left: 40px; top: 40px; overflow: visible; }
+.dots { fill: none; stroke: #ffffff; stroke-opacity: 0.45; stroke-width: 1.8; stroke-linecap: round; }
+.outer { fill: none; stroke: #ffffff; stroke-opacity: 0.6; stroke-width: 1; }
+.centre { fill: #ffffff; fill-opacity: 0.5; }
+/* 40 whole segments per 110 deg arc */
+.track { fill: none; stroke: #ffffff; stroke-opacity: 0.1; stroke-width: 7; stroke-dasharray: 4.9378 1.9751; }
+</style>
+</head>
+<body>
+<div id="board">
+<div class="display"></div>
+<svg viewBox="0 0 400 400" width="400" height="400" aria-hidden="true">
+<!-- 1G and 2G: 47 and 95 round dots, evenly spaced all the way round. -->
+<circle class="dots" cx="200" cy="200" r="45.3" style="stroke-dasharray: 0.01 6.0459"></circle>
+<circle class="dots" cx="200" cy="200" r="90.7" style="stroke-dasharray: 0.01 5.9888"></circle>
+<circle class="outer" cx="200" cy="200" r="136"></circle>
+<circle class="centre" cx="200" cy="200" r="1.6"></circle>
+<!-- Tracks: r 143; brake drawn from 215 deg clockwise to 325, throttle from 145 back to 35. The plugin's
+     bars start where these start, with the same 4.9378 on, 1.9751 off, so their segments land on the
+     tracks'. The ends are exact to 0.0001 (rounded to 0.1, the arc spans 109.95 deg), and pathLength
+     is the pattern's length, 40 x 4.9378 + 39 x 1.9751, so the dashes are spread over the arc as drawn
+     and its last segment is whole. -->
+<path class="track" pathLength="274.5409" d="M117.9786 317.1387A143 143 0 0 1 117.9786 82.8613"></path>
+<path class="track" pathLength="274.5409" d="M282.0214 317.1387A143 143 0 0 0 282.0214 82.8613"></path>
+</svg>
+</div>
+<script>
+document.body.className = (location.hash || '#preview').slice(1);
+</script>
+</body>
+</html>

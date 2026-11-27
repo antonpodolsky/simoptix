@@ -4,7 +4,8 @@
 #   SimOptixSetup-<version>.exe        SimOptix Setup, which carries both plugins and the layer
 #   SimOptixOBSPlugins-<version>.zip   both plugins, laid out as in OBS's plugin folder,
 #                                      C:\ProgramData\obs-studio\plugins: <name>\bin\64bit\<name>.dll
-#                                      and <name>\data\manifest.json
+#                                      and <name>\data\manifest.json, with the sources' icons in
+#                                      <name>\data\icons
 #   SimOptixOpenXRLayer-<version>.zip  the layer and its manifest in bin\, beside install.ps1,
 #                                      uninstall.ps1 and uninstall.bat, which install it from there
 # Refuses when a file's version isn't exactly the one in version.txt (a build off the release tag, or with
@@ -55,9 +56,11 @@ $pluginsFolder = Join-Path $staging 'obs_plugins'
 foreach ($name in $plugins.Keys) {
     $binFolder = Join-Path $pluginsFolder "$name\bin\64bit"
     $dataFolder = Join-Path $pluginsFolder "$name\data"
-    New-Item -ItemType Directory -Force $binFolder, $dataFolder | Out-Null
+    $iconsFolder = Join-Path $dataFolder 'icons'
+    New-Item -ItemType Directory -Force $binFolder, $iconsFolder | Out-Null
     Copy-Item (Join-Path $plugins[$name] "$name.dll") $binFolder
     Copy-Item (Join-Path $plugins[$name] 'manifest.json') $dataFolder
+    Copy-Item (Join-Path $plugins[$name] '..\data\icons\*.svg') $iconsFolder
 }
 
 $layerFolder = Join-Path $staging 'openxr_layer'

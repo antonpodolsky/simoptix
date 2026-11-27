@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The few Windows-specific OpenXR declarations the layer and its check program use: the D3D11 binding
+// The few Windows-specific OpenXR declarations the layer, its check program and the test game (game\)
+// use: the D3D11 binding
 // (XR_KHR_D3D11_enable) and the performance-counter time conversion
 // (XR_KHR_win32_convert_performance_counter_time). They live in openxr_platform.h, which
 // third_party\openxr doesn't carry; these have the same layout and values as the specification's.

@@ -37,6 +37,24 @@ namespace {
         return WritePartFile(part.manifestResource, manifestPath, error);
     }
 
+    // Each in its folder inside the plugin's data folder (data\icons for the icons).
+    bool WriteDataFiles(const Part& part, std::wstring* error) {
+        for (size_t i = 0; i < part.dataFileCount; ++i) {
+            const DataFile& file = part.dataFiles[i];
+            const std::wstring path = PluginDataFilePath(part, file);
+
+            if (!CreateFolders(path.substr(0, path.find_last_of(L'\\')), error)) {
+                return false;
+            }
+
+            if (!WritePartFile(file.resource, path, error)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // The plugin's DLL in the layout the OBS found doesn't use, which OBS would load twice or flag.
     bool RemoveOtherLayout(const Part& part, PluginLayout layout, std::wstring* error) {
         if (layout == PluginLayout::kFlat) {
@@ -63,6 +81,10 @@ namespace {
         }
 
         if (!WritePartFiles(part, dll, PluginManifestPath(part), error)) {
+            return false;
+        }
+
+        if (!WriteDataFiles(part, error)) {
             return false;
         }
 

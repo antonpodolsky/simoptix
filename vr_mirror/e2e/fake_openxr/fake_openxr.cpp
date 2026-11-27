@@ -24,7 +24,9 @@
 //    the frame begins, while another ends the frames, and the runtime holds each xrEndFrame until the
 //    frame's vsync. So the next frame's image is released while the frame before is still in xrEndFrame.
 //    Both threads use the device's one context, protected for that as a game must. `drop_rate` and
-//    `queue_lag` don't apply.
+//    `queue_lag` don't apply, and the frames aren't timed for the performance overlay.
+//  - Without the render thread, the frames are timed for the performance overlay while it reads, as the
+//    layer times the game's: each frame waits for its beginning in xrWaitFrame and begins right after.
 //  - Stalls (`stall_every_s`, `stall_ms`, with the render thread): that often, a frame takes that much
 //    longer to draw. It ends late for the slot it was drawn for, the frames due meanwhile never come,
 //    and the next frame follows it at once.
@@ -301,7 +303,7 @@ namespace {
             if (delta.w < 0) {
                 delta = {-delta.x, -delta.y, -delta.z, -delta.w};
             }
-            const float angle = static_cast<float>(RotationAngle(prev, q));
+            const float angle = static_cast<float>(RotationAngleAtan2(prev, q));
             const float s = std::sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
             if (angle < 1e-7f || s < 1e-7f) {
                 return q;
@@ -443,11 +445,20 @@ namespace {
                 double end = vsync + config_.arrivalPhaseMs / 1000 + jitter(rng) + (lag > 0 ? 0.004 : 0);
                 end = std::clamp(end, vsync - 0.95 * lead, vsync + 0.4 * period_);
 
-                WaitUntil(begin);
-                const Quat head = Predicted(begin, target);
+                // A frame drawn is held in xrWaitFrame until it is drawn, as a runtime holds a game, so its
+                // CPU time is the drawing's.
                 const bool drop = uniform(rng) < config_.dropRate;
+                layer_.WaitFrame([begin, end, drop] {
+                    WaitUntil(begin);
+
+                    if (!drop) {
+                        WaitUntil(end - 0.0015);
+                    }
+                });
+
+                const Quat head = Predicted(begin, target);
                 if (!drop) {
-                    WaitUntil(end - 0.0015);
+                    layer_.BeginFrame();
                     Draw(layer_.Acquire(), head, target - start_);
                     layer_.Release();
                     layer_.EndFrame(FrameEndOf(head, target), [end] { WaitUntil(end); });
