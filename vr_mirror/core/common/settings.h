@@ -14,6 +14,9 @@ struct MirrorSettings {
     // it is), Instant (a filter, no delay) or Look-ahead (the view runs half a second behind the game,
     // and the smoothing sees that far ahead).
     int smoothing = kSmoothingLookahead;
+    // How strong the smoothing is: 1 each smoothing's own tuning, above 1 calmer (the view follows the head
+    // less closely), below 1 closer (Smoothing::SetStrength).
+    float strength = 1;
     float zoom = 1.5f;  // crop factor; the spare image around the view is how far it may trail the head
     // The drawn pose stage's method (vr_mirror\core\pipeline\2_drawn_pose\): 0 off, every frame keeps
     // the slot its arrival timing gives it; 1 the slot check: judge from small images whether each game
@@ -32,6 +35,7 @@ inline bool Stabilizes(const MirrorSettings& s) {
 template <class F>
 void VisitSettings(MirrorSettings& s, F&& f) {
     f("smoothing", s.smoothing);
+    f("smoothing_strength", s.strength);
     f("zoom", s.zoom);
     f("drawn_pose", s.drawnPose);
 }

@@ -1,7 +1,8 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Text raster: one line of text rasterised by DirectWrite into a coverage bitmap (0-255 per pixel), for
-// the meter's labels (meter_text.h). Grayscale anti-aliasing (no ClearType: its colour fringes don't
+// the G-meter's labels (overlays\common\meter_text.h) and VR Mirror's empty state
+// (vr_mirror\obs_plugin\empty_state.h). Grayscale anti-aliasing (no ClearType: its colour fringes don't
 // survive video encoding), outlines grid-fitted vertically when the text is upright (horizontal strokes
 // and the tops and bottoms of letters land on whole pixels; horizontally the text keeps its exact
 // position), the font's own tabular figures, letter spacing, and any rotation applied while

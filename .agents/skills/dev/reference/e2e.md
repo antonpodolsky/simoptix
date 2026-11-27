@@ -24,8 +24,8 @@ It runs every scenario. Name some to run only those (`e2e_runner.exe stabilizati
 list them with `--list`. A name that matches no scenario stops the run with exit code 2.
 
 - Each scenario opens a small window (320×180) on top of everything, for about 15 s.
-- With every scenario at both smoothings, that is 38 runs. They took 558 s (about 9 minutes) in
-  run 8 (`reference\e2e_results.md`).
+- With every scenario at both smoothings, that is 40 runs. They took 594 s (about 10 minutes) in
+  run 17 (`reference\e2e_results.md`).
 - Don't use the PC meanwhile. For consistent timing, close LMU, the mirror app, Pimax Play and other
   heavy apps first.
 - A run stopped midway (Ctrl+C, or its window closed) ends the mirror app and the fake game it started
@@ -111,7 +111,7 @@ the same numbers.
 ### The whole pipeline: `--pipeline`
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --pipeline [--smoothing instant --drawn_pose cockpit ...] [--zoom 1.2] [--ticks 60] [--input NAME ...] [--replay FILE ...] [--eye L,R,U,D] [--dump FILE]
+vr_mirror\e2e\bin\stage_replay.exe --pipeline [--smoothing instant --drawn_pose cockpit ...] [--zoom 1.2] [--strength 1.5] [--ticks 60] [--input NAME ...] [--replay FILE ...] [--eye L,R,U,D] [--dump FILE]
 ```
 
 It runs the whole pipeline with any mix of stages. The settings' configuration (Look-ahead, the slot
@@ -126,7 +126,7 @@ check) applies, with any stage replaced by its flag, named after the config's fi
 | `--warp` | `rotation` |
 | `--observer` | `none`, `stamp_trace` |
 
-- `--zoom Z` sets the zoom.
+- `--zoom Z` sets the zoom, and `--strength S` the smoothing's strength (1 by default).
 - The run draws as the mirror app's window, or with `--ticks HZ` as the OBS plugin's ticks, with the
   frames picked by the frame picker.
 - It runs over the replays and motions. `--input NAME` picks some.
@@ -170,8 +170,11 @@ pose, the view and image pose, and the edge counters. It runs over a fixed matri
   plugin's 60 Hz ticks (each tick's own moment, with an older frame standing in as the image, which e2e
   never sees)
 - then single runs with stabilization switched off and on
+- then strength 0, nothing smoothed, at zoom 1.2: on `queued_late_frames`, whose ticks show an older
+  image standing in, and on `edge_test+heartbeat`, whose fast turns reach the image's edges, at both
+  smoothings and as both hosts
 
-That is 52 runs and about 26 MB.
+That is 60 runs and about 29 MB.
 
 **Refactor guard.** A change that must not change behaviour (moving code, splitting the pipeline into
 stages) must reproduce the build before it byte for byte. Write `golden_main.txt` with that build, then

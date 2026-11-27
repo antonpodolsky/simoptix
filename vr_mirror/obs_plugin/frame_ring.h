@@ -12,10 +12,11 @@
 // only if a tick will show it (or after two display periods without a next one). It marks
 // a slot ready once the GPU has finished the copy (an event query read with DONOTFLUSH: it never waits
 // on the GPU), and feeds each frame's images to the pipeline's drawn pose (DrawnPoseFeed), which the
-// graphics thread then asks for the pose each frame was drawn with. OBS's graphics thread reads the
-// slots with Snapshot and opens their shared textures on OBS's device. Shrinking (SetSlotCount) keeps
-// the most recently copied entries, compacted to the new size, because the ring overwrites by index
-// and the newest entry's index can be anywhere once it has wrapped (ShrinkTo).
+// graphics thread then asks for the pose each frame was drawn with. While auto sync measures
+// (SetGreyCopies), it also makes a small grey copy of each frame it copies, and keeps the newest.
+// OBS's graphics thread reads the slots with Snapshot and opens their shared textures on OBS's device.
+// Shrinking (SetSlotCount) keeps the most recently copied entries, compacted to the new size, because the
+// ring overwrites by index and the newest entry's index can be anywhere once it has wrapped (ShrinkTo).
 //
 // Knows nothing about OBS (no libobs calls, no settings, no drawing), nor which frame source runs.
 #pragma once
@@ -35,6 +36,8 @@
 #include "adapters/d3d/drawn_pose_feed.h"
 #include "adapters/d3d/frame_copy.h"
 #include "adapters/d3d/frame_source.h"
+#include "adapters/d3d/thumbnail.h"
+#include "auto_sync/grey_frame.h"
 #include "pipeline/3_frame_picker/frame_picker.h"
 #include "shared/unique_handle.h"
 
@@ -73,6 +76,9 @@ public:
     void SetTickRecord(const TickRecord& record);
     // Frames not copied since the last call: the forecast said no tick will show them.
     int TakeSkippedCopies() { return skipped_.exchange(0); }
+    // How many times the game's frames have started again after kStartGapS or more without one (a restart of
+    // the game or of its VR session), while the ring ran. Any thread.
+    uint64_t FrameStarts() const { return frameStarts_.load(); }
 
     // Creates the copy device on the game's adapter and starts the copy thread.
     bool Start(FrameSource* source);
@@ -82,6 +88,9 @@ public:
     // Copies all kMaxSlots entries into `out` (nothing allocated); those beyond the slots in use are
     // never valid.
     void Snapshot(SlotInfo out[kMaxSlots]);
+    // Signalled (auto-reset) when copies are finished, for one waiter (the recorded lap's recorder). Kept
+    // across Stop and Start.
+    HANDLE CopiedEvent() const { return copiedEvent_.Get(); }
     // Graphics thread: use `count` slots (4 to kMaxSlots) from the next copy on (more: made as they are
     // first used); the copy thread frees the textures of the others. The caller should close its own
     // handles to them too, or their memory stays allocated.
@@ -96,6 +105,13 @@ public:
         statLookTime_ = {};
         return t;
     }
+
+    // Any thread: start or stop making a grey copy of each frame copied (auto_sync\auto_sync.h).
+    void SetGreyCopies(bool on) { greysOn_ = on; }
+    // Any thread: the grey copies of the frames that arrived between `from` and `to` (de-jittered
+    // arrival, source time), oldest first, into `out`, with their times on that clock. The newest
+    // kGreyKept are kept.
+    void CopyGreys(double from, double to, std::vector<GreyFrame>* out);
 
     // Copy-thread passes since the last call, and the timestamp-counter cycles the copy thread has
     // run so far (thread_cpu.h; 0 while stopped). Call from the thread that calls Start and Stop.
@@ -114,6 +130,8 @@ private:
     void Look();
     void TakeNewDrawnPose();
     bool CheckCopies();
+    void MakeGrey(int slot, const GameFrame& f);
+    void ReadGreys();
 
     FrameSource* source_ = nullptr;
     Microsoft::WRL::ComPtr<ID3D11Device> device_;
@@ -128,6 +146,7 @@ private:
     int next_ = 0;
     uint32_t generation_ = 0;
     UniqueHandle wake_;
+    UniqueHandle copiedEvent_{CreateEventW(nullptr, FALSE, FALSE, nullptr)};
     CallStats statLookTime_;                 // the drawn pose's time, for the 10 s stats (mutex_)
     std::atomic<int> wakeups_{0};            // copy-thread passes, for the 10 s stats
     std::atomic<int> wantSlots_{kMaxSlots};  // SetSlotCount
@@ -143,10 +162,25 @@ private:
     bool hasPrevious_ = false;                // copy thread
     bool held_ = false;                       // copy thread: previous_ is held, not copied yet
     std::atomic<int> skipped_{0};             // TakeSkippedCopies
+    std::atomic<uint64_t> frameStarts_{0};    // FrameStarts (the copy thread counts)
     std::mutex recordMutex_;
     std::unique_ptr<ShowForecast> nextForecast_;  // SetForecast's, until the copy thread takes it
     bool hasNextForecast_ = false;                // recordMutex_
     TickRecord nextRecord_;                       // the newest record set (recordMutex_)
+
+    static constexpr int kGreyKept = 64, kGreysPending = 8;
+    struct GreyPending {
+        int64_t ticket = -1;
+        double time = 0;
+        Quat pose;
+    };
+    std::atomic<bool> greysOn_{false};
+    Thumbnailer greys_;                        // copy thread
+    GreyPending greysPending_[kGreysPending];  // copy thread: copies waiting for the GPU, oldest first
+    int greysPendingCount_ = 0;                // copy thread
+    std::mutex greyMutex_;
+    GreyFrame greysKept_[kGreyKept];  // greyMutex_: the newest grey copies, a ring
+    int greyNext_ = 0;                // greyMutex_
 
     std::thread thread_;
     std::atomic<bool> running_{false};

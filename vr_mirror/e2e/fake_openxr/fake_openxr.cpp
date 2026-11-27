@@ -24,10 +24,19 @@
 //    the frame begins, while another ends the frames, and the runtime holds each xrEndFrame until the
 //    frame's vsync. So the next frame's image is released while the frame before is still in xrEndFrame.
 //    Both threads use the device's one context, protected for that as a game must. `drop_rate` and
-//    `queue_lag` don't apply.
+//    `queue_lag` don't apply, and the frames aren't timed for the performance overlay.
+//  - Without the render thread, the frames are timed for the performance overlay while it reads, as the
+//    layer times the game's: each frame waits for its beginning in xrWaitFrame and begins right after.
 //  - Stalls (`stall_every_s`, `stall_ms`, with the render thread): that often, a frame takes that much
 //    longer to draw. It ends late for the slot it was drawn for, the frames due meanwhile never come,
 //    and the next frame follows it at once.
+//  - A recording, for auto sync's e2e test (`plan`): a cut of a real recording of LMU's menus (`menu_cut`:
+//    its folder) played on the plan, each frame drawn from the camera it was recorded from
+//    (fake_openxr_recording.h). The plan starts once the event named by `start_event` is set, or at once
+//    without one. The menu cut's sound (`menu_sound`, mono 32-bit floats at `menu_sound_rate`, its first
+//    sample `menu_sound_after` seconds after the plan's start) plays through Windows' default output device
+//    `menu_sound_lag_ms` late (fake_openxr_sound.h). Once the event named by `restart_event` is set, the
+//    game restarts: its frames and sound stop for `restart_s`, and the cut plays again from its start.
 //
 // Configuration: the file named by SIMOPTIX_FAKE_OPENXR_SCENARIO (key=value lines). Its log (key `log`) has
 // the true head motion and every frame drawn, in fake_pvr's format, so the runner measures both fakes
@@ -56,6 +65,8 @@
 #include "fake_game_image.h"
 #include "fake_game_motion.h"
 #include "fake_openxr_layer.h"
+#include "fake_openxr_recording.h"
+#include "fake_openxr_sound.h"
 #include "shared/unique_handle.h"
 
 using Microsoft::WRL::ComPtr;
@@ -102,7 +113,7 @@ namespace {
     constexpr float kDegToRad = 0.017453293f;
 
     struct Config {
-        std::string motion = "still", log, stopEvent;
+        std::string motion = "still", log, stopEvent, startEvent, restartEvent;
         double refreshHz = 90;
         double slotStepLeadMs = 1.0;
         double arrivalPhaseMs = 0.2;
@@ -116,6 +127,10 @@ namespace {
         double stallEveryS = 0;  // 0: no stalls
         double stallMs = 64;
         int width = 5084, height = 4168;
+        RecordingPlayback::Settings recording;  // no plan: no recordings
+        std::string menuSound;                  // empty: silent
+        double menuSoundAfter = 0, menuSoundLagMs = 0, menuSoundRate = 48000;
+        double restartS = 3;
 
         bool Load() {
             char path[MAX_PATH] = {};
@@ -151,6 +166,12 @@ namespace {
             if (kv.count("stop_event")) {
                 stopEvent = kv["stop_event"];
             }
+            if (kv.count("start_event")) {
+                startEvent = kv["start_event"];
+            }
+            if (kv.count("restart_event")) {
+                restartEvent = kv["restart_event"];
+            }
 
             refreshHz = num("refresh_hz", refreshHz);
             slotStepLeadMs = num("slot_step_lead_ms", slotStepLeadMs);
@@ -166,6 +187,13 @@ namespace {
             stallMs = num("stall_ms", stallMs);
             width = int(num("width", width));
             height = int(num("height", height));
+            recording.menuCut = kv.count("menu_cut") ? kv["menu_cut"] : "";
+            recording.plan = kv.count("plan") ? kv["plan"] : "";
+            menuSound = kv.count("menu_sound") ? kv["menu_sound"] : "";
+            menuSoundAfter = num("menu_sound_after", 0);
+            restartS = num("restart_s", restartS);
+            menuSoundLagMs = num("menu_sound_lag_ms", 0);
+            menuSoundRate = num("menu_sound_rate", menuSoundRate);
             return true;
         }
     };
@@ -205,6 +233,14 @@ namespace {
 
             if (!config_.stopEvent.empty()) {
                 stop_.Reset(OpenEventA(SYNCHRONIZE, FALSE, config_.stopEvent.c_str()));
+            }
+
+            if (!config_.startEvent.empty()) {
+                planStart_.Reset(OpenEventA(SYNCHRONIZE, FALSE, config_.startEvent.c_str()));
+            }
+
+            if (!config_.restartEvent.empty()) {
+                restart_.Reset(OpenEventA(SYNCHRONIZE, FALSE, config_.restartEvent.c_str()));
             }
 
             period_ = 1.0 / config_.refreshHz;
@@ -301,8 +337,8 @@ namespace {
             if (delta.w < 0) {
                 delta = {-delta.x, -delta.y, -delta.z, -delta.w};
             }
-            const float angle = 2 * std::acos(std::min(1.0f, delta.w));
-            const float s = std::sqrt(std::max(0.0f, 1 - delta.w * delta.w));
+            const float angle = static_cast<float>(RotationAngleAtan2(prev, q));
+            const float s = std::sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
             if (angle < 1e-7f || s < 1e-7f) {
                 return q;
             }
@@ -351,13 +387,69 @@ namespace {
                 multithread->SetMultithreadProtected(TRUE);
             }
 
+            if (!config_.recording.plan.empty()) {
+                if (!playback_.Init(config_.recording, device_.Get(), config_.width, config_.height)) {
+                    return false;
+                }
+
+                playing_ = true;
+            }
+
+            if (!config_.menuSound.empty()) {
+                if (!sound_.Load(config_.menuSound, config_.menuSoundRate)) {
+                    fprintf(stderr, "fake_openxr: no sound in %s\n", config_.menuSound.c_str());
+                    return false;
+                }
+
+                sound_.Start(config_.menuSoundLagMs / 1000);
+            }
+
             return image_.Init(device_.Get(), false);
+        }
+
+        // A recording's plan and its sound start once start_event is set (at once without it). Once
+        // restart_event is set, they stop, and after restart_s play from the start again, the sound as far
+        // after the frames as at first.
+        void FollowEvents() {
+            auto set = [](const UniqueHandle& event) {
+                return event && WaitForSingleObject(event.Get(), 0) == WAIT_OBJECT_0;
+            };
+
+            if (!playing_) {
+                return;
+            }
+
+            const double now = Now();
+
+            if (!begun_ && (!planStart_ || set(planStart_))) {
+                playback_.Begin(now);
+                sound_.Begin(now + config_.menuSoundAfter);
+                begun_ = true;
+                fprintf(stderr, "fake_openxr: the recording plays\n");
+            } else if (begun_ && !restarted_ && set(restart_)) {
+                playback_.Restart(now, config_.restartS);
+                sound_.Restart(now, now + config_.restartS + config_.menuSoundAfter);
+                restarted_ = true;
+                fprintf(stderr, "fake_openxr: the game restarts\n");
+            }
+        }
+
+        // The head pose of the frame drawn for `target`, begun at `begin`: a recording's camera while one
+        // plays, else the pose predicted then.
+        Quat HeadFor(double begin, double target) {
+            return playing_ ? playback_.Head(target, kEyeCant[0]) : Predicted(begin, target);
         }
 
         void Draw(ID3D11RenderTargetView* target, const Quat& head, double sceneTime) {
             FakeGameImage::Look look;
             look.leftTan = std::tan(-kLeftFov.left), look.rightTan = std::tan(kLeftFov.right);
             look.upTan = std::tan(kLeftFov.up), look.downTan = std::tan(-kLeftFov.down);
+
+            if (playing_) {
+                playback_.Draw(context_.Get(), target, look.leftTan, look.rightTan, look.upTan, look.downTan);
+                return;
+            }
+
             look.drawnFov = float(config_.drawnFov);
             look.cockpit = config_.cockpit;
             look.encodedTwice = false;  // as the game draws it: the layer copies it so
@@ -443,11 +535,21 @@ namespace {
                 double end = vsync + config_.arrivalPhaseMs / 1000 + jitter(rng) + (lag > 0 ? 0.004 : 0);
                 end = std::clamp(end, vsync - 0.95 * lead, vsync + 0.4 * period_);
 
-                WaitUntil(begin);
-                const Quat head = Predicted(begin, target);
-                const bool drop = uniform(rng) < config_.dropRate;
+                FollowEvents();
+                // A frame drawn is held in xrWaitFrame until it is drawn, as a runtime holds a game, so its
+                // CPU time is the drawing's. A restart of a recording: the game's frames stop for a while.
+                const bool drop = uniform(rng) < config_.dropRate || (playing_ && playback_.Paused(target));
+                layer_.WaitFrame([begin, end, drop] {
+                    WaitUntil(begin);
+
+                    if (!drop) {
+                        WaitUntil(end - 0.0015);
+                    }
+                });
+
+                const Quat head = HeadFor(begin, target);
                 if (!drop) {
-                    WaitUntil(end - 0.0015);
+                    layer_.BeginFrame();
                     Draw(layer_.Acquire(), head, target - start_);
                     layer_.Release();
                     layer_.EndFrame(FrameEndOf(head, target), [end] { WaitUntil(end); });
@@ -522,7 +624,7 @@ namespace {
                 end = std::clamp(end, vsync - 0.95 * lead, vsync + 0.4 * period_);
 
                 WaitUntil(begin);
-                const Quat head = Predicted(begin, target);
+                const Quat head = HeadFor(begin, target);
                 const bool stall = nextStall > 0 && Now() >= nextStall;
                 ID3D11RenderTargetView* image = layer_.Acquire();
 
@@ -600,8 +702,12 @@ namespace {
 
         Config config_;
         motion::Motion motion_;
+        RecordingPlayback playback_;  // the recordings, when they play
+        bool playing_ = false;
+        RecordedSound sound_;  // plays while the game runs
         double period_ = 1.0 / 90, start_ = 0;
-        UniqueHandle stop_;
+        UniqueHandle stop_, planStart_, restart_;
+        bool begun_ = false, restarted_ = false;
         FILE* log_ = nullptr;
         std::mutex logMutex_;
         std::atomic<bool> running_{true};

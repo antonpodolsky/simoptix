@@ -46,10 +46,71 @@ inline Vec3 Rotate(const Quat& q, const Vec3& v) {
     return {p.x, p.y, p.z};
 }
 
-// Angle in radians of the rotation taking a to b.
-inline float AngleBetween(const Quat& a, const Quat& b) {
+// The angle between two directions (radians): atan2 of the cross product's length over the dot, which
+// holds to float rounding where they nearly match (acos of the dot reads about 0.05 deg apart there).
+// The measures and fakes in vr_mirror\e2e use it and RotationAngleAtan2 (below), and no other.
+inline double DirectionAngle(const Vec3& a, const Vec3& b) {
+    const double cx = double(a.y) * b.z - double(a.z) * b.y;
+    const double cy = double(a.z) * b.x - double(a.x) * b.z;
+    const double cz = double(a.x) * b.y - double(a.y) * b.x;
+    const double dot = double(a.x) * b.x + double(a.y) * b.y + double(a.z) * b.z;
+    return std::atan2(std::sqrt(cx * cx + cy * cy + cz * cz), dot);
+}
+
+// Two readings of the angle of the rotation taking a to b (radians). They agree to 0.01 deg from about
+// 0.1 deg up, and part below it:
+//
+// | True turn | RotationAngleAcos | RotationAngleAtan2 |
+// |-----------|-------------------|--------------------|
+// | 0.02 deg  | 0                 | 0.0200 deg         |
+// | 0.06 deg  | 0.0396 deg        | 0.0600 deg         |
+// | 0.1 deg   | 0.1047 deg        | 0.1000 deg         |
+
+// 2 atan2(|v|, |w|) of the relative rotation, in double. |v| is the sine of half the turn, which keeps its
+// float precision however small the turn. The measures and fakes in vr_mirror\e2e use it.
+inline double RotationAngleAtan2(const Quat& a, const Quat& b) {
+    const Quat r = Mul(Conj(a), b);
+    const double v = std::sqrt(double(r.x) * r.x + double(r.y) * r.y + double(r.z) * r.z);
+    return 2 * std::atan2(v, std::fabs(double(r.w)));
+}
+
+// 2 acos of the float dot. The dot is the cosine of half the turn, so a small turn is a gap from 1 that
+// a float holds in steps of 6e-8: turns under 0.04 deg read 0, and the next readings are 0.056 and
+// 0.069 deg. The step is 0.008 deg at 0.1 deg and 0.002 deg at 0.5 deg. Two equal poses that aren't quite
+// unit length read 0.02-0.05 deg apart. The smoothings use it, and stage_replay --golden's expected output is
+// made with it, so moving them to RotationAngleAtan2 changes every golden run.
+inline float RotationAngleAcos(const Quat& a, const Quat& b) {
     const float d = std::fabs(Dot(a, b));
     return 2.0f * std::acos(std::min(1.0f, d));
+}
+
+// The rotation taking a to b as an angle (radians) and a unit axis.
+struct AngleAxis {
+    float angle = 0;
+    Vec3 axis;             // zero without hasAxis
+    bool hasAxis = false;  // the sine of half the angle is at least 1e-6, so the axis can be read
+};
+
+// The angle and axis by acos, like RotationAngleAcos: 2 acos(w) of the normalized relative rotation, and
+// the axis from sqrt(1 - w^2), in float. Below about 0.1 deg the angle is as coarse as RotationAngleAcos's,
+// and the axis loses its digits too. The image room uses it, and stage_replay --golden's expected output
+// is made with it.
+inline AngleAxis RotationAngleAxisAcos(const Quat& a, const Quat& b) {
+    Quat r = Normalize(Mul(Conj(a), b));
+    if (r.w < 0) {
+        r = {-r.x, -r.y, -r.z, -r.w};
+    }
+
+    AngleAxis turn;
+    turn.angle = 2 * std::acos(std::min(1.0f, r.w));
+    const float sinHalf = std::sqrt(std::max(0.0f, 1 - r.w * r.w));
+
+    if (sinHalf >= 1e-6f) {
+        turn.axis = {r.x / sinHalf, r.y / sinHalf, r.z / sinHalf};
+        turn.hasAxis = true;
+    }
+
+    return turn;
 }
 
 inline Quat Slerp(const Quat& a, Quat b, float t) {

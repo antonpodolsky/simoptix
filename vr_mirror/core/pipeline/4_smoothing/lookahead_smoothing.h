@@ -74,7 +74,7 @@ public:
 
         // Each moment's time constant, from the fastest turn within kSpeedSpan of it.
         for (int i = 0; i < m; i++) {
-            speed_[i] = i ? AngleBetween(poses[i - 1], poses[i]) / dt : 0;
+            speed_[i] = i ? RotationAngleAcos(poses[i - 1], poses[i]) / dt : 0;
         }
         const int span = int(std::lround(kSpeedSpan / dt));
         const double deg = 3.14159265358979 / 180;
@@ -207,6 +207,10 @@ public:
     // The output is always level (its path is checked after levelling).
     void Reset() override {}  // no state between frames
     double DelayS() const override { return LookaheadOutputDelayS(); }
+    // Multiplies the path's time constants (tauStillS, tauMoveS). The delay stays: the path sees as far
+    // ahead at every strength, and the window behind grows with the time constant. At 0 there is no path:
+    // the view is the image's own pose, levelled.
+    void SetStrength(float strength) override;
     void Window(double period, int* behind, int* ahead) const override;
     Smoothed Smooth(const SmoothingInput& in) override;
 
@@ -223,7 +227,8 @@ private:
     // a moment got a target for the first time this frame (the path should be solved again).
     bool Plan(const SmoothingInput& in, int n);
 
-    LookaheadParams params_;
+    LookaheadParams params_;  // the tuning at the strength set
+    float strength_ = 1;
     LookaheadSmoother solver_;
     std::vector<Quat> targets_;    // per path moment: what the path is pulled towards (grown once)
     std::vector<double> weights_;  // ...and how hard

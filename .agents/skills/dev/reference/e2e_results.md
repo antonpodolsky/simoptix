@@ -10,6 +10,57 @@ today's Look-ahead. A row may say otherwise.
 
 ## The latest runs
 
+**Run 18: the core's angles from before #54 (#62), and the horizon comparison with 2% of Instant's
+tilt.** The build was `main` at a9c36f6. LMU, OBS, the mirror app and Pimax Play were closed. The 40 runs
+took 594 s. All 40 passed, and 18 of 20 comparisons with Instant. `stage_replay --golden` gives the
+output from before #54 in its 52 runs (`findings\pipeline.md`, "One exact angle").
+- Both failures were the worst horizon tilt, with the 0.05° margin of the time:
+  - `black_borders`: 1.117° at Instant, 1.174° with Look-ahead (allowed 1.167°). A rerun gave 1.115 /
+    1.174°.
+  - `openxr_black_borders`: 0.204 / 0.257° (allowed 0.254°). A rerun gave 0.158 / 0.204° and passed
+    (#3).
+- `black_borders`' pair on the builds before, two runs each:
+
+  | Build | Instant | Look-ahead |
+  |---|---|---|
+  | `main` before #54 (69ace06) | 1.156°, 1.127° | 1.124°, 1.174° |
+  | `main` before #62 (78c9b3e, #54's angles) | 1.197°, 1.196° | 1.114°, 1.125° |
+  | a9c36f6 | 1.117°, 1.115° | 1.174°, 1.174° |
+
+  Look-ahead read 1.174° before #54 too. Instant tilts less with the angles from before #54, so the
+  0.05° left less room. Up to 0.059° apart over these runs, against a tilt of 1.1° that the
+  scenario's head makes. The comparison takes 2% of Instant's tilt on top of the 0.05° since.
+- With the 2%, the two pairs twice:
+  - `black_borders`: 1.117 / 1.113° and 1.100 / 1.150° (allowed 1.172°), both passed.
+  - `openxr_black_borders`: 0.138 / 0.202° (allowed 0.190°) failed, as in #3, and 0.206 / 0.245°
+    (allowed 0.260°) passed.
+- `stabilization` 0.42 / 0.014 of the head's shake, `dropped_frames` 0.53 / 0.025,
+  `replay_queued_late_frames` 7.3 / 4.1% from the wrong pose, the featureless replay 1.61 / 0.21%,
+  and `game_starts_late` 4.8 runtime calls/s idle.
+- Recorded view jitter: `stabilization` 0.130 / 0.116°, `dropped_frames` 0.178 / 0.159°.
+- Worst horizon tilt: `openxr_stabilization` 0.181 / 0.172°, `openxr_dropped_frames` 0.205 / 0.146°,
+  `openxr_game_behind` 0.121 / 0.148°, `stabilization` 0.122 / 0.108°, `no_smoothing` 0.085 / 0.103°.
+- `openxr_stall`: image/pose mismatch 0.053 / 0.051° rms.
+
+**Run 17: strength 0 smooths nothing (`no_smoothing`), and every angle comes from `RotationAngle` or
+`DirectionAngle`.** LMU, OBS and Pimax Play were closed. The 40 runs took 594 s. All 40 passed, and 19
+of 20 comparisons with Instant. Every `stage_replay --golden` run changed, as the smoothings' and the
+image room's angles did (`findings\pipeline.md`, "One exact angle").
+- `openxr_black_borders` failed its comparison on the worst horizon tilt: 0.135° at Instant, 0.257°
+  with Look-ahead (allowed 0.185°). Three reruns of the pair failed it twice (Instant 0.180 / 0.197 /
+  0.198°, Look-ahead 0.204 / 0.257 / 0.257°). The same pair failed it on `main` (69ace06) once in three
+  runs (Instant 0.150 / 0.216 / 0.207°, Look-ahead 0.245 / 0.257 / 0.245°), and on the branch before the
+  core's angles changed (d5173be) twice in three. Look-ahead's worst tilt stays near 0.25° on every
+  build, while Instant's varies from run to run, so the comparison's margin is the limit.
+- `no_smoothing` 0.103 / 0.103° worst horizon tilt, the view at its image's direction (0.000°).
+- `stabilization` 0.40 / 0.014 of the head's shake, `dropped_frames` 0.51 / 0.024,
+  `replay_queued_late_frames` 7.6 / 4.3% from the wrong pose, the featureless replay 1.70 / 0.21%,
+  and `game_starts_late` 4.8 runtime calls/s idle.
+- Recorded view jitter: `stabilization` 0.128 / 0.116°, `dropped_frames` 0.187 / 0.159°.
+- Worst horizon tilt: `openxr_stabilization` 0.187 / 0.173°, `openxr_dropped_frames` 0.207 / 0.146°,
+  `openxr_game_behind` 0.141 / 0.149°, `stabilization` 0.120 / 0.112°.
+- `openxr_stall`: image/pose mismatch 0.053 / 0.052° rms.
+
 **Run 16: the forecast told of each frame as it arrives, so only the frames it can't tell yet are
 held.** LMU, OBS and Pimax Play were closed. All 38 runs passed, and 18 of 19 comparisons with
 Instant. `stage_replay --golden` is unchanged. The mirror app, which e2e runs, uses neither the fixed
@@ -298,6 +349,11 @@ window at zoom 1.5, by smoothing. Lower is better in every column.
 - `--drawn_pose measured`: 98.15%, because the measured head is never exactly the pose a frame was
   drawn with. The measured drawn pose has since been removed.
 - Instant's dead zone holds a slow view still, so it reads lowest while still, as in e2e.
+- **One angle for every measure.** When the scores' direction angle moved from `acos` of the dot to
+  `DirectionAngle` (atan2, `vr_mirror\core\common\rot.h`), the pipeline's default run (Look-ahead, zoom
+  1.5) changed only in jitter, by at most 0.0005°: still 0.0018 → 0.0013° on `queued_late_frames`,
+  0.0010 → 0.0013° on `false_retiming_head_turns`, small 0.0859 → 0.0873° on `edge_test+heartbeat`. Lag,
+  black, edge limit, planned and wrong pose stayed the same on every input.
 - **Not explained:** on the synthetic motions the look-ahead reads higher than Instant in small moves
   (`racing+heartbeat` 0.034° against 0.007°), where e2e's shake measure, on the presented frames, finds
   it far calmer. The two measures differ in what they see: here the intended view per frame, with exact

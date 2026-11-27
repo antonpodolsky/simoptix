@@ -10,7 +10,8 @@
 
 #include <cstddef>
 
-enum class LocalFileKind { kFrameTrace, kCrashDump, kLayerLog };
+// A recorded lap is two files of one second: its video (.mp4) and its frames' times and poses (.csv).
+enum class LocalFileKind { kFrameTrace, kCrashDump, kLayerLog, kRecordedLap };
 
 // How many files of `kind` are kept.
 int LocalFilesKept(LocalFileKind kind);

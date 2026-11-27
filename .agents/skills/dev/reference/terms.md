@@ -18,7 +18,8 @@ A new term goes here, and into the table of every README that uses it.
 | Term | Meaning |
 |---|---|
 | game eye | The eye image a frame source delivers. The Pimax source's is a half-size copy of the left eye. The OpenXR source's is the left eye at full size |
-| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`) or the OpenXR source (`vr_mirror\frame_sources\openxr\`) |
+| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
+| recorded lap | One full lap of the game that a VR Mirror source recorded for its demo: the raw left eye of each frame, and the head pose it was drawn with. The demo source plays it in place of the game |
 | frame ring | The OBS plugin's store of copied game frames (`vr_mirror\obs_plugin\frame_ring.*`, `FrameRing`), as many slots as the frame picker needs. Shrinking it keeps the frames copied most recently, wherever they physically were, and frees the rest |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
@@ -37,6 +38,7 @@ A new term goes here, and into the table of every README that uses it.
 | image room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
 | edge stop | The smoothing's last resort. It holds the view at 95% of its image room when the smoothing's own planning wasn't enough |
 | output delay | How far VR Mirror's view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
+| auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
 | observer | The debugging code beside the pipeline. It numbers the stamp and writes the frame trace |
 | stamp | The frame number that VR Mirror draws as 15 small squares in the top-left corner of the view, when its Debug setting is on |
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
@@ -55,6 +57,7 @@ A new term goes here, and into the table of every README that uses it.
 | pi_server | The Pimax runtime's compositor process (`pi_server.exe`). Every call through PVR goes to it |
 | API layer | A DLL that the OpenXR loader puts between a game and the runtime. It sees every OpenXR call the game makes |
 | performance counter | The Windows high-resolution clock (`QueryPerformanceCounter`). All times in the code are seconds on it |
+| headroom | The part of a frame's time budget left on the CPU or the GPU: 100 × (budget − time) / budget, in percent, where the budget is one frame's time at the target rate. Negative when a frame takes longer than its budget |
 | sRGB encoding | The usual way images store brightness, with a curve that gives dark tones more values. Maths on encoded values without undoing the curve gives wrong results. Pimax's client mirror encodes the eye image twice |
 
 ## Words with a narrow meaning

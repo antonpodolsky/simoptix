@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdio>
 
+#include "openxr_headset_test.h"
 #include "shared/log.h"
 #include "shared/thread_cpu.h"
 
@@ -61,6 +62,18 @@ bool OpenXrSource::Start(std::string* error) {
     }
 
     Stop();
+
+    // A game in VR is measured instead, and the headset left to it. Reported is this start's alone: nothing
+    // when the test doesn't run, so an older reading never stands for the headset now.
+    const UniqueHandle published(OpenFileMappingW(FILE_MAP_READ, FALSE, openxr_share::kMappingName));
+    const bool test = testRequested_.exchange(false) && !published;
+    reported_ = {};
+
+    if (test && !RunHeadsetTest(&reported_)) {
+        reported_ = {};
+        reported_.failed = true;
+    }
+
     ResetEvent(stop_.Get());
     running_ = true;
     thread_ = std::thread([this] {
@@ -346,6 +359,8 @@ void OpenXrSource::Run() {
     while (running_) {
         wakeups_++;
         if (!header_) {
+            FollowIdle(Now());  // the game gone sends no frames either
+
             if (session_event_) {
                 ResetEvent(session_event_.Get());  // before looking: a session starting now sets it again
             }
@@ -399,14 +414,19 @@ void OpenXrSource::Run() {
         if (report.noise) {
             CoreLog("OpenXR: arrival timing noise removed: %.2f ms rms", report.noiseMs);
         }
-        if (!idle_ && now - lastFinished_ > kIdleAfter) {
-            idle_ = true;
-            fps_ = 0;
-            CoreLog("OpenXR: no game frames for %.0f s: idle", kIdleAfter);
-        }
-
+        FollowIdle(now);
         HANDLE wait[2] = {stop_.Get(), layerEvent_.Get()};
         WaitForMultipleObjects(layerEvent_ ? 2 : 1, wait, FALSE, 500);
+    }
+}
+
+// Idle once no frame has finished for kIdleAfter: the game stalled, or quit and closed the layer's memory.
+// Source time `now`. Reader thread.
+void OpenXrSource::FollowIdle(double now) {
+    if (!idle_ && now - lastFinished_ > kIdleAfter) {
+        idle_ = true;
+        fps_ = 0;
+        CoreLog("OpenXR: no game frames for %.0f s: idle", kIdleAfter);
     }
 }
 

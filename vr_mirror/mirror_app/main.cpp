@@ -23,6 +23,7 @@
 #include "precise_wait.h"
 #include "shared/guarded.h"
 #include "shared/log.h"
+#include "vr_mirror/frame_sources/demo/demo_source.h"
 #include "vr_mirror/frame_sources/openxr/openxr_source.h"
 #include "vr_mirror/frame_sources/pimax/pimax_source.h"
 #include "window_output.h"
@@ -517,6 +518,8 @@ int wmain() {
 
     if (app.settings.frameSource == MirrorAppFrameSource::kOpenXr) {
         app.source = std::make_unique<OpenXrSource>();
+    } else if (app.settings.frameSource == MirrorAppFrameSource::kDemo) {
+        app.source = std::make_unique<DemoSource>();  // the newest recorded lap, in a loop
     } else {
         app.source = std::make_unique<PimaxSource>();
     }

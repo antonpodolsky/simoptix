@@ -10,7 +10,7 @@
 //     smoothing 1/2 and zoom 1.2 and 1.5, as the window and as OBS ticks; then single runs with
 //     stabilization switched off and on. A refactor that must not change behaviour reproduces the
 //     file byte for byte.
-//   --pipeline [stage flags] [--zoom Z] [--ticks HZ] [--input NAME ...] [--replay FILE ...]
+//   --pipeline [stage flags] [--zoom Z] [--strength S] [--ticks HZ] [--input NAME ...] [--replay FILE ...]
 //     [--eye L,R,U,D] [--dump FILE]: the pipeline with the settings' configuration (Look-ahead, the slot
 //     check), each stage overridden by its flag: --arrival_timing grid, --drawn_pose
 //     slot_check|arrival_slot|cockpit, --frame_picker fixed_delay|newest_frame|held_frame, --smoothing
@@ -140,6 +140,24 @@ namespace {
             }
         }
 
+        // Strength 0, nothing smoothed: on queued_late_frames, whose ticks show an older image standing in,
+        // and on edge_test+heartbeat, whose fast turns reach the image's edges. At every smoothing and both
+        // host styles.
+        for (int index : {0, 4}) {
+            for (int smoothing = 1; smoothing <= 2; smoothing++) {
+                for (bool ticks : {false, true}) {
+                    GoldenRun run;
+                    run.input = inputs[index].get();
+                    run.settings.smoothing = smoothing;
+                    run.settings.zoom = 1.2f;
+                    run.settings.strength = 0;
+                    run.ticks = ticks;
+                    run.label = LabelOf(run, " strength 0");
+                    runs.push_back(run);
+                }
+            }
+        }
+
         return runs;
     }
 
@@ -262,6 +280,9 @@ namespace {
             } else if (!strcmp(option, "--zoom")) {
                 options->settings.zoom = float(atof(value));
                 i++;
+            } else if (!strcmp(option, "--strength")) {
+                options->settings.strength = static_cast<float>(atof(value));
+                i++;
             } else if (!strcmp(option, "--ticks")) {
                 options->tickHz = atof(value);
                 i++;
@@ -370,8 +391,8 @@ namespace {
     void PrintUsage() {
         printf(
             "usage: stage_replay.exe --golden FILE [--replays DIR]\n"
-            "       stage_replay.exe --pipeline [--<stage> <kind> ...] [--zoom Z] [--ticks HZ] "
-            "[--input NAME ...] [--replay FILE ...] [--eye L,R,U,D] [--dump FILE]\n"
+            "       stage_replay.exe --pipeline [--<stage> <kind> ...] [--zoom Z] [--strength S] "
+            "[--ticks HZ] [--input NAME ...] [--replay FILE ...] [--eye L,R,U,D] [--dump FILE]\n"
             "       stage_replay.exe --stage drawn_pose <replay .csv> [--show FIRST-LAST] [--dump FILE] "
             "[--delays A,B,...] [--drawn_pose K]\n"
             "       stage_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]\n"

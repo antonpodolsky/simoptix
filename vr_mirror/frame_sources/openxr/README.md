@@ -14,7 +14,7 @@ sessions, and recordings made there were successful. `uninstall.bat` removes the
 
 | Term | Meaning |
 |---|---|
-| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`) or the OpenXR source (`vr_mirror\frame_sources\openxr\`) |
+| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
@@ -73,6 +73,21 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 - **It copies only while VR Mirror reads.** The three textures are the size of the game's left eye
   image, at 4 bytes per pixel. The layer makes them when VR Mirror starts reading and lets them go 10 s
   after it stopped. With nobody reading, the layer only writes each frame's record.
+- **It times the game's frames, only while the performance overlay reads them.** The SimOptix:
+  Performance Overlay source in OBS (`overlays\README.md`) signs in a second piece of shared memory
+  (`shared\performance\performance_share.h`). While it signs, the layer writes each frame's times
+  there:
+  - The CPU time runs from the moment xrWaitFrame returns to the game to the game's next call of
+    xrWaitFrame.
+  - The GPU time is the time between two timestamps the layer puts in the game's immediate context. One
+    goes in when xrBeginFrame returns, the other before xrEndFrame goes on to the runtime. The layer
+    reads them a few frames later, at the end of a frame, without waiting.
+  - The layer also writes the display period that xrWaitFrame gave the frame, and whether the game
+    called xrWaitFrame for its next frame before it ended this one. The CPU time is then cut short.
+  - The timestamps go in on the thread that ends the frames, where the copy goes. When the game begins
+    its frames on another thread and its context isn't protected for several threads, the GPU time is
+    unknown.
+  - With nobody reading, the layer only checks at the end of each frame whether the overlay signed.
 - **In LMU, it writes one log per game start,**
   `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`. The newest 10 logs are kept. When a
   game start reaches OpenXR, the layer deletes the oldest beyond 10. Its log says how many it deleted.
@@ -93,12 +108,16 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
   - when VR Mirror starts and stops reading, and when the textures are made and let go
   - every 10 seconds: the game's frame rate, how many frames were copied and why others weren't, and
     the copy's time on the graphics card (median, 99th percentile, longest)
+  - when the performance overlay starts and stops reading the frame times, and every 10 seconds while
+    it reads, how many frames were timed and their average CPU and GPU times
 - **Its footprint in the game is small.** Each call goes on to the runtime first, unchanged. The layer
   then reads what the game passed and the runtime returned.
   - At the end of a frame it first notes which image the frame shows. OpenXR shows the image the game
     released last when it ends the frame, and a thread of the game may release the next one while the
     call is in the runtime.
-  - Per frame, it does a few comparisons, writes the record, and copies while VR Mirror reads.
+  - Per frame, it does a few comparisons, writes the record, and copies while VR Mirror reads. While
+    the performance overlay reads, it also reads the clock at three calls and puts in two GPU
+    timestamps.
   - It uses no locks, no waits on the graphics card, no flushes and no allocations per frame.
   - It makes the textures on a thread of its own. It makes them on the game's thread only if the
     game's graphics device can't be used from another one.
@@ -154,6 +173,8 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 | `openxr_layer_calls.*` | The calls the layer looks at in LMU, what it logs from each, and what it hands on to the frame source |
 | `openxr_layer_frames.*` | The game's swapchain images and the frame each end of frame shows, handed to the publisher |
 | `openxr_publisher.*` | The frame records, the copies of the left eye image and the layer's own thread. It is plain D3D11 with no OpenXR calls. The e2e tests' fake game publishes with it too |
+| `openxr_layer_timing.*` | The frame calls handed to the frame timing, for a D3D11 session |
+| `openxr_frame_timing.*` | `OpenXrFrameTiming`: the game's CPU and GPU time per frame, written into `shared\performance\performance_share.h` while the performance overlay reads. It is plain D3D11 with no OpenXR calls. The e2e tests' fake game times its frames with it too |
 | `openxr_share.h` | The memory the layer shares with VR Mirror: its layout, and the rules for reading it |
 | `openxr_d3d11.h` | The few Windows-specific OpenXR declarations that the layer and its check program use |
 | `openxr_frame_layout.*` | The summary of each frame's layout and the log lines (plain logic, no OpenXR calls) |
@@ -166,8 +187,9 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
 | `install.ps1`, `uninstall.ps1` | Install or remove the layer for every user (as administrator). `install.ps1` shows the installed DLL's signature |
 | `openxr_source.*` | `OpenXrSource`: the reader, a frame source for the hosts (`vr_mirror\core\adapters\d3d\frame_source.h`) |
 | `openxr_images.*` | `OpenXrImages`: the layer's textures opened on a host's device, and the copy of an eye image into the host's store at the size it needs |
+| `openxr_headset_test.*` | The headset test: with no game in VR, the source is an OpenXR app for about a second, showing "Collecting headset info" on black, and reads the eye image size, the field of view, the eye's turn and the refresh rate a game would get. The runtime is loaded directly, without the OpenXR loader or any layer. Only the OBS plugin runs it, each time a source's properties window opens with no game in VR |
 | `openxr.rsp` | The reader's `.cpp` files, as a `cl` response file that the hosts' build scripts list |
-| `check\` | The check program. It runs the built layer the way the game will, before the layer goes anywhere near the game: with LMU's name, a D3D11 session, one image buffer per eye in the game's format, and five seconds of frames, through a real OpenXR loader. It reads what the layer publishes as VR Mirror would |
+| `check\` | The check program. It runs the built layer the way the game will, before the layer goes anywhere near the game: with LMU's name, a D3D11 session, one image buffer per eye in the game's format, and five seconds of frames, through a real OpenXR loader. It reads what the layer publishes as VR Mirror would, and the frame times as the performance overlay would |
 
 Installed, the DLL and its manifest are in `C:\Program Files\simoptix\openxr_frame_source\`. They are
 registered in `HKLM\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` (value 0 = on, 1 = off).

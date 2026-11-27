@@ -31,8 +31,9 @@ the branch changes against `main`, why, what was verified and what wasn't. These
 
 ## Commit messages
 
-- **The subject** is `Area: what changed`, written for developers: `Overlays: the G-meter's live G
-  moved up 1 px`. The area is the part's name (`Pipeline`, `OpenXR layer`, `Docs`, `Dev skill`).
+- **The subject** is `type(scope): what changed`, in the form of the pull request's title ("The
+  title", below), written for developers: `fix(overlays): the G-meter's live G moved up 1 px`. Each
+  commit takes the type of its own change.
 - **The body** says why: the problem, why the change solves it this way, and what was checked, with
   numbers. Wrap it at about 72 columns.
 - **The sign-off and the attribution** are in the dev skill, step 6: `git commit -s`, and the
@@ -44,13 +45,26 @@ the branch changes against `main`, why, what was verified and what wasn't. These
 
 ## The pull request
 
-- **The title** is `Area: what changed`, like a commit subject. With one commit, it is that commit's
-  subject. With several, it says what they do together: `SimOptix files: one place names them and
-  keeps the newest 10 of each kind`.
+- **The title** is `type(scope): what changed`, in the form of Conventional Commits. GitHub makes it
+  the subject of the pull request's commit on `main`.
+  - **The type** is one of those its label allows ("The label", below): `feat`, `fix`, `perf`,
+    `docs`, `refactor`, `test`, `build`, `ci`, `chore` or `style`.
+  - **The scope** is the part the change is about, by its folder's name: a part's (`vr_mirror`,
+    `overlays`, `pipeline`, `openxr`, `e2e`, `stage_replay`, `telemetry`, `setup`) or a skill's
+    (`dev`, `pull-requests`). The READMEs, `CONTRIBUTING.md` and the skills that change with it
+    leave the scope as it is. A change to the folders of one name in several parts takes that name
+    (`obs_plugin`). A release's pull request takes `release`.
+  - **No scope stands for the whole repo,** because it would say nothing. A change about several
+    parts takes the one it is mostly about, or is split in two.
+  - **What changed** starts in lower case, unless it starts with a name (`G-meter`, `OBS`).
+  - With one commit, the title is that commit's subject. With several, it says what they do
+    together: `feat(shared): one place names SimOptix's files and keeps the newest 10 of each kind`.
+  - The Changelog check on GitHub fails a title of another form, or with a type its label doesn't
+    allow (`release.py --check-pr`).
 - **The description** follows the template (`.github\pull_request_template.md`):
-  - **What changed and why:** the problem in a sentence or two, then a bullet per change, each with a
-    bold lead. `Fixes #<number>` names an issue the pull request closes. `Part of #<number>` names one
-    it doesn't close.
+  - **What changed and why:** first the issues it closes and works on, one line each ("The issues it
+    closes", below). Then the problem in a sentence or two, and a bullet per change, each with a bold
+    lead.
   - **What was verified:** the builds, the e2e results if `vr_mirror\core\` or
     `vr_mirror\mirror_app\` changed (compared with `reference\e2e_results.md`), and what was checked by
     hand, with numbers. Then **Not verified:** each check that wasn't run or couldn't be, with its
@@ -62,17 +76,54 @@ the branch changes against `main`, why, what was verified and what wasn't. These
     for one.
 - **Plain words.** Short sentences with one idea each, and no semicolons. Code names and paths are
   fine where the reviewer needs them.
-- **The label.** Every pull request takes exactly one type label, which decides whether it goes into
-  `CHANGELOG.md` (`reference\release.md`, "The changelog, from each pull request"):
-  - A change users notice gets `added`, `changed`, `fixed`, `removed` or `security`, and one to three
-    lines in the description's Changelog section.
-  - Any other change gets `internal` and an empty Changelog section: tests, refactors, contributors'
-    docs, the skills, the build, findings.
+- **The label.** Every pull request takes exactly one type label. Issues take the same labels
+  (issues skill, "Labels"). The label decides whether the pull request goes into `CHANGELOG.md`, and
+  under which heading (`reference\release.md`, "The changelog, from each pull request"). It also
+  decides the types its title may start with:
+
+  | Label | The pull request | Title types | Changelog |
+  |---|---|---|---|
+  | `feature` | Adds something users notice: a source, a setting, a game, a headset | `feat` | Added |
+  | `change` | Changes what users see, set or install, or how well it works | `feat`, `perf`, `docs` | Changed |
+  | `bug` | Fixes something users noticed | `fix` | Fixed |
+  | `deprecation` | Marks something users have to be removed in a later release. It still works | `feat` | Deprecated |
+  | `removal` | Removes something users had | `feat`, `refactor` | Removed |
+  | `security` | Fixes a security problem | `fix` | Security |
+  | `documentation` | Changes only contributors' docs, the skills or findings | `docs` | None |
+  | `maintenance` | Changes nothing users notice: tests, refactors, the build, the checks, a release | `refactor`, `test`, `build`, `ci`, `chore`, `perf`, `style` | None |
+
+  - A change users notice gets one to three lines in the description's Changelog section.
+  - A pull request labelled `documentation` or `maintenance` has an empty Changelog section.
+
+## The issues it closes
+
+GitHub closes an issue by itself when a pull request that names it with a closing keyword is merged
+into `main`. A pull request that names its issues this way leaves no issue open after its work is
+done.
+
+- **Find them first.** List the open issues (`gh issue list --state open`). Read the "Done when" of
+  each one the change touches, and check each of its items against the branch.
+- **`Fixes #<number>`** for each issue whose "Done when" is fully met once the pull request is
+  merged. One line per issue, each with its own keyword: `Fixes #12` and `Fixes #27` on two lines.
+  In `Fixes #12, #27`, GitHub closes only #12.
+- **`Part of #<number>`** for each issue the change works on and leaves open, with what of it this
+  change does: `Part of #34: every part builds on each pull request`. GitHub links it without
+  closing it.
+- **These lines start the description,** under "What changed and why", before the problem.
+- **A closing keyword closes the issue wherever it stands.** GitHub reads `fix`, `fixes`, `fixed`,
+  `close`, `closes`, `closed`, `resolve`, `resolves` and `resolved` followed by an issue number, in
+  any case, anywhere in the description. A sentence about an issue that stays open never puts one of
+  these words right before its number: "the fault in #12" instead of "fixes #12 partly".
+- **Commit messages name no issue with a closing keyword.** The pull request's description does. A
+  keyword in a commit message also closes the issue once the commit reaches `main`, but GitHub then
+  doesn't list the pull request as linked to the issue.
+- **Check it after posting.** `gh pr view <number> --json closingIssuesReferences` lists the issues
+  GitHub will close. It must list exactly the `Fixes` lines.
 
 ## Opening a pull request
 
-1. Write the description from the template into a file outside the repo, such as the agent's scratch
-   folder.
+1. Find the issues the change closes and works on ("The issues it closes"). Write the description
+   from the template into a file outside the repo, such as the agent's scratch folder.
 2. Read each sentence as a reviewer who sees only `git diff main...<branch>`. Delete each one that
    reviewer doesn't need ("Only this change").
 3. Check the description and the branch's commit messages (public-text skill, "Check before committing
@@ -92,7 +143,8 @@ the branch changes against `main`, why, what was verified and what wasn't. These
    gh pr create --base main --title "<title>" --label <label> --body-file <file>
    ```
 
-5. Check what was posted: `check_public_text.py --pr <number>`.
+5. Check what was posted: `check_public_text.py --pr <number>`, and the issues GitHub will close:
+   `gh pr view <number> --json closingIssuesReferences`.
 6. An agent in Claude Code's desktop app turns on Auto-fix for the pull request. The app then wakes
    the agent when a check fails, the branch conflicts with `main`, or a review comment arrives. The
    agent fixes the branch, checks the fix and pushes it. A review comment's request waits for the
@@ -118,16 +170,23 @@ the branch changes against `main`, why, what was verified and what wasn't. These
 | **Next step:** once the installer is on `main`, it should show the version | A plan, and work on another branch | (delete, and tell the maintainer in chat) |
 | I've left a note in the shared notes folder | The agent's notes | (delete) |
 | Tested on a recording from last night at Spa | A session's date, a track | Tested on one recording, OpenXR Mirror on Look-ahead |
-| `Fix stuff` | No area, says nothing | `Telemetry: the reader keeps LMU while the game is in its menus` |
+| `Fix stuff` | No type, no scope, says nothing | `fix(telemetry): the reader keeps LMU while the game is in its menus` |
+| `feat(repo): auto sync puts the game's sound in step with the view` | `repo` says nothing. The change is about VR Mirror, and its docs changed with it | `feat(vr_mirror): auto sync puts the game's sound in step with the view` |
+| `Telemetry: the reader keeps LMU while the game is in its menus` | No type | `fix(telemetry): the reader keeps LMU while the game is in its menus` |
+| `feat(telemetry): the reader keeps LMU while the game is in its menus`, labelled `bug` | The label `bug` takes the type `fix` | `fix(telemetry): ...` |
 
 ## Checklist before posting
 
-- [ ] The title is `Area: what changed`
+- [ ] The title is `type(scope): what changed`, with a type its label allows, and each commit
+      subject has the same form
+- [ ] The open issues were checked. Each one the change closes has its own `Fixes #<number>` line,
+      and each it works on a `Part of #<number>` line. `closingIssuesReferences` lists exactly the
+      `Fixes` lines once it is posted
 - [ ] Every sentence is about this change, and a reviewer who sees only the diff needs it
 - [ ] No personal information, nothing about the maintainer's PC, nothing of how the work went, no
       plans
 - [ ] What was verified has numbers. What wasn't is named, with a reason about the change
-- [ ] One type label, and Changelog lines only with a user-facing label
+- [ ] One type label, and Changelog lines only with a label that has a Changelog heading
 - [ ] The Changelog section ends the description, and no line names the tool or agent that wrote it.
       `python -I .agents\skills\dev\release.py --check-pr <number>` passes once it is posted
 - [ ] `check_public_text.py` run on what each commit staged, on the description and on the branch's

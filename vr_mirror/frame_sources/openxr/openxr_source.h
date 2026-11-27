@@ -14,6 +14,7 @@
 //
 // Source time is the performance counter, in seconds. The images (OpenXrImages) are opened and
 // scaled on the host's device; the layer's textures are claimed while the host's GPU reads them.
+// Asked to, it runs the headset test as it starts with no game publishing (openxr_headset_test.h).
 // Knows nothing about OpenXR's calls, OBS or windows.
 #pragma once
 
@@ -49,6 +50,9 @@ public:
 
     LUID AdapterLuid() const override;
     EyeInfo Eye() const override;
+    // The headset test's, once it has run, or that it failed.
+    HeadsetReport Reported() const override { return reported_; }
+    void RequestHeadsetTest() override { testRequested_ = true; }
     double Now() const override;
     double Period() const override { return period_.load(); }
 
@@ -70,6 +74,16 @@ public:
 
     void SetImageNeed(float width, double maxBytes) override { images_.SetNeed(width, maxBytes); }
     bool CopySize(float width, double maxBytes, uint32_t* copyWidth, uint32_t* copyHeight) override;
+    void StoredSize(
+        uint32_t imageWidth,
+        uint32_t imageHeight,
+        float width,
+        double maxBytes,
+        uint32_t* copyWidth,
+        uint32_t* copyHeight
+    ) const override {
+        OpenXrStoredSize(int(imageWidth), int(imageHeight), width, maxBytes, copyWidth, copyHeight);
+    }
     void OpenImages(ID3D11Device* device) override;
     // The layer's three textures take turns, so a frame's image is written over only when the third
     // frame after it is copied, and its newest finished frames are kept (kFinished).
@@ -117,6 +131,7 @@ private:
     static constexpr int kWaiting = 8;
 
     void Run();
+    void FollowIdle(double now);
     bool OpenShare();
     void CloseShare(const char* why);
     void ReadClock();
@@ -160,6 +175,8 @@ private:
     int finishedHead_ = 0, finishedCount_ = 0;
 
     std::atomic<double> period_{1.0 / 90};
+    std::atomic<bool> testRequested_{false};  // RequestHeadsetTest
+    HeadsetReport reported_;                  // the headset test's in this Start (none: not run)
     std::atomic<double> fps_{0};
     std::atomic<uint64_t> framesArrived_{0};
     std::atomic<bool> idle_{true};

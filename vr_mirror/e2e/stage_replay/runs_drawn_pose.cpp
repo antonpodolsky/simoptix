@@ -62,9 +62,9 @@ namespace {
         const replay::Replay& replay_;
     };
 
-    double AngleDeg(const Quat& a, const Quat& b) {
-        const Vec3 v = RotationVector(Mul(Conj(a), b));
-        return std::sqrt(double(v.x) * v.x + double(v.y) * v.y + double(v.z) * v.z) * 180 / 3.14159265358979;
+    // The rotation between two orientations (degrees; common/rot.h: RotationAngleAtan2).
+    double RotationDeg(const Quat& a, const Quat& b) {
+        return RotationAngleAtan2(a, b) * 180 / 3.14159265358979;
     }
 
     const int kD45 = 45, kD92 = 92;
@@ -321,7 +321,7 @@ namespace {
     }
 
     bool DrawnPoseReplay::Wrong(const Row& r, const Quat& q, bool has) const {
-        return !has || AngleDeg(q, r.truePose) > kWrongDeg;
+        return !has || RotationDeg(q, r.truePose) > kWrongDeg;
     }
 
     // Which slot's prediction a pose matches, by comparing poses: the slots before the arrival slot (0
@@ -330,7 +330,7 @@ namespace {
         for (int lag = 0; lag < LagFilter::kLags; lag++) {
             Quat p;
             const double slot = rp_.Frames()[k].slot - lag * kPeriod;
-            if (lookup_.PredictedHeadAt(slot, &p) && AngleDeg(q, p) <= kWrongDeg) {
+            if (lookup_.PredictedHeadAt(slot, &p) && RotationDeg(q, p) <= kWrongDeg) {
                 return lag;
             }
         }

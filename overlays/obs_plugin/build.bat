@@ -2,9 +2,15 @@
 rem Copyright (C) 2026 Anton Podolsky
 rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds SimOptix: Overlays, simoptix_overlays.dll: plugin.cpp registers the G-meter
-rem (..\gmeter\gmeter_source.cpp: SimOptix: G-Meter Overlay, drawn by meter_chrono.cpp with
-rem meter_draw.cpp and meter_text.cpp; its text rasterised by ..\common\text_raster.cpp with
-rem DirectWrite, its image layers by meter_image.cpp, embedded by gmeter.rc from its design folder).
+rem (..\gmeter\gmeter_source.cpp: SimOptix: G-Meter Overlay, drawn by meter_chrono.cpp or
+rem meter_oled.cpp with meter_dot.cpp, its image layers embedded by gmeter.rc from its design folder)
+rem and the performance overlay
+rem (..\performance\performance_source.cpp: SimOptix: Performance Overlay, drawn by
+rem performance_theme.cpp, its image layers embedded by performance.rc, the frame times it reads from
+rem ..\..\shared\performance). What any overlay uses is in ..\common: shapes
+rem (meter_draw.cpp), labels (meter_text.cpp, their text rasterised by ..\..\shared\text_raster.cpp with
+rem DirectWrite), image layers (meter_image.cpp), the box on the canvas (overlay_box.cpp) and the
+rem Properties preview (properties_preview.cpp).
 rem Telemetry is ..\..\shared\telemetry (the model, the one reader both plugins share and the games it
 rem reads), listed by its sources.bat, which also finds LMU's headers (without them the plugin builds
 rem without LMU and reads no game). The G-meter's demo lap is ..\..\shared\telemetry\demo_lap.cpp.
@@ -13,9 +19,9 @@ rem files kept in %%LOCALAPPDATA%%\simoptix).
 rem Its version comes from ..\..\shared\build\version.bat (version.txt at the repo's root, and git),
 rem and goes into the DLL's version resource (version.rc).
 rem Writes bin\manifest.json from manifest.json with the version filled in, for OBS 32 and later.
-rem Optional argument "install": copies the DLL and manifest.json to OBS's per-machine plugin folder
-rem (C:\ProgramData\obs-studio\plugins\simoptix_overlays: the DLL in bin\64bit, manifest.json in
-rem data, where OBS reads it). Close OBS first.
+rem Optional argument "install": copies the DLL, manifest.json and the sources' icons (data\icons) to
+rem OBS's per-machine plugin folder (C:\ProgramData\obs-studio\plugins\simoptix_overlays: the DLL in
+rem bin\64bit, manifest.json in data and the icons in data\icons, where OBS reads them). Close OBS first.
 rem It links against OBS through an import library made here from ..\..\shared\obs_lib\obs.def (the
 rem functions OBS 32.2.2's obs.dll exports).
 setlocal
@@ -28,19 +34,24 @@ call ..\..\shared\build\version.bat obj || exit /b 1
 lib /nologo /def:..\..\shared\obs_lib\obs.def /machine:x64 /out:obj\obs.lib >nul || exit /b 1
 call ..\..\shared\telemetry\sources.bat
 rc /nologo /i ..\gmeter /fo obj\gmeter.res ..\gmeter\gmeter.rc || exit /b 1
+rc /nologo /i ..\performance /fo obj\performance.res ..\performance\performance.rc || exit /b 1
 rc /nologo /i ..\.. /i obj /fo obj\version.res version.rc || exit /b 1
 set "G=..\gmeter"
 set "C=..\common"
+set "P=..\performance"
 cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Fo:obj\ ^
-   /I..\.. /I%G% /I%C% /Iobj ^
+   /I..\.. /I%G% /I%C% /I%P% /Iobj ^
    /I..\..\third_party\obs-32.2.2\libobs %TELEMETRY_FLAGS% ^
    plugin.cpp %TELEMETRY_FILES% ..\..\shared\telemetry\demo_lap.cpp ^
-   %G%\gmeter_source.cpp %G%\meter_chrono.cpp %G%\meter_draw.cpp %G%\meter_text.cpp ^
-   %C%\text_raster.cpp %C%\meter_image.cpp %C%\properties_preview.cpp ^
+   %G%\gmeter_source.cpp %G%\meter_chrono.cpp %G%\meter_oled.cpp %G%\meter_dot.cpp ^
+   %P%\performance_source.cpp %P%\performance_theme.cpp %P%\performance_view.cpp ^
+   ..\..\shared\performance\performance_reader.cpp ..\..\shared\performance\performance_reading.cpp ^
+   %C%\meter_draw.cpp %C%\meter_text.cpp %C%\meter_image.cpp %C%\overlay_box.cpp ^
+   %C%\properties_preview.cpp ..\..\shared\text_raster.cpp ^
    ..\..\shared\log.cpp ..\..\shared\shared_memory.cpp ..\..\shared\program_delay.cpp ^
    ..\..\shared\crash_dump.cpp ..\..\shared\local_files.cpp ^
    /LD /Fe:bin\%NAME%.dll ^
-   /link obj\gmeter.res obj\version.res obj\obs.lib shlwapi.lib dwrite.lib d3d11.lib user32.lib ^
+   /link obj\gmeter.res obj\performance.res obj\version.res obj\obs.lib shlwapi.lib dwrite.lib d3d11.lib user32.lib ^
    gdi32.lib gdiplus.lib dbghelp.lib || exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\..\shared\build\fill_version.ps1 ^
    manifest.json bin\manifest.json || exit /b 1
@@ -50,8 +61,9 @@ rem leaves the block by goto.
 set "PLUGIN_FOLDER=C:\ProgramData\obs-studio\plugins\%NAME%"
 if /i "%~1"=="install" (
    if not exist "%PLUGIN_FOLDER%\bin\64bit" mkdir "%PLUGIN_FOLDER%\bin\64bit" || goto :install_failed
-   if not exist "%PLUGIN_FOLDER%\data" mkdir "%PLUGIN_FOLDER%\data" || goto :install_failed
+   if not exist "%PLUGIN_FOLDER%\data\icons" mkdir "%PLUGIN_FOLDER%\data\icons" || goto :install_failed
    copy /y bin\%NAME%.dll "%PLUGIN_FOLDER%\bin\64bit\" >nul || goto :install_failed
+   copy /y data\icons\*.svg "%PLUGIN_FOLDER%\data\icons\" >nul || goto :install_failed
    copy /y bin\manifest.json "%PLUGIN_FOLDER%\data\" >nul || goto :install_failed
    echo installed to %PLUGIN_FOLDER%
 )

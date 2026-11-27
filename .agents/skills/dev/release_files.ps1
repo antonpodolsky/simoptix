@@ -1,12 +1,13 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Packs a release's built files for its GitHub Release (reference\release.md, step 8):
-#   simoptix_setup_<version>.exe         SimOptix Setup, which carries both plugins and the layer
-#   simoptix_obs_plugins_<version>.zip   both plugins, laid out as in OBS's plugin folder,
-#                                        C:\ProgramData\obs-studio\plugins: <name>\bin\64bit\<name>.dll
-#                                        and <name>\data\manifest.json
-#   simoptix_openxr_layer_<version>.zip  the layer and its manifest in bin\, beside install.ps1,
-#                                        uninstall.ps1 and uninstall.bat, which install it from there
+#   SimOptixSetup-<version>.exe        SimOptix Setup, which carries both plugins and the layer
+#   SimOptixOBSPlugins-<version>.zip   both plugins, laid out as in OBS's plugin folder,
+#                                      C:\ProgramData\obs-studio\plugins: <name>\bin\64bit\<name>.dll
+#                                      and <name>\data\manifest.json, with the sources' icons in
+#                                      <name>\data\icons
+#   SimOptixOpenXRLayer-<version>.zip  the layer and its manifest in bin\, beside install.ps1,
+#                                      uninstall.ps1 and uninstall.bat, which install it from there
 # Refuses when a file's version isn't exactly the one in version.txt (a build off the release tag, or with
 # changes), or when the layer's or setup's signature isn't valid.
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File release_files.ps1 <output folder>
@@ -55,9 +56,11 @@ $pluginsFolder = Join-Path $staging 'obs_plugins'
 foreach ($name in $plugins.Keys) {
     $binFolder = Join-Path $pluginsFolder "$name\bin\64bit"
     $dataFolder = Join-Path $pluginsFolder "$name\data"
-    New-Item -ItemType Directory -Force $binFolder, $dataFolder | Out-Null
+    $iconsFolder = Join-Path $dataFolder 'icons'
+    New-Item -ItemType Directory -Force $binFolder, $iconsFolder | Out-Null
     Copy-Item (Join-Path $plugins[$name] "$name.dll") $binFolder
     Copy-Item (Join-Path $plugins[$name] 'manifest.json') $dataFolder
+    Copy-Item (Join-Path $plugins[$name] '..\data\icons\*.svg') $iconsFolder
 }
 
 $layerFolder = Join-Path $staging 'openxr_layer'
@@ -69,9 +72,9 @@ foreach ($script in 'install.ps1', 'uninstall.ps1', 'uninstall.bat') {
     Copy-Item (Join-Path $root "vr_mirror\frame_sources\openxr\$script") $layerFolder
 }
 
-$setupCopy = Join-Path $OutputPath "simoptix_setup_$version.exe"
-$pluginsZip = Join-Path $OutputPath "simoptix_obs_plugins_$version.zip"
-$layerZip = Join-Path $OutputPath "simoptix_openxr_layer_$version.zip"
+$setupCopy = Join-Path $OutputPath "SimOptixSetup-$version.exe"
+$pluginsZip = Join-Path $OutputPath "SimOptixOBSPlugins-$version.zip"
+$layerZip = Join-Path $OutputPath "SimOptixOpenXRLayer-$version.zip"
 Copy-Item $setup $setupCopy -Force
 Compress-Archive -Path (Join-Path $pluginsFolder '*') -DestinationPath $pluginsZip -Force
 Compress-Archive -Path (Join-Path $layerFolder '*') -DestinationPath $layerZip -Force

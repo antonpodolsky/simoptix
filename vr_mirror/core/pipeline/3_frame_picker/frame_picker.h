@@ -75,6 +75,13 @@ public:
     // `smoothingDelayS` and `copiesShownOnly` (Restart's), from what it measured so far (the
     // display's period, its copy delay, the host's ticks); 0 while it hasn't measured enough to tell.
     virtual int SlotsFor(double /*smoothingDelayS*/, bool /*copiesShownOnly*/) const { return SlotsInUse(); }
+    // The copy delay it measured and fixed (s), which sizes its store with the display's and the host's
+    // periods (FixedDelaySlots); 0 until fixed, or for a picker without one.
+    virtual double CopyDelayS() const { return 0; }
+    // The copy delay to work with until it is measured and fixed (s): one known for the source, so the
+    // delay barely changes when it is fixed, which would make the output jump. 0: the picker's own guess.
+    // A picker without one ignores it.
+    virtual void SetStartCopyDelay(double /*s*/) {}
     // A forecast of its picks (ShowForecast), fed with Record after every tick; null if it can't
     // forecast them, and then every frame is copied.
     virtual std::unique_ptr<ShowForecast> MakeForecast() const { return nullptr; }

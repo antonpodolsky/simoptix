@@ -57,6 +57,11 @@ struct SessionState {
     bool driving;         // in the car, not at the monitor or in the menus
     float speed;          // m/s, the player's car (0 without one)
     unsigned session;     // counts driving sessions: changes when a new one starts (or one restarts)
+    // The player's lap: its number as the game counts it (-1 without a car), the performance-counter
+    // seconds it started (when the car crossed the line), and whether the car is in the pit lane or garage.
+    int lap;
+    double lapStart;
+    bool inPits;
 };
 
 inline bool Finished(PlayerResult r) {

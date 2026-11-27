@@ -20,6 +20,7 @@ $builds = @(
     @{ Name = 'openxr_layer'; Script = 'vr_mirror\frame_sources\openxr\build.bat' },
     @{ Name = 'setup'; Script = 'setup\build.bat' },
     @{ Name = 'recording_analysis'; Script = 'vr_mirror\recording_analysis\build.bat' },
+    @{ Name = 'game'; Script = 'game\build.bat' },
     @{ Name = 'pvr_layout_check'; Script = 'vr_mirror\frame_sources\pimax\check\build.bat' }
 )
 

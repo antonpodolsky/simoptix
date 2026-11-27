@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "pipeline/image_room/image_room.h"
 
-#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -34,19 +33,15 @@ namespace {
 
 EdgeRoom RoomIn(const Quat& image, const Quat& view, const ViewGeometry& g) {
     EdgeRoom r;
-    Quat delta = Normalize(Mul(Conj(image), view));  // image -> view, in head coordinates
-    if (delta.w < 0) {
-        delta = {-delta.x, -delta.y, -delta.z, -delta.w};
-    }
-    r.lag = 2 * std::acos(std::min(1.0f, delta.w));
-    const float sinHalf = std::sqrt(std::max(0.0f, 1 - delta.w * delta.w));
+    const AngleAxis turn = RotationAngleAxisAcos(image, view);  // image -> view, in head coordinates
+    r.lag = turn.angle;
     const float kSearch = 60 * 3.14159265f / 180;
-    if (r.lag < 1e-5f || sinHalf < 1e-6f) {
+    if (r.lag < 1e-5f || !turn.hasAxis) {
         r.room = kSearch;
         return r;
     }
 
-    r.axis = {delta.x / sinHalf, delta.y / sinHalf, delta.z / sinHalf};
+    r.axis = turn.axis;
     auto fits = [&](float angle) {
         float rm[3][3];
         ViewToEye(image, TrailingView(image, r.axis, angle), g, rm);
@@ -74,20 +69,14 @@ EdgeRoom RoomIn(const Quat& image, const Quat& view, const ViewGeometry& g) {
 }
 
 bool Within(const Quat& image, const Quat& view, float fraction, const ViewGeometry& g, EdgeRoom* room) {
-    Quat d = Normalize(Mul(Conj(image), view));
-    if (d.w < 0) {
-        d = {-d.x, -d.y, -d.z, -d.w};
-    }
-    const float lag = 2 * std::acos(std::min(1.0f, d.w));
-    const float sinHalf = std::sqrt(std::max(0.0f, 1 - d.w * d.w));
-    if (lag < 1e-4f || sinHalf < 1e-6f) {
+    const AngleAxis turn = RotationAngleAxisAcos(image, view);
+    if (turn.angle < 1e-4f || !turn.hasAxis) {
         return true;
     }
 
     // Quick check first (one fit instead of a search): still inside if trailing by lag / fraction.
-    const Vec3 axis = {d.x / sinHalf, d.y / sinHalf, d.z / sinHalf};
     float rm[3][3];
-    ViewToEye(image, TrailingView(image, axis, lag / fraction), g, rm);
+    ViewToEye(image, TrailingView(image, turn.axis, turn.angle / fraction), g, rm);
     if (Fits(rm, g)) {
         return true;
     }

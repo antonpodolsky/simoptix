@@ -26,6 +26,15 @@ It doesn't try to sound good.
   would have to work out what is meant.
 - **Use the reader's own terms.** An OBS plugin adds a **source**. Pimax Play's setting is **Render
   Quality**. Never write around a word the reader uses every day.
+- **Docs for contributors use the technical term.** That is every level below the plugin READMEs in
+  "Who reads what" (below), the skills included. They name each thing by its standard term in git,
+  GitHub, Windows, Direct3D, C++ or the tool in question. A figure of speech, an everyday paraphrase or
+  a word of the writer's own never stands in for it:
+  - "the app sends the agent a message", not "the agent hears from the app"
+  - "a squash merge", not "GitHub folds the branch into one commit"
+  - "the render thread blocks on the mutex", not "the render thread waits its turn"
+
+  A term the reader of that level may not know gets a row in a terms table (rule 2). It isn't replaced.
 - **Keep a professional tone.** State a rule as what the project does or requires, in a neutral
   sentence, with its reason. No slogans or blunt commands as a bold lead ("Never touch the game"),
   and no dismissive asides ("There are no unit tests, and none are wanted").
@@ -136,7 +145,7 @@ assumes.
      Remove words, never these.
 7. **No code names in text for non-programmers.** A code name is the name of a class, function,
    file or setting key, such as `PimaxSource` or `kDrawnPose`. In the root README and the
-   plugin READMEs, say what the thing is instead: "the Pimax source", "the Smoothing setting". Give a
+   plugin READMEs, say what the thing is instead: "the Pimax source", "the Stabilization Method setting". Give a
    file path only where the reader has to open that file. In READMEs for contributors, code names
    go in tables, next to a plain description.
 8. **Avoid "picture" as a technical word.** Use the precise one:
@@ -207,13 +216,14 @@ assumes.
 reader. It has one section per release, newest first, in the Keep a Changelog format.
 
 - **Its lines are written in the pull request,** in the Changelog section of its description, with
-  one label for their heading: `added`, `changed`, `fixed`, `removed` or `security`. The release
+  one label for their heading: `feature` (Added), `change` (Changed), `bug` (Fixed), `deprecation`
+  (Deprecated), `removal` (Removed) or `security` (Security). The release
   script copies them into `CHANGELOG.md` at a release. Don't edit `CHANGELOG.md` in any other pull
   request.
 - **Every change users notice gets lines, in the same pull request,** the way a README moves with the
   code. Users notice what they see, set, install or run, and how well it works. A pull request whose
-  change only contributors notice is labelled `internal` and has none: tests, refactors,
-  contributors' docs, the skills, the build, findings.
+  change only contributors notice is labelled `documentation` or `maintenance` and has none: tests,
+  refactors, contributors' docs, the skills, the build, findings.
 - **One to three lines per pull request,** each a bullet (`- `) with one change. Say what changed for
   the user, with its numbers and conditions, in the words of the root README. Use the names the user
   sees: the sources, the settings, the files they run or open.
@@ -224,7 +234,7 @@ reader. It has one section per release, newest first, in the Keep a Changelog fo
 |---|---|---|
 | Build: each DLL carries the version in its version resource | A commit subject, for developers | Windows shows SimOptix's version in each plugin's Properties, under Details |
 | Fixed the install | Doesn't say what was wrong, or for whom | `build.bat install` makes the plugin's folders on a PC that has none |
-| Refactored the frame ring into its own file | Users notice nothing. Label it `internal`, with no lines | (no line) |
+| Refactored the frame ring into its own file | Users notice nothing. Label it `maintenance`, with no lines | (no line) |
 
 ## Findings and reference files
 
@@ -280,6 +290,8 @@ them)". A clean run is not the end. Read the rest yourself.
 
 - [ ] Each changed sentence states its facts in the plainest words: plain verbs, things named, the
       reader's own terms ("State the facts, plainly")
+- [ ] In the skills and the docs for contributors, each thing has its technical term, never a figure
+      of speech or a paraphrase ("State the facts, plainly")
 - [ ] The tone is professional: no slogans, blunt commands as bold leads, or dismissive asides
 - [ ] Only what the maintainer pointed at changed, and their wording is used as given
 - [ ] No semicolons outside code blocks, inline code and legal text (script)
@@ -287,7 +299,7 @@ them)". A clean run is not the end. Read the rest yourself.
 - [ ] Every coined term of `reference\terms.md` has a row in a terms table at or before its first
       use (script)
 - [ ] `CHANGELOG.md` has the release script's form: each section `## [x.y.z] - YYYY-MM-DD`, newest
-      first, with its link, and only the groups Added, Changed, Fixed, Removed and Security (script)
+      first, with its link, and only the groups Added, Changed, Fixed, Deprecated, Removed and Security (script)
 - [ ] Outside terms used without a table row: needed at this level? (script lists them)
 - [ ] "doesn't", "never", "no longer", "not yet", "for now" lines reviewed against rule 3 (script
       lists them)
@@ -308,5 +320,6 @@ them)". A clean run is not the end. Read the rest yourself.
 - [ ] The matching README, `CONTRIBUTING.md` and the dev skill changed together (dev skill, "Docs move
       with the code")
 - [ ] A change users notice has one to three lines in its pull request's Changelog section and one
-      type label. Any other pull request is labelled `internal` ("The changelog")
-- [ ] The commit subject is `Docs: what changed`
+      type label. Any other pull request is labelled `documentation` or `maintenance` ("The
+      changelog")
+- [ ] The commit subject is `docs(<scope>): what changed`

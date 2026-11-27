@@ -10,6 +10,10 @@ The local files test (`local_files\`) is separate. It runs the real OBS plugins 
 OBS, and the real OpenXR layer in a fake game. It checks the files they write under
 `%LOCALAPPDATA%\simoptix` ("The local files test", below).
 
+`auto_sync_e2e.exe` is separate too. It runs the real OBS plugin in a private copy of OBS, with a fake
+game that plays a real recording of LMU's menus, and checks how the plugin puts the game's sound in step
+with the view by itself (below).
+
 ## Terms
 
 | Term | Meaning |
@@ -37,6 +41,8 @@ OBS, and the real OpenXR layer in a fake game. It checks the files they write un
 | stage replay | `stage_replay.exe`. It runs the pipeline's stages offline, without the mirror app, the fake runtime or the GPU |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
 | golden file | The file `stage_replay --golden` writes: every output of the pipeline over a fixed set of inputs, to compare byte for byte |
+| auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
+| data folder | The folder `SIMOPTIX_DATA` names, outside the repo, where analyses of recordings are kept |
 
 ## The tests
 
@@ -191,6 +197,7 @@ is shown about half a second after the slot check's short memory moved on.
 | `stabilization` | Racing glances (±25° sway, 35° glances) with a fast shake (23 and 31 Hz) | No stall. Shake at most 50% of the head's (Look-ahead: 10%) |
 | `dropped_frames` | `stabilization`'s motion with the game missing 5% of its frames at random (`drop_rate=0.05`: one now and then, sometimes two in a row) | No stall. Shake at most 70% of the head's (Instant gets shakier with drops: 0.49–0.59, and Look-ahead: 10%). Mirror app at least 80 fps. Compared with Instant: recorded view jitter |
 | `head_still` | Headset worn and head held still: pulse, breathing, head tremor (6–12 Hz) with a fine shake (13–19 Hz), slow sway, and a slow ±0.6° lean towards a shoulder. The jitter measure sees 0.012° of it, within the 0.007–0.017° of the real heads in the replays | Smoothed jitter at most 0.005°, horizon level (at most 0.2°), no stall |
+| `no_smoothing` | `stabilization`'s motion at strength 0 (`smoothing_strength=0`): nothing is smoothed, and the horizon is still levelled. The motion rolls the head ±2° | The view looks where its image does, to 0.001°, horizon level (at most 0.2°) |
 | `black_borders` | One 12 s cycle of everything that pushes the view to an edge: 70° turns at about 315°/s, 35° flicks up and down, diagonal flicks, a 25° tilt, a fast shake, and a held turn with tilt | No black at any edge or corner, no stall (Look-ahead: jitter at most the head's) |
 | `black_borders_low_zoom` | `black_borders`' motion at zoom 1.2, where the view meets the edge | No black, no stall. Look-ahead: the edge stop acts on at most 0.5% of frames (the path is pulled in ahead of time instead), and jitter at most 1.2 of the head's |
 | `game_starts_late` | The mirror is on 5 s before the game's first frame (`game_start_s=5`). The texture and frame signal exist and the signal stays low, as on Pimax with no game | Runtime calls at most 50/s while no game runs (full rate is about 2,800/s), at most 1 of the game's first frames missed, no game frame missed after. Compared with Instant: its frame measures only |
@@ -221,7 +228,7 @@ measure the look-ahead made worse fails, beyond the spread of repeated runs of o
 | jitter ratio smoothed/head | 0.005, and never while the smoothed jitter is at most 0.005° |
 | recorded view jitter | 10% + 0.005° (repeated runs: within 0.003°) |
 | frames from the wrong pose | 40% + 0.3 points (Instant alone: 6.9–9.5% in `queued_late_frames`) |
-| max horizon tilt | 0.05° |
+| max horizon tilt | 2% + 0.05° (`black_borders`, whose head tilts 1.1° by design: up to 0.059° apart over repeated runs) |
 
 The rest is shown beside them: frame rates, delay and its spread, frame gaps, OBS repeats, lag,
 mismatch, on-screen jitter, pose error and edge limit. These differ by design (the delay, the lag) or
@@ -258,6 +265,33 @@ three things:
   inputs and settings. A change that must not change behaviour can be checked byte for byte against
   the build before it.
 
+## The auto sync test
+
+`bin\auto_sync_e2e.exe` checks auto sync (`vr_mirror\obs_plugin\README.md`, "Auto sync") end to end, on
+a real recording of LMU's menus. It runs the plugins as built in a private copy of OBS, as the local files
+test does (below), with the OpenXR source and Desktop Audio in its scene. The fake OpenXR game plays a cut
+of the recording, made by `vr_mirror\recording_analysis\export_menu_cut.py`: each frame drawn from the
+camera it was recorded from, so the menu stays fixed in the headset's tracking space for the plugin as in
+the game, and the recording's sound through Windows' default output device, a chosen lag late. Auto sync
+measures the game's sound at the hovers. The menus start playing when the OBS log says auto sync is
+measuring, so no hover goes by before it, and each run lasts until the log says it is done.
+
+| Run | Put in | Checks |
+|---|---|---|
+| `sound_0` | The menus' sound as recorded | Auto sync is done, and the game's sound is found |
+| `sound_60_again` | The menus' sound 60 ms later. Once auto sync is done, the game's frames stop for 3 s, as when LMU restarts, and the menus play again | The same. Then auto sync measures again because the game's frames started again, and is done again within 10 ms of the first value |
+| Between the runs | | The game's sound moves by 60 ms, within 10 ms |
+
+The sound in a real recording has a lag of its own after its image, which isn't known exactly. So the
+sound is checked by how much it moves between the runs.
+
+The cut shows LMU's menus, with cars and tracks, so it stays in the data folder: in the folder
+`AUTO_SYNC_MENU_CUT` names, else `auto_sync_menu_cut` in `SIMOPTIX_DATA`. Without it, the test says so and
+stops. It needs OBS installed and a sound output device, OBS and LMU closed, and no other sound playing:
+Desktop Audio captures all of it, and other sound drowns the ticks. The menus' sound is heard. Each run
+takes about 10 s, and the test about half a minute with OBS's starts.
+Each run's files, OBS's log among them, are in `out\auto_sync\<run>\`.
+
 ## The local files test
 
 `bin\local_files_e2e.exe` checks the frame traces, crash dumps and OpenXR layer logs that SimOptix
@@ -285,12 +319,13 @@ in `out\local_files\<case>\`.
 
 | Folder or file | What |
 |---|---|
-| `build.bat` | Builds the fake runtime, the fake OpenXR game, the runner, the local files test with its fake game, and `stage_replay` into `bin\` |
+| `build.bat` | Builds the fake runtime, the fake OpenXR game, the runner, the local files test with its fake game, the auto sync test and `stage_replay` into `bin\` |
 | `fake_game\` | What `fake_pvr\` and `fake_openxr\` share: the head motion (`fake_game_motion.h`) and the game's image (`fake_game_image.*`: the direction codes or the cockpit, stored as the faked source stores it) |
 | `fake_layer_game\` | `Le Mans Ultimate.exe`: the fake game that loads the real OpenXR layer's DLL, for the local files test |
-| `fake_openxr\` | `fake_openxr.exe`: the fake game with the OpenXR layer's frames, through the layer's own frame code (`fake_openxr_layer.*` makes the game's calls into it) |
+| `fake_openxr\` | `fake_openxr.exe`: the fake game with the OpenXR layer's frames, through the layer's own frame code (`fake_openxr_layer.*` makes the game's calls into it). Without its render thread, the layer also times its frames for the performance overlay while the overlay reads. For the auto sync test, it plays a cut of a real recording (`fake_openxr_recording.*`) and its sound (`fake_openxr_sound.*`) |
 | `local_files\` | `local_files_e2e.exe`: the local files test. Its cases (`local_files_e2e.cpp`), its copy of OBS (`local_files_obs.*`), and the older files it makes and the files it reads (`local_files_folder.*`) |
 | `fake_pvr\` | `libPVRClient64.dll`: the fake PVR runtime and game, with replays of real sessions (`fake_pvr_replay.h`) and their real thumbnails (`fake_pvr_thumbs.h`) |
 | `runner\` | `e2e_runner.exe`: the scenarios (`scenarios.*`), running the mirror app (`tool_process.*`), capturing its window (`capture.h`, `patches.h`), the measures (`analysis.*`), and the comparison with Instant (`compare.*`) |
+| `auto_sync_e2e\` | `auto_sync_e2e.exe`: the auto sync test. It writes the fake game's plan from the cut, runs OBS with the fake game, and grades what auto sync settled at |
 | `stage_replay\` | `stage_replay.exe`: one run per stage (`runs_*.cpp`), the whole pipeline (`runs_pipeline.cpp`), its scores (`scores.*`), the golden file (`golden.*`), `golden_compare.py`, which compares golden files run by run, and `golden_expected.txt`, the SHA-256 of each run of the expected golden file |
 | `replay\` | The replays of real sessions (`<name>.csv`, each a scenario `replay_<name>`) and their real thumbnails (`<name>.thumbs.png`) |

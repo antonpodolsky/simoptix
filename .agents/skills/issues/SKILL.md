@@ -38,14 +38,19 @@ maintainer's PC, or the agent's notes, memory and other sessions.
 
 ## Labels
 
+An issue takes one type label, the same as the pull request that does its work takes
+(pull-requests skill, "The label"):
+
 | Label | When |
 |---|---|
+| `feature` | Something new is wanted that users would notice: a source, a setting, a game, a headset |
+| `change` | Something users see, set or install should work differently or better |
 | `bug` | Something works wrong |
-| `enhancement` | Something new is wanted, or something that works should work better |
-| `documentation` | Only the docs or the skills change |
-
-The type labels `added`, `changed`, `fixed`, `removed`, `security` and `internal` are for pull
-requests (pull-requests skill, "The label").
+| `deprecation` | Something users have should be marked to be removed in a later release |
+| `removal` | Something users have should be removed |
+| `security` | A security problem |
+| `documentation` | Only contributors' docs, the skills or findings should change |
+| `maintenance` | Something users don't notice should change: tests, refactors, the build, the checks, a release |
 
 ## Comments
 

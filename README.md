@@ -1,43 +1,45 @@
 # SimOptix
 
-SimOptix is a set of sim racing tools for capturing stabilized VR footage and overlays.
-The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both currently work with `Le Mans Ultimate (LMU)` and `Pimax` headsets (support for more games and headsets is planned).
+SimOptix is a suite of sim racing tools for capturing stabilized VR footage and overlays.  
+The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both currently work with `Le Mans Ultimate`, `Pimax` headsets and the `Meta Quest 3`.
 
-## What you get
+## What's included
 
-- **SimOptix: VR Mirror** adds two OBS sources with the stabilized view:
-  - **SimOptix: Pimax Mirror** takes Pimax Play's copy of the left eye.
-    - It is half the size the game draws.
-  - **SimOptix: OpenXR Mirror** takes the game's own left eye.
-    - It is the full size the game draws.
-    - It needs an API layer in the game.
+- OBS VR Mirror plugin which adds two sources that provide a stabilized view:
+  - **SimOptix: Pimax Mirror** reads left eye frames from Pimax.
+    - Frames are half the size.
+    - No OpenXR layer is required.
+  - **SimOptix: OpenXR Mirror** reads left eye frames from the SimOptix OpenXR layer.
+    - Frames are full resolution.
     - The layer works with Easy Anti-Cheat (EAC) only when it is signed (below).
-- **Stabilization** is set by the source's Smoothing setting:
-  - **Off:** raw headset view.
-  - **Instant:** prioritizes latency (no delay), best for live streams.
-  - **Look-ahead:** prioritizes smoothness over latency (runs half a second behind the game), best for
-    recording. It is the default.
-  - OBS's audio, the G-meter and race auto-record follow the delay, so they stay in sync with the view.
-- **Race auto-record** makes OBS record each LMU race by itself.
-  - It records from the start lights to 5 s after the car stops past the finish.
-- **SimOptix: Overlays** adds the **SimOptix: G-Meter Overlay** source.
-  - It also works over a normal capture of a flat-screen game.
-  - It plays a demo lap, so you can try it without the game.
+- Two stabilization methods:
+  - **Instant:** prioritizes low latency (no delay, low VRAM usage), best for live streams.
+  - **Look-ahead:** prioritizes smoothness (0.5s delay, higher VRAM usage), best for
+    recording.
+- Auto-record option:
+  - Race is recorded from the starting lights to 5s after the car stops past the finish line.
+- OBS Overlays plugin which adds two sources:
+  - **SimOptix: G-Meter Overlay** shows the car's G-forces, brake and throttle.
+    - No OpenXR layer is required.
+  - **SimOptix: Performance Overlay** shows the game's FPS, and how much of each frame's time is left
+    on the GPU and the CPU.
+    - It reads them from the SimOptix OpenXR layer.
 
-## Headsets and games
+## Supported VR headsets and games
 
 ### Games
 | Game | VR Mirror | G-meter and race auto-record |
 |---|---|---|
-| LMU | Supported, with both sources | Supported |
+| Le Mans Ultimate | Supported, with both sources | Supported |
 | Other games | Pimax Mirror should work, not tested. OpenXR Mirror's API layer currently loads only in LMU by design. | Not supported |
 
 ### Headsets
-| Headset | Pimax Mirror | OpenXR Mirror |
+| Headset | Sources | Status |
 |---|---|---|
-| Pimax Dream Air | Supported | **Measured** |
-| Other Pimax headsets | Should work, not tested | Should work, not tested |
-| Other OpenXR headsets | Should work, not tested | Should work, not tested |
+| Pimax Dream Air | Pimax Mirror, OpenXR Mirror | Supported |
+| Meta Quest 3 | OpenXR Mirror | Supported |
+| Other Pimax headsets | Pimax Mirror, OpenXR Mirror | Should work, not tested |
+| Other OpenXR headsets | OpenXR Mirror | Should work, not tested |
 
 ## Recording in OBS
 To record at the source's native resolution, set OBS's canvas and output to the suggested size
@@ -45,11 +47,15 @@ To record at the source's native resolution, set OBS's canvas and output to the 
 highest Zoom setting at which the recording stays native. Above it, the image is enlarged, and the
 video gets softer.
 
-| Headset | Source | Render Quality | Left eye image | Suggested canvas | Max zoom for native |
+| Headset | Source | Resolution setting | Left eye image | Suggested canvas | Max zoom for native |
 |---|---|---|---|---|---|
-| Pimax Dream Air | Pimax Mirror | 1.0 | 2508×2084 | 1920×1080 | 1.31 |
-| Pimax Dream Air | Pimax Mirror | 1.25 | 3134×2604 | 2560×1440 | 1.22 |
-| Pimax Dream Air | OpenXR Mirror | 1.0 | 5084×4168 | 3840×2160 | 1.32 |
+| Pimax Dream Air | Pimax Mirror | Render Quality 1.0 | 2508×2084 | 1920×1080 | 1.31 |
+| Pimax Dream Air | Pimax Mirror | Render Quality 1.25 | 3134×2604 | 2560×1440 | 1.22 |
+| Pimax Dream Air | OpenXR Mirror | Render Quality 1.0 | 5084×4168 | 3840×2160 | 1.32 |
+| Meta Quest 3 | OpenXR Mirror | Pixels Per Display Pixel Override 0 (the default) | 2720×2976 | 1920×1080 | 1.37 |
+| Meta Quest 3 | OpenXR Mirror | Pixels Per Display Pixel Override 1.5 | 4080×4448 | 2560×1440 | 1.54 |
+
+The Meta Quest 3's setting is in the Oculus Debug Tool.
 
 `vr_mirror\obs_plugin\README.md` ("Recording at the source's
 native resolution") has more canvases and zooms.
@@ -61,14 +67,18 @@ native resolution") has more canvases and zooms.
   poses. The G-meter and race auto-record read the telemetry that LMU publishes for outside tools.
 - **OpenXR Mirror** needs an API layer that OpenXR loads into LMU when the game starts. The layer
   copies the left eye image after each frame has gone to the headset, and only while an OpenXR Mirror
-  source is shown in OBS. It passes every OpenXR call on unchanged, except that it asks the runtime for
-  one time-conversion extension. Its README has the details (`vr_mirror\frame_sources\openxr\README.md`).
+  source is shown in OBS. While a Performance Overlay source is shown, it also times the game's frames
+  on the CPU and the GPU. It passes every OpenXR call on unchanged, except that it asks the runtime for
+  one time-conversion extension. More details in the README (`vr_mirror\frame_sources\openxr\README.md`).
 
 **The unsigned OpenXR layer is blocked by EAC.**
 - **Unsigned,** the layer is refused by EAC, and online play is disabled as a result.
-- **Signed with a code signing certificate Windows trusts,** the layer loads and online is enabled. Currently the layer is built unsigned
-  unless you sign it with such a certificate of your own (Install, step 3).
+- **Signed with a code signing certificate Windows trusts,** the layer loads and online is enabled.
 
+## How SimOptix is built
+
+SimOptix's development is AI-assisted, using a strict workflow to ensure code and product quality (read more in `HOW_SIMOPTIX_IS_BUILT.md`).  
+Author is a software engineer with over 15 years of experience.
 
 ## Requirements
 
@@ -76,7 +86,9 @@ To run:
 - 64-bit Windows (developed on Windows 11)
 - OBS Studio 32 (built against 32.2.2)
 - For Pimax Mirror: a Pimax headset with Pimax Play running
-- For OpenXR Mirror: the API layer installed. If unsigned, LMU needs to be started without EAC (with a `+XR` flag).
+- For OpenXR Mirror: a headset whose VR software is the active OpenXR runtime, such as Pimax Play or
+  Meta Horizon Link, and the API layer installed. If unsigned, LMU needs to be started without EAC
+  (with a `+XR` flag).
 
 To build:
 - Visual Studio 2019 or later, or its Build Tools, with the C++ tools. Only 2019 has been tried.
@@ -90,8 +102,9 @@ To build:
 1. Close OBS.
 2. Run `vr_mirror\obs_plugin\build.bat install` and `overlays\obs_plugin\build.bat install`. Each
    builds its plugin and copies it to OBS's plugin folder
-   (`C:\ProgramData\obs-studio\plugins\<its name>`): the DLL to `bin\64bit`, and `manifest.json` with
-   the plugin's name and version to `data`. Install both from one build, because they share the game's
+   (`C:\ProgramData\obs-studio\plugins\<its name>`): the DLL to `bin\64bit`, `manifest.json` with the
+   plugin's name and version to `data`, and its sources' icons to `data\icons`. OBS 32.2 and later show
+   those icons beside the sources. Install both from one build, because they share the game's
    data and check that they match. If SimOptix Setup installed the plugins, their files belong to the
    administrators, and the script stops with "cannot install": run it from a command prompt opened as
    administrator.
@@ -119,29 +132,17 @@ its Uninstall removes everything. `setup\README.md` describes setup.
 | Folder | What |
 |---|---|
 | `vr_mirror\` | SimOptix: VR Mirror |
-| `vr_mirror\obs_plugin\` | The OBS sources Pimax Mirror and OpenXR Mirror, and race auto-record (`race_auto_record\`) |
-| `vr_mirror\frame_sources\` | Where the game's frames and head poses come from: `pimax\` through Pimax Play, and `openxr\` through the API layer and its reader. Each has a check program |
+| `vr_mirror\obs_plugin\` | The OBS sources Pimax Mirror and OpenXR Mirror, race auto-record (`race_auto_record\`), and the lap recorder for the demo (`lap_recorder\`) |
+| `vr_mirror\frame_sources\` | Where the game's frames and head poses come from: `pimax\` through Pimax Play, and `openxr\` through the API layer and its reader, each with a check program. `demo\` plays a lap you recorded, in their place |
 | `vr_mirror\core\` | The stabilization itself, the same in OBS and in the desktop window |
 | `vr_mirror\mirror_app\` | VR Mirror in a desktop window, which the end-to-end tests run |
 | `vr_mirror\e2e\` | End-to-end tests: the desktop window against a simulated Pimax headset and game, or a simulated game with the API layer |
 | `vr_mirror\recording_analysis\` | Scripts that check a recording frame by frame, and turn a moment of it into a test |
+| `game\` | A test game for the headset with a grid for judging sharpness, to try ways of drawing each eye without LMU |
 | `overlays\` | SimOptix: Overlays: the G-meter (`gmeter\`, its image layers in `gmeter\design\`) and what any overlay can reuse (`common\`) |
-| `shared\` | Code compiled into both plugins: logging, CPU counters, crash dumps, the files kept in `%LOCALAPPDATA%\simoptix` (the newest 10 of each kind), the view's delay, and the list of OBS functions they call (`obs_lib\`). `build\` finds Visual Studio and gives every build SimOptix's version |
-| `shared\telemetry\` | One reader of the game's telemetry for all of OBS, and the G-meter's demo lap. `games\lmu\fake\` makes up LMU telemetry, to test without the game |
+| `shared\` | Code shared between all plugins |
 | `setup\` | SimOptix Setup: one program that installs and removes both plugins and the layer |
 | `third_party\` | libobs 32.2.2 and the OpenXR headers, as published |
-
-Each part's README describes what it does, its settings and its files:
-- `vr_mirror\obs_plugin\README.md`
-- `vr_mirror\core\README.md`, and a README for each stage of the pipeline in `vr_mirror\core\pipeline\`
-- `vr_mirror\frame_sources\README.md`, `vr_mirror\frame_sources\pimax\README.md` and
-  `vr_mirror\frame_sources\openxr\README.md`
-- `vr_mirror\mirror_app\README.md`
-- `vr_mirror\e2e\README.md`
-- `vr_mirror\recording_analysis\README.md`
-- `overlays\README.md` and `overlays\gmeter\design\README.md`
-- `shared\telemetry\README.md`
-- `setup\README.md`
 
 ## Contributing
 
@@ -149,13 +150,6 @@ Each part's README describes what it does, its settings and its files:
 for the code and the same way of working in full, written for AI coding agents and people alike, with
 what was measured and tried so far. `.agents\skills\docs\` holds the rules for writing the docs.
 `AGENTS.md` points every coding agent at these skills.
-
-## How SimOptix is built
-
-SimOptix's development is AI-assisted, using software engineering best practices. It has a strict dev
-workflow, quality gates, and the author reviews the code. The work rests on
-end-to-end tests with a simulated headset and game, and on decisions made from measurements.
-`HOW_SIMOPTIX_IS_BUILT.md` describes these practices.
 
 ## Licence
 

@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "text_raster.h"
+#include "shared/text_raster.h"
 
 #include <windows.h>
-#include <dwrite_2.h>
+#include <dwrite_3.h>
 #include <wrl/client.h>
 
 #include <algorithm>
@@ -149,17 +149,34 @@ namespace {
         Microsoft::WRL::ComPtr<IDWriteTextLayout> layout;
         Microsoft::WRL::ComPtr<IDWriteTypography> typography;
         Microsoft::WRL::ComPtr<IDWriteTextLayout1> layout1;
-        bool ok = SUCCEEDED(f->CreateTextFormat(
-                      style.family,
-                      nullptr,
-                      DWRITE_FONT_WEIGHT(style.weight),
-                      DWRITE_FONT_STYLE_NORMAL,
-                      DWRITE_FONT_STRETCH_NORMAL,
-                      style.size,
-                      L"en-us",
-                      &format
-                  ))
-                  && SUCCEEDED(format->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP))
+        Microsoft::WRL::ComPtr<IDWriteTextFormat3> format3;
+        const HRESULT hr = f->CreateTextFormat(
+            style.family,
+            nullptr,
+            static_cast<DWRITE_FONT_WEIGHT>(style.weight),
+            DWRITE_FONT_STYLE_NORMAL,
+            DWRITE_FONT_STRETCH_NORMAL,
+            style.size,
+            L"en-us",
+            &format
+        );
+
+        if (FAILED(hr)) {
+            return false;
+        }
+
+        // A weight between a variable font's named ones (Bahnschrift's Medium, 500) exists only on its
+        // weight axis: without it DirectWrite takes the nearest named weight (SemiBold). Fonts without
+        // the axis ignore it, and so does a Windows older than 10 version 1803, which lacks the interface.
+        if (SUCCEEDED(format.As(&format3))) {
+            const DWRITE_FONT_AXIS_VALUE weight = {
+                DWRITE_FONT_AXIS_TAG_WEIGHT,
+                static_cast<float>(style.weight)
+            };
+            (void)format3->SetFontAxisValues(&weight, 1);  // without it, the nearest named weight
+        }
+
+        bool ok = SUCCEEDED(format->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP))
                   && SUCCEEDED(f->CreateTextLayout(text, length, format.Get(), 100000, 100000, &layout));
 
         if (ok && style.tabular && SUCCEEDED(f->CreateTypography(&typography))) {

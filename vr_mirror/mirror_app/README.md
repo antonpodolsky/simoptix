@@ -20,7 +20,7 @@ OBS captures a window.
 | cockpit correction | A refinement of the drawn pose. It measures how the fixed cockpit moved between two frames and corrects the pose by what the head poses don't explain |
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
 | fake runtime | The stand-in for Pimax's client library (`vr_mirror\e2e\fake_pvr\`) that the e2e tests use in place of a headset and a game |
-| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`) or the OpenXR source (`vr_mirror\frame_sources\openxr\`) |
+| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
 | PVR | Pimax's own name for its client interface: the client library `libPVRClient64.dll` that Pimax Play installs, and the table of functions it hands out. The project's code that wraps it is named after it |
 
 ## How it works
@@ -55,7 +55,7 @@ file.
 | Key | What |
 |---|---|
 | `frame_source` | Where the frames come from: `pimax` (the default, Pimax's client mirror) or `openxr` (the OpenXR layer in the game, `vr_mirror\frame_sources\openxr\`) |
-| `smoothing` | 0 Off, 1 Instant, 2 Look-ahead (the default), as in the OBS plugin |
+| `smoothing` | 0 Off, 1 Instant, 2 Look-ahead (the default), the values of the OBS plugin's Stabilization Method |
 | `zoom` | The crop factor (default 1.5). The spare image around the view is how far the view may trail the head |
 | `drawn_pose` | How the head pose a frame was drawn with is found: 0 off, 1 the slot check (the default), 2 the slot check plus the cockpit correction (the OBS plugin's choice) |
 | `output_width`, `output_height` | The window's client size at start (default 2560×1440) |

@@ -2,12 +2,34 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "pipeline/4_smoothing/lookahead_smoothing.h"
 
+void LookaheadSmoothing::SetStrength(float strength) {
+    if (strength == strength_) {
+        return;
+    }
+
+    strength_ = strength;
+    params_ = LookaheadParams();
+    params_.tauStillS *= strength;
+    params_.tauMoveS *= strength;
+}
+
 void LookaheadSmoothing::Window(double period, int* behind, int* ahead) const {
+    if (strength_ <= 0) {
+        *behind = *ahead = 0;  // no path to solve
+        return;
+    }
+
     *behind = LookaheadSmoother::Behind(params_, period);
     *ahead = LookaheadSmoother::Ahead(params_, period);
 }
 
 Smoothed LookaheadSmoothing::Smooth(const SmoothingInput& in) {
+    // Strength 0: no smoothing, the image's own pose levelled. The delay stays: it is the method's.
+    if (strength_ <= 0) {
+        const EdgeStop stop = StopAtEdge(in.shown, LevelHorizon(in.followed), in.geometry);
+        return {stop.view, false, stop.stopped, stop.movedDeg};
+    }
+
     int behind = 0, ahead = 0;
     Window(in.period, &behind, &ahead);
 
