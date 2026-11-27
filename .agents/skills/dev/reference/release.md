@@ -114,7 +114,7 @@ Work in a worktree from `main` (`SKILL.md`, step 0), named `release_v<version>`.
    or the Changelog section of its description. Then choose the bump ("When to bump").
 2. Write the new version into `version.txt`. Run `python -I .agents\skills\dev\release.py`, and read the
    section it wrote.
-3. Commit `version.txt` and `CHANGELOG.md` as `chore(repo): release v<version>`, and open the pull
+3. Commit `version.txt` and `CHANGELOG.md` as `chore(release): v<version>`, and open the pull
    request with the same title and the label `maintenance`. Merge it after its checks.
 4. Tag the merged commit on GitHub's `main`, annotated, and push the tag:
 
