@@ -2,12 +2,14 @@
 rem Copyright (C) 2026 Anton Podolsky
 rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds SimOptix: VR Mirror, simoptix_vr_mirror.dll: the OBS source SimOptix: Pimax
-rem Mirror (plugin.cpp; drawn by mirror_view.cpp with
-rem the effect in warp_effect.cpp, its empty state by empty_state.cpp with ..\..\shared\text_raster.cpp
-rem and the facts on it by setup_facts.cpp with video_memory.cpp, its frames
+rem Mirror (plugin.cpp, its settings as OBS saves them in source_settings.cpp; drawn by
+rem mirror_view.cpp with the effect in warp_effect.cpp, its empty state by empty_state.cpp with
+rem ..\..\shared\text_raster.cpp, its text by empty_state_text.cpp and the facts on it by setup_facts.cpp
+rem with video_memory.cpp, its frames
 rem copied by frame_ring.cpp, its frame source started and stopped by session_worker.cpp, the audio kept
-rem in step with its view by audio_sync.cpp, the file beside each recording by recording_notes.cpp), and
-rem its race auto-record (race_auto_record\race_recorder.cpp decides when, race_auto_record\auto_record.cpp tells
+rem in step with its view by audio_sync.cpp, the game's sound by auto_sync\*.cpp, the file beside each
+rem recording by recording_notes.cpp), and its race
+rem auto-record (race_auto_record\race_recorder.cpp decides when, race_auto_record\auto_record.cpp tells
 rem OBS), the lap recorder for the demo (lap_recorder\: lap_finder.cpp finds the lap, lap_video.cpp encodes it,
 rem lap_recorder.cpp runs both), plus the frame sources (..\frame_sources\pimax, openxr and demo, each
 rem listed in its .rsp), the VR
@@ -19,9 +21,9 @@ rem builds without LMU, and race auto-record reads no game).
 rem Its version comes from ..\..\shared\build\version.bat (version.txt at the repo's root, and git),
 rem and goes into the DLL's version resource (version.rc).
 rem Writes bin\manifest.json from manifest.json with the version filled in, for OBS 32 and later.
-rem Optional argument "install": copies the DLL and manifest.json to OBS's per-machine plugin folder
-rem (C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror: the DLL in bin\64bit, manifest.json in
-rem data, where OBS reads it). Close OBS first.
+rem Optional argument "install": copies the DLL, manifest.json and the sources' icons (data\icons) to
+rem OBS's per-machine plugin folder (C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror: the DLL in
+rem bin\64bit, manifest.json in data and the icons in data\icons, where OBS reads them). Close OBS first.
 rem It links against OBS through an import library made here from ..\..\shared\obs_lib\obs.def (the
 rem functions OBS 32.2.2's obs.dll exports).
 setlocal
@@ -38,9 +40,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ..\core\build\embed_text.ps1
    ..\core\pipeline\5_warp\warp.hlsli obj\warp_hlsli.h kWarpHlsli || exit /b 1
 cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Fo:obj\ ^
    /I..\.. /I..\core /I..\..\third_party\obs-32.2.2\libobs /I..\..\third_party\openxr /Iobj %TELEMETRY_FLAGS% ^
-   plugin.cpp mirror_view.cpp video_memory.cpp setup_facts.cpp warp_effect.cpp empty_state.cpp frame_ring.cpp ^
-   session_worker.cpp ^
+   plugin.cpp source_settings.cpp mirror_view.cpp video_memory.cpp setup_facts.cpp warp_effect.cpp ^
+   empty_state.cpp empty_state_text.cpp frame_ring.cpp session_worker.cpp ^
    audio_sync.cpp recording_notes.cpp ^
+   auto_sync\auto_sync.cpp auto_sync\auto_sync_values.cpp auto_sync\audio_tap.cpp auto_sync\tracking_grid.cpp ^
+   auto_sync\sync_setup.cpp ^
+   auto_sync\hover_sync_measure.cpp auto_sync\hover_highlight.cpp auto_sync\hover_tick.cpp auto_sync\hover_tally.cpp ^
    race_auto_record\race_recorder.cpp race_auto_record\auto_record.cpp ^
    lap_recorder\lap_finder.cpp lap_recorder\lap_video.cpp lap_recorder\lap_recorder.cpp ^
    ..\..\shared\shared_memory.cpp ..\..\shared\program_delay.cpp ..\..\shared\crash_dump.cpp ^
@@ -59,8 +64,9 @@ rem leaves the block by goto.
 set "PLUGIN_FOLDER=C:\ProgramData\obs-studio\plugins\%NAME%"
 if /i "%~1"=="install" (
    if not exist "%PLUGIN_FOLDER%\bin\64bit" mkdir "%PLUGIN_FOLDER%\bin\64bit" || goto :install_failed
-   if not exist "%PLUGIN_FOLDER%\data" mkdir "%PLUGIN_FOLDER%\data" || goto :install_failed
+   if not exist "%PLUGIN_FOLDER%\data\icons" mkdir "%PLUGIN_FOLDER%\data\icons" || goto :install_failed
    copy /y bin\%NAME%.dll "%PLUGIN_FOLDER%\bin\64bit\" >nul || goto :install_failed
+   copy /y data\icons\*.svg "%PLUGIN_FOLDER%\data\icons\" >nul || goto :install_failed
    copy /y bin\manifest.json "%PLUGIN_FOLDER%\data\" >nul || goto :install_failed
    echo installed to %PLUGIN_FOLDER%
 )

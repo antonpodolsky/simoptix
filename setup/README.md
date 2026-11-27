@@ -29,7 +29,7 @@ beside it.
 
 | Part | Where |
 |---|---|
-| VR Mirror | `C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror\`: the DLL, and `manifest.json` with the plugin's name and version in a folder named data |
+| VR Mirror | `C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror\`: the DLL, and in a folder named data `manifest.json` with the plugin's name and version and the sources' icons in `icons\` |
 | Overlays | `C:\ProgramData\obs-studio\plugins\simoptix_overlays\`, the same way |
 | OpenXR layer | The DLL and its manifest in `C:\Program Files\simoptix\openxr_frame_source\`, registered in `HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\OpenXR\1\ApiLayers\Implicit` with the value 0 (on) |
 | Setup's own copy | `C:\Program Files\simoptix\simoptix_setup.exe`, while anything is installed |

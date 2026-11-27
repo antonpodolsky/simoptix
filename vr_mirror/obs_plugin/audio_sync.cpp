@@ -7,6 +7,8 @@
 
 #include <atomic>
 #include <cmath>
+#include <cstring>
+#include <mutex>
 
 #include "shared/program_delay.h"
 
@@ -23,6 +25,13 @@ namespace {
     // The shift the UI task applies (ns), set when it is queued.
     std::atomic<int64_t> g_shift{0};
     bool (*g_anyDebug)() = nullptr;  // set at Start, then only read: whether to log a change
+    // The game's sound (SetGameSound): its source and its correction (ns), and a count of changes the
+    // tick callback compares with what it queued.
+    std::mutex g_gameMutex;
+    std::string g_gameName;
+    int64_t g_gameCorrection = 0;
+    std::atomic<uint32_t> g_gameChanges{0};
+    uint32_t g_gameQueued = 0;  // graphics thread
 
     // The delay as a shift, to the millisecond (so the copy delay's small changes don't touch the offsets).
     int64_t ShiftNow() {
@@ -33,8 +42,16 @@ namespace {
     void Apply(void*) {
         struct Ctx {
             int64_t shift;
+            std::string game;
+            int64_t correction;
             int changed;
-        } ctx = {g_shift.load(), 0};
+        } ctx = {g_shift.load(), {}, 0, 0};
+
+        {
+            std::lock_guard<std::mutex> lock(g_gameMutex);
+            ctx.game = g_gameName;
+            ctx.correction = ctx.shift != 0 ? g_gameCorrection : 0;
+        }
 
         obs_enum_sources(
             [](void* p, obs_source_t* source) {
@@ -42,14 +59,16 @@ namespace {
                 if (!(obs_source_get_output_flags(source) & OBS_SOURCE_AUDIO)) {
                     return true;
                 }
+                const bool game = !c->game.empty() && c->game == obs_source_get_name(source);
+                const int64_t shift = c->shift + (game ? c->correction : 0);
                 obs_data_t* priv = obs_source_get_private_settings(source);
                 const int64_t applied = obs_data_get_int(priv, kShiftKey);
-                if (applied != c->shift) {
+                if (applied != shift) {
                     obs_source_set_sync_offset(
                         source,
-                        ShiftedSyncOffset(obs_source_get_sync_offset(source), applied, c->shift)
+                        ShiftedSyncOffset(obs_source_get_sync_offset(source), applied, shift)
                     );
-                    obs_data_set_int(priv, kShiftKey, c->shift);
+                    obs_data_set_int(priv, kShiftKey, shift);
                     c->changed++;
                 }
                 obs_data_release(priv);
@@ -58,14 +77,25 @@ namespace {
             &ctx
         );
 
-        if (ctx.changed && g_anyDebug && g_anyDebug()) {
+        if (!ctx.changed || !g_anyDebug || !g_anyDebug()) {
+            return;
+        }
+
+        blog(
+            LOG_INFO,
+            "[simoptix_vr_mirror] audio sync: %d audio source%s now %+lld ms on top of their own offsets "
+            "(the view's delay)",
+            ctx.changed,
+            ctx.changed == 1 ? "" : "s",
+            static_cast<long long>(ctx.shift / 1000000)
+        );
+
+        if (ctx.correction != 0) {
             blog(
                 LOG_INFO,
-                "[simoptix_vr_mirror] audio sync: %d audio source%s now %+lld ms on top of their own offsets "
-                "(the view's delay)",
-                ctx.changed,
-                ctx.changed == 1 ? "" : "s",
-                static_cast<long long>(ctx.shift / 1000000)
+                "[simoptix_vr_mirror] audio sync: '%s' %+lld ms more (the game's sound, auto sync)",
+                ctx.game.c_str(),
+                static_cast<long long>(ctx.correction / 1000000)
             );
         }
     }
@@ -76,12 +106,14 @@ namespace {
             g_loaded = now;
         }
         const int64_t shift = ShiftNow();
-        const bool changed = shift != g_queued;
+        const uint32_t gameChanges = g_gameChanges.load();
+        const bool changed = shift != g_queued || gameChanges != g_gameQueued;
         const bool recheck = (shift != 0 || now - g_loaded < kStartupNs) && now >= g_nextCheck;
         if (!changed && !recheck) {
             return;
         }
         g_queued = shift;
+        g_gameQueued = gameChanges;
         g_nextCheck = now + kRecheckNs;
         g_shift = shift;
         obs_queue_task(OBS_TASK_UI, Apply, nullptr, false);
@@ -96,4 +128,14 @@ void AudioSync::Start(bool (*anyDebug)()) {
 
 void AudioSync::Stop() {
     obs_remove_tick_callback(Tick, nullptr);
+}
+
+void AudioSync::SetGameSound(const std::string& name, double correctionS) {
+    {
+        std::lock_guard<std::mutex> lock(g_gameMutex);
+        g_gameName = name;
+        g_gameCorrection = static_cast<int64_t>(std::llround(correctionS * 1000)) * 1000000;
+    }
+
+    g_gameChanges++;
 }

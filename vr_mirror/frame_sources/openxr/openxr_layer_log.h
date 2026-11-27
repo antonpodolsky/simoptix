@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The layer's log: %LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log, one per game start, named
 // by LocalFiles (shared\local_files.h), which keeps the newest. Like all of SimOptix's logs it follows
-// Debug, here the Debug of VR Mirror's source that reads the frames: its lines wait in memory until that
-// reader comes, then go to the file if Debug is on and away if it is off. Without a reader they never reach
-// a file. Failures (CoreLogError) are always written. The file is made at its first line, and the oldest
-// logs are deleted then.
+// Debug, here the Debug of the sources that read the layer: VR Mirror's OpenXR source (the frames) and the
+// performance overlay (the frame times). Its lines wait in memory until a reader comes, then go to the file
+// while a reader there has Debug on, and away while those there have it off. When the last reader leaves,
+// its word stands until the next one comes. Without a reader they never reach a file. Failures
+// (CoreLogError) are always written. The file is made at its first line, and the oldest logs are deleted
+// then.
 //
 // Its first line says that Windows loaded the DLL into the game, before any OpenXR step. Once started,
 // CoreLog and CoreLogError (shared\log.h) write the rest, with the time of day to the millisecond, from any
@@ -23,6 +25,12 @@ void NoteDllLoaded();
 // nowhere.
 bool StartLayerLog();
 
-// Whether VR Mirror reads the frames, and with Debug on (OpenXrPublisher::ReaderNews). A reader decides
-// what happens to the lines, the held ones too; once it leaves, its word stands until the next one comes.
-void FollowReaderDebug(bool there, bool debug);
+// The layer's readers, each told apart in FollowReaderDebug.
+enum LayerLogReader : int {
+    kFramesReader,  // VR Mirror's OpenXR source (OpenXrPublisher::ReaderNews)
+    kTimingReader,  // the performance overlay (OpenXrFrameTiming::ReaderNews)
+};
+
+// Whether `reader` is there, and with Debug on. The readers there decide what happens to the lines, the
+// held ones too. Any thread, without waiting.
+void FollowReaderDebug(LayerLogReader reader, bool there, bool debug);

@@ -38,6 +38,7 @@ A new term goes here, and into the table of every README that uses it.
 | image room | How far a view can turn away from the pose of an eye image before the output would look past the image's edge and show black |
 | edge stop | The smoothing's last resort. It holds the view at 95% of its image room when the smoothing's own planning wasn't enough |
 | output delay | How far VR Mirror's view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
+| auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
 | observer | The debugging code beside the pipeline. It numbers the stamp and writes the frame trace |
 | stamp | The frame number that VR Mirror draws as 15 small squares in the top-left corner of the view, when its Debug setting is on |
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
@@ -56,6 +57,7 @@ A new term goes here, and into the table of every README that uses it.
 | pi_server | The Pimax runtime's compositor process (`pi_server.exe`). Every call through PVR goes to it |
 | API layer | A DLL that the OpenXR loader puts between a game and the runtime. It sees every OpenXR call the game makes |
 | performance counter | The Windows high-resolution clock (`QueryPerformanceCounter`). All times in the code are seconds on it |
+| headroom | The part of a frame's time budget left on the CPU or the GPU: 100 × (budget − time) / budget, in percent, where the budget is one frame's time at the target rate. Negative when a frame takes longer than its budget |
 | sRGB encoding | The usual way images store brightness, with a curve that gives dark tones more values. Maths on encoded values without undoing the curve gives wrong results. Pimax's client mirror encodes the eye image twice |
 
 ## Words with a narrow meaning

@@ -83,7 +83,10 @@ python -I aligned_diff.py "<recording>.mp4" 7:39.50 0.2 [--cockpit ... --road ..
 python -I frozen_check.py "<output folder>"
 ```
 
-- `moment.py` prints the trace's rows and the runtime's arrival rows, frame by frame.
+- `moment.py` prints the trace's rows and the frame source's rows, frame by frame. With the Pimax
+  source these are the runtime's arrival rows. With the OpenXR source they are the layer's rows of
+  the frames that became those game frames: when the game ended each frame, and the slot it was drawn
+  for.
 - `aligned_diff.py` says how much the road changed between frames once the cockpit is lined up: about
   1 on a frozen game frame, about 6 on a normal one, and double on a skipped one. Its default regions
   fit the car of the recordings analysed so far, at 2560x1440. Pick new ones for another car.
@@ -140,6 +143,35 @@ on real images, which the e2e fake can't always imitate.
 **Not an exact copy of core.** It averages and compares thumbnails as displayed, while core
 does both in linear light. Even in linear light it re-times far more frames than the mirror app does in
 e2e on the same thumbnails (`findings\e2e.md`, "Real thumbnails in replays").
+
+## The G-meter and the sound against the view
+
+```
+python -I sync_check.py "<recording>.mp4" --from 310 --seconds 120 --hud 2775,1410@300 --hud-radius 173 --gmeter 3537,1872,133 --out <folder>
+```
+
+- It follows LMU's HUD dial through the stretch and reads its pedal arc, its gear number and its RPM arc,
+  and the G-meter's pedal bars. Then it times each throttle lift and press in the G-meter against the
+  HUD, and the engine's pitch drop at each upshift against the HUD's next gear. "Later" is later in the
+  video than the view.
+- `--hud`: the dial's centre in the video's pixels at a time it is in view, and `--hud-radius` the radius
+  of its RPM arc. `--gmeter`: the G-meter's centre and the radius of its pedal groove. Measure them on
+  a frame of the recording.
+- It reads only the part of the video around the dial and the G-meter: 2 minutes of a 4K recording take
+  about 15 minutes. `--out` keeps what it read, and the gear changes (`gear_changes.json`).
+- LMU's HUD shows N for a few frames between two gears. A gear change is the digit's changes within 12
+  frames of each other: the first frame that changed, and the first showing the next gear.
+
+```
+python -I export_menu_cut.py "<recording>.mp4" <data folder>\auto_sync_menu_cut --from 0.5 --seconds 41 --gmeter 3537,1872,133 [--tan-w 0.825]
+```
+
+It makes the menu cut that the auto sync test plays: a recording of LMU's menus with the pointer moved
+over the items, with Debug on, from the main menu on.
+- The recorded sound was moved by its sync offset, so the cut puts it back: the delay from the log's
+  "audio sync:" line, and the source's own offset (`--own-offset`, -120 ms by default).
+- It fits the view's width from how the menu moves as the head turns. Where the head barely turns, it
+  says so, and `--tan-w` gives the width fitted on another recording with the same headset and zoom.
 
 ## A replay test from the moment
 

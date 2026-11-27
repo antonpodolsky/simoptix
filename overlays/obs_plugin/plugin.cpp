@@ -1,7 +1,9 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The Overlays plugin's OBS module: registers the overlays (the G-meter, ..\gmeter\gmeter_source.cpp), sends
-// core logging to OBS's log, and stops the telemetry reader when it unloads. Nothing else lives here.
+// The Overlays plugin's OBS module: registers the overlays (the G-meter, ..\gmeter\gmeter_source.cpp, and
+// the performance overlay, ..\performance\performance_source.cpp), sends core logging to OBS's log, and
+// stops the telemetry reader when it unloads. Nothing else lives here. The performance overlay reads the
+// game's frame times from the OpenXR layer's memory (shared\performance\).
 //
 // It knows nothing of VR Mirror: the two plugins are separate DLLs that never load or call each
 // other. What they share passes through memory each opens on its own: the view's delay
@@ -23,7 +25,8 @@ MODULE_EXPORT const char* obs_module_name(void) {
 }
 
 MODULE_EXPORT const char* obs_module_description(void) {
-    return "SimOptix: Overlays: game telemetry drawn over the video, such as the G-meter.";
+    return "SimOptix: Overlays: game telemetry and performance drawn over the video: the G-meter and the "
+           "performance overlay.";
 }
 
 namespace {
@@ -32,7 +35,8 @@ namespace {
     }
 }
 
-void RegisterGMeterSource();  // ..\gmeter\gmeter_source.cpp
+void RegisterGMeterSource();       // ..\gmeter\gmeter_source.cpp
+void RegisterPerformanceSource();  // ..\performance\performance_source.cpp
 
 bool obs_module_load(void) {
     return Guarded("load", [] {
@@ -44,6 +48,7 @@ bool obs_module_load(void) {
         }
 
         RegisterGMeterSource();
+        RegisterPerformanceSource();
         blog(LOG_INFO, "[simoptix_overlays] loaded, version %s", SIMOPTIX_VERSION);
         return true;
     });

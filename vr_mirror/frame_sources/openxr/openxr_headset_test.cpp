@@ -97,7 +97,10 @@ namespace {
         loader.minInterfaceVersion = 1;
         loader.maxInterfaceVersion = XR_CURRENT_LOADER_RUNTIME_VERSION;
         loader.minApiVersion = XR_MAKE_VERSION(1, 0, 0);
-        loader.maxApiVersion = XR_CURRENT_API_VERSION;
+        // Every 1.x: the instance asks for 1.0 itself (CreateInstance). Meta's runtime, an OpenXR 1.1 one,
+        // refuses a range that ends at the headers' version, 1.0.34 (XR_ERROR_API_VERSION_UNSUPPORTED,
+        // measured with a Quest 3 on Link); Pimax's takes either.
+        loader.maxApiVersion = XR_MAKE_VERSION(1, 0x3ff, 0xfff);
 
         XrNegotiateRuntimeRequest request = {};
         request.structType = XR_LOADER_INTERFACE_STRUCT_RUNTIME_REQUEST;

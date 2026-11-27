@@ -6,10 +6,11 @@
 // rings at every whole G. A comet tail (the dot's recent positions, shrinking and fading) shows how
 // braking blends into cornering, and the highest G reached in each of the four directions stands
 // outside the outer ring (reset when a new driving session starts). Two bars just inside the outer
-// ring show the brake (left) and throttle (right), each darker while ABS or TC intervenes. One look,
-// Chrono (meter_chrono.h: a black bezel around a face under domed glass).
+// ring show the brake (left) and throttle (right), each darker while ABS or TC intervenes. Two themes:
+// Chrono (meter_chrono.h: a black bezel around a face under domed glass) and OLED (meter_oled.h: a
+// self-lit black display with dotted rings and segmented bars).
 //
-// Its properties hold only the meter type (Chrono, the one look) and the demo lap's button; the rest is
+// Its properties hold only the theme and the demo lap's button; the rest is
 // fixed here (the constants below). The dot moves the way the driver is pushed (braking: forward, a
 // left turn: right), as those in-car meters do. Drawn on OBS's frame clock from the telemetry of the
 // moment the view shows, lightly smoothed (raw acceleration is noisy over kerbs). Only holds
@@ -17,15 +18,13 @@
 // DirectWrite and placed by their ink, so gaps are exact.
 //
 // Always drawn at the size it is shown on the canvas, so it stays sharp however it is scaled: in OBS
-// it is 300 px (its layout size) under the scene item's scale, which OBS keeps in proportion to the
-// canvas; while drawing, the meter reads that scale and draws itself in canvas pixels (see Fit). Its
-// Properties window is sized so the preview shows it at that size too (properties_preview.h).
+// it is 300 px (its layout size) under the scene item's scale (overlay_box.h). Its Properties window is
+// sized so the preview shows it at that size too (properties_preview.h).
 //
-// This file is the source: settings and values. The look is drawn in meter_chrono.*, from the values
-// in meter_view.h; shapes and batching are in meter_draw.*, labels in meter_text.*, images in
-// meter_image.*.
+// This file is the source: settings and values. The themes are drawn by meter_chrono.* and meter_oled.*
+// (each a MeterTheme, meter_theme.h), from the values in meter_view.h; shapes and batching are in
+// meter_draw.*, labels in meter_text.*, images in meter_image.*.
 
-#include <graphics/matrix4.h>
 #include <graphics/vec2.h>
 #include <obs-module.h>
 
@@ -39,10 +38,14 @@
 
 #include "meter_chrono.h"
 #include "meter_draw.h"
+#include "meter_oled.h"
+#include "meter_theme.h"
 #include "meter_view.h"
+#include "overlay_box.h"
 #include "properties_preview.h"
 #include "shared/guarded.h"
 #include "shared/log.h"
+#include "shared/source_icon.h"
 #include "shared/telemetry/demo_lap.h"
 #include "shared/telemetry/qpc_clock.h"
 #include "shared/telemetry/telemetry.h"
@@ -53,20 +56,32 @@ namespace {
 
     // The meter's layout size in OBS (its width and height before the scene item's scale), pixels.
     constexpr uint32_t kLayoutSize = 300;
-    // How long the shown size must stay the same before the meter is rebuilt for it (its images take
-    // ~20 ms on the graphics thread): while a meter is being resized, the last build is stretched. Seconds.
-    constexpr double kResizeSettle = 0.3;
 
     // The dot's smoothing: the time constant of its exponential filter, seconds. The tail's length, seconds.
     constexpr float kSmoothingS = 0.080f;
     constexpr float kTailS = 1;
 
+    // The themes, as the Theme setting saves them ("chrono", "oled").
+    enum class ThemeChoice { kChrono, kOled };
+
+    ThemeChoice ThemeOf(obs_data_t* settings) {
+        return strcmp(obs_data_get_string(settings, "theme"), "oled") == 0 ? ThemeChoice::kOled
+                                                                           : ThemeChoice::kChrono;
+    }
+
+    std::unique_ptr<MeterTheme> MakeTheme(ThemeChoice choice) {
+        if (choice == ThemeChoice::kOled) {
+            return std::make_unique<OledTheme>();
+        }
+
+        return std::make_unique<ChronoTheme>();
+    }
+
     struct GMeter {
         obs_source_t* source = nullptr;
         std::atomic<bool> wanted{false};
         bool started = false;
-        int placeTries = 0;  // first placement in the scene (see PlaceNewItem)
-        double nextPlaceTry = 0;
+        OverlayBox box{kLayoutSize, kLayoutSize, "G-Meter Overlay"};
 
         // the demo lap instead of the game: set by the properties button, not saved
         std::atomic<bool> demo{false};
@@ -75,12 +90,7 @@ namespace {
         std::atomic<bool> debug{false};
         bool heldDebug = false;  // graphics thread: Debug as told to the telemetry (Telemetry::HoldDebug)
 
-        // Graphics thread (drawSize and previewPixels also read by the UI thread).
-        float shownScale = 0;  // the largest canvas scale it was drawn at since the last tick (0: not drawn)
-        std::atomic<int> drawSize{0};  // the size the meter is built and drawn at, pixels (0: not yet)
-        int wantSize = 0;              // the shown size, and since when (performance-counter seconds)
-        double wantSince = 0;
-        std::atomic<int> previewPixels{0};  // the size it was last shown at in a preview window, pixels
+        // Graphics thread.
         int fitTries = 0;  // UI-thread steps left for fitting the Properties preview (FitPreviewTask)
         double nextFitTry = 0;
         bool fitRestart = false;  // the next step starts a new fit
@@ -99,7 +109,9 @@ namespace {
         Trail trail;
         float maxRight = 0, maxLeft = 0, maxForward = 0, maxBack = 0;  // highest G reached each way
         unsigned session = 0;  // driving session of the last sample: a new one resets the maxima
-        ChronoMeter look;
+        std::atomic<ThemeChoice> wantedChoice{ThemeChoice::kChrono};  // set from the settings (UI thread)
+        ThemeChoice choice = ThemeChoice::kChrono;  // graphics thread: which theme `theme` is
+        std::unique_ptr<MeterTheme> theme = MakeTheme(ThemeChoice::kChrono);  // graphics thread
         MeterBatch batch;  // everything drawn this frame, uploaded once
         // new telemetry each frame: sized once, so nothing is allocated per frame
         std::vector<CarSample> samples;
@@ -174,85 +186,27 @@ namespace {
         return "SimOptix: G-Meter Overlay";
     }
 
+    const char* GetDarkIcon(void*) {
+        return Guarded("dark icon", [] { return FindSourceIcon("gmeter_dark.svg"); });
+    }
+
+    const char* GetLightIcon(void*) {
+        return Guarded("light icon", [] { return FindSourceIcon("gmeter_light.svg"); });
+    }
+
     // ---- Default size and place: the bottom-right corner, in proportion to the canvas: on 1920x1080,
     // 300 px with its box 16.125 px from the right edge and 10.875 from the bottom (on 2560x1440: 400 px,
     // gaps 21.5 and 14.5).
 
-    float DefaultScale(uint32_t canvasH) {
-        return canvasH / 1080.0f;
-    }
-
     vec2 DefaultPosition(uint32_t canvasW, uint32_t canvasH) {
-        const float k = DefaultScale(canvasH), shown = kLayoutSize * k;
+        const float k = canvasH / 1080.0f, shown = kLayoutSize * k;
         vec2 pos;
         vec2_set(&pos, canvasW - shown - 16.125f * k, canvasH - shown - 10.875f * k);
         return pos;
     }
 
-    // UI thread (OBS's place for changing scenes): moves a new meter's scene items from OBS's spot
-    // for new sources (top left, unscaled) to the default place and size, once. Items the user has
-    // already placed are left alone. Marks the source "placed" when it found it in a scene.
-    void PlaceNewItem(void* param) {
-        obs_weak_source_t* weak = static_cast<obs_weak_source_t*>(param);
-        obs_source_t* source = obs_weak_source_get_source(weak);
-        obs_weak_source_release(weak);
-        if (!source) {
-            return;
-        }
-        obs_data_t* settings = obs_source_get_settings(source);
-        Guarded("place", [&] {
-            if (obs_data_get_bool(settings, "placed")) {
-                return;
-            }
-
-            struct Search {
-                obs_source_t* source;
-                vec2 pos, scale;
-                bool found;
-            } search = {source, {}, {}, false};
-
-            obs_video_info ovi = {};
-            obs_get_video_info(&ovi);
-            search.pos = DefaultPosition(ovi.base_width, ovi.base_height);
-            vec2_set(&search.scale, DefaultScale(ovi.base_height), DefaultScale(ovi.base_height));
-
-            obs_enum_scenes(
-                [](void* p, obs_source_t* scene) {
-                    obs_scene_enum_items(
-                        obs_scene_from_source(scene),
-                        [](obs_scene_t*, obs_sceneitem_t* item, void* p) {
-                            Search* search = static_cast<Search*>(p);
-                            if (obs_sceneitem_get_source(item) != search->source) {
-                                return true;
-                            }
-                            search->found = true;
-                            vec2 pos, scale;
-                            obs_sceneitem_get_pos(item, &pos);
-                            obs_sceneitem_get_scale(item, &scale);
-                            if (pos.x == 0 && pos.y == 0 && scale.x == 1 && scale.y == 1) {
-                                obs_sceneitem_set_scale(item, &search->scale);
-                                obs_sceneitem_set_pos(item, &search->pos);
-                            }
-                            return true;
-                        },
-                        p
-                    );
-                    return true;
-                },
-                &search
-            );
-
-            if (search.found) {
-                obs_data_set_bool(settings, "placed", true);
-            }
-        });
-
-        obs_data_release(settings);
-        obs_source_release(source);
-    }
-
     void GetDefaults(obs_data_t* s) {
-        Guarded("defaults", [&] { obs_data_set_default_string(s, "meter_type", "chrono"); });
+        Guarded("defaults", [&] { obs_data_set_default_string(s, "theme", "chrono"); });
     }
 
     // UI thread: starts or stops the demo lap, and names the button for what it does next.
@@ -273,15 +227,16 @@ namespace {
                 static_cast<GMeter*>(data)->fitWanted = true;
             }
             obs_properties_t* p = obs_properties_create();
-            obs_property_t* type = obs_properties_add_list(
+            obs_property_t* theme = obs_properties_add_list(
                 p,
-                "meter_type",
-                "Meter type",
+                "theme",
+                "Theme",
                 OBS_COMBO_TYPE_LIST,
                 OBS_COMBO_FORMAT_STRING
             );
 
-            obs_property_list_add_string(type, "Chrono", "chrono");
+            obs_property_list_add_string(theme, "Chrono", "chrono");
+            obs_property_list_add_string(theme, "OLED", "oled");
             obs_properties_add_button2(
                 p,
                 "demo",
@@ -295,20 +250,27 @@ namespace {
         });
     }
 
+    // UI thread: the theme the settings ask for, which the graphics thread makes on its next tick
+    // (SwitchTheme), and Debug.
+    void UpdateSettings(void* data, obs_data_t* settings) {
+        Guarded("update", [&] {
+            GMeter* m = static_cast<GMeter*>(data);
+            m->wantedChoice = ThemeOf(settings);
+            m->debug = obs_data_get_bool(settings, "debug");
+        });
+    }
+
     void* Create(obs_data_t* settings, obs_source_t* source) {
         return Guarded("create", [&]() -> void* {
             auto m = std::make_unique<GMeter>();
             m->samples.resize(Telemetry::kRing);
             m->shapes.reserve(1 << 16);
             m->source = source;
+            m->wantedChoice = m->choice = ThemeOf(settings);
+            m->theme = MakeTheme(m->choice);
             m->debug = obs_data_get_bool(settings, "debug");
             return m.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });
-    }
-
-    // The properties changed: Debug is the setting it reads. UI thread.
-    void FollowSettings(void* data, obs_data_t* settings) {
-        Guarded("update", [&] { static_cast<GMeter*>(data)->debug = obs_data_get_bool(settings, "debug"); });
     }
 
     // Lets go of the telemetry if it holds it, its Debug first (Telemetry::HoldDebug).
@@ -346,7 +308,7 @@ namespace {
             const ScopedLogGate gate(&m->debug);                    // ends before the meter is freed
             ReleaseTelemetry(m.get());
             obs_enter_graphics();
-            m->look.Destroy();
+            m->theme->Destroy();
             m->batch.Destroy();
             obs_leave_graphics();
         });
@@ -365,24 +327,21 @@ namespace {
         static_cast<GMeter*>(data)->wanted = false;
     }
 
-    // Picks the size to build the meter at: the size it was last shown at (Fit), once that has held for
-    // kResizeSettle, or at once the first time. Graphics thread.
-    void FollowShownSize(GMeter* m, double now) {
-        if (m->shownScale <= 0) {
-            return;  // not drawn since the last tick
-        }
-        const int want = std::min(4096, std::max(16, int(std::lround(kLayoutSize * m->shownScale))));
-        m->shownScale = 0;
-        if (want != m->wantSize) {
-            m->wantSize = want;
-            m->wantSince = now;
+    // Graphics thread: replaces the theme when the setting changed, freeing the old one's textures. The
+    // new one builds its images and labels on this tick, before it is first drawn.
+    void SwitchTheme(GMeter* m) {
+        const ThemeChoice wanted = m->wantedChoice;
+        if (wanted == m->choice) {
+            return;
         }
 
-        if (want != m->drawSize && (m->drawSize == 0 || now - m->wantSince >= kResizeSettle)) {
-            m->drawSize = want;
-            m->fitWanted = true;  // an open Properties preview follows
-            CoreLog("G-Meter Overlay: drawn at %d px (its size on the canvas)", want);
-        }
+        obs_enter_graphics();
+        m->theme->Destroy();
+        obs_leave_graphics();
+
+        m->theme = MakeTheme(wanted);
+        m->choice = wanted;
+        CoreLog("G-Meter Overlay: theme %s", wanted == ThemeChoice::kOled ? "OLED" : "Chrono");
     }
 
     // UI thread: one step of fitting the meter's Properties preview (properties_preview.h). Holds a
@@ -405,8 +364,8 @@ namespace {
             if (!m->fitStop) {
                 const PreviewFitResult r = FitPropertiesPreview(
                     obs_source_get_name(t->source),
-                    m->drawSize,
-                    m->previewPixels,
+                    m->box.DrawHeight(),
+                    m->box.PreviewPixels(),
                     m->fit
                 );
 
@@ -428,7 +387,7 @@ namespace {
             m->fitRestart = true;
         }
 
-        if (m->fitTries <= 0 || now < m->nextFitTry || m->drawSize <= 0) {
+        if (m->fitTries <= 0 || now < m->nextFitTry || m->box.DrawHeight() <= 0) {
             return;
         }
         if (m->fitStop) {
@@ -461,66 +420,19 @@ namespace {
             }
 
             const double now = QpcNow();
-            FollowShownSize(m, now);
+
+            if (m->box.Tick(now)) {
+                m->fitWanted = true;  // an open Properties preview follows
+            }
+
             StepPreviewFit(m, now);
-            if (m->wanted && m->drawSize > 0) {
-                m->look.Tick(m->drawSize, now);
+            SwitchTheme(m);
+            if (m->wanted && m->box.DrawHeight() > 0) {
+                m->theme->Tick(m->box.DrawHeight(), now);
             }
 
-            // A new meter isn't in a scene yet when it's created: look for it twice a second, for 5 s.
-            if (m->placeTries < 10 && now >= m->nextPlaceTry) {
-                obs_data_t* settings = obs_source_get_settings(m->source);
-                const bool placed = obs_data_get_bool(settings, "placed");
-                obs_data_release(settings);
-                m->placeTries = placed ? 10 : m->placeTries + 1;
-                m->nextPlaceTry = now + 0.5;
-                if (!placed) {
-                    obs_queue_task(OBS_TASK_UI, PlaceNewItem, obs_source_get_weak_source(m->source), false);
-                }
-            }
+            m->box.Place(m->source, now, DefaultPosition);
         });
-    }
-
-    // Notes the canvas scale the meter is drawn at (the scene item's scale: OBS draws the scene in canvas
-    // pixels), for FollowShownSize, and pushes a matrix that maps the meter's build size onto its layout
-    // size. Shown at the size it was built, that is exactly 1:1 in canvas pixels, from a whole pixel, so
-    // images and labels land unfiltered. False (nothing pushed) until the first build. Graphics thread.
-    bool Fit(GMeter* m) {
-        matrix4 world;
-        gs_matrix_get(&world);
-        const float sx = std::hypot(world.x.x, world.x.y), sy = std::hypot(world.y.x, world.y.y);
-        m->shownScale = std::max(m->shownScale, std::max(sx, sy));
-
-        // A preview window (Properties, Filters) draws the source alone, unmoved, into a viewport of the size
-        // it shows it at; the canvas has a viewport of its own size.
-        gs_rect viewport;
-        gs_get_viewport(&viewport);
-        obs_video_info ovi = {};
-        if (sx == 1 && sy == 1 && world.t.x == 0 && world.t.y == 0 && obs_get_video_info(&ovi)
-            && (uint32_t(viewport.cx) != ovi.base_width || uint32_t(viewport.cy) != ovi.base_height)) {
-            m->previewPixels = std::min(viewport.cx, viewport.cy);
-        }
-
-        if (m->drawSize <= 0 || sx <= 0 || sy <= 0) {
-            return false;
-        }
-        const float layout = float(kLayoutSize);
-        const bool upright = std::fabs(world.x.y) < 1e-4f && std::fabs(world.y.x) < 1e-4f;
-        gs_matrix_push();
-        if (upright && std::fabs(sx - sy) < 1e-4f && int(std::lround(layout * sx)) == m->drawSize) {
-            gs_matrix_translate3f(
-                (std::round(world.t.x) - world.t.x) / sx,
-                (std::round(world.t.y) - world.t.y) / sy,
-                0
-            );
-
-            gs_matrix_scale3f(1 / sx, 1 / sy, 1);
-        } else {
-            // stretched until rebuilt (or turned)
-            gs_matrix_scale3f(layout / m->drawSize, layout / m->drawSize, 1);
-        }
-
-        return true;
     }
 
     void VideoRender(void* data, gs_effect_t*) {
@@ -528,12 +440,12 @@ namespace {
             GMeter* m = static_cast<GMeter*>(data);
             const ScopedLogGate gate(&m->debug);
             Update(m);
-            if (!Fit(m)) {
+            if (!m->box.Fit()) {
                 return;
             }
 
             MeterView view;
-            view.size = float(m->drawSize);
+            view.size = float(m->box.DrawHeight());
             view.now = m->lastRender;
             view.live = (m->demoRunning || m->connected) && m->hasValue;
             view.gx = m->gx;
@@ -550,7 +462,7 @@ namespace {
             gs_blend_state_push();
             gs_enable_blending(true);
             gs_blend_function(GS_BLEND_SRCALPHA, GS_BLEND_INVSRCALPHA);
-            m->look.Draw(view, m->batch, m->shapes);
+            m->theme->Draw(view, m->batch, m->shapes);
             gs_blend_state_pop();
             gs_matrix_pop();
         });
@@ -564,12 +476,16 @@ void RegisterGMeterSource() {
     info.type = OBS_SOURCE_TYPE_INPUT;
     info.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW;
 
+    info.icon_type = OBS_ICON_TYPE_CUSTOM;
+    info.get_dark_icon = GetDarkIcon;
+    info.get_light_icon = GetLightIcon;
+
     info.get_name = GetName;
     info.create = Create;
     info.destroy = Destroy;
-    info.update = FollowSettings;
     info.get_defaults = GetDefaults;
     info.get_properties = GetProperties;
+    info.update = UpdateSettings;
     info.get_width = GetWidth;
     info.get_height = GetHeight;
     info.show = Show;

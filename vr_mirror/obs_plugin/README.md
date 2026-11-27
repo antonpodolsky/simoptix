@@ -22,6 +22,7 @@ The two sources show the same view. They differ in where the game's image comes 
 | client mirror | A feature of the Pimax runtime. It gives other programs a half-size copy of the left eye image the game draws, and a signal for each new frame |
 | game eye | The eye image a source works from. The Pimax source's is the client mirror's half-size copy of the left eye. The OpenXR source's is the left eye at full size |
 | output delay | How far the view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden |
+| auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
 | display slot | One of the regular moments at which the headset shows a new image, one per refresh (90 per second at 90 Hz). The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
 | game behind | The game's GPU has fallen behind and queues up to two frames. Each arrives one or two display slots after the slot it was drawn for |
 | slot check | How the Pimax source finds the slot a late frame was really drawn for: it compares small thumbnails of consecutive frames |
@@ -49,8 +50,9 @@ So the G-meter, race auto-record and the audio all follow the moment the view sh
 1. With OBS closed, run `build.bat install` in this folder. The root `README.md` lists what the build
    needs. The script builds the plugin and copies it to
    `C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror\bin\64bit`. It also copies the plugin's
-   `manifest.json` to `data` beside `bin`. OBS 32 reads the plugin's name and version from it. If you use the Overlays plugin,
-   install it from the same build.
+   `manifest.json` to `data` beside `bin`. OBS 32 reads the plugin's name and version from it. It
+   copies the sources' icons to `data\icons`, and OBS 32.2 and later show them beside the sources. If
+   you use the Overlays plugin, install it from the same build.
 2. In OBS, add a **SimOptix: Pimax Mirror** or **SimOptix: OpenXR Mirror** source. For the OpenXR one,
    install the API layer too: close LMU and run `vr_mirror\frame_sources\openxr\install.bat`, which
    asks for administrator rights. The dev skill's `reference\openxr.md` has the steps.
@@ -99,36 +101,35 @@ Both sources have the same five settings:
 
 | Setting | What it does |
 |---|---|
-| **Stabilization Method** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). The list says each one's delay and how much video memory it takes ("no delay, low VRAM usage", "0.5s delay, higher VRAM usage"). Look-ahead is the default |
-| **Stabilization Strength** | A slider from 0.25 to 2, 1 by default: how strongly Instant and Look-ahead smooth. Hidden while Stabilization Method is Off. Higher is calmer, and the view follows the head less closely. Lower follows the head more closely ("Stabilization Strength", below) |
-| **Zoom** | A slider from 1 to 3, 1.25 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
+| **Stabilization Method** | A list that sets how the camera follows the head: Off, Instant or Look-ahead (below). The list says each one's delay and how much video memory it takes ("no delay, low VRAM usage", "0.5s delay, higher VRAM usage"). Instant is the default |
+| **Stabilization Strength** | A slider from 0 to 10, 3 by default: how strongly Instant and Look-ahead smooth. At 5 each method has its own tuning. Hidden while Stabilization Method is Off. Higher is calmer, and the view follows the head less closely. Lower follows the head more closely. At 0 nothing is smoothed, and the horizon is still kept level ("Stabilization Strength", below) |
+| **Zoom** | A slider from 1 to 3, 1.3 by default. The source shows the middle 1/zoom of the eye image, and the image around it is the room the stabilization uses (below). The same zoom gives the same view in both sources |
 | **Record races automatically** | OBS records each race by itself, from the start lights to 5 s after the car stops past the finish ("Recording races automatically", below). Off by default |
 | **Debug** | Stamps frame numbers on the view and writes a frame trace, for checking a recording frame by frame ("Debug: stamp and frame trace", below) |
 
 Below them, under a line, four buttons run the demo ("The demo", below): **Play recorded lap**, **Record
 a lap** (**Record a new lap** once one is recorded), **Open recording location** and **Delete recorded
-lap**. While a lap is being
-recorded, a status line under them says where it stands. The buttons aren't saved, so both are off when OBS starts.
+lap**. Until a lap is recorded, only **Record a lap** shows. It is greyed out until the source has found
+the headset, from its VR software or the game's frames. The buttons aren't saved, so both are off when OBS starts.
 
 The source is always the size of the OBS canvas (Settings → Video → Base resolution), so it fills the
 canvas at 1:1. When the canvas changes, the source follows at once.
 
-Everything else is fixed in the code (`plugin.cpp`, the constants above `MirrorSettingsOf`, and the
-core's own):
+Everything else is fixed in the code (the constants in `source_settings.h`, and the core's own):
 - The horizon is kept level.
 - The filtering is sharp (bicubic).
 - Each frame is warped from the pose the game drew it with.
 - The Pimax source runs the slot check while the game is behind ("When the game falls behind", below).
 - The OpenXR source takes the slot and the pose each frame reports.
-- Instant's filter has a 0.5 Hz cutoff, beta 2 and a 0.5° dead zone, at Stabilization Strength 1.
+- Instant's filter has a 0.5 Hz cutoff, beta 2 and a 0.5° dead zone, at Stabilization Strength 5.
 
 ### Stabilization Method
 
-- **Look-ahead** (the default): the view runs about half a second behind the game. The source uses
+- **Look-ahead:** the view runs about half a second behind the game. The source uses
   that half second to see where the head goes next, so it follows each look closely. It removes tremor
   and the headset's tracking noise completely, without the floaty lag of a filter that can't see ahead.
   For recording.
-- **Instant:** no delay. A filter that has to trail the head to stay smooth. For live streaming,
+- **Instant** (the default): no delay. A filter that has to trail the head to stay smooth. For live streaming,
   where every bit of delay counts.
 - **Off:** no stabilization. The view is the headset's view as it is, with no delay. Switching
   the stabilization on or off starts the smoothing afresh.
@@ -139,17 +140,23 @@ checked in a recording.
 
 ### Stabilization Strength
 
-**Stabilization Strength** sets how strongly the smoothing works. At 1, each smoothing has the tuning described here.
-- **Look-ahead** multiplies the time constants of its path by the strength. It still sees half a second
-  ahead at every strength.
-- **Instant** divides its filter's cutoff, and how fast the cutoff rises with the head's speed, by the
-  strength.
+**Stabilization Strength** sets how strongly the smoothing works, from 0 to 10, 3 by default. At 5,
+each smoothing has the tuning described here.
+- **At 0 nothing is smoothed.** The view looks where the game's image looks, and the horizon is still
+  kept level. The method keeps its delay, so Look-ahead still runs half a second behind the game.
+- **From 1 to 10,** each level stands for a factor on the tuning: 0.25 at 1, 1 at 5 and 2 at 10. Each
+  step below 5 multiplies the factor by about 1.41, and each step above 5 by about 1.15.
+  - **Look-ahead** multiplies the time constants of its path by the factor. It still sees half a second
+    ahead at every level.
+  - **Instant** divides its filter's cutoff, and how fast the cutoff rises with the head's speed, by the
+    factor.
 
-The view trails the head more as the strength rises. On the e2e suite's racing motion at Zoom 1.25, with
-Look-ahead, it trails by 0.27° at most 99% of the time at 0.25, 1.68° at 1 and 4.4° at 2. Above 2,
-Look-ahead runs into the image's edges: at 3 it stopped the view at an edge on 2.8% of the frames of the
-same motion, and the view shook. Instant changes less, because its catch-up near the edges sets most of
-its lag. This was measured on recorded and made-up head motion, not checked in a recording.
+The view trails the head more as the level rises. On the e2e suite's racing motion at Zoom 1.25, with
+Look-ahead, it trails by 0.27° at most 99% of the time at 1, 1.68° at 5 and 4.4° at 10. A factor above
+2 runs Look-ahead into the image's edges: at 3 it stopped the view at an edge on 2.8% of the frames of
+the same motion, and the view shook. So 10 is a factor of 2. Instant changes less, because its catch-up
+near the edges sets most of its lag. This was measured on recorded and made-up head motion, not checked
+in a recording.
 
 **The delay costs video memory,** because the source keeps a copy of every game frame within it. With
 the Pimax source that is about 1.1 GB at Render Quality 1.0, and about 1.7 GB at 1.25.
@@ -164,13 +171,78 @@ About 2 s after the first game frame, the OBS log says the delay the source sett
   start lights and ends after the finish, as the recorded video shows them.
 - **The sound.** While the source is shown, the plugin adds the delay to every audio source's own Sync
   Offset (Edit → Advanced Audio Properties), and takes it off again when the source is hidden.
-  - Keep each audio source's own offset as it is. A game whose sound trails its image needs an offset
-    of its own.
+  - Keep each audio source's own offset as it is. Set the game's own offset to 0: auto sync moves the
+    game's sound by what it measured (below).
   - The OBS log says how far the sources were shifted ("audio sync: 2 audio sources now ... ms on top
     of their own offsets").
   - Each audio source remembers the shift it got, saved with the scene. So its own offset comes back
     exactly, also after OBS was closed with the source shown.
   - Changing an offset while it is shifted changes the source's own offset by as much.
+
+### Auto sync
+
+The output delay, about half a second with Look-ahead, applies to every audio source as soon as the
+source knows it. The game's sound reaches OBS late by an amount of its own, which auto sync measures in
+LMU's menus and adds on top. That is one way of measuring it, and others can sit beside it
+(`auto_sync\sync_measure.h`).
+
+The G-meter and race auto-record follow the output delay alone. The game draws each frame a little after
+the physics step it shows, so they run slightly ahead of the view.
+
+**How it measures:**
+- **Most of LMU's menu items** light up and tick when the pointer comes onto them.
+- **While you aren't driving,** the source looks in each audio source's sound for ticks: sounds whose
+  high frequencies rise by 25 dB or more within a few milliseconds. For each tick, it looks in the frames
+  from 0.4 s before to 0.1 s after it for the frame in which a small part of the menu lit up while the
+  rest held still. The menu stays put in the headset's tracking space, so turning the head doesn't count.
+  The time from that frame to the tick is the audio source's lag.
+- **The game's sound** is the audio source whose ticks come at the same lag, within 30 ms, three times.
+  Clicks, music and voices make sharp sounds too, and the image often changes before them, but not at the
+  same lag each time. Until three agree, the game's sound keeps the value from before. Then that source
+  is moved back by its lag, on top of the output delay.
+- **It needs** LMU's menus in view, the pointer moved over a few items, and the game's sound in an audio
+  source of the scene.
+
+**When it measures, and when it stops:**
+- **It starts once the game's frames run,** about 3 s after the first (the source reads their rate
+  over 3 s), in each OBS session.
+- **After 5 ticks that agree,** the value is settled, and auto sync stops measuring. It is kept in
+  `auto_sync.json` in VR Mirror's OBS config folder, one entry per source type (Pimax or OpenXR), and the
+  next OBS session starts with it. After 60 ticks without 5 that agree, it stops with what it has.
+- **It measures again when what the value depends on changes:** the game's frame rate (held for 6 s) or
+  the size of its image, its frames starting again after 2 s or more without one (a restart of the game
+  or of its VR session), OBS's audio sources or their settings, or Windows' default output device. A
+  change while it measures starts the measuring over. The value from before applies until a new one
+  settles.
+- **What it costs:** while it measures, a small grey copy of each frame on the copy thread, and the last
+  2 s of each audio source's sound. It works on a thread of its own, at below-normal priority, every
+  250 ms. Once settled, it only reads the setup every 2 s.
+
+The OBS log says when it starts and what it found:
+
+```
+auto sync: measuring, with 2 audio sources
+auto sync: a tick in 'Application Audio Capture (BETA)' at 0.61 s (46 dB), ... ms after its highlight: a step of 30.4 against the median 0.2 of 46 frames; the next 1.0, ... ms before the tick
+auto sync: a tick in 'Application Audio Capture (BETA)' at 0.22 s (67 dB), with no highlight before it: the frames held only from 204 ms before the tick to 1574 ms after the tick
+auto sync now, after 3 ticks: 'Application Audio Capture (BETA)' has them ... ms after (3 agree), so it moves ... ms
+audio sync: 'Application Audio Capture (BETA)' ... ms more (the game's sound, auto sync)
+auto sync done, after 7 ticks: 'Application Audio Capture (BETA)' has them ... ms after (5 agree), so it moves ... ms
+...
+auto sync: measuring again (the game's frame rate, 90 to 72 changed), with 2 audio sources
+```
+
+A tick line comes for each tick heard: when, in seconds since the measuring started, and how far its high
+frequencies rose. Then its lag after the frame that lit up most, that frame's step in grey levels against
+the median step around it, and the frame with the next biggest step. Or, "with no highlight before it",
+and why:
+- The frames around the tick aren't all held: the grey copies had only just started, or the frames
+  stopped.
+- Fewer than 3 frames were there.
+- The biggest step is under 4 grey levels.
+- The biggest step is under 6 times the median step.
+
+A "now" line comes each time the value moves by a millisecond or more, and the "done" line once it is
+settled. A "measuring again" line says what changed.
 
 ### Zoom
 
@@ -214,12 +286,14 @@ recorded, it says how to record one. Under a divider it shows one thing:
     has run with the source, they are what the runtime reports when the source starts, without the game.
     Pimax reports the refresh rate, the eye, and the size it renders the eye at with Pimax Play's Render
     Quality, and the client mirror is half that size. OpenXR tells the refresh rate and the eye only to
-    an app in VR. So when the properties window opens, with no game in VR and the headset not read yet,
-    the OpenXR source is one for about a second: the headset shows "Collecting headset info" on black,
-    and the source reads what a game would get. It gives up after 5 s. Meanwhile every row shows a softly
+    an app in VR. So each time the properties window opens with no game in VR, the OpenXR source is one
+    for about a second: the headset shows "Collecting headset info" on black, and the source reads what
+    a game would get. It gives up after 5 s. Meanwhile every row shows a softly
     pulsing bar where its value will be, Canvas too, and the values come in together. When the headset
-    can't be read (it is off, or its VR software isn't running), the error takes the setup's place.
-    Opening the properties window again tries again.
+    can't be read (it is off, or its VR software isn't running), the error takes the setup's place, with
+    the steps for the source: Pimax Mirror asks for Pimax Play to be started. OpenXR Mirror asks for the
+    headset's VR software to be started and the headset to be worn, because some VR software runs the
+    headset test only while the headset is worn. Opening the properties window again tries again.
   - **Canvas:** OBS's canvas and frame rate.
   - **VRAM usage:** the expected VRAM usage at the current settings. Before the game has run, it is the
     most the store can take ("Up to"): the time a copy takes is measured with the game, and until then
@@ -229,21 +303,25 @@ recorded, it says how to record one. Under a divider it shows one thing:
     there: "Yes. Native up to zoom 1.45, canvas up to 4224 × 2376", "No. Lower zoom to 1.31 or canvas
     to 2560 × 1440", a Yes in green and a No in amber. It follows Zoom as you change it.
 
-Once the game runs, what it measures replaces what the runtime reported, until OBS closes. Nothing is
-saved with the scene.
+Once the game runs, what it measures replaces what the runtime reported. Each opening of the properties
+window with no game frames coming reads the headset again, so a resolution or refresh rate changed in the
+headset's VR software shows at once. The game's measurements stay while the headset reads the same image
+size and refresh rate, until OBS closes. Nothing is saved with the scene.
 
 **Record a lap** records the lap the demo plays:
-1. With the game running and the source shown, press **Record a lap** in the source's properties.
+1. With the game running and the source shown, press **Record a lap** in the source's properties, and
+   keep them open.
 2. In an LMU practice session, leave the pits and drive. The recording starts when the car crosses the
    start/finish line, and stops when it crosses it again. So it holds one full lap, which ends where it
    starts.
-3. A status line under the buttons says where it stands: waiting for the start/finish line, recording,
-   saved, or why it wasn't recorded. The OBS log has the same in lines that start "recorded lap:",
-   with Debug on. Why a lap wasn't recorded is written with Debug off too.
+3. With Debug on, the OBS log says where it stands, in lines that start "recorded lap:": waiting for
+   the start/finish line, recording, saved, or why it wasn't recorded. Why a lap wasn't recorded is
+   written with Debug off too.
 
 The lap is thrown away if, before the start/finish line, the car goes into the pits, the player leaves
 the car, the game pauses or a new session starts. The recording then waits for the next crossing. **Cancel lap
-recording** gives it up.
+recording** gives it up, and so does closing the source's properties, unless the lap is already being
+saved.
 
 With a lap recorded, the button reads **Record a new lap**, and asks before it starts: once the new lap is
 saved, it replaces the recorded one. Until then the recorded lap stays, so a lap thrown away or cancelled
@@ -283,8 +361,8 @@ is kept: the one before is deleted when a new one is saved.
   few frames when the warm-up fixes it.
 - Windows decodes the video on the graphics card. That needs Windows' HEVC Video Extension. Without it,
   the OBS log says the video can't be decoded, and the source goes back to the game.
-- **Play recorded lap** is greyed out until a lap is recorded. Playing it gives up a lap being recorded,
-  and recording a lap stops the demo.
+- **Play recorded lap** shows once a lap is recorded. Playing it gives up a lap being recorded,
+  and **Record a new lap** is greyed out while it plays.
 
 ## Recording races automatically
 
@@ -338,9 +416,9 @@ at the end. Every scaling step in between softens the image. Set OBS's frame rat
 refresh rate, which you choose in the headset's software, such as Pimax Play. While the game keeps up,
 it draws one frame per refresh, so the source shows every game frame exactly once and motion is even.
 
-The canvas that is native depends on the headset, its Render Quality and the zoom. The root
-`README.md` ("Headsets and games") suggests a canvas for each measured headset, and the highest zoom at
-which it stays native. Above that zoom, the image is enlarged, and the video gets softer.
+The canvas that is native depends on the headset, its resolution setting (Pimax Play's Render Quality,
+for one) and the zoom. The root `README.md` ("Recording in OBS") suggests a canvas for each measured
+headset and setting, and the highest zoom at which it stays native. Above that zoom, the image is enlarged, and the video gets softer.
 
 **The OpenXR source** keeps each frame's image at the game's own size when the canvas shows it at 83%
 of that size or more. Otherwise it keeps the image at the size the canvas shows it 1:1. Each
@@ -392,7 +470,8 @@ OBS log:
     percentile and longest)
   - The plugin that runs the telemetry reader logs the reader's footprint to the OBS log every 10 s
     while it is connected to a game, with that plugin's tag ("footprint: telemetry thread (Le Mans
-    Ultimate) ..."). It does so while a G-meter or a source with race auto-record ticked has Debug on.
+    Ultimate) ..."). It does so while something that holds the telemetry has Debug on
+    (`shared\telemetry\README.md`).
 - for the OpenXR source, the frames read and the frames that were gone before they were copied
   ("OpenXR frames: ..."). The layer logs its own side while the source has Debug on, including the
   copy's time on the graphics card (`vr_mirror\frame_sources\openxr\README.md`).

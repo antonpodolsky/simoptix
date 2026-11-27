@@ -54,7 +54,7 @@ public:
     // The runtime's time (XrTime, ns) for performance-counter moment `counter`; false if it can't say.
     using ClockReading = bool (*)(void* context, int64_t counter, int64_t* time);
     // Whether VR Mirror reads the frames (`there`), and with its Debug setting on (`debug`): told once at
-    // each change, from the publisher's thread.
+    // each change, from the publisher's thread, and as gone when the publisher stops.
     using ReaderNews = void (*)(bool there, bool debug);
 
     ~OpenXrPublisher() { Stop(); }

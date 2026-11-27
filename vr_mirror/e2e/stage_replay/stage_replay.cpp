@@ -137,6 +137,24 @@ namespace {
             }
         }
 
+        // Strength 0, nothing smoothed: on queued_late_frames, whose ticks show an older image standing in,
+        // and on edge_test+heartbeat, whose fast turns reach the image's edges. At every smoothing and both
+        // host styles.
+        for (int index : {0, 4}) {
+            for (int smoothing = 1; smoothing <= 2; smoothing++) {
+                for (bool ticks : {false, true}) {
+                    GoldenRun run;
+                    run.input = inputs[index].get();
+                    run.settings.smoothing = smoothing;
+                    run.settings.zoom = 1.2f;
+                    run.settings.strength = 0;
+                    run.ticks = ticks;
+                    run.label = LabelOf(run, " strength 0");
+                    runs.push_back(run);
+                }
+            }
+        }
+
         return runs;
     }
 

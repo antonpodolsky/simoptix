@@ -176,7 +176,7 @@ private:
 
     std::atomic<double> period_{1.0 / 90};
     std::atomic<bool> testRequested_{false};  // RequestHeadsetTest
-    HeadsetReport reported_;                  // the headset test's, set in Start
+    HeadsetReport reported_;                  // the headset test's in this Start (none: not run)
     std::atomic<double> fps_{0};
     std::atomic<uint64_t> framesArrived_{0};
     std::atomic<bool> idle_{true};

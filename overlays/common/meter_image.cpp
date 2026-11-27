@@ -50,8 +50,8 @@ namespace {
         return module;
     }
 
-    // Decodes the PNG resource and scales it to size x size, premultiplied BGRA rows. False if it can't.
-    bool Render(const wchar_t* resource, int size, std::vector<uint8_t>* pixels) {
+    // Decodes the PNG resource and scales it to width x height, premultiplied BGRA rows. False if it can't.
+    bool Render(const wchar_t* resource, int width, int height, std::vector<uint8_t>* pixels) {
         if (!StartGdiplus()) {
             return false;
         }
@@ -73,7 +73,7 @@ namespace {
 
         {
             Gdiplus::Bitmap source(stream);
-            Gdiplus::Bitmap scaled(size, size, PixelFormat32bppPARGB);
+            Gdiplus::Bitmap scaled(width, height, PixelFormat32bppPARGB);
 
             if (source.GetLastStatus() == Gdiplus::Ok && scaled.GetLastStatus() == Gdiplus::Ok) {
                 {
@@ -86,7 +86,7 @@ namespace {
                     clamp.SetWrapMode(Gdiplus::WrapModeTileFlipXY);
                     g.DrawImage(
                         &source,
-                        Gdiplus::Rect(0, 0, size, size),
+                        Gdiplus::Rect(0, 0, width, height),
                         0,
                         0,
                         INT(source.GetWidth()),
@@ -97,15 +97,15 @@ namespace {
                 }
 
                 Gdiplus::BitmapData locked;
-                Gdiplus::Rect all(0, 0, size, size);
+                Gdiplus::Rect all(0, 0, width, height);
                 if (scaled.LockBits(&all, Gdiplus::ImageLockModeRead, PixelFormat32bppPARGB, &locked)
                     == Gdiplus::Ok) {
-                    pixels->resize(size_t(size) * size * 4);
-                    for (int y = 0; y < size; y++) {
+                    pixels->resize(size_t(width) * height * 4);
+                    for (int y = 0; y < height; y++) {
                         memcpy(
-                            &(*pixels)[size_t(y) * size * 4],
+                            &(*pixels)[size_t(y) * width * 4],
                             static_cast<const uint8_t*>(locked.Scan0) + y * locked.Stride,
-                            size_t(size) * 4
+                            size_t(width) * 4
                         );
                     }
 
@@ -121,14 +121,14 @@ namespace {
 
 }
 
-void MeterImage::Build(int size) {
-    if (size == size_ || failed_ || size <= 0) {
+void MeterImage::Build(int width, int height) {
+    if ((width == width_ && height == height_) || failed_ || width <= 0 || height <= 0) {
         return;
     }
     const double start = Seconds();
     std::vector<uint8_t> pixels;
-    if (!Render(resource_, size, &pixels)) {
-        CoreLogError("G-Meter Overlay: couldn't read the meter image %ls from the plugin", resource_);
+    if (!Render(resource_, width, height, &pixels)) {
+        CoreLogError("overlay image %ls couldn't be read from the plugin", resource_);
         failed_ = true;
         return;
     }
@@ -138,15 +138,17 @@ void MeterImage::Build(int size) {
         gs_texture_destroy(tex_);
     }
     const uint8_t* rows[] = {pixels.data()};
-    tex_ = gs_texture_create(uint32_t(size), uint32_t(size), GS_BGRA, 1, rows, 0);
+    tex_ = gs_texture_create(uint32_t(width), uint32_t(height), GS_BGRA, 1, rows, 0);
     obs_leave_graphics();
-    size_ = tex_ ? size : 0;
+    width_ = tex_ ? width : 0;
+    height_ = tex_ ? height : 0;
 
     // Once per size: it runs on OBS's graphics thread, so its cost is worth seeing.
     CoreLog(
-        "G-Meter Overlay: meter image %ls at %d px in %.1f ms",
+        "overlay image %ls at %d x %d px in %.1f ms",
         resource_,
-        size,
+        width,
+        height,
         (Seconds() - start) * 1000
     );
 }
@@ -170,5 +172,5 @@ void MeterImage::Destroy() {
         gs_texture_destroy(tex_);
     }
     tex_ = nullptr;
-    size_ = 0;
+    width_ = height_ = 0;
 }

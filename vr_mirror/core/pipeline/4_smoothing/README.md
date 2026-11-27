@@ -66,6 +66,10 @@ it asks for the window, and each implementation maps it onto its own tuning:
 - Look-ahead multiplies `tauStillS` and `tauMoveS` by it. Its delay stays, and the window behind the frame
   grows with `tauStillS`.
 
+At 0 nothing is smoothed. Each implementation returns the followed image's pose, levelled and stopped at
+the edge like any view. Instant restarts its filter, and Look-ahead asks for no window and keeps its delay.
+The e2e scenario `no_smoothing` checks it.
+
 At 1 every output is byte for byte the one before the setting (`stage_replay --golden`).
 
 **Thread:** the host's output thread (OBS's graphics thread, the mirror app's main thread). Per-frame

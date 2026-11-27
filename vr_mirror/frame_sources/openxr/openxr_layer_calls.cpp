@@ -10,6 +10,7 @@
 #include "openxr_d3d11.h"
 #include "openxr_frame_layout.h"
 #include "openxr_layer_frames.h"
+#include "openxr_layer_timing.h"
 #include "shared/log.h"
 
 // No locks: the game's threads must never wait here. What crosses threads is atomic; logging copies the
@@ -36,6 +37,7 @@ namespace {
         PFN_xrAcquireSwapchainImage acquireSwapchainImage = nullptr;
         PFN_xrReleaseSwapchainImage releaseSwapchainImage = nullptr;
         PFN_xrWaitFrame waitFrame = nullptr;
+        PFN_xrBeginFrame beginFrame = nullptr;
         PFN_xrEndFrame endFrame = nullptr;
         PFN_XrCounterToTime counterToTime = nullptr;  // only with the time conversion extension
     };
@@ -135,6 +137,19 @@ namespace {
                 );
             }
 
+            OpenXrFrameTimingStats t;
+            if (TimingTakeStats(&t) && t.frames) {
+                CoreLog(
+                    "frame timing: %u frames timed for the performance overlay, CPU %.2f ms (%u frames), GPU "
+                    "%.2f ms (%u frames)",
+                    t.frames,
+                    t.cpuMs,
+                    t.cpuFrames,
+                    t.gpuMs,
+                    t.gpuFrames
+                );
+            }
+
             g_statsFrames = 0;
             g_statsStart = now;
         }
@@ -150,11 +165,13 @@ namespace {
         return "none found";
     }
 
-    // ---- The calls handed to the game. Each passes the call on first, then only reads and logs. ----
+    // ---- The calls handed to the game. Each passes the call on unchanged; around it the layer reads, logs
+    // and, while SimOptix reads, times the frame. ----
 
     XrResult XRAPI_CALL DestroyInstance(XrInstance instance) {
         try {
             FramesSessionDestroyed();  // a session the game didn't destroy itself
+            TimingSessionDestroyed();
             CoreLog("instance destroyed");
         } catch (...) {
         }
@@ -186,6 +203,7 @@ namespace {
             );
 
             FramesSessionCreated(instance, *info, g_next.counterToTime);
+            TimingSessionCreated(*info);
         } catch (...) {
         }
 
@@ -195,6 +213,7 @@ namespace {
     XrResult XRAPI_CALL DestroySession(XrSession session) {
         try {
             FramesSessionDestroyed();  // before the runtime lets go of the device and the swapchains
+            TimingSessionDestroyed();
         } catch (...) {
         }
 
@@ -308,10 +327,32 @@ namespace {
     }
 
     XrResult XRAPI_CALL WaitFrame(XrSession session, const XrFrameWaitInfo* info, XrFrameState* state) {
-        XrResult r = g_next.waitFrame(session, info, state);
-        if (XR_SUCCEEDED(r) && state) {
-            FramesDisplayPeriod(state->predictedDisplayPeriod);
+        try {
+            TimingWaitCalled();
+        } catch (...) {
         }
+
+        XrResult r = g_next.waitFrame(session, info, state);
+        try {
+            if (XR_SUCCEEDED(r) && state) {
+                FramesDisplayPeriod(state->predictedDisplayPeriod);
+                TimingWaitReturned(state->predictedDisplayPeriod);
+            }
+        } catch (...) {
+        }
+
+        return r;
+    }
+
+    XrResult XRAPI_CALL BeginFrame(XrSession session, const XrFrameBeginInfo* info) {
+        XrResult r = g_next.beginFrame(session, info);
+        try {
+            if (XR_SUCCEEDED(r)) {
+                TimingFrameBegun();
+            }
+        } catch (...) {
+        }
+
         return r;
     }
 
@@ -323,6 +364,8 @@ namespace {
             if (info) {
                 image = FramesEnding(*info);
             }
+
+            TimingFrameEnding();
         } catch (...) {
         }
 
@@ -330,6 +373,7 @@ namespace {
         try {
             LARGE_INTEGER now;
             QueryPerformanceCounter(&now);
+            TimingFrameEnded(XR_SUCCEEDED(r));
             if (XR_FAILED(r)) {
                 LogFailure("xrEndFrame", r, g_frameFailures);
             } else if (info) {
@@ -363,6 +407,7 @@ namespace {
         {"xrAcquireSwapchainImage", reinterpret_cast<PFN_xrVoidFunction>(AcquireSwapchainImage)},
         {"xrReleaseSwapchainImage", reinterpret_cast<PFN_xrVoidFunction>(ReleaseSwapchainImage)},
         {"xrWaitFrame", reinterpret_cast<PFN_xrVoidFunction>(WaitFrame)},
+        {"xrBeginFrame", reinterpret_cast<PFN_xrVoidFunction>(BeginFrame)},
         {"xrEndFrame", reinterpret_cast<PFN_xrVoidFunction>(EndFrame)},
     };
 
@@ -385,6 +430,7 @@ void StartCalls(XrInstance instance, PFN_xrGetInstanceProcAddr next, const XrIns
     Resolve(instance, "xrAcquireSwapchainImage", g_next.acquireSwapchainImage);
     Resolve(instance, "xrReleaseSwapchainImage", g_next.releaseSwapchainImage);
     Resolve(instance, "xrWaitFrame", g_next.waitFrame);
+    Resolve(instance, "xrBeginFrame", g_next.beginFrame);
     Resolve(instance, "xrEndFrame", g_next.endFrame);
 
     for (uint32_t i = 0; i < info.enabledExtensionCount; i++) {

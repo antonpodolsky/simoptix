@@ -9,9 +9,9 @@
 #include <algorithm>
 #include <cstring>
 
+#include "empty_state_text.h"
 #include "pipeline/pipeline_builder.h"
 #include "recording_notes.h"
-#include "setup_facts.h"
 #include "shared/local_files.h"
 #include "shared/log.h"
 #include "shared/program_delay.h"
@@ -49,10 +49,16 @@ namespace {
 
 }
 
-MirrorView::MirrorView(std::unique_ptr<FrameSource> game, const MirrorSettings& settings, bool debug)
+MirrorView::MirrorView(
+    std::unique_ptr<FrameSource> game,
+    std::vector<std::wstring> headsetSteps,
+    const MirrorSettings& settings,
+    bool debug
+)
     : gameSource_(std::move(game)),
       demoSource_(std::make_unique<DemoSource>()),
-      frameSource_(gameSource_.get()) {
+      frameSource_(gameSource_.get()),
+      headsetSteps_(std::move(headsetSteps)) {
     const ScopedLogGate gate(&debug_);  // it logs as its Debug setting says, from its first line
     SetSettings(settings, debug);       // first: Debug decides its other lines
     FollowVideoSettings();
@@ -115,6 +121,7 @@ void MirrorView::SetSettings(const MirrorSettings& settings, bool debug) {
         g_debugViews += debug ? 1 : -1;
         RecordingNotes::SetDebug(this, frameSource_->Name(), debug);
         FollowTelemetryDebug();
+        autoSync_.FollowDebug();
     }
 
     if (!debug) {
@@ -167,82 +174,25 @@ bool MirrorView::WaitsForGame() const {
            || gameSource_->Idle();
 }
 
-namespace {
-
-    // The messages the empty state shows under its rule in place of the facts.
-    EmptyMessage HeadsetUnreadMessage() {
-        return {
-            L"The headset didn't answer",
-            FactTone::kWarning,
-            {L"Turn the headset on",
-             L"Start its VR software (Pimax Play)",
-             L"Close this window and open it again"},
-            L""
-        };
-    }
-
-    EmptyMessage LapFailedMessage() {
-        return {
-            L"The last lap wasn't recorded",
-            FactTone::kWarning,
-            {L"Find why in the OBS log: lines starting \"recorded lap:\"",
-             L"Press \"Record a lap\" to try again"},
-            L""
-        };
-    }
-
-    EmptyMessage RecordingMessage() {
-        return {
-            L"Recording a lap",
-            FactTone::kPlain,
-            {L"Start a practice session in LMU",
-             L"Leave the pits and cross the start/finish line",
-             L"Drive one full lap back to the start/finish line"},
-            L"Entering the pits or pausing the game starts the lap over at the next start/finish line."
-        };
-    }
-
-}
-
-// What the empty state says: why the view is empty (no game frames), then the one next step, which is the
-// game or the recorded lap. Under its rule one thing: the headset's error, else a failed lap's, else the
-// recording's steps while a lap is asked for, else the setup's facts (SetupFacts). It shows only in the
-// properties dialog, whose buttons are below it. Graphics thread.
+// The empty state's text, from the view's state now (empty_state_text.h). Graphics thread.
 EmptyText MirrorView::EmptyTextNow() {
-    EmptyText text;
-    text.title = L"Waiting for the game";
-
-    if (lapWanted_) {
-        text.lines = {L"Start LMU in VR."};
-    } else if (lapRecorded_) {
-        text.lines = {L"Start LMU in VR, or press \"Play recorded lap\" below."};
-    } else {
-        text.lines = {L"Start LMU in VR, or record a lap with \"Record a lap\" below."};
-    }
-
-    SetupFactsInput in;
-    in.headsetUnread = headsetUnread_;
-    in.settings = settings_;
-    in.obs.canvasWidth = width_;
-    in.obs.canvasHeight = height_;
-    in.obs.framePeriod = obsFramePeriod_;
+    EmptyStateTextInput in;
+    in.headsetSteps = &headsetSteps_;
+    in.lapWanted = lapWanted_;
+    in.lapRecorded = lapRecorded_;
+    in.lapFailed = recorder_.Get() == LapRecorder::State::kFailed;
+    in.setup.headsetUnread = headsetUnread_;
+    in.setup.settings = settings_;
+    in.setup.obs.canvasWidth = width_;
+    in.setup.obs.canvasHeight = height_;
+    in.setup.obs.framePeriod = obsFramePeriod_;
 
     {
         std::lock_guard<std::mutex> lock(factsMutex_);
-        in.facts = facts_;
+        in.setup.facts = facts_;
     }
 
-    if (headsetUnread_ && in.facts.imageWidth == 0) {
-        text.message = HeadsetUnreadMessage();
-    } else if (recorder_.Get() == LapRecorder::State::kFailed) {
-        text.message = LapFailedMessage();
-    } else if (lapWanted_) {
-        text.message = RecordingMessage();
-    } else {
-        text.facts = SetupFacts(in, *gameSource_);
-    }
-
-    return text;
+    return EmptyStateText(in, *gameSource_);
 }
 
 void MirrorView::SetRecordLap(bool on) {
@@ -465,6 +415,11 @@ void MirrorView::StartStop() {
         statStart_ = 0;  // a new 10 s stretch of stats (TraceStats)
         statTicks_ = statRepeats_ = statJumps_ = statNoFrame_ = statHeld_ = 0;
         KeepReportedFacts();
+
+        if (frameSource_ == gameSource_.get()) {
+            autoSync_.Start();
+        }
+
         CoreLog("started (source shown): %s", frameSource_->Name());
     } else if (!run && state == SessionWorker::kRunning) {
         StopSession(wanted_ ? "switching between the game and the demo" : "source hidden");
@@ -494,6 +449,7 @@ void MirrorView::StopSession(const char* why) {
 
     if (started_) {
         ToggleTrace(false);
+        autoSync_.Stop();
         started_ = false;
         warpSlot_ = -1;
         obs_enter_graphics();
@@ -509,6 +465,12 @@ void MirrorView::StopSession(const char* why) {
 // Runs the lap recorder while a lap is asked for and the game's frames come; once it has saved the lap or
 // failed, the request is done. Graphics thread, every tick.
 void MirrorView::FollowLap() {
+    // The properties window closed: the lap asked for there is given up, unless it is being saved.
+    if (lapWanted_ && *emptyViewers_ == 0 && recorder_.Get() != LapRecorder::State::kSaving) {
+        lapWanted_ = false;
+        CoreLog("recorded lap: cancelled, the properties window closed");
+    }
+
     const bool want = lapWanted_ && started_ && frameSource_ == gameSource_.get();
 
     if (want && !lapStarted_) {
@@ -543,8 +505,9 @@ void MirrorView::FollowTelemetryDebug() {
 }
 
 // What the game source's runtime reported as it started, until the game is measured: the empty state has
-// the headset before the game has run with the source. The game's stay: they are what it really did.
-// Graphics thread.
+// the headset before the game has run with the source. The game's stay while the headset reads alike:
+// they are what it really did. A reading that differs replaces them, because the headset's resolution or
+// refresh rate was changed since, and the game would get the new ones. Graphics thread.
 void MirrorView::KeepReportedFacts() {
     if (frameSource_ != gameSource_.get()) {
         return;
@@ -555,24 +518,18 @@ void MirrorView::KeepReportedFacts() {
     headsetUnread_ = report.failed;
     std::lock_guard<std::mutex> lock(factsMutex_);
 
-    if (facts.imageWidth > 0 && !facts_.measured) {
+    if (facts.imageWidth > 0 && (!facts_.measured || !SameHeadset(facts, facts_))) {
         facts_ = facts;
+        headsetFound_ = true;
     }
 }
 
-// The properties dialog opened (DialogOpened) with the headset not known yet and no game frames coming:
-// the game source reads it, by starting again (OpenXR's headset test). Graphics thread, every tick.
+// The properties dialog opened (DialogOpened) with no game frames coming: the game source reads the
+// headset again, by starting again (OpenXR's headset test), so the facts show what its VR software is set
+// to now, also after a change since the last reading. Graphics thread, every tick.
 void MirrorView::FollowDialogOpened() {
     if (!dialogOpened_.exchange(false) || frameSource_ != gameSource_.get() || !WaitsForGame()) {
         return;
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(factsMutex_);
-
-        if (facts_.measured || facts_.imageWidth > 0) {
-            return;
-        }
     }
 
     gameSource_->RequestHeadsetTest();
@@ -608,6 +565,7 @@ void MirrorView::KeepMemoryFacts(const FramePicker& picker) {
         return;
     }
 
+    headsetFound_ = true;
     std::unique_lock<std::mutex> lock(factsMutex_, std::try_to_lock);
 
     if (lock.owns_lock()) {

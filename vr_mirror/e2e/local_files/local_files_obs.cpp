@@ -16,7 +16,6 @@ namespace {
 
     constexpr const char* kName = "SimOptixE2E";  // the profile and the scene collection
     constexpr DWORD kStartMs = 30000;
-    constexpr DWORD kLoggedMs = 60000;
     constexpr DWORD kCloseMs = 30000;
 
     // What OBS shows for each source id, as the plugins name them.
@@ -55,30 +54,53 @@ namespace {
         return text.str();
     }
 
-    // A scene that shows each source in `sources` at the canvas's top left, with Debug on or off
-    // (`debug`), Instant smoothing (no output delay) and race auto-record off.
-    std::string SceneCollection(const std::vector<std::string>& sources, bool debug) {
-        std::string items, list;
+    // A source as the scene collection holds it: its name, its type's id and its settings (JSON).
+    struct SceneSource {
+        std::string name, type, settings;
+    };
 
-        for (size_t i = 0; i < sources.size(); i++) {
-            const int id = static_cast<int>(i) + 1;
-            items += std::string(i ? "," : "") + "{\"name\":\"" + DisplayName(sources[i])
-                     + "\",\"source_uuid\":\"" + Uuid(id)
-                     + "\",\"visible\":true,\"locked\":false,\"id\":" + std::to_string(id)
-                     + ",\"pos\":{\"x\":0.0,\"y\":0.0},\"scale\":{\"x\":1.0,\"y\":1.0},\"rot\":0.0,\"align\":"
-                       "5}";
-            list += ",{\"name\":\"" + std::string(DisplayName(sources[i])) + "\",\"uuid\":\"" + Uuid(id)
-                    + "\",\"id\":\"" + sources[i] + "\",\"versioned_id\":\"" + sources[i]
-                    + "\",\"enabled\":true,\"settings\":{\"debug\":" + (debug ? "true" : "false")
-                    + ",\"smoothing\":1,\"auto_record\":false}}";
+    // One source in the scene's list of items, and in the collection's list of sources.
+    void AddSource(int id, const SceneSource& source, std::string* items, std::string* list) {
+        const std::string& name = source.name;
+        *items += std::string(id > 1 ? "," : "") + "{\"name\":\"" + name + "\",\"source_uuid\":\"" + Uuid(id)
+                  + "\",\"visible\":true,\"locked\":false,\"id\":" + std::to_string(id)
+                  + ",\"pos\":{\"x\":0.0,\"y\":0.0},\"scale\":{\"x\":1.0,\"y\":1.0},\"rot\":0.0,\"align\":5}";
+        *list += ",{\"name\":\"" + name + "\",\"uuid\":\"" + Uuid(id) + "\",\"id\":\"" + source.type
+                 + "\",\"versioned_id\":\"" + source.type
+                 + "\",\"enabled\":true,\"settings\":" + source.settings + "}";
+    }
+
+    // A scene that shows each source in `sources` at the canvas's top left, with Debug on or off
+    // (`debug`), Instant smoothing (no output delay) and race auto-record off, and Desktop Audio if asked.
+    std::string SceneCollection(const std::vector<std::string>& sources, bool debug, bool desktopAudio) {
+        std::string items, list;
+        int id = 0;
+
+        for (const std::string& source : sources) {
+            const SceneSource mirror = {
+                DisplayName(source),
+                source,
+                std::string("{\"debug\":") + (debug ? "true" : "false")
+                    + ",\"smoothing\":1,\"auto_record\":false}"
+            };
+            AddSource(++id, mirror, &items, &list);
+        }
+
+        if (desktopAudio) {
+            AddSource(
+                ++id,
+                {"Desktop Audio", "wasapi_output_capture", "{\"device_id\":\"default\"}"},
+                &items,
+                &list
+            );
         }
 
         return std::string("{\"name\":\"") + kName
                + "\",\"current_scene\":\"Scene\",\"current_program_scene\":\"Scene\","
                  "\"scene_order\":[{\"name\":\"Scene\"}],\"sources\":[{\"name\":\"Scene\",\"uuid\":\""
                + Uuid(0) + "\",\"id\":\"scene\",\"versioned_id\":\"scene\",\"enabled\":true,\"settings\":{"
-               + "\"id_counter\":" + std::to_string(sources.size()) + ",\"custom_size\":false,\"items\":["
-               + items + "]}}" + list + "]}";
+               + "\"id_counter\":" + std::to_string(id) + ",\"custom_size\":false,\"items\":[" + items + "]}}"
+               + list + "]}";
     }
 
     // Where OBS records (`recordTo`, if set): a short MKV with the software encoder, which every machine
@@ -123,7 +145,10 @@ namespace {
                                        "FPSCommon=60\r\n[Output]\r\nMode=Simple\r\n"
                                      + RecordingSettings(run.recordTo)
                              )
-                             && Write(scenes / (name + ".json"), SceneCollection(run.sources, run.debug));
+                             && Write(
+                                 scenes / (name + ".json"),
+                                 SceneCollection(run.sources, run.debug, run.desktopAudio)
+                             );
 
         return written;
     }
@@ -344,8 +369,19 @@ bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string
     }
 
     if (sourcesStarted && !run.holdUntilLogged.empty()) {
-        for (DWORD waited = 0; waited < kLoggedMs; waited += 250) {
-            if (Count(NewestLog(obs.dir), run.holdUntilLogged.c_str()) > 0) {
+        std::vector<bool> cued(run.cues.size(), false);
+
+        for (DWORD waited = 0; waited < run.holdUntilMs; waited += 250) {
+            const std::string newest = NewestLog(obs.dir);
+
+            for (size_t i = 0; i < run.cues.size(); i++) {
+                if (!cued[i] && Count(newest, run.cues[i].text.c_str()) > 0) {
+                    cued[i] = true;
+                    run.cues[i].then();
+                }
+            }
+
+            if (Count(newest, run.holdUntilLogged.c_str()) >= run.holdUntilTimes) {
                 break;
             }
 

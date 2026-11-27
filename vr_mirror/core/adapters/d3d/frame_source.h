@@ -73,8 +73,9 @@ public:
     // The copy delay a host's frame picker can start with when the source knows it (s;
     // FramePicker::SetStartCopyDelay); 0 if it doesn't.
     virtual double StartCopyDelayS() const { return 0; }
-    // What the runtime reported of the headset when the source last started, game or no game; nothing by
-    // default. Any thread, once Start has returned.
+    // What the runtime reported of the headset when the source last started, game or no game; nothing if
+    // it didn't read the headset then (the OpenXR source reads it only in its test), and by default. Any
+    // thread, once Start has returned.
     virtual HeadsetReport Reported() const { return {}; }
     // Asks the next Start to show the headset a test of the source's own and read it, if no game is in VR
     // (the OpenXR source: a second of "Collecting headset info"). Others read it as they start anyway. Only

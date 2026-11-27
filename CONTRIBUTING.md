@@ -27,6 +27,8 @@ project settings set `context.fileName` to `AGENTS.md`.
 | fake runtime | The stand-in for Pimax's client library that the e2e tests use in place of a headset and a game |
 | replay | A real session played back through the fake runtime: its head poses, the runtime's predictions, and every game frame at its real arrival time |
 | stage replay | `stage_replay.exe`. It runs the pipeline's stages offline, without the mirror app, the fake runtime or the GPU |
+| data folder | The folder `SIMOPTIX_DATA` names, outside the repo, where analyses of recordings are kept |
+| auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
 
 ## Before you start
 
@@ -62,7 +64,7 @@ project settings set `context.fileName` to `AGENTS.md`.
 |---|---|
 | Every build | 64-bit Windows. Visual Studio 2019 or later, or its Build Tools, with "Desktop development with C++". The builds find it with `shared\build\vs_env.bat`. Only 2019 has been tried |
 | Reading LMU's telemetry | LMU installed through Steam, or `LMU_SDK` set to the game's `Support\SharedMemoryInterface` folder. The build finds that folder in any Steam library. Without it, both plugins build, the build says so, and they read no game. The fake LMU isn't built |
-| Trying the plugins | OBS Studio 32.2.2. For VR Mirror's Pimax source, a Pimax headset with Pimax Play running |
+| Trying the plugins | OBS Studio 32.2.2. For VR Mirror's Pimax source, a Pimax headset with Pimax Play running. For its OpenXR source, a headset whose VR software is the active OpenXR runtime, and the API layer installed |
 | The layout check of `pvr_interface.h` | Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`, or `PVR_SDK` naming its `Include` folder. Nothing else needs it |
 | Signing the OpenXR layer | A code signing certificate of your own that Windows trusts, and `signtool`, which comes with the Visual Studio C++ workload. The repo builds the layer unsigned. Sign `bin\XR_APILAYER_SIMOPTIX_frame_source.dll` with SHA-256 and a timestamp, then install it with `install.ps1` |
 | The e2e tests | A Windows SDK with the C++/WinRT headers (the Visual Studio C++ workload has one), Windows 10 1903 or later, and a D3D11 graphics card |
@@ -81,17 +83,19 @@ and fail on any warning, run
 |---|---|---|
 | `vr_mirror\core\`, `vr_mirror\frame_sources\pimax\` | Both plugins, `vr_mirror\mirror_app\build.bat`, `vr_mirror\e2e\build.bat` | Yes |
 | `shared\` | The same, and `shared\telemetry\games\lmu\fake\build.bat` for a telemetry change, and `vr_mirror\frame_sources\openxr\build.bat` for `shared\local_files.*` | If the mirror app or the tests use the file. The local files test for `shared\local_files.*` and the crash dump |
-| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins | The local files test for the Debug setting's trace files, what a plugin logs with Debug on or off, the settings and eye lines, or the file beside a recording. Otherwise no. Check in OBS (below) |
+| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins | The local files test for the Debug setting's trace files, what a plugin logs with Debug on or off, the settings and eye lines, or the file beside a recording. The auto sync test for `vr_mirror\obs_plugin\auto_sync\`. Otherwise no. Check in OBS (below) |
 | `vr_mirror\mirror_app\` | `vr_mirror\mirror_app\build.bat` | Yes, for a change in behaviour |
 | `vr_mirror\e2e\` | `vr_mirror\e2e\build.bat` | The scenarios that changed |
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`, which checks the declarations against Pimax's headers. Without the SDK it says so and skips | Yes |
 | `vr_mirror\frame_sources\openxr\` | Its `build.bat`, then its check program, then signed if the layer goes into the game | The local files test for the layer's log. Otherwise no |
 | `vr_mirror\recording_analysis\` | Its `build.bat` (`patch_shift.exe`, `grid_shift.exe`) | No |
+| `game\`, `vr_mirror\frame_sources\openxr\openxr_d3d11.h` | `game\build.bat` (`simoptix_game.exe`) | No. Run it with the headset on, and look at the grid in each eye |
 | `setup\` | Its `build.bat`, after the layer's `build.bat` (and signing). It builds both plugins too | No. Check its window and what it installs |
 
 The two plugins are `vr_mirror\obs_plugin\build.bat` and `overlays\obs_plugin\build.bat`. With the
 argument `install`, each also copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`,
-and its `manifest.json`, which OBS 32 reads for the plugin's name and version, to `data` beside it.
+its `manifest.json`, which OBS 32 reads for the plugin's name and version, to `data` beside it, and its
+sources' icons from its `data\icons` folder to `data\icons` there.
 OBS must be closed, because it holds the DLLs. Install both from the same build, because the telemetry
 they share checks that they match. Plugins that SimOptix Setup installed belong to the administrators:
 the install then stops with "cannot install", and it has to run as administrator.
@@ -107,7 +111,7 @@ way OBS does and measures what a viewer would see.
 2. Close LMU and the mirror app. For runs whose numbers are compared, close Pimax Play too, because its
    compositor disturbs the timing.
 3. Run `vr_mirror\e2e\bin\e2e_runner.exe`. To run some scenarios only, name them
-   (`e2e_runner.exe head_still`). `--list` lists them. The 38 runs take about 9 minutes, each in a
+   (`e2e_runner.exe head_still`). `--list` lists them. The 40 runs take about 10 minutes, each in a
    small window on top of everything. Don't use the PC meanwhile.
 4. Compare the results with `.agents\skills\dev\reference\e2e_results.md`, and update the numbers there
    when they change for a reason. Each run's files are in `vr_mirror\e2e\out\<scenario>\`.
@@ -119,6 +123,11 @@ OBS's log has with Debug on and off, and the file beside a recording. It runs th
 game.
 Build both plugins, the layer and `vr_mirror\e2e\build.bat` first, and close OBS and LMU. It takes about
 a minute, and its first run copies OBS (466 MB).
+
+The auto sync test (`vr_mirror\e2e\bin\auto_sync_e2e.exe`) checks auto sync in the built plugin, in a
+private copy of OBS, with a fake game that plays a cut of a real recording of LMU's menus. The cut
+stays in the data folder, so it runs only where it is. Run it after a change to `vr_mirror\obs_plugin\auto_sync\`.
+It takes about half a minute, and its sound is heard. Play no other sound meanwhile: it drowns the ticks.
 
 The stage replay (`vr_mirror\e2e\bin\stage_replay.exe`) runs in about a second. Use it to find out why
 a scenario fails, and to check that a refactor changes nothing (`.agents\skills\dev\reference\e2e.md`).
@@ -166,7 +175,10 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   what it deliberately doesn't know. Split files past about 500 lines.
 - **Threads.** Comment which thread owns each member. Share only through `std::atomic` or a briefly
   held mutex. Threads catch everything, log it and stop cleanly.
-- **Setting keys are saved in users' scenes.** Never rename them.
+- **Consistency comes first.** One thing has one name everywhere: in the code, the comments, the docs
+  and what OBS shows. Parts that do the same kind of job do it the same way, with the same names. A name
+  that breaks the pattern is renamed everywhere in the same change, even a setting key saved in users'
+  scenes (`.agents\skills\dev\SKILL.md`, "Consistency comes first").
 - **Names.**
   - A part's name is its folder's: `frame_sources\pimax\` holds `pimax_source.*` and `PimaxSource`.
   - File names and the names programs see are snake_case with `simoptix_`, and never have hyphens.
@@ -184,8 +196,9 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 
 ## Commits and pull requests
 
-- Make one small commit per change. The subject is `Area: what changed` (for example `Overlays: the
-  G-meter's live G moved up 1 px`), and the body says why.
+- Make one small commit per change. The subject is `type(scope): what changed` (for example
+  `fix(overlays): the G-meter's live G moved up 1 px`), and the body says why. The pull request's
+  title has the same form ("The title" in `.agents\skills\pull-requests\SKILL.md`).
 - Docs move with the code. When behaviour, settings or files change, update the matching README in the
   same commit. READMEs describe what the project is and does. How to work on it, and the rules, go here
   and in `.agents\skills\dev\`. Write docs by `.agents\skills\docs\SKILL.md`, and run its check script
@@ -206,17 +219,20 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   against `vr_mirror\e2e\stage_replay\golden_expected.txt`), in `.github\workflows\checks.yml`. A pull
   request that changes only Markdown files skips Build and Pipeline output, because no build reads
   them, and runs the other checks. Changelog checks the label and the Changelog section the way a
-  release reads them, and Description the description's public text, each time either changes
+  release reads them, and the title's form and type. Description checks the description's public
+  text. Both run each time the title, the description or the label changes
   (`.github\workflows\pull_request.yml`). The Changelog section ends the description, so nothing goes
   after it. GitHub's runners have no LMU, no Pimax SDK, no headset and no graphics card, so the e2e
-  suite and the local files test run only by hand (Test, above). Say in the pull request what you checked by hand.
-- Give the pull request one label, which decides whether it goes into `CHANGELOG.md`:
-  - If users notice the change, label it `added`, `changed`, `fixed`, `removed` or `security`. Then
-    write one to three lines in the Changelog section of its description. Write them for a VR sim
-    racer, in plain words with no code names, as `.agents\skills\docs\SKILL.md` says ("The
-    changelog").
-  - If only contributors notice it (tests, refactors, contributors' docs, the skills, the build),
-    label it `internal`, and leave the Changelog section empty.
+  suite, the local files test and the auto sync test run only by hand (Test, above). Say in the pull request what you checked by hand.
+- Give the pull request one label, which decides whether it goes into `CHANGELOG.md` and the types
+  its title may start with. Issues take the same labels.
+  - If users notice the change, label it `feature`, `change`, `bug`, `deprecation`, `removal` or
+    `security`. Then write one to three lines in the Changelog section of its description. Write
+    them for a VR sim racer, in plain words with no code names, as `.agents\skills\docs\SKILL.md`
+    says ("The changelog").
+  - If only contributors notice it, label it `documentation` (contributors' docs, the skills,
+    findings) or `maintenance` (tests, refactors, the build, the checks), and leave the Changelog
+    section empty.
 - Keep personal information out of everything public: every file in the repo, commit messages, branch
   names, pull requests, issues and comments. That means recording names, dates and times (of your
   sessions and of your work on the code alike), tracks, cars and local paths. Git and GitHub keep every version.
@@ -229,7 +245,7 @@ SimOptix has one version for all its parts, in `version.txt` at the repo's root,
 build carries it, and a build that isn't a release adds the commits since the last one
 (`0.1.0+12.gabc1234`). The maintainer makes the releases.
 
-1. In a "Release: v<version>" pull request, bump `version.txt` and run
+1. In a "chore(release): v<version>" pull request, bump `version.txt` and run
    `python -I .agents\skills\dev\release.py`. It writes the release's section of `CHANGELOG.md` from
    the labels and Changelog sections of the pull requests since the last release.
 2. After it merges, tag the merge commit on `main` as `v<version>`, annotated.

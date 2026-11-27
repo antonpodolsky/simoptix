@@ -63,10 +63,13 @@ bool OpenXrSource::Start(std::string* error) {
 
     Stop();
 
-    // A game in VR is measured instead, and the headset left to it.
+    // A game in VR is measured instead, and the headset left to it. Reported is this start's alone: nothing
+    // when the test doesn't run, so an older reading never stands for the headset now.
     const UniqueHandle published(OpenFileMappingW(FILE_MAP_READ, FALSE, openxr_share::kMappingName));
+    const bool test = testRequested_.exchange(false) && !published;
+    reported_ = {};
 
-    if (testRequested_.exchange(false) && !published && !RunHeadsetTest(&reported_)) {
+    if (test && !RunHeadsetTest(&reported_)) {
         reported_ = {};
         reported_.failed = true;
     }

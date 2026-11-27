@@ -18,6 +18,14 @@ namespace {
 }
 
 Smoothed InstantSmoothing::Smooth(const SmoothingInput& in) {
+    // Strength 0: no smoothing, the image's own pose levelled. The filter starts afresh once it smooths
+    // again.
+    if (strength_ <= 0) {
+        filter_.Reset();
+        const EdgeStop stop = StopAtEdge(in.shown, LevelHorizon(in.followed), in.geometry);
+        return {stop.view, false, stop.stopped, stop.movedDeg};
+    }
+
     // How close the previous view is to running out of room against the new head pose:
     // the closer, the faster the smoothing catches up.
     float extraHz = 0;
@@ -25,7 +33,7 @@ Smoothed InstantSmoothing::Smooth(const SmoothingInput& in) {
         const EdgeRoom r = RoomIn(in.shown, in.previous.view, in.geometry);
 
         // Head turning speed, smoothed over ~50 ms so vibration and tremor don't count.
-        const float speed = AngleBetween(in.previous.followed, in.followed) / in.dt;
+        const float speed = RotationAngleAcos(in.previous.followed, in.followed) / in.dt;
         headSpeed_ += (speed - headSpeed_) * (1 - std::exp(-in.dt / 0.05f));
 
         // The cutoff at which the two smoothing stages trail a turn at this speed by 70% of

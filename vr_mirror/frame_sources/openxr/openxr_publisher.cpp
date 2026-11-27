@@ -211,6 +211,11 @@ void OpenXrPublisher::Stop() {
     if (thread_.joinable()) {
         thread_.join();
     }
+
+    if (news_) {
+        news_(false, false);  // no reader of this session's frames any more
+    }
+
     if (header_) {
         header_->state.store(openxr_share::kEnded);
         header_->textureGeneration.store(0);

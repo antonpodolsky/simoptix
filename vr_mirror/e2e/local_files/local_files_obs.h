@@ -11,6 +11,7 @@
 #include <windows.h>
 
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -30,12 +31,22 @@ bool PrepareObs(const fs::path& repo, const fs::path& out, ObsCopy* obs, std::st
 struct ObsRun {
     std::vector<std::string> sources;  // the source ids the scene shows
     bool debug = true;                 // ...each with Debug on, or each with it off
-    fs::path localAppData;             // %LOCALAPPDATA% for OBS and the plugins
-    fs::path fakePvrScenario;          // the fake runtime's settings (SIMOPTIX_FAKE_PVR_SCENARIO)
-    DWORD holdMs = 5000;               // how long OBS runs once every source has started
-    // When set, OBS first runs until its log has this text (60 s at most), then holdMs more: the time
-    // a frame takes to arrive is the machine's, and isn't what the test checks.
+    // Also a Desktop Audio source (the default output device's sound), which logs no start.
+    bool desktopAudio = false;
+    fs::path localAppData;     // %LOCALAPPDATA% for OBS and the plugins
+    fs::path fakePvrScenario;  // the fake runtime's settings (SIMOPTIX_FAKE_PVR_SCENARIO)
+    DWORD holdMs = 5000;       // how long OBS runs once every source has started
+    // When set, OBS first runs until its log has this text (holdUntilMs at most), then holdMs more: the
+    // time a frame takes to arrive is the machine's, and isn't what the test checks.
     std::string holdUntilLogged;
+    size_t holdUntilTimes = 1;  // ...that many times
+    DWORD holdUntilMs = 60000;
+    // While OBS holds for holdUntilLogged: each cue's `then` runs once, when the log first has its text.
+    struct LogCue {
+        std::string text;
+        std::function<void()> then;
+    };
+    std::vector<LogCue> cues;
     // When set, OBS records into this folder from its start (--startrecording) until it closes.
     fs::path recordTo;
 };

@@ -26,6 +26,7 @@
 #include "openxr_layer_calls.h"
 #include "openxr_layer_frames.h"
 #include "openxr_layer_log.h"
+#include "openxr_layer_timing.h"
 #include "shared/log.h"
 #include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
 
@@ -253,7 +254,13 @@ extern "C" XrResult XRAPI_CALL xrNegotiateLoaderApiLayerInterface(
         if (!g_inGame && ProcessIsGame()) {
             g_inGame = true;
             if (StartLayerLog()) {
-                FramesOnReader(FollowReaderDebug);  // the log writes while VR Mirror reads with Debug on
+                // The log writes while a reader has Debug on: VR Mirror, or the performance overlay.
+                FramesOnReader([](bool there, bool debug) {
+                    FollowReaderDebug(kFramesReader, there, debug);
+                });
+                TimingOnReader([](bool there, bool debug) {
+                    FollowReaderDebug(kTimingReader, there, debug);
+                });
                 CoreLog(
                     "%s %s loaded into %ls, process %lu (layer built %s %s)",
                     kLayerName,

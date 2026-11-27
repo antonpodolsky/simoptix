@@ -35,8 +35,10 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "adapters/system/trace_writer.h"
+#include "auto_sync/auto_sync.h"
 #include "common/clock_sync.h"
 #include "common/footprint.h"
 #include "common/settings.h"
@@ -49,8 +51,14 @@
 
 class MirrorView {
 public:
-    // `game`: the game's frames (the Pimax session or the OpenXR layer's reader).
-    MirrorView(std::unique_ptr<FrameSource> game, const MirrorSettings& settings, bool debug);
+    // `game`: the game's frames (the Pimax session or the OpenXR layer's reader). `headsetSteps`: what the
+    // empty state asks for when that source can't read the headset (EmptyStateTextInput::headsetSteps).
+    MirrorView(
+        std::unique_ptr<FrameSource> game,
+        std::vector<std::wstring> headsetSteps,
+        const MirrorSettings& settings,
+        bool debug
+    );
     ~MirrorView();
 
     // Core's settings, and Debug (the frame-number stamp, the frame trace and the source's log lines).
@@ -63,20 +71,26 @@ public:
     // Plays the newest recorded lap in place of the game (not saved: off when OBS starts).
     void SetDemo(bool on) { demoWanted_ = on; }
     bool DemoOn() const { return demoWanted_; }
-    // Records the next full lap the game's frames show, while the source is shown; off again once it is
-    // saved.
+    // Records the next full lap the game's frames show, while the source is shown and its properties are
+    // open; off again once it is saved, or when the last properties window closes before it is saving.
     void SetRecordLap(bool on);
     bool RecordingLap() const { return lapWanted_; }
     // Looks for the recorded lap again (after it was deleted), for the empty state. Any thread: it lists the
     // laps' folder, so not per frame.
     void FindLap();
     LapRecorder::State LapState() const { return recorder_.Get(); }
+    // A lap is recorded, as FindLap last saw it.
+    bool LapRecorded() const { return lapRecorded_; }
     // How many places show the empty state while the view waits for the game: counted up and down by them,
     // from any thread, and kept by them as long as they need it. With none, a view waiting for the game draws
     // nothing.
     std::shared_ptr<std::atomic<int>> EmptyStateViewers() const { return emptyViewers_; }
-    // The properties dialog opened: the game source reads the headset if it isn't known yet. Any thread.
+    // The properties dialog opened: the game source reads the headset again, if no game frames come. Any
+    // thread.
     void DialogOpened() { dialogOpened_ = true; }
+    // The headset is found: the size of the game's eye image is known, as the source's runtime reported it
+    // or as the game's frames showed it. Kept once found. Any thread.
+    bool HeadsetFound() const { return headsetFound_; }
 
     // OBS's show and hide: the frame source starts and stops with them.
     void Show() { wanted_ = true; }
@@ -126,15 +140,23 @@ private:
     // OBS's show/hide set `wanted_`; the graphics thread asks the session worker to start and stop
     // (StartStop), never waiting for it.
     SessionWorker session_{nullptr, &ring_};
+    // The Debug setting: set on the UI thread, read by every thread's log gate. Before the members whose
+    // threads log by it.
+    std::atomic<bool> debug_{false};
+    // Measures how the game's sound lines up with the view, while the game's frames run. Destroyed before the
+    // ring, the frame source it reads and the Debug setting it logs by.
+    AutoSync autoSync_{gameSource_.get(), &ring_, &debug_};
     std::atomic<bool> wanted_{false};
     std::atomic<bool> demoWanted_{false}, lapWanted_{false};
     std::atomic<bool> telemetryHeld_{false};   // for the lap recorder (Telemetry::Acquire)
     std::atomic<bool> telemetryDebug_{false};  // ...with Debug on, as told to it (FollowTelemetryDebug)
     LapRecorder recorder_;
-    std::atomic<bool> lapRecorded_{false};  // a lap is recorded (FindLap)
-    EmptyState emptyState_;                 // graphics thread
+    std::atomic<bool> lapRecorded_{false};          // a lap is recorded (FindLap)
+    EmptyState emptyState_;                         // graphics thread
+    const std::vector<std::wstring> headsetSteps_;  // the constructor's
     std::shared_ptr<std::atomic<int>> emptyViewers_ = std::make_shared<std::atomic<int>>(0);
     std::atomic<bool> dialogOpened_{false};  // DialogOpened
+    std::atomic<bool> headsetFound_{false};  // HeadsetFound: set on the graphics thread with facts_
     bool headsetUnread_ = false;  // graphics thread: the game source couldn't read the headset (or start)
     bool lapStarted_ = false;     // graphics thread: the recorder was started for this run of the source
     bool started_ = false;        // graphics thread: the session runs and its per-start state is set up
@@ -142,9 +164,6 @@ private:
 
     MirrorSettings settings_;
     std::string loggedSettings_;  // UI thread: the settings as last logged (SetSettings)
-    std::atomic<bool> debug_{
-        false
-    };  // the Debug setting: set on the UI thread, read by every thread's log gate
     // The OBS canvas's base size: written each tick on the graphics thread (FollowVideoSettings), read
     // by OBS from any thread (Width, Height).
     std::atomic<uint32_t> width_{2560}, height_{1440};

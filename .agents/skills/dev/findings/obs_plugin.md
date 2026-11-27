@@ -61,6 +61,96 @@ This file holds what was measured on the plugin, and what was tried.
   - The plugin shows each game frame 5 ms after it arrives. So the delay is in the game's sound or its
     capture, not in the image.
   - Not checked: drift over a long session.
+- **Out of step while driving, before auto sync** (#8). One recording, OpenXR Mirror on Look-ahead
+  (544 ms delay), LMU's sound at −120 ms of its own. LMU's HUD dial is drawn into the game's image, so
+  its pedal arc and gear number show what the view shows. They were compared frame by frame with the
+  G-meter's pedal bars and with the engine's sound. "Ahead" is earlier in the video than the view:
+
+  | What | Against | Result | Events |
+  |---|---|---|---|
+  | G-meter throttle (telemetry) | HUD throttle | 37 ms ahead (middle half 33–42 ms) | 12 lifts, 3 presses |
+  | G-meter brake (telemetry) | HUD brake | about 45 ms ahead, a weak measurement | the whole recording |
+  | Engine sound | Telemetry throttle | 47 ms ahead (middle half 33–52 ms) | 11 lifts |
+  | Engine sound | HUD throttle | 85 ms ahead (middle half 68–91 ms) | 9 lifts |
+  | Engine sound at upshifts | HUD gear number | 73 ms ahead (middle half 43–86 ms) | 29 upshifts |
+
+  - The G-meter is early because the delay counts from a frame's arrival, while the telemetry is
+    stamped as soon as LMU publishes a physics step. The game draws the frame after that step.
+  - The −120 ms offset was about 80 ms too much there. So one fixed offset doesn't fit every frame
+    source and setup, and auto sync measures it instead.
+- **Tried and dropped: the telemetry delay measured at LMU's upshifts.** Auto sync timed each upshift in
+  the telemetry against the gear number changing in the game's image, to put the G-meter and race
+  auto-record in step with the view. #72 looks for that delay in the frames' own times instead, which
+  needs no driving and no image.
+  - LMU's HUD shows N between gears: in a second recording (OpenXR Mirror on Look-ahead), 24 of 25 gear
+    changes in 2 minutes went through N, for 3 frames or 6. The G-meter's throttle ran 41 ms ahead of the
+    HUD's there (6 lifts and presses, middle half 34 to 43 ms), as in the table.
+  - On made-up laps with known lags and no gear display, the best spot in the image stepped 44 grey levels
+    at the first upshift and about 20 after, and gave telemetry delays near 311 ms. A ramp of scenery whose
+    change grew over 10 frames as the car turned faster gave 283 ms. Asking the change to stand out of the
+    frames either side of it rejects it.
+  - On a race's frames around 18 upshifts (OpenXR Mirror on Look-ahead, in 4K, 384 pixels wide, about
+    0.27° a pixel), with the cameras rebuilt from the trace, the dial's gear number stepped 20 to 28 grey
+    levels an upshift, and its change jumped 1300 to 2800 against 30 to 200 in the other frames.
+  - At the plugin's grey copies' resolution (256 texels over 80% of the eye image's width, about 0.43°
+    each), the digit's strokes blur, and the dial stepped 10 to 12 grey levels an upshift. The scenery
+    through the windscreen stepped 14 to 20 at the same upshifts, at a steady lag too (the car's jolt).
+    Only cells whose biggest change stood out 4 times of the frames either side counted, as a digit
+    changes in one frame and the jolt over a few: that timed 14 to 15 of the 18.
+  - Delays of 40 and 80 ms put in gave 43 and 82 ms, then 44 and 82 ms, each from 5 of 7 upshifts. The
+    change was found either at the delay put in or a frame period after it.
+- **Tried and dropped: the engine's pitch drop at an upshift, for the game's sound.**
+  - On the recording of the table above, the engine's harmonics (450–3500 Hz) dropped by about 16%
+    within about 50 ms at every upshift. Downshifts were too noisy to use. Searched over any drop of 6%
+    to 46%, a minute of a crowded race gave about 90 "drops", many as strong as real upshifts, so the
+    search looked only near the drop that the telemetry's RPM gave (±4%).
+  - On that race's sound, with its own sync offset (+416 ms) taken out, a drop was found at all 18
+    upshifts, but spread widely: middle half about 71 to 170 ms, from 51 to 378 ms. The drop's size had
+    to come from the sound itself, as a recording holds no RPM.
+  - Weighing the frequencies near the engine's harmonics at the RPM before the drop made it depend on the
+    RPM: on that race, one RPM for every upshift (7,875, the median the sound showed) settled the game's
+    sound at -171 ms instead of -75 ms, and each upshift's own RPM from the sound at -90 ms.
+  - Played through a speaker and captured as Desktop Audio in OBS, a made-up engine's pitch drops came
+    from -61 to 375 ms after the telemetry, against 30 ms put in, and the game's sound never settled.
+  - So the game's sound is measured at the hovers in LMU's menus instead.
+- **The hovers in LMU's menus.** One recording of the menus (OpenXR Mirror on Look-ahead, a Quest 3,
+  LMU's sound on Application Audio Capture at -120 ms of its own):
+  - Most items tick and light up when the pointer comes onto them. 21 ticks rose 32 to 52 dB above the 40
+    ms before them, in 2 ms frames of the sound's first difference, where the menu's music rose less than
+    20 dB. The louder click of a page change came at other lags.
+  - The highlight comes in one frame. On the main menu its box stepped 14 to 111 grey levels. In the race
+    weekend's screens it stepped 1 to 2, too little to find without the tick. Looking for highlights first found
+    about 6 real hovers of 14, at lags spread from 73 to 121 ms. Looking for the ticks first, then the
+    frame before each in which a small part of the menu lit up, gave 106 to 119 ms at 5 hovers in a row.
+  - In the recording, with LMU's -120 ms own offset, the ticks came 15 to 61 ms before their highlights
+    (17 of the 21, middle half 20 to 42 ms): LMU's sound trailed its image by about 90 to 110 ms there.
+  - That session's frame trace has the same head pose in every tick for 106 s, so the menu didn't move in
+    the frames.
+- **The auto sync test** (`vr_mirror\e2e\README.md`, "The auto sync test"):
+  - The game's sound settled at 102 ms with the menus' sound as recorded and 166 ms with it 60 ms later
+    (moved 64 ms), then at 98 and 167 ms (69 ms), 100 and 166 ms (66 ms), 106 and 166 ms (60 ms), 102 and
+    165 ms (63 ms), and 99 and 159 ms (60 ms), each with 5 ticks agreeing. The highlight is timed to the frame (11 ms), so two runs can differ by about
+    that much, close to the test's 10 ms for the move.
+  - In one run, the first measuring took 31 ticks, against 6 in the next run. On the way it moved the
+    game's sound by 396 ms, from 3 ticks about 400 ms after a highlight, and still settled at 100 ms.
+  - With other sound playing on the same output device, two runs in a row heard one tick each, rising 25
+    dB where the menus' ticks rise 44 to 68, and never settled. With nothing else playing, the next run
+    passed.
+  - The menus start when auto sync logs that it measures, about 3 s after the game's frames start. Then
+    the first measuring was done after 6 ticks, about 4 s, and the test took 29 s.
+  - A highlight is drawn over two frames: the step was 30 to 40 grey levels in one frame and 40 to 42 in
+    the next, against a median step of 0.1 to 0.2. The bigger one is taken.
+  - Measuring again: after the game's frames stopped for 3 s and the menus played again, auto sync measured
+    again and settled at 165 ms against 164 the first time, then 165 against 166, 166 against 166, and 159
+    against 159.
+    Read every 2 s, the frame source's idle state (no frame for 2 s) missed a 3 s pause. The frame ring
+    sees every frame, and counts each that comes 2 s or more after the one before.
+  - Each check was shown to fail when auto sync was broken: moving the game's sound at the first tick,
+    without three that agree, moved it 80 ms first and 109 ms when it stopped, on the menu cut.
+- **Not checked yet:** auto sync in the game. Whether a sync offset changed during a recording makes an
+  audible glitch. Hovers with the head moving. Whether the menus' sound and a race's sound have the same
+  lag. Measuring again on a change of frame rate, image size, OBS's audio sources or Windows' output
+  device (only the restart of the game's frames is tested).
 
 ## Race auto-record
 
@@ -185,6 +275,34 @@ The root `README.md` ("Headsets and games") suggests one canvas per source from 
 - **Audio:** with Look-ahead, LMU's sound shows about +415 ms and the microphone about +535 ms ("audio
   sync: 2 audio sources now +535 ms on top of their own offsets").
 
+## Native canvases on a Meta Quest 3 in LMU
+
+The root `README.md` ("Recording in OBS") suggests a canvas per setting from these. The headset ran on
+Meta Horizon Link, and its setting is the Oculus Debug Tool's Pixels Per Display Pixel Override.
+- **The eye image:** 2720×2976 at the default (0), as the headset test read it, and 4080×4448 at 1.5, as
+  LMU drew it in one recording (the OBS log's "frame ring: 4080x4448"). Source pixels per unit of view
+  tangent: about 1228 at the default and 1842 at 1.5.
+- **The field of view of the left eye,** from the layer's log in LMU: 54° outward, 40° inward, 44° up
+  and 55° down (`findings\openxr.md`, "LMU on a Meta Quest 3").
+- **The highest zoom at which a 16:9 canvas is native,** worked out from those with the pipeline's
+  `NativeImageWidth`, as the empty state does. The same calculation gives the Dream Air's rows above
+  within 0.01, from the rounded tangents there.
+
+| Pixels Per Display Pixel Override | Canvas | Max zoom for native |
+|---|---|---|
+| 0 (the default) | 1920x1080 | 1.37 |
+| 0 (the default) | 2560x1440 | 1.02 |
+| 1.5 | 1920x1080 | 2.05 |
+| 1.5 | 2560x1440 | 1.54 |
+| 1.5 | 3200x1800 | 1.23 |
+| 1.5 | 3840x2160 | 1.02 |
+
+- **The store at 1.5, on a 4K canvas with Look-ahead:** "frame ring: 4080x4448, 57 slots, 4138 MB", then
+  53 slots and 3847 MB once the copy delay was fixed. The images were kept at the game's size, because a
+  4K canvas shows them at 98% of it or more at any zoom (the source shrinks them below 83%).
+- **Not measured:** the game's image at the default setting (only the runtime's recommended size), and
+  the room for stabilization at these zooms.
+
 ## Diagnostics
 
 - **The game's frame rate in the 10 s stats is over the same 10 s.** Until October 2026 it was over
@@ -272,6 +390,24 @@ What OBS does with the plugin's `manifest.json`. All of it holds for Overlays' m
 - **Enabling and disabling** in the Plugin Manager is remembered by the DLL's name without its
   extension, not by `id`.
 
+## Source icons
+
+How OBS shows the icons the sources give it (`shared\source_icon.h`). All of it holds for both plugins.
+
+- **OBS 32.2.0 added custom source icons.** A source whose `icon_type` is `OBS_ICON_TYPE_CUSTOM`
+  gives OBS one file for dark themes and one for light themes, through `get_dark_icon` and
+  `get_light_icon`. OBS 32.0.2 and 32.1.2 map that type to their generic source icon, with a "TODO" to
+  add custom icons (`OBSBasic::GetSourceIcon` in
+  [OBSBasic_Icons.cpp](https://github.com/obsproject/obs-studio/blob/32.2.0/frontend/widgets/OBSBasic_Icons.cpp),
+  read at each of those tags). On those versions the sources keep OBS's generic icon.
+- **OBS frees the path with `bfree`** and loads the file with `QIcon`, picking it by whether the
+  theme is dark (`OBSBasic::GetCustomIcon`). A null path, or one to a missing file, gives the generic
+  icon. So the sources return `obs_module_file`'s string, which is null when the file is missing.
+- **Checked in OBS 32.2.2's Sources dock**, dark theme, at 1:1: the headset beside OpenXR Mirror, the
+  gauge beside Performance Overlay and the rings beside G-Meter Overlay, next to OBS's own icons. The
+  light theme, the add-source dialog and the other places OBS shows source icons (the toolbar under
+  the preview, Advanced Audio Properties) were not looked at on screen.
+
 ## The demo: recording and playing a lap
 
 How Windows' own video encoder and decoder (Media Foundation) do with the eye images, and how the demo
@@ -334,6 +470,12 @@ The Strength setting scales each smoothing's own tuning: Look-ahead's time const
 it, Instant's cutoff and beta divided by it. Measured with `stage_replay --pipeline` at zoom 1.25, as the
 mirror app's window, with the build of the pull request that added it.
 
+- **In OBS, a level from 0 to 10.** Level 0 is strength 0, no smoothing. The table's strengths are the
+  levels 1 (0.25), 3 (0.5), 5 (1) and 10 (2), and 1.5 is about level 8 (1.52).
+- **Strength 0 before it was handled.** Instant's view stayed up to 0.135° off its image's direction (its
+  dead zone still held the head), and Look-ahead's path solve divided 0 by 0, so the mirror app showed no
+  readable view at all. With the fix, both views look where their images do, to 0.00002° (the trace's
+  rounding), on the e2e scenario `no_smoothing`.
 - **At 1 nothing changed:** `stage_replay --golden` wrote the same 26 MB as the build before, byte for
   byte, over all 52 runs.
 - **Look-ahead,** lag p99 and the view's jitter still, on the racing motion (`racing+heartbeat`) and the
@@ -448,6 +590,16 @@ Pimax Play's Render Quality at 1.0.
     a time rather than for a count of frames.
   - An image written into a swapchain needs the context flushed before it is released: the compositor
     reads it on a device of its own.
+- **Meta's runtime, with a Quest 3 on Link** (Meta Horizon Link, OpenXR 1.1.63). The test gave up about
+  30 ms after it began, and the empty state showed no facts.
+  - The runtime refused the loader handshake with `XR_ERROR_API_VERSION_UNSUPPORTED` (−4). The test
+    offered API versions 1.0.0 to 1.0.34, the version of the headers in `third_party\openxr`. Offering
+    every 1.x version fixed it, and the instance still asks for 1.0. Pimax's runtime accepts both ranges.
+  - After that, the runtime reported "Meta Quest 3", a recommended 2720 × 2976 eye image, and the
+    sRGB swapchain formats the test uses.
+  - With the headset off the head, the session stayed idle (`XR_SESSION_STATE_IDLE`) for 30 s and never
+    became ready, so the test still gives up after 5 s. With the headset on, it was ready at once and ran
+    at 90 Hz with the views located.
 - **The warm-up's jump.** The frame picker assumed a 40 ms copy delay until it fixed the one it
   measured. On the recorded lap that was 4 ms (copies at most 1.8 ms at the 95th percentile), so after
   2 s the output delay fell by 36 ms at once and the view jumped about 3 frames. The lap now starts at

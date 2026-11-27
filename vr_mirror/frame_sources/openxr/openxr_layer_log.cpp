@@ -20,11 +20,11 @@ namespace {
     constexpr int kMaxHeld = 48;     // ...of them held before a reader says: the rest is room for failures
     constexpr int kLineChars = 320;  // with the time of day in front
 
-    // What happens to a line that isn't a failure, set by what VR Mirror's reader says.
+    // What happens to a line that isn't a failure, set by what the readers say.
     enum Mode : int {
         kHold,   // no reader yet: kept in memory until one says
-        kWrite,  // the last reader had Debug on
-        kDrop,   // the last reader had Debug off
+        kWrite,  // a reader there has Debug on (or the last one had, when none is there)
+        kDrop,   // the readers there have Debug off (or the last one had)
     };
 
     struct Lines {
@@ -33,7 +33,19 @@ namespace {
         char text[kMaxLines][kLineChars];
     };
 
-    std::atomic<int> g_mode{kHold};
+    // The readers' word and the Mode it makes, in one value, so the readers' threads never undo each
+    // other's news: bit 2r says reader r (LayerLogReader) is there, bit 2r + 1 that it has Debug on, and
+    // the bits from kModeShift hold the Mode.
+    constexpr uint32_t kThereBits = 0x5, kDebugBits = 0xA, kModeShift = 4;
+    std::atomic<uint32_t> g_state{kHold << kModeShift};
+
+    int ModeOf(uint32_t state) {
+        return static_cast<int>(state >> kModeShift);
+    }
+
+    int ModeNow() {
+        return ModeOf(g_state.load());
+    }
 
     // Lines waiting to be written or held. The game's threads add with try_lock only; the writer takes
     // them with a brief lock (a copy of at most 20 KB).
@@ -73,7 +85,7 @@ namespace {
     }
 
     void Add(bool failure, const char* message) {
-        const int mode = g_mode.load();
+        const int mode = ModeNow();
         if (!failure && mode == kDrop) {
             return;
         }
@@ -162,7 +174,7 @@ namespace {
                 WaitForSingleObject(g_wake, INFINITE);
                 {
                     std::lock_guard<std::mutex> lock(g_pendingMutex);
-                    TakeLines(g_mode.load());
+                    TakeLines(ModeNow());
                 }
 
                 int deleted = 0;
@@ -264,11 +276,28 @@ bool StartLayerLog() {
     return true;
 }
 
-void FollowReaderDebug(bool there, bool debug) {
-    if (!there) {
-        return;  // the last reader's word stands: the end of a session it read goes the same way
-    }
+void FollowReaderDebug(LayerLogReader reader, bool there, bool debug) {
+    const int shift = 2 * static_cast<int>(reader);
+    const uint32_t mine = 3u << shift;
+    const uint32_t word = ((there ? 1u : 0u) | (there && debug ? 2u : 0u)) << shift;
+    uint32_t state = g_state.load();
+    uint32_t next = 0;
 
-    g_mode.store(debug ? kWrite : kDrop);
-    SetEvent(g_wake);  // the held lines go now
+    // With no reader there, the last one's word stands: the end of a session it read goes the same way.
+    do {
+        const uint32_t readers = (state & (kThereBits | kDebugBits) & ~mine) | word;
+        int mode = ModeOf(state);
+
+        if (readers & kDebugBits) {
+            mode = kWrite;
+        } else if (readers & kThereBits) {
+            mode = kDrop;
+        }
+
+        next = readers | static_cast<uint32_t>(mode) << kModeShift;
+    } while (!g_state.compare_exchange_weak(state, next));
+
+    if (ModeOf(next) != ModeOf(state)) {
+        SetEvent(g_wake);  // the held lines go now
+    }
 }

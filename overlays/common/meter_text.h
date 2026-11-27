@@ -4,7 +4,7 @@
 // 1 px clear border, and placed by their ink, so gaps between a label and what it labels are exact to the
 // pixel (centred and rotated labels, to a fraction of one). Every label is drawn 1:1, unfiltered: a
 // turned one is rasterised turned. A label is asked for while drawing (WantLabel, DrawLabel...) and its
-// texture is rebuilt on the next tick when the text, its look or its placement changed, at most 10 times
+// texture is rebuilt on the next tick when the text, its style or its placement changed, at most 10 times
 // a second (UpdateLabels).
 //
 // Knows nothing about what a meter shows or about OBS sources: only text rasterising and libobs graphics.
@@ -21,6 +21,7 @@ struct LabelInk {
     float cx = 0, cy = 0;  // the label's centre (see DrawLabelCentred, DrawLabelRotated)
     float left = 0, top = 0, right = 0, bottom = 0;  // the ink's box
     float uprightW = 0;  // the ink's width upright (for a turned label, before turning)
+    float advance = 0;   // the text's advance (along its baseline), pixels
 };
 
 struct MeterLabel {
@@ -47,7 +48,7 @@ struct MeterLabel {
     int w = 0, h = 0;  // the texture: the ink is at (1, 1) to (w - 1, h - 1)
 };
 
-// Builds the textures of labels whose text, look or placement changed (outside drawing; enters graphics).
+// Builds the textures of labels whose text, style or placement changed (outside drawing; enters graphics).
 void UpdateLabels(MeterLabel* labels, int count, double now);
 
 // Asks for `text` in `l` without drawing it (so it is ready when it is first drawn). Keeps the label's
@@ -85,7 +86,7 @@ void DrawLabel(
 // fraction of a pixel: the text is rasterised at the sub-pixel offset that puts it there, instead of the
 // sharpest one, for text in a tight box or numbers that must not shift. (Vertically the grid-fitting keeps
 // strokes on whole pixels.) tabular: the font's tabular figures, placed by the text's advance instead of
-// its ink, so a changing number's digits stay in place.
+// its ink, so a changing number's digits stay in place. tracking: extra space after each letter, in em.
 void DrawLabelCentred(
     MeterLabel& l,
     const char* text,
@@ -96,7 +97,8 @@ void DrawLabelCentred(
     float y,
     uint32_t rgb = 0xFFFFFF,
     bool tabular = false,
-    float align = 0.5f
+    float align = 0.5f,
+    float tracking = 0
 );
 
 // Draws what `l` shows now (asked for with WantLabel) with its upright ink centre on (x, y), turned by

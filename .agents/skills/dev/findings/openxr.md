@@ -199,3 +199,39 @@ as they were then: the load log was `openxr_layer_loads.log`, and the DLL
     per second.
   - Pimax's log for the same game says 89.97–90.07 per second, with nothing missed or stale.
   - Measured in the game's menu, not on track.
+
+## LMU on a Meta Quest 3
+
+One recording, on Meta Horizon Link over USB 3, with the Oculus Debug Tool's Pixels Per Display Pixel
+Override at 1.5, OpenXR Mirror on Look-ahead and a 4K canvas at 90 fps. The layer was the signed build
+`e9776fe`.
+- **The layer loaded, joined the chain and worked** on Meta's runtime ("Oculus 1.210.0"). The loader
+  offered OpenXR 1.0.0 to 1.1023.4095, and LMU made its instance for 1.0.34. The layer added the time
+  conversion extension, which LMU didn't ask for.
+- **The game's buffers:** two, one per eye, 4080×4448 in format 29 (usage 0x11), one projection layer and
+  no depth. That is 1.5× the 2720 width the runtime recommends at the default setting (the headset
+  test's reading). The height is 4448, against 4464 for 1.5× of 2976.
+- **The field of view per eye** was 54° outward, 40° inward, 44° up and 55° down.
+- **The copy** took 0.039–0.046 ms on the GPU at the median in each 10 s, at most 0.058 ms, with every
+  frame copied after the first 10 s. The three shared textures took 218 MB.
+- **The game's rate** was 90.0 frames per second once it settled, in step with VR Mirror's 10 s stats.
+  Before that, LMU ran at 41–89 per second for about a minute.
+
+## Timing the game's frames
+
+- **The method.** The CPU time runs from xrWaitFrame's return to the next xrWaitFrame call. The GPU time
+  runs between two GPU timestamps, at xrBeginFrame and at xrEndFrame, read back a few frames later.
+  Both are averaged over 1 s. Headroom is 100 × (budget − time) / budget, cut to a whole percent. The
+  CPU headroom is unknown when the game calls xrWaitFrame inside a frame (pipelining). The target counts
+  as missed when the frame rate is more than 2 below it, so the colour doesn't flicker, and the CPU then
+  counts as holding the game back unless the GPU takes at least 0.5 ms longer.
+- **The budget** is the display period xrWaitFrame gives the game, so there is no setting.
+- **The fake OpenXR game** (`fake_openxr.exe`, 90 Hz, 1024×1024 image, no render thread), read once a
+  second as the performance overlay reads:
+  - 90 fps of a 90.00 target, CPU 1.53 ms (86 % headroom), GPU 0.005–0.011 ms (99 %).
+  - The fake held the frame outside xrWaitFrame at first, so its CPU time read 11.1 ms, the whole
+    frame (0 % headroom). It now waits inside xrWaitFrame until it draws, as a runtime holds a game.
+  - The first second after the reader appeared read 82 fps, because the layer had timed only part of
+    it. A second the layer didn't time in full now reads as unknown.
+- **Not checked:** in LMU, and with the check program on a headset. The check program reached
+  `xrGetSystem` (−35) with no headset, so its frames and their times didn't run.

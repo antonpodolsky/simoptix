@@ -74,7 +74,7 @@ public:
 
         // Each moment's time constant, from the fastest turn within kSpeedSpan of it.
         for (int i = 0; i < m; i++) {
-            speed_[i] = i ? AngleBetween(poses[i - 1], poses[i]) / dt : 0;
+            speed_[i] = i ? RotationAngleAcos(poses[i - 1], poses[i]) / dt : 0;
         }
         const int span = int(std::lround(kSpeedSpan / dt));
         const double deg = 3.14159265358979 / 180;
@@ -208,7 +208,8 @@ public:
     void Reset() override {}  // no state between frames
     double DelayS() const override { return LookaheadOutputDelayS(); }
     // Multiplies the path's time constants (tauStillS, tauMoveS). The delay stays: the path sees as far
-    // ahead at every strength, and the window behind grows with the time constant.
+    // ahead at every strength, and the window behind grows with the time constant. At 0 there is no path:
+    // the view is the image's own pose, levelled.
     void SetStrength(float strength) override;
     void Window(double period, int* behind, int* ahead) const override;
     Smoothed Smooth(const SmoothingInput& in) override;
