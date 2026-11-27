@@ -28,6 +28,9 @@ std::wstring PluginDllPath(const Part& part, PluginLayout layout);
 // either layout.
 std::wstring PluginManifestPath(const Part& part);
 
+// <plugin folder>\data\<the file's path>: a source's icon in data\icons, where the plugin hands it to OBS.
+std::wstring PluginDataFilePath(const Part& part, const DataFile& file);
+
 // C:\Program Files\simoptix
 std::wstring SimOptixFolder();
 

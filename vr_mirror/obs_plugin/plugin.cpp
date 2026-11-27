@@ -29,6 +29,7 @@
 #include "shared/guarded.h"
 #include "shared/local_files.h"
 #include "shared/log.h"
+#include "shared/source_icon.h"
 #include "shared/telemetry/telemetry.h"
 #include "simoptix_version.h"  // written into obj\ by shared\build\version.bat
 #include "source_settings.h"
@@ -104,6 +105,14 @@ namespace {
     }
     const char* GetOpenXrName(void*) {
         return "SimOptix: OpenXR Mirror";
+    }
+
+    const char* GetDarkIcon(void*) {
+        return Guarded("dark icon", [] { return FindSourceIcon("vr_headset_dark.svg"); });
+    }
+
+    const char* GetLightIcon(void*) {
+        return Guarded("light icon", [] { return FindSourceIcon("vr_headset_light.svg"); });
     }
 
     // What the empty state asks for when the source on frame source `Frames` can't read the headset
@@ -501,6 +510,9 @@ namespace {
         obs_source_info info = {};
         info.type = OBS_SOURCE_TYPE_INPUT;
         info.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW;
+        info.icon_type = OBS_ICON_TYPE_CUSTOM;  // both sources show the same view, so one icon
+        info.get_dark_icon = GetDarkIcon;
+        info.get_light_icon = GetLightIcon;
 
         info.destroy = Destroy;
         info.update = Update;

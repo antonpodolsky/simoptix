@@ -1,0 +1,95 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Anton Podolsky -->
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="en" data-theme="chrono">
+<head>
+<meta charset="utf-8">
+<title>Performance overlay: image layers</title>
+<style>
+/* The performance overlay's image layers, from the SimOptix Overlays design system (its tokens and the
+   performance overlay's parts). Sizes are design px: canvas px on a 1080-pixel canvas.
+     #chrono-base   bezel, face, dividers, empty GPU and CPU tracks (Chrono)
+     #chrono-glass  the glass band alone, drawn last (Chrono)
+     #oled-base     the black display, dividers, empty segmented GPU and CPU tracks (OLED, no glass)
+   Add -preview to see a layer over a stand-in video, and -text to add sample readings (FPS 90, GPU HR 34%,
+   CPU HR 52%, for measuring where the plugin puts its live text). Render at 2x: 624 x 328. */
+:root, [data-theme="chrono"] {
+  --bezel-top: #26282b;
+  --bezel-bottom: #141517;
+  --face-light: #1d2024;
+  --face-dark: #0b0c0e;
+  --ink: #ffffff;
+  --label-bright: rgba(255, 255, 255, 0.85);
+  --track: rgba(255, 255, 255, 0.07);
+  --axis: rgba(255, 255, 255, 0.06);
+  --glass-soft: rgba(255, 255, 255, 0.16);
+  --level-good: #3ddc84;
+  --shadow-perf-bezel: 0 14px 28px -8px rgba(0,0,0,0.6), 0 3px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -2px 3px rgba(0,0,0,0.5);
+  --shadow-face: inset 0 4px 10px rgba(0,0,0,0.85), inset 0 0 0 1px rgba(0,0,0,0.9);
+}
+[data-theme="oled"] {
+  --bezel-top: #000000;
+  --bezel-bottom: #000000;
+  --face-light: #000000;
+  --face-dark: #000000;
+  --track: rgba(255, 255, 255, 0.1);
+  --axis: rgba(255, 255, 255, 0.1);
+  --glass-soft: rgba(255, 255, 255, 0);
+  --shadow-perf-bezel: inset 0 0 0 1px #1f1f1f, 0 0 0 5px rgba(0,0,0,0.28), 0 12px 30px rgba(0,0,0,0.4);
+  --shadow-face: none;
+}
+:root {
+  --space-bezel-inset: 6px;
+  --space-cell-pad: 10px;
+  --space-shadow-room: 40px;
+  --space-shadow-room-bottom: 56px;
+  --space-segment-gap: 2px;
+  --radius-perf-bezel: 14px;
+  --radius-perf-face: 9px;
+  --size-perf-bezel-w: 232px;
+  --size-perf-bezel-h: 68px;
+  --size-segment: 5px;
+}
+
+html, body { margin: 0; background: transparent; font-family: Bahnschrift, sans-serif; color: var(--ink); }
+#box { width: 312px; height: 164px; position: relative; overflow: hidden; }
+body.preview #box { background: linear-gradient(180deg, #7f93a8 0%, #aab6c0 44%, #6a6e72 45%, #3c3f43 100%); }
+
+.perf { position: relative; width: 312px; height: 164px; }
+.perf__bezel { position: absolute; left: var(--space-shadow-room); top: var(--space-shadow-room); width: var(--size-perf-bezel-w); height: var(--size-perf-bezel-h); box-sizing: border-box; border-radius: var(--radius-perf-bezel); background: linear-gradient(180deg, var(--bezel-top), var(--bezel-bottom)); box-shadow: var(--shadow-perf-bezel); padding: var(--space-bezel-inset); }
+.perf__face { position: relative; height: 100%; border-radius: var(--radius-perf-face); background: radial-gradient(120% 160% at 50% 20%, var(--face-light) 0%, var(--face-dark) 70%); box-shadow: var(--shadow-face); display: grid; grid-template-columns: repeat(3, 1fr); overflow: hidden; }
+.perf__cell { position: relative; }
+.perf__cell + .perf__cell::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 0.8px; background: var(--axis); }
+.perf__label { position: absolute; left: var(--space-cell-pad); top: 8px; font-size: 9px; line-height: 11px; letter-spacing: 0.1em; color: var(--label-bright); }
+.perf__value { position: absolute; left: var(--space-cell-pad); top: 19px; font-size: 20px; line-height: 20px; font-weight: 600; font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums; }
+.perf__unit { font-size: 11px; font-weight: 400; color: var(--label-bright); margin-left: 1px; }
+.perf__track { position: absolute; left: var(--space-cell-pad); right: var(--space-cell-pad); top: 45px; height: 3px; background: var(--track); }
+.perf__glass { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, var(--glass-soft) 0%, rgba(255, 255, 255, 0.06) 25%, rgba(255, 255, 255, 0) 50%); clip-path: ellipse(80% 45% at 50% 0%); filter: blur(1.5px); }
+[data-theme="oled"] .perf__track {
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 var(--size-segment), transparent var(--size-segment) calc(var(--size-segment) + var(--space-segment-gap)));
+  mask: repeating-linear-gradient(90deg, #000 0 var(--size-segment), transparent var(--size-segment) calc(var(--size-segment) + var(--space-segment-gap)));
+}
+[data-theme="oled"] .perf__glass { display: none; }
+
+body.base .perf__glass { display: none; }
+body.glass .perf__bezel, body.glass .perf__face { background: none; box-shadow: none; }
+body.glass .perf__cell + .perf__cell::before, body.glass .perf__track { display: none; }
+body:not(.text) .perf__label, body:not(.text) .perf__value { display: none; }
+</style>
+</head>
+<body>
+<div id="box">
+<div class="perf"><div class="perf__bezel"><div class="perf__face">
+<div class="perf__cell"><div class="perf__label">FPS</div><div class="perf__value">90</div></div>
+<div class="perf__cell"><div class="perf__label">GPU HR</div><div class="perf__value">34<span class="perf__unit">%</span></div><div class="perf__track"></div></div>
+<div class="perf__cell"><div class="perf__label">CPU HR</div><div class="perf__value">52<span class="perf__unit">%</span></div><div class="perf__track"></div></div>
+<div class="perf__glass"></div>
+</div></div></div>
+</div>
+<script>
+var layer = (location.hash || '#chrono-base-preview').slice(1).split('-');
+document.documentElement.setAttribute('data-theme', layer[0]);
+document.body.className = layer.slice(1).join(' ');
+</script>
+</body>
+</html>

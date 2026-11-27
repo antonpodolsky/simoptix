@@ -87,11 +87,13 @@ and fail on any warning, run
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`, which checks the declarations against Pimax's headers. Without the SDK it says so and skips | Yes |
 | `vr_mirror\frame_sources\openxr\` | Its `build.bat`, then its check program, then signed if the layer goes into the game | The local files test for the layer's log. Otherwise no |
 | `vr_mirror\recording_analysis\` | Its `build.bat` (`patch_shift.exe`, `grid_shift.exe`) | No |
+| `game\`, `vr_mirror\frame_sources\openxr\openxr_d3d11.h` | `game\build.bat` (`simoptix_game.exe`) | No. Run it with the headset on, and look at the grid in each eye |
 | `setup\` | Its `build.bat`, after the layer's `build.bat` (and signing). It builds both plugins too | No. Check its window and what it installs |
 
 The two plugins are `vr_mirror\obs_plugin\build.bat` and `overlays\obs_plugin\build.bat`. With the
 argument `install`, each also copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`,
-and its `manifest.json`, which OBS 32 reads for the plugin's name and version, to `data` beside it.
+its `manifest.json`, which OBS 32 reads for the plugin's name and version, to `data` beside it, and its
+sources' icons from its `data\icons` folder to `data\icons` there.
 OBS must be closed, because it holds the DLLs. Install both from the same build, because the telemetry
 they share checks that they match. Plugins that SimOptix Setup installed belong to the administrators:
 the install then stops with "cannot install", and it has to run as administrator.
@@ -164,7 +166,10 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   what it deliberately doesn't know. Split files past about 500 lines.
 - **Threads.** Comment which thread owns each member. Share only through `std::atomic` or a briefly
   held mutex. Threads catch everything, log it and stop cleanly.
-- **Setting keys are saved in users' scenes.** Never rename them.
+- **Consistency comes first.** One thing has one name everywhere: in the code, the comments, the docs
+  and what OBS shows. Parts that do the same kind of job do it the same way, with the same names. A name
+  that breaks the pattern is renamed everywhere in the same change, even a setting key saved in users'
+  scenes (`.agents\skills\dev\SKILL.md`, "Consistency comes first").
 - **Names.**
   - A part's name is its folder's: `frame_sources\pimax\` holds `pimax_source.*` and `PimaxSource`.
   - File names and the names programs see are snake_case with `simoptix_`, and never have hyphens.
@@ -182,8 +187,9 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 
 ## Commits and pull requests
 
-- Make one small commit per change. The subject is `Area: what changed` (for example `Overlays: the
-  G-meter's live G moved up 1 px`), and the body says why.
+- Make one small commit per change. The subject is `type(scope): what changed` (for example
+  `fix(overlays): the G-meter's live G moved up 1 px`), and the body says why. The pull request's
+  title has the same form ("The title" in `.agents\skills\pull-requests\SKILL.md`).
 - Docs move with the code. When behaviour, settings or files change, update the matching README in the
   same commit. READMEs describe what the project is and does. How to work on it, and the rules, go here
   and in `.agents\skills\dev\`. Write docs by `.agents\skills\docs\SKILL.md`, and run its check script
@@ -204,17 +210,20 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   against `vr_mirror\e2e\stage_replay\golden_expected.txt`), in `.github\workflows\checks.yml`. A pull
   request that changes only Markdown files skips Build and Pipeline output, because no build reads
   them, and runs the other checks. Changelog checks the label and the Changelog section the way a
-  release reads them, and Description the description's public text, each time either changes
+  release reads them, and the title's form and type. Description checks the description's public
+  text. Both run each time the title, the description or the label changes
   (`.github\workflows\pull_request.yml`). The Changelog section ends the description, so nothing goes
   after it. GitHub's runners have no LMU, no Pimax SDK, no headset and no graphics card, so the e2e
   suite and the local files test run only by hand (Test, above). Say in the pull request what you checked by hand.
-- Give the pull request one label, which decides whether it goes into `CHANGELOG.md`:
-  - If users notice the change, label it `added`, `changed`, `fixed`, `removed` or `security`. Then
-    write one to three lines in the Changelog section of its description. Write them for a VR sim
-    racer, in plain words with no code names, as `.agents\skills\docs\SKILL.md` says ("The
-    changelog").
-  - If only contributors notice it (tests, refactors, contributors' docs, the skills, the build),
-    label it `internal`, and leave the Changelog section empty.
+- Give the pull request one label, which decides whether it goes into `CHANGELOG.md` and the types
+  its title may start with. Issues take the same labels.
+  - If users notice the change, label it `feature`, `change`, `bug`, `deprecation`, `removal` or
+    `security`. Then write one to three lines in the Changelog section of its description. Write
+    them for a VR sim racer, in plain words with no code names, as `.agents\skills\docs\SKILL.md`
+    says ("The changelog").
+  - If only contributors notice it, label it `documentation` (contributors' docs, the skills,
+    findings) or `maintenance` (tests, refactors, the build, the checks), and leave the Changelog
+    section empty.
 - Keep personal information out of everything public: every file in the repo, commit messages, branch
   names, pull requests, issues and comments. That means recording names, dates and times (of your
   sessions and of your work on the code alike), tracks, cars and local paths. Git and GitHub keep every version.
@@ -227,7 +236,7 @@ SimOptix has one version for all its parts, in `version.txt` at the repo's root,
 build carries it, and a build that isn't a release adds the commits since the last one
 (`0.1.0+12.gabc1234`). The maintainer makes the releases.
 
-1. In a "Release: v<version>" pull request, bump `version.txt` and run
+1. In a "chore(repo): release v<version>" pull request, bump `version.txt` and run
    `python -I .agents\skills\dev\release.py`. It writes the release's section of `CHANGELOG.md` from
    the labels and Changelog sections of the pull requests since the last release.
 2. After it merges, tag the merge commit on `main` as `v<version>`, annotated.

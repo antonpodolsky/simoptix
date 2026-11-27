@@ -37,7 +37,9 @@ namespace {
         {"frames from the wrong pose", 0.4, 0.3, true, false, nullptr, 0},
         // what a 60 fps recording shows: dropped frames held over, present timing, the 90-to-60 judder
         {"recorded view jitter", 0.1, kInvisibleJitterDeg, true, true, nullptr, 0},
-        {"max horizon tilt", 0, 0.05, true, true, nullptr, 0},
+        // black_borders tilts 1.1 deg by design: Look-ahead read 1.12-1.17 deg on every build, and Instant
+        // 1.12-1.20 deg, up to 0.059 deg apart (e2e_results.md, run 18)
+        {"max horizon tilt", 0.02, 0.05, true, true, nullptr, 0},
         {"frames with black borders", 0, 0, true, true, nullptr, 0},
     };
 

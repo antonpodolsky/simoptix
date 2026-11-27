@@ -21,6 +21,7 @@ closer at one moment. They need the trace that the Pimax source's **Debug** sett
 | edge stop | The smoothing's last resort. It holds the view at 95% of its image room when the smoothing's own planning wasn't enough |
 | display slot | One of the regular moments at which the headset shows a new image, one per refresh (90 per second at 90 Hz). The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
 | tick | One time OBS draws a frame of its output |
+| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
 
 ## Files
 
@@ -46,7 +47,7 @@ closer at one moment. They need the trace that the Pimax source's **Debug** sett
 | `cadence.py` | Ticks, game frames and display slots step by step, to find where the scenery's steps go uneven |
 | `tick_regularity.py` | How regular OBS's ticks are, from a trace's tick times alone: how far a tick predicted 0.1, 0.5 and 0.6 s ahead lands from the real one, and the ticks OBS skipped, for each frame rate OBS ran at in the trace |
 | `events.py` | Repeated game frames, missed slots, two frames on one slot, and frames never shown, with the cockpit's jump at each |
-| `moment.py` | One moment frame by frame: the trace's rows and the runtime's arrival rows |
+| `moment.py` | One moment frame by frame: the trace's rows and the frame source's rows for those frames. These are the runtime's arrival rows with the Pimax source, and the layer's rows with the OpenXR source |
 | `aligned_diff.py` | The road's change between frames with the cockpit lined up (frozen or skipped game frames) |
 | `frozen_check.py` | The video-only repeat detector's finds checked against the trace |
 

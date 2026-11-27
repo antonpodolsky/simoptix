@@ -18,7 +18,12 @@ The tools are available as OBS Studio plugins: `VR Mirror` and `Overlays`. Both 
     recording.
 - Auto-record option:
   - Race is recorded from the starting lights to 5s after the car stops past the finish line.
-- OBS Overlays plugin adds the **SimOptix: G-Meter Overlay** source.
+- OBS Overlays plugin which adds two sources:
+  - **SimOptix: G-Meter Overlay** shows the car's G-forces, brake and throttle.
+    - No OpenXR layer is required.
+  - **SimOptix: Performance Overlay** shows the game's FPS, and how much of each frame's time is left
+    on the GPU and the CPU.
+    - It reads them from the SimOptix OpenXR layer.
 
 ## Supported VR headsets and games
 
@@ -62,7 +67,8 @@ native resolution") has more canvases and zooms.
   poses. The G-meter and race auto-record read the telemetry that LMU publishes for outside tools.
 - **OpenXR Mirror** needs an API layer that OpenXR loads into LMU when the game starts. The layer
   copies the left eye image after each frame has gone to the headset, and only while an OpenXR Mirror
-  source is shown in OBS. It passes every OpenXR call on unchanged, except that it asks the runtime for
+  source is shown in OBS. While a Performance Overlay source is shown, it also times the game's frames
+  on the CPU and the GPU. It passes every OpenXR call on unchanged, except that it asks the runtime for
   one time-conversion extension. More details in the README (`vr_mirror\frame_sources\openxr\README.md`).
 
 **The unsigned OpenXR layer is blocked by EAC.**
@@ -96,8 +102,9 @@ To build:
 1. Close OBS.
 2. Run `vr_mirror\obs_plugin\build.bat install` and `overlays\obs_plugin\build.bat install`. Each
    builds its plugin and copies it to OBS's plugin folder
-   (`C:\ProgramData\obs-studio\plugins\<its name>`): the DLL to `bin\64bit`, and `manifest.json` with
-   the plugin's name and version to `data`. Install both from one build, because they share the game's
+   (`C:\ProgramData\obs-studio\plugins\<its name>`): the DLL to `bin\64bit`, `manifest.json` with the
+   plugin's name and version to `data`, and its sources' icons to `data\icons`. OBS 32.2 and later show
+   those icons beside the sources. Install both from one build, because they share the game's
    data and check that they match. If SimOptix Setup installed the plugins, their files belong to the
    administrators, and the script stops with "cannot install": run it from a command prompt opened as
    administrator.
@@ -131,6 +138,7 @@ its Uninstall removes everything. `setup\README.md` describes setup.
 | `vr_mirror\mirror_app\` | VR Mirror in a desktop window, which the end-to-end tests run |
 | `vr_mirror\e2e\` | End-to-end tests: the desktop window against a simulated Pimax headset and game, or a simulated game with the API layer |
 | `vr_mirror\recording_analysis\` | Scripts that check a recording frame by frame, and turn a moment of it into a test |
+| `game\` | A test game for the headset with a grid for judging sharpness, to try ways of drawing each eye without LMU |
 | `overlays\` | SimOptix: Overlays: the G-meter (`gmeter\`, its image layers in `gmeter\design\`) and what any overlay can reuse (`common\`) |
 | `shared\` | Code shared between all plugins |
 | `setup\` | SimOptix Setup: one program that installs and removes both plugins and the layer |

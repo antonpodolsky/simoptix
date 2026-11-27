@@ -4,3 +4,4 @@
 // by name in meter_image.cpp.
 GMETER_BASE RCDATA "design\\gmeter_base.png"
 GMETER_GLASS RCDATA "design\\gmeter_glass.png"
+GMETER_OLED_BASE RCDATA "design\\gmeter_oled_base.png"

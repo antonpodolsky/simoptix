@@ -72,9 +72,11 @@ for the agents that read those files. Change the rules here, never in those file
   - It passes every call on unchanged, with one exception. When the game makes its OpenXR instance, it
     asks for the time conversion extension (`XR_KHR_win32_convert_performance_counter_time`) if the game
     didn't and the runtime offers it.
-  - It reads only what the game hands the headset. It copies the left eye's image, and only while VR
-    Mirror reads it. It never makes the game wait, and the footprint rules below apply to it twice
-    over.
+  - It reads only what the game hands the headset, and when the game makes its frame calls. It copies
+    the left eye's image, and only while VR Mirror reads it. It times the game's frames, and only while
+    the performance overlay reads them. For that it puts two GPU timestamps per frame in the game's
+    immediate context, on the thread its copies use. It never makes the game wait, and the footprint
+    rules below apply to it twice over.
   - Nothing else goes into the game process. Every build of the layer that goes into the game is
     signed with a code signing certificate Windows trusts. Easy Anti-Cheat keeps an unsigned layer
     out, and online play is disabled while it is installed. Unsigned, the layer runs only in LMU
@@ -111,7 +113,8 @@ for the agents that read those files. Change the rules here, never in those file
     after every edit.
   - Checks in the headset or in OBS come last. Tell the user exactly what to look at.
 - **Git instead of backups.**
-  - Make one small commit per change. The subject is `Area: what changed` and the body says why.
+  - Make one small commit per change. The subject is `type(scope): what changed` and the body says
+    why.
   - Sign off every commit with `git commit -s`, the maintainer's and every agent's (step 6).
   - An agent ends every commit message with the attribution line its own instructions give, if any.
   - Never commit build output, captures or local `.ini` files, or binaries the build can make (OBS's
@@ -194,7 +197,8 @@ for the agents that read those files. Change the rules here, never in those file
     OBS module), race auto-record (`vr_mirror\obs_plugin\race_auto_record\`) and the lap recorder for
     the demo (`vr_mirror\obs_plugin\lap_recorder\`).
   - `vr_mirror\e2e\`, `vr_mirror\recording_analysis\`, the fake LMU, the OpenXR layer's check
-    program and SimOptix Setup (`setup\`) are standalone programs. Setup carries the plugins' and the
+    program, the test game (`game\`) and SimOptix Setup (`setup\`) are standalone programs. The test
+    game includes only the layer's OpenXR declarations for Direct3D 11 (`openxr_d3d11.h`). Setup carries the plugins' and the
     layer's built DLLs inside it, and includes none of their code.
   - Hosts include `vr_mirror\core\`, and core includes no host. Hosts include no other host, and no
     includes are cyclic.
@@ -221,8 +225,23 @@ for the agents that read those files. Change the rules here, never in those file
   - VR Mirror's settings live in `vr_mirror\core\common\settings.h` and are walked with
     `VisitSettings`.
   - Settings that only one host uses stay in that host.
-  - Setting keys are saved in user scenes and config, so never rename them.
+  - Setting keys are saved in user scenes and config. A key that breaks "Consistency comes first"
+    (below) is renamed all the same, and no code reads the old one: a scene saved before keeps the
+    default for that setting.
 - **Logging.** Log state changes once, not every frame. Periodic stats go out at most every 10 s.
+- **Overlay size.** An overlay covers the same share of the canvas on every canvas size, so a canvas
+  change leaves its size relative to the canvas as it was. Every overlay is sized the way the G-meter
+  is:
+  - Its size in OBS, the source's width and height before the scene item's scale, is its size on a
+    1920x1080 canvas. The G-meter's is 300 x 300. The overlay scales its own design into that size (the
+    G-meter's 480 px design board into 300 px).
+  - A new overlay's scene item gets the canvas's scale only, canvas height / 1080, at its place on a
+    1080-pixel canvas scaled the same way (`overlays\common\overlay_box.*`). A smaller or larger default
+    size is a smaller or larger size in OBS, never another item scale.
+  - When the canvas changes, OBS keeps the scene item in proportion. The overlay never sets its own size
+    from the canvas's.
+  - It draws itself at the size it is shown on the canvas, read from the scene item's scale while
+    drawing, so it stays sharp at any size.
 - **libobs pitfalls (OBS 32).**
   - `gs_color4v` is an empty stub. Use `gs_color` or effect parameters.
   - Immediate mode (`gs_render_start`) with vertex colours crashed OBS. Use a vertex buffer of the
@@ -270,8 +289,9 @@ for the agents that read those files. Change the rules here, never in those file
 - **Copies kept in step.**
   - `vr_mirror\recording_analysis\replica.py` is a Python copy of the slot check's helpers
     (`vr_mirror\core\pipeline\2_drawn_pose\slot_check_drawn_pose_lag.cpp`). Change both together.
-  - The G-meter's live parts in `overlays\gmeter\meter_chrono.cpp` and the tables in
-    `overlays\gmeter\design\README.md` hold the same numbers. Change both together.
+  - The G-meter's live parts in `overlays\gmeter\meter_chrono.cpp`, `meter_oled.cpp` and
+    `meter_dot.cpp`, and the tables in `overlays\gmeter\design\README.md`, hold the same numbers.
+    Change both together.
 - **Thresholds.** Never loosen a scenario's limits or remove a scenario to get a pass without asking.
   Report failures with their numbers.
 - **The pipeline's expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the
@@ -306,6 +326,22 @@ for the agents that read those files. Change the rules here, never in those file
   Effort is not a criterion. If the correct solution is a lot of work, say so and do it.
 - When options are compared, judge them only on correctness, the user's request, the rules above, and
   measured results. Don't list an easier but worse option as the recommended one.
+
+## Consistency comes first
+
+Consistency outranks every other concern of naming and structure: a smaller change, a name that is
+already merged, and settings saved with an older name.
+- **One thing has one name, everywhere.** The same word in the code, its comments, the READMEs, the
+  skills, what OBS shows, the design system and the pull request. Chrono and OLED are themes in all of
+  them: the setting is Theme (key `theme`), and the code that draws one is a theme too (`MeterTheme`,
+  `PerformanceTheme`). No second word for the same thing, such as "look" beside "theme".
+- **One concept, one way.** Parts that do the same kind of job do it the same way, with the same names:
+  both overlays pick their theme with the same setting, the same choices and the same names in the
+  code.
+- **A new name follows the names already there.** When the name already there breaks the pattern,
+  don't copy it: rename it everywhere, in the same change.
+- **A rename is complete.** Search the whole repo for the old word and each form of it (types, files,
+  members, comments, docs, the build lists) and leave none, except where it means something else.
 
 ## Talk in plain words
 
@@ -513,6 +549,7 @@ committed.
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`: the layout check, on a PC with Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`. `PVR_SDK` names another `Include` folder. Without the SDK it says so and skips | Yes |
 | `vr_mirror\frame_sources\openxr\` | `vr_mirror\frame_sources\openxr\build.bat`, then its check program, then signed if it goes into the game (`reference\openxr.md`) | The local files test for the layer's log. Otherwise no |
 | `vr_mirror\recording_analysis\` | `build.bat` there, for `patch_shift.exe` and `grid_shift.exe` | No |
+| `game\`, `vr_mirror\frame_sources\openxr\openxr_d3d11.h` | `game\build.bat`, for `simoptix_game.exe` | No. Run it with the headset on, and look at the grid in each eye |
 | `setup\` | `setup\build.bat`, after `vr_mirror\frame_sources\openxr\build.bat` and signing: setup takes the layer as it is, because building it again would replace a signed DLL with an unsigned one. It builds both plugins itself, and carries all three inside `simoptix_setup.exe`. A new worktree has no layer build, so build and sign the layer there first. The build ends with a warning when the layer it carries isn't validly signed, or carries another version than the plugins | No. Run it (Windows asks for administrator rights), and check its buttons and what Install, Update and Uninstall leave on the PC |
 
 - Run the build scripts through `cmd /c "<full path>\build.bat"` from PowerShell. A bare `build.bat`
@@ -536,10 +573,11 @@ committed.
 `build.bat install` in `vr_mirror\obs_plugin\` and in `overlays\obs_plugin\` builds each plugin and
 copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`. It also copies the
 `manifest.json` that the build wrote into its own `bin` folder, with the version filled in, to the
-plugin's `data` folder beside `bin`, where OBS 32 and later read it. OBS must be closed, because it
-holds the DLLs. Install both from one build, because the telemetry both read checks that they match.
+plugin's `data` folder beside `bin`, where OBS 32 and later read it, and the sources' icons from the
+plugin's own `data\icons` folder to `data\icons` there. OBS must be closed, because it holds the DLLs.
+Install both from one build, because the telemetry both read checks that they match.
 Plugins that SimOptix Setup installed belong to the administrators, and `build.bat install` then stops
-with "cannot install". Copy the two files of each plugin from its `bin` folder with administrator
+with "cannot install". Copy each plugin's DLL, `manifest.json` and icons to those folders with administrator
 rights instead (a PowerShell script started with `Start-Process -Verb RunAs`, which Windows asks the
 user to allow), and check the version in the installed `manifest.json`.
 
@@ -557,20 +595,26 @@ Crash dumps go to `%LOCALAPPDATA%\simoptix`, and the newest 10 are kept. OBS log
 
 ## 4a. Take a design into the plugin
 
-`overlays\gmeter\design\` holds what the G-meter's look is built from. Its README has the layers and
-the size, place and colour of every live part.
+`overlays\gmeter\design\` holds what the G-meter's themes are built from. Its README has the layers and
+the size, place and colour of every live part, per theme. `overlays\performance\design\` holds the
+performance overlay's in the same way: `perf.html` draws its layers (`#chrono-base`, `#chrono-glass`,
+`#oled-base`, rendered with `--window-size=312,164`), and its README has the live parts. The steps below
+are the G-meter's, and apply to it the same way.
 
-- **The static parts are images.** `overlays\gmeter\design\meter.html` draws the meter's static parts
-  and its glass reflection. Open it with `#base`, `#glass`, or `#preview` for both over a backdrop. To
-  change them, change `meter.html` (the live parts stay out of it). Then render each layer at 2× with
-  Edge, transparent outside the meter:
+- **The static parts are images.** Each theme has an HTML file that draws its static parts:
+  `meter.html` for Chrono (its base and its glass reflection) and `meter_oled.html` for OLED (its base).
+  Open one with `#base`, `#glass` (Chrono), or `#preview` for its layers over a backdrop. To change
+  them, change the HTML (the live parts stay out of it). Then render each layer at 2× with Edge,
+  transparent outside the meter:
 
   ```
   msedge --headless=new --disable-gpu --hide-scrollbars --user-data-dir=<scratch folder>
     --default-background-color=00000000 --force-device-scale-factor=2 --window-size=480,480
     --screenshot=<overlays\gmeter\design\gmeter_<layer>.png>
-    "file:///<repo>/overlays/gmeter/design/meter.html#<layer>"
+    "file:///<repo>/overlays/gmeter/design/<meter.html or meter_oled.html>#<layer>"
   ```
+
+  The OLED base is `gmeter_oled_base.png`.
 
   Edge is at `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`. Check each layer by
   script:
@@ -580,20 +624,25 @@ the size, place and colour of every live part.
 
   Then look at `#preview`.
 - **The plugin embeds the images** by name: `overlays\gmeter\gmeter.rc` (`GMETER_BASE` is
-  `gmeter_base.png` and `GMETER_GLASS` is `gmeter_glass.png`, as RCDATA), read by
-  `overlays\common\meter_image.cpp`. `overlays\obs_plugin\build.bat` compiles the `.rc`. So after
-  re-rendering a layer, rebuild and install (steps 3 and 4). A new layer (another reflection, say)
-  needs its own RCDATA line and its own `MeterImage` in `meter_chrono.h`. If the user picks it, it
-  needs a setting too (`overlays\README.md` as well).
-- **The live parts are code.** `meter_chrono.cpp` draws them from constants in design pixels on the
-  480 px board, centre (240, 240), with angles clockwise from up (as in `meter_draw.h`). Keep those
-  constants and the tables in `overlays\gmeter\design\README.md` the same, and change both together.
+  `gmeter_base.png`, `GMETER_GLASS` is `gmeter_glass.png` and `GMETER_OLED_BASE` is
+  `gmeter_oled_base.png`, as RCDATA), read by `overlays\common\meter_image.cpp`.
+  `overlays\obs_plugin\build.bat` compiles the `.rc`. So after re-rendering a layer, rebuild and
+  install (steps 3 and 4). A new layer (another reflection, say) needs its own RCDATA line and its own
+  `MeterImage` in its theme's header (`meter_chrono.h`, `meter_oled.h`). If the user picks it, it needs
+  a setting too (`overlays\README.md` as well).
+- **The live parts are code.** Each theme draws them (`meter_chrono.cpp`, `meter_oled.cpp`) from
+  constants in design pixels on the 480 px board, centre (240, 240), with angles clockwise from up (as
+  in `meter_draw.h`). Keep those constants and the tables in `overlays\gmeter\design\README.md` the
+  same, and change both together.
+- **A new theme** is a `MeterTheme` (`meter_theme.h`) in its own `meter_<theme>.h/.cpp`, with its
+  layers in the design folder. It adds one choice to the Theme list and one case in `MakeTheme`
+  (`gmeter_source.cpp`), and its `.cpp` in `overlays\obs_plugin\build.bat`.
 - **Text** is drawn live and never put in an image, because it would be shrunk with the image and go
   soft. DirectWrite (`shared\text_raster.cpp`) rasterises it at the size shown. `meter_text.cpp` makes labels
   of it, placed by their ink to a fraction of a pixel, with numbers in the font's tabular figures.
   Measure a label change at 1:1 (sharpness, position) before looking in OBS.
 - **Verify** as for any visual change (step 5). Screenshot the OBS preview at 1:1 and measure it
-  against `meter.html#preview` rendered the same way (positions, gaps, glare strength). Centring and
+  against the theme's `#preview` rendered the same way (positions, gaps, glare strength). Centring and
   spacing are then corrected to look right, not to measure right (step 5, "Centring and spacing are
   optical").
 - Go design folder first, then the plugin. Record designs tried and dropped, and why a spec is as it
@@ -714,10 +763,12 @@ build, then fix.
 
   Every replay in the repo has its sources there.
 - **Pitfalls met:** for angles between nearly equal quaternions, use `2 atan2(|v|, |w|)` of the
-  relative rotation and not `2 acos(dot)` (7-digit values read 0.05 deg apart). The core and
-  `vr_mirror\e2e\` (its measures and fakes) use `RotationAngle` and `DirectionAngle`
-  (`vr_mirror\core\common\rot.h`) for every angle, and no other. Never leave a shell's
-  working directory inside `vr_mirror\e2e\out\<scenario>\`, because the runner deletes it and aborts.
+  relative rotation and not `2 acos(dot)` (7-digit values read 0.05 deg apart). The measures and
+  fakes in `vr_mirror\e2e\` use `RotationAngleAtan2` and `DirectionAngle`
+  (`vr_mirror\core\common\rot.h`) for every angle, and no other. The core's smoothings use
+  `RotationAngleAcos` and its image room `RotationAngleAxisAcos`, which the pipeline's expected output
+  is made with (`findings\pipeline.md`, "One exact angle"). Never leave a shell's working directory
+  inside `vr_mirror\e2e\out\<scenario>\`, because the runner deletes it and aborts.
 
 ## 5b. Check the overlays and race auto-record without the game
 
@@ -750,7 +801,7 @@ Record what each start of the game showed in `findings\openxr.md`.
 ## 6. Commit
 
 - Commit each finished change on its own, without being asked.
-- The subject is `Area: what changed`. The body says why. An agent ends the message with the
+- The subject is `type(scope): what changed`. The body says why. An agent ends the message with the
   attribution line its own instructions give, if any. Write the message by the pull-requests skill
   ("Commit messages"), and check a branch's messages before pushing it.
 - Commit with `git commit -s`, the maintainer and every agent alike. It adds a `Signed-off-by:` line
@@ -791,7 +842,7 @@ Record what each start of the game showed in `findings\openxr.md`.
   | Docs | `check_docs.py` |
   | Public text | `check_public_text.py` on every file and on the pull request's commits |
   | Pipeline output | `stage_replay --golden` against the expected output in `vr_mirror\e2e\stage_replay\golden_expected.txt`, run by run. Any change fails it, and the run uploads the new golden file and its `golden_expected.txt` ("Tests", "The pipeline's expected output") |
-  | Changelog | The type label and the Changelog section as a release reads them (`release.py --check-pr`) |
+  | Changelog | The type label and the Changelog section as a release reads them, and the title's form and type (`release.py --check-pr`) |
   | Description | `check_public_text.py` on the description |
 
   `.github\workflows\checks.yml` holds the first six, which also run on each push to `main`. Build
@@ -815,8 +866,8 @@ Record what each start of the game showed in `findings\openxr.md`.
   the local files test, and the checks in OBS and in the headset are still done by hand, as steps 3 to
   5 say.
 - **Write the pull request by the pull-requests skill** (`.agents\skills\pull-requests\SKILL.md`): its
-  title, its description from the template, which covers this change only, and its one type label,
-  which feeds the changelog. The release script refuses a release while a pull request since the last
+  title (`type(scope): what changed`), its description from the template, which covers this change
+  only, and its one type label, which feeds the changelog. Issues take the same labels. The release script refuses a release while a pull request since the last
   one has no type label.
 - **The pull request names the issues it closes and the issues it works on.** Before writing it, look
   through the open issues (`gh issue list --state open`) and read the "Done when" of each one the

@@ -17,6 +17,10 @@ std::wstring PluginManifestPath(const Part& part) {
     return PluginFolder(part) + L"\\data\\" + part.manifestName;
 }
 
+std::wstring PluginDataFilePath(const Part& part, const DataFile& file) {
+    return PluginFolder(part) + L"\\data\\" + file.path;
+}
+
 std::wstring SimOptixFolder() {
     return ProgramFilesFolder() + L"\\simoptix";
 }

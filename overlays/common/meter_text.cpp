@@ -37,6 +37,7 @@ namespace {
 
         const Suffix suffixes[] = {
             {L" SemiBold", 600},
+            {L" Medium", 500},
             {L" Bold", 700},
             {L" SemiLight", 350},
             {L" Light", 300},
@@ -212,6 +213,7 @@ namespace {
 
         if (keep) {
             Measure(r, &ix, &iy, true);
+            ink_->advance = r.advance;
 
             // The texture's centre is the label's, wherever the ink's own centre is.
             ink_->cx += *cx - ix;
@@ -280,15 +282,15 @@ namespace {
 void UpdateLabels(MeterLabel* labels, int count, double now) {
     for (int i = 0; i < count; i++) {
         MeterLabel& l = labels[i];
-        const bool look = l.text == l.shownText && l.size == l.shownSize && l.face == l.shownFace
-                          && l.opacity == l.shownOpacity && l.rgb == l.shownRgb
-                          && l.tracking == l.shownTracking && l.tabular == l.shownTabular;
+        const bool style = l.text == l.shownText && l.size == l.shownSize && l.face == l.shownFace
+                           && l.opacity == l.shownOpacity && l.rgb == l.shownRgb
+                           && l.tracking == l.shownTracking && l.tabular == l.shownTabular;
 
         const bool place = l.angle == l.shownAngle && l.anchor == l.shownAnchor
                            && std::fabs(l.centreX - l.shownCentreX) < 0.01f
                            && std::fabs(l.centreY - l.shownCentreY) < 0.01f;
 
-        if (look && place) {
+        if (style && place) {
             continue;
         }
         if (now - l.updated < 0.1) {
@@ -390,9 +392,10 @@ void DrawLabelCentred(
     float y,
     uint32_t rgb,
     bool tabular,
-    float align
+    float align,
+    float tracking
 ) {
-    WantLabel(l, text, size, face, opacity, rgb);
+    WantLabel(l, text, size, face, opacity, rgb, tracking);
     PlaceLabel(l, x, y, 0);
     l.tabular = tabular;
     l.anchor = align;

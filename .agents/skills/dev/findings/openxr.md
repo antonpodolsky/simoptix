@@ -216,3 +216,22 @@ Override at 1.5, OpenXR Mirror on Look-ahead and a 4K canvas at 90 fps. The laye
   frame copied after the first 10 s. The three shared textures took 218 MB.
 - **The game's rate** was 90.0 frames per second once it settled, in step with VR Mirror's 10 s stats.
   Before that, LMU ran at 41–89 per second for about a minute.
+
+## Timing the game's frames
+
+- **The method.** The CPU time runs from xrWaitFrame's return to the next xrWaitFrame call. The GPU time
+  runs between two GPU timestamps, at xrBeginFrame and at xrEndFrame, read back a few frames later.
+  Both are averaged over 1 s. Headroom is 100 × (budget − time) / budget, cut to a whole percent. The
+  CPU headroom is unknown when the game calls xrWaitFrame inside a frame (pipelining). The target counts
+  as missed when the frame rate is more than 2 below it, so the colour doesn't flicker, and the CPU then
+  counts as holding the game back unless the GPU takes at least 0.5 ms longer.
+- **The budget** is the display period xrWaitFrame gives the game, so there is no setting.
+- **The fake OpenXR game** (`fake_openxr.exe`, 90 Hz, 1024×1024 image, no render thread), read once a
+  second as the performance overlay reads:
+  - 90 fps of a 90.00 target, CPU 1.53 ms (86 % headroom), GPU 0.005–0.011 ms (99 %).
+  - The fake held the frame outside xrWaitFrame at first, so its CPU time read 11.1 ms, the whole
+    frame (0 % headroom). It now waits inside xrWaitFrame until it draws, as a runtime holds a game.
+  - The first second after the reader appeared read 82 fps, because the layer had timed only part of
+    it. A second the layer didn't time in full now reads as unknown.
+- **Not checked:** in LMU, and with the check program on a headset. The check program reached
+  `xrGetSystem` (−35) with no headset, so its frames and their times didn't run.

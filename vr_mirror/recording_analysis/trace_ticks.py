@@ -99,19 +99,65 @@ def Load(prefix):
     return d
 
 
-def Arrivals(prefix, serials):
-    """The runtime's F rows (arrival, smooth, display_slot, current_slot, offset) for some game frames:
-    {serial: [values]}."""
+# The columns Arrivals gives for each frame source, as (name, kind). Kinds: "time" (source seconds),
+# "span" (seconds) and "number".
+PIMAX_ARRIVAL_COLUMNS = [("display_slot", "time"), ("current_slot", "time"), ("offset", "span")]
+OPENXR_ARRIVAL_COLUMNS = [
+    ("layer_frame", "number"),
+    ("ended", "time"),
+    ("drawn_slot", "time"),
+    ("images_held", "number"),
+    ("released_during_end", "number"),
+]
 
-    want, F = set(int(s) for s in serials), {}
-    with open(SourceTrace(prefix)) as f:
+
+def Arrivals(prefix, serials):
+    """The frame source's own row for each of some game frames: (columns, {serial: [values]}), with the
+    columns as (name, kind) above.
+    - Pimax: the runtime's F row (F,serial,arrival,smooth,display_slot,current_slot,offset).
+    - OpenXR: the layer's F row (F,layer_frame,ended,drawn_slot,texture,game_image,images_held,
+      released_during_end,...) of the layer frame that became the game frame, which its A row
+      (A,layer_frame,serial,arrival) names."""
+
+    path, want = SourceTrace(prefix), {int(s) for s in serials}
+
+    if path.endswith("_pimax.csv"):
+        return PIMAX_ARRIVAL_COLUMNS, PimaxArrivals(path, want)
+
+    return OPENXR_ARRIVAL_COLUMNS, OpenXrArrivals(path, want)
+
+
+def PimaxArrivals(path, serials):
+    rows = {}
+    with open(path, encoding="utf-8") as f:
         for line in f:
             if line.startswith("F,"):
                 v = line.split(",")
-                if int(v[1]) in want:
-                    F[int(v[1])] = [float(x) for x in v[2:]]
+                if int(v[1]) in serials:
+                    rows[int(v[1])] = [float(x) for x in v[4:7]]
 
-    return F
+    return rows
+
+
+def OpenXrArrivals(path, serials):
+    serial_of_layer_frame = {}
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("A,"):
+                v = line.split(",")
+                if int(v[2]) in serials:
+                    serial_of_layer_frame[int(v[1])] = int(v[2])
+
+    rows = {}
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("F,"):
+                v = line.split(",")
+                serial = serial_of_layer_frame.get(int(v[1]))
+                if serial is not None:
+                    rows[serial] = [float(v[1]), float(v[2]), float(v[3]), float(v[6]), float(v[7])]
+
+    return rows
 
 
 def FirstPose(prefix):

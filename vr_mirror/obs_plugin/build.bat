@@ -20,9 +20,9 @@ rem builds without LMU, and race auto-record reads no game).
 rem Its version comes from ..\..\shared\build\version.bat (version.txt at the repo's root, and git),
 rem and goes into the DLL's version resource (version.rc).
 rem Writes bin\manifest.json from manifest.json with the version filled in, for OBS 32 and later.
-rem Optional argument "install": copies the DLL and manifest.json to OBS's per-machine plugin folder
-rem (C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror: the DLL in bin\64bit, manifest.json in
-rem data, where OBS reads it). Close OBS first.
+rem Optional argument "install": copies the DLL, manifest.json and the sources' icons (data\icons) to
+rem OBS's per-machine plugin folder (C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror: the DLL in
+rem bin\64bit, manifest.json in data and the icons in data\icons, where OBS reads them). Close OBS first.
 rem It links against OBS through an import library made here from ..\..\shared\obs_lib\obs.def (the
 rem functions OBS 32.2.2's obs.dll exports).
 setlocal
@@ -60,8 +60,9 @@ rem leaves the block by goto.
 set "PLUGIN_FOLDER=C:\ProgramData\obs-studio\plugins\%NAME%"
 if /i "%~1"=="install" (
    if not exist "%PLUGIN_FOLDER%\bin\64bit" mkdir "%PLUGIN_FOLDER%\bin\64bit" || goto :install_failed
-   if not exist "%PLUGIN_FOLDER%\data" mkdir "%PLUGIN_FOLDER%\data" || goto :install_failed
+   if not exist "%PLUGIN_FOLDER%\data\icons" mkdir "%PLUGIN_FOLDER%\data\icons" || goto :install_failed
    copy /y bin\%NAME%.dll "%PLUGIN_FOLDER%\bin\64bit\" >nul || goto :install_failed
+   copy /y data\icons\*.svg "%PLUGIN_FOLDER%\data\icons\" >nul || goto :install_failed
    copy /y bin\manifest.json "%PLUGIN_FOLDER%\data\" >nul || goto :install_failed
    echo installed to %PLUGIN_FOLDER%
 )

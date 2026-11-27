@@ -49,8 +49,9 @@ So the G-meter, race auto-record and the audio all follow the moment the view sh
 1. With OBS closed, run `build.bat install` in this folder. The root `README.md` lists what the build
    needs. The script builds the plugin and copies it to
    `C:\ProgramData\obs-studio\plugins\simoptix_vr_mirror\bin\64bit`. It also copies the plugin's
-   `manifest.json` to `data` beside `bin`. OBS 32 reads the plugin's name and version from it. If you use the Overlays plugin,
-   install it from the same build.
+   `manifest.json` to `data` beside `bin`. OBS 32 reads the plugin's name and version from it. It
+   copies the sources' icons to `data\icons`, and OBS 32.2 and later show them beside the sources. If
+   you use the Overlays plugin, install it from the same build.
 2. In OBS, add a **SimOptix: Pimax Mirror** or **SimOptix: OpenXR Mirror** source. For the OpenXR one,
    install the API layer too: close LMU and run `vr_mirror\frame_sources\openxr\install.bat`, which
    asks for administrator rights. The dev skill's `reference\openxr.md` has the steps.
