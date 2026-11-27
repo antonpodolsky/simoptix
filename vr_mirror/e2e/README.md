@@ -38,9 +38,9 @@ with the view by itself (below).
 | edge stop | The smoothing's last resort. It holds the view at 95% of its image room when the smoothing's own planning wasn't enough |
 | game behind | The game's GPU has fallen behind and queues up to two frames. Each arrives one or two display slots after the slot it was drawn for |
 | timing gate | The part of the slot check that lets a slot be judged only while the frames' timing shows a queue |
-| stage replay | `stage_replay.exe`. It runs the pipeline's stages offline, without the mirror app, the fake runtime or the GPU |
+| pipeline replay | `pipeline_replay.exe`. It runs the pipeline's stages offline, without the mirror app, the fake runtime or the GPU |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
-| golden file | The file `stage_replay --golden` writes: every output of the pipeline over a fixed set of inputs, to compare byte for byte |
+| golden file | The file `pipeline_replay --golden` writes: every output of the pipeline over a fixed set of inputs, to compare byte for byte |
 | auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
 | data folder | The folder `SIMOPTIX_DATA` names, outside the repo, where analyses of recordings are kept |
 
@@ -242,9 +242,9 @@ are informational.
   where the look-ahead leaves 0.001–0.002° (0.02 px). Its recorded judder is lower where the head moves
   slowly (`short_hiccup`: 0.016° against 0.021°). The allowances above cover that and nothing visible.
 
-## Stage replay
+## Pipeline replay
 
-`stage_replay` runs core's frame pipeline offline, without the mirror app, the fake runtime or the GPU.
+`pipeline_replay` runs core's frame pipeline offline, without the mirror app, the fake runtime or the GPU.
 It runs on the replays, with each frame drawn with its true slot's pose. It also runs on synthetic
 motion (`edge_test+heartbeat`, `racing+heartbeat`, with exact pose predictions, about 3% dropped frames
 and a few unsynced ones). It feeds poses and predictions to core's pose history in time order, up to the
@@ -319,7 +319,7 @@ in `out\local_files\<case>\`.
 
 | Folder or file | What |
 |---|---|
-| `build.bat` | Builds the fake runtime, the fake OpenXR game, the runner, the local files test with its fake game, the auto sync test and `stage_replay` into `bin\` |
+| `build.bat` | Builds the fake runtime, the fake OpenXR game, the runner, the local files test with its fake game, the auto sync test and `pipeline_replay` into `bin\` |
 | `fake_game\` | What `fake_pvr\` and `fake_openxr\` share: the head motion (`fake_game_motion.h`) and the game's image (`fake_game_image.*`: the direction codes or the cockpit, stored as the faked source stores it) |
 | `fake_layer_game\` | `Le Mans Ultimate.exe`: the fake game that loads the real OpenXR layer's DLL, for the local files test |
 | `fake_openxr\` | `fake_openxr.exe`: the fake game with the OpenXR layer's frames, through the layer's own frame code (`fake_openxr_layer.*` makes the game's calls into it). Without its render thread, the layer also times its frames for the performance overlay while the overlay reads. For the auto sync test, it plays a cut of a real recording (`fake_openxr_recording.*`) and its sound (`fake_openxr_sound.*`) |
@@ -327,5 +327,5 @@ in `out\local_files\<case>\`.
 | `fake_pvr\` | `libPVRClient64.dll`: the fake PVR runtime and game, with replays of real sessions (`fake_pvr_replay.h`) and their real thumbnails (`fake_pvr_thumbs.h`) |
 | `runner\` | `e2e_runner.exe`: the scenarios (`scenarios.*`), running the mirror app (`tool_process.*`), capturing its window (`capture.h`, `patches.h`), the measures (`analysis.*`), and the comparison with Instant (`compare.*`) |
 | `auto_sync_e2e\` | `auto_sync_e2e.exe`: the auto sync test. It writes the fake game's plan from the cut, runs OBS with the fake game, and grades what auto sync settled at |
-| `stage_replay\` | `stage_replay.exe`: one run per stage (`runs_*.cpp`), the whole pipeline (`runs_pipeline.cpp`), its scores (`scores.*`), the golden file (`golden.*`), `golden_compare.py`, which compares golden files run by run, and `golden_expected.txt`, the SHA-256 of each run of the expected golden file |
+| `pipeline_replay\` | `pipeline_replay.exe`: one run per stage (`runs_*.cpp`), the whole pipeline (`runs_pipeline.cpp`), its scores (`scores.*`), the golden file (`golden.*`), `golden_compare.py`, which compares golden files run by run, and `golden_expected.txt`, the SHA-256 of each run of the expected golden file |
 | `replay\` | The replays of real sessions (`<name>.csv`, each a scenario `replay_<name>`) and their real thumbnails (`<name>.thumbs.png`) |

@@ -166,7 +166,7 @@ The dev skill's "1b. Names" names the parts, files and concepts. Inside the code
 | Private and protected data members | `camelCase_` | `running_`, `stages_` |
 | Constants and enumerators | `kName` | `kIdleAfter`, `kStopped` |
 | Mutable variable in a file's anonymous namespace | `g_camelCase` | `g_headset` |
-| Namespaces, files, folders | `lower_snake_case` | `stage_replay`, `pimax_source.cpp` |
+| Namespaces, files, folders | `lower_snake_case` | `pipeline_replay`, `pimax_source.cpp` |
 
 - **A name says what a thing is or does.** A function that changes something starts with a verb
   (`Reset`, `Publish`). A question reads as one (`IsOpen`, `HasSignal`).

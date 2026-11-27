@@ -50,7 +50,7 @@ the branch changes against `main`, why, what was verified and what wasn't. These
   - **The type** is one of those its label allows ("The label", below): `feat`, `fix`, `perf`,
     `docs`, `refactor`, `test`, `build`, `ci`, `chore` or `style`.
   - **The scope** is the part the change is about, by its folder's name: a part's (`vr_mirror`,
-    `overlays`, `pipeline`, `openxr`, `e2e`, `stage_replay`, `telemetry`, `setup`) or a skill's
+    `overlays`, `pipeline`, `openxr`, `e2e`, `pipeline_replay`, `telemetry`, `setup`) or a skill's
     (`dev`, `pull-requests`). The READMEs, `CONTRIBUTING.md` and the skills that change with it
     leave the scope as it is. A change to the folders of one name in several parts takes that name
     (`obs_plugin`). A release's pull request takes `release`.

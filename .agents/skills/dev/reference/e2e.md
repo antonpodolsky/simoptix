@@ -14,7 +14,7 @@ vr_mirror\e2e\build.bat
 ```
 
 It builds the fake runtime (`bin\libPVRClient64.dll`), the fake OpenXR game, `bin\e2e_runner.exe` and
-`bin\stage_replay.exe`.
+`bin\pipeline_replay.exe`.
 
 ```
 vr_mirror\e2e\bin\e2e_runner.exe
@@ -70,9 +70,9 @@ What it runs and checks: `vr_mirror\e2e\README.md`, "The local files test".
 A change to a kind of file, or a new kind, gets a case or a check in `local_files_e2e.cpp` that fails
 on the build before the change.
 
-## The stage replay
+## The pipeline replay
 
-`stage_replay` runs core's frame pipeline offline. `vr_mirror\core\pipeline\pipeline_builder.cpp` builds
+`pipeline_replay` runs core's frame pipeline offline. `vr_mirror\core\pipeline\pipeline_builder.cpp` builds
 the pipeline for each run's settings, and the run needs no mirror app, fake runtime or GPU. It is
 deterministic.
 
@@ -88,7 +88,7 @@ deterministic.
 ### One stage on real inputs: `--stage drawn_pose`
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --stage drawn_pose replay\<name>.csv [--show FIRST-LAST] [--dump FILE] [--delays A,B,...] [--drawn_pose K]
+vr_mirror\e2e\bin\pipeline_replay.exe --stage drawn_pose replay\<name>.csv [--show FIRST-LAST] [--dump FILE] [--delays A,B,...] [--drawn_pose K]
 ```
 
 It replays only the drawn pose stage, on a replay's real thumbnails, slots and pose predictions. The
@@ -111,7 +111,7 @@ the same numbers.
 ### The whole pipeline: `--pipeline`
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --pipeline [--smoothing instant --drawn_pose cockpit ...] [--zoom 1.2] [--strength 1.5] [--ticks 60] [--input NAME ...] [--replay FILE ...] [--eye L,R,U,D] [--dump FILE]
+vr_mirror\e2e\bin\pipeline_replay.exe --pipeline [--smoothing instant --drawn_pose cockpit ...] [--zoom 1.2] [--strength 1.5] [--ticks 60] [--input NAME ...] [--replay FILE ...] [--eye L,R,U,D] [--dump FILE]
 ```
 
 It runs the whole pipeline with any mix of stages. The settings' configuration (Look-ahead, the slot
@@ -154,13 +154,13 @@ It scores each input from the pipeline's numbers alone (`scores.*`). Lower is be
 | planned | Outputs where the planning pulled the path in |
 | wrong pose | Outputs warped from a pose more than 0.01° off the one the frame was really drawn with (the replays' true lags, and the motions' exact predictions) |
 
-The baseline of these scores is in `reference\e2e_results.md`, "Stage replay baseline". The whole run
+The baseline of these scores is in `reference\e2e_results.md`, "Pipeline replay baseline". The whole run
 takes about 10 seconds.
 
 ### Every output: `--golden` and the refactor guard
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --golden out\stage_replay\golden_new.txt
+vr_mirror\e2e\bin\pipeline_replay.exe --golden out\pipeline_replay\golden_new.txt
 ```
 
 It writes every output of the pipeline, each float exactly in hex: the 28 numbers of the warp, the head
@@ -181,18 +181,18 @@ stages) must reproduce the build before it byte for byte. Write `golden_main.txt
 compare the two golden files:
 
 ```
-python -I vr_mirror\e2e\stage_replay\golden_compare.py out\stage_replay\golden_main.txt out\stage_replay\golden_new.txt
+python -I vr_mirror\e2e\pipeline_replay\golden_compare.py out\pipeline_replay\golden_main.txt out\pipeline_replay\golden_new.txt
 ```
 
 It names each run that changed, is new or is gone, and exits with 1 when the files differ. A difference
 is a behaviour change until shown otherwise. The e2e suite still decides at the end.
 
-**The expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the SHA-256 of each run
-of the golden file, as GitHub's runners build `stage_replay`. The Pipeline output check on GitHub
+**The expected output.** `vr_mirror\e2e\pipeline_replay\golden_expected.txt` holds the SHA-256 of each run
+of the golden file, as GitHub's runners build `pipeline_replay`. The Pipeline output check on GitHub
 compares with it:
 
 ```
-python -I vr_mirror\e2e\stage_replay\golden_compare.py --expected <golden file>
+python -I vr_mirror\e2e\pipeline_replay\golden_compare.py --expected <golden file>
 ```
 
 A golden file built with another compiler can differ from it in the last bits of some values with
@@ -208,7 +208,7 @@ shows the rounding.
 ### Stage 1 and stage 3 over OBS traces
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --stage arrival_timing [--arrival_timing K] [--trace TICKS PIMAX ...]
+vr_mirror\e2e\bin\pipeline_replay.exe --stage arrival_timing [--arrival_timing K] [--trace TICKS PIMAX ...]
 ```
 
 It runs the arrival timing alone over the traces' frame arrivals. It reports the noise it removes, how
@@ -220,7 +220,7 @@ one the plugin recorded.
 - The small differences come from the plugin's session restarts, which the run doesn't see.
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]
+vr_mirror\e2e\bin\pipeline_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]
 ```
 
 It runs the frame picker as the OBS plugin does: the fixed delay, unless `--frame_picker` names another.

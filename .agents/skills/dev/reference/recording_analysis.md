@@ -122,7 +122,7 @@ python -I replica.py "<OBS log>" "<recording>.mp4" 18:30 4 --gate --show 1.6-2.8
 It rebuilds the plugin's thumbnails from the recording, and runs the slot check's logic on them. That
 logic is a Python copy of the slot check's helpers,
 `vr_mirror\core\pipeline\2_drawn_pose\slot_check_drawn_pose_lag.cpp`: keep the two in step. Core's
-own code runs on a replay's exported thumbnails with `vr_mirror\e2e\bin\stage_replay.exe --stage
+own code runs on a replay's exported thumbnails with `vr_mirror\e2e\bin\pipeline_replay.exe --stage
 drawn_pose`.
 
 | Option | What it does |
@@ -198,7 +198,7 @@ would have shown there.
    prediction, as the source feeds the pipeline live.
 2. Run it with the session's settings, and write every output:
    ```
-   vr_mirror\e2e\bin\stage_replay.exe --pipeline --arrival_timing reported --drawn_pose reported --ticks <OBS fps> --zoom <zoom> --eye <left>,<right>,<up>,<down> --replay <replay>.csv --dump <out>.csv
+   vr_mirror\e2e\bin\pipeline_replay.exe --pipeline --arrival_timing reported --drawn_pose reported --ticks <OBS fps> --zoom <zoom> --eye <left>,<right>,<up>,<down> --replay <replay>.csv --dump <out>.csv
    ```
    `--eye` takes the left view's field of view from the OpenXR layer's log (its `fov` line). Drop
    `--arrival_timing` and `--drawn_pose` for a Pimax session.

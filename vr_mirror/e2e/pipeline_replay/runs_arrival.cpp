@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// stage_replay --stage arrival_timing: the arrival timing (stage 1) over the frame arrivals of OBS
+// pipeline_replay --stage arrival_timing: the arrival timing (stage 1) over the frame arrivals of OBS
 // frame traces (_pimax.csv F rows: arrival and the runtime's next display slot then, and what the
 // plugin's own arrival timing gave). Scores the timing noise it removes (its result against the raw
 // arrival, rms; and the spacing of the results against the display grid) and how often its slot
@@ -17,7 +17,7 @@
 #include "pipeline/pipeline_builder.h"
 #include "runs.h"
 
-namespace stage_replay {
+namespace pipeline_replay {
 
     namespace {
 

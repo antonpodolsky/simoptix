@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// stage_replay --stage drawn_pose (was lag_sim, then --stage frame_matching): the drawn pose
+// pipeline_replay --stage drawn_pose (was lag_sim, then --stage frame_matching): the drawn pose
 // (stage 2, vr_mirror\core\pipeline\2_drawn_pose) replayed on an e2e replay, without the tool, the fake or
 // the GPU: each frame's real thumbnail (<replay>.thumbs.png, as the fake shows it and the tool reads it), its
 // slot and arrival, and the runtime's recorded pose predictions go straight into the drawn pose the
@@ -18,7 +18,7 @@
 // prediction each pose matches (by comparing poses: the slots before its arrival slot, ? for none)
 // and the slot check's evidence for the pair of frames.
 //
-// Usage: stage_replay.exe --stage drawn_pose <replay .csv> [--show FIRST-LAST] [--dump FILE]
+// Usage: pipeline_replay.exe --stage drawn_pose <replay .csv> [--show FIRST-LAST] [--dump FILE]
 //        [--delays A,B,...] [--drawn_pose K]   (--show: serials to print frame by frame)
 
 #include <cmath>
@@ -37,7 +37,7 @@
 
 namespace {
 
-    using stage_replay::kPeriod;
+    using pipeline_replay::kPeriod;
     // LMU's left eye on the Dream Air, as the fake reports it (vr_mirror\e2e\fake_pvr).
     const EyeInfo kEye = {
         1.195f,
@@ -169,12 +169,12 @@ namespace {
         const DrawnPoseKind kind_;
         replay::Replay rp_;
         ReplayPredictions lookup_;
-        stage_replay::Input input_;
+        pipeline_replay::Input input_;
         std::vector<uint8_t> rgba_;
         int tiles_ = 0;
 
         // The answers' poses, fed in time order up to each frame's draw, as a host has them.
-        std::unique_ptr<stage_replay::ReplayPoses> poses_;
+        std::unique_ptr<pipeline_replay::ReplayPoses> poses_;
         std::shared_ptr<DrawnPose> drawnPose_;
         ImageNeeds needs_;
         std::vector<float> areas_;
@@ -195,7 +195,7 @@ namespace {
         if (!rp_.Load(options_.path, error)) {
             return false;
         }
-        if (!stage_replay::LoadReplay(options_.path, "replay", &input_, error)) {
+        if (!pipeline_replay::LoadReplay(options_.path, "replay", &input_, error)) {
             return false;
         }
 
@@ -205,7 +205,7 @@ namespace {
             return false;
         }
 
-        poses_ = std::make_unique<stage_replay::ReplayPoses>(input_);
+        poses_ = std::make_unique<pipeline_replay::ReplayPoses>(input_);
         drawnPose_ = MakeDrawnPose(kind_);
         needs_ = drawnPose_->Needs();
         areas_.resize(size_t(std::max(1, needs_.patches.count)) * 4);
@@ -502,7 +502,7 @@ namespace {
 
 static int DrawnPoseRun(int argc, char** argv, DrawnPoseKind kind) {
     if (argc < 2) {
-        printf("usage: stage_replay.exe --stage drawn_pose <replay .csv> [--show FIRST-LAST]\n");
+        printf("usage: pipeline_replay.exe --stage drawn_pose <replay .csv> [--show FIRST-LAST]\n");
         return 2;
     }
 
@@ -519,7 +519,7 @@ static int DrawnPoseRun(int argc, char** argv, DrawnPoseKind kind) {
     return 0;
 }
 
-namespace stage_replay {
+namespace pipeline_replay {
 
     int RunDrawnPose(int argc, char** argv, const PipelineConfig& config) {
         return DrawnPoseRun(argc, argv, config.drawnPose);

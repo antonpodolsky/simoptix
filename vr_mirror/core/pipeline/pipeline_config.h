@@ -3,7 +3,7 @@
 // PipelineConfig: which implementation each stage of the frame pipeline uses, one field per stage,
 // named as the stage's folder (vr_mirror\core\pipeline\<N>_<stage>\), its values as the implementations.
 // ConfigFor maps the settings onto it; NameOf and Parse give each value's name, for logs and
-// stage_replay's flags. Plain data and lookups only: it knows the implementations' names, not their
+// pipeline_replay's flags. Plain data and lookups only: it knows the implementations' names, not their
 // code (pipeline_builder makes them).
 #pragma once
 

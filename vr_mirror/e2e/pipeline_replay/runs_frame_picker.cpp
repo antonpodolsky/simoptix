@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// stage_replay --stage frame_picker: runs the frame picker (stage 3) the way the OBS plugin does,
+// pipeline_replay --stage frame_picker: runs the frame picker (stage 3) the way the OBS plugin does,
 // over OBS frame traces (their ticks and frame arrivals) and synthetic frames (a 90 Hz headset with
 // OBS ticking at 50, 59.94, 60, 90 and 144 fps, and a 144 Hz headset with OBS at 60 fps; each set
 // with jittered and with exact ticks), with copies finishing after a seeded random time (now and then
 // late) and a store that shrinks and grows as the picker asks; prints the picks by kind, the delay it
 // fixed, what the store held (the frames shown, the frames still stored when due, the most entries
 // holding a frame), and the picker's forecast's answers against what was shown. Checked identical to
-// the plugin's picking before the stage (vr_mirror\e2e\README.md, "Stage replay"). Knows nothing
+// the plugin's picking before the stage (vr_mirror\e2e\README.md, "Pipeline replay"). Knows nothing
 // about textures or OBS.
 
 #include <algorithm>
@@ -24,7 +24,7 @@
 #include "pipeline/pipeline_builder.h"
 #include "runs.h"
 
-namespace stage_replay {
+namespace pipeline_replay {
 
     namespace {
 

@@ -127,7 +127,7 @@ namespace replay {
         }
 
         const std::vector<Frame>& Frames() const { return frames_; }
-        // The recorded rows themselves, in time order (vr_mirror\e2e\stage_replay feeds them to core's pose
+        // The recorded rows themselves, in time order (vr_mirror\e2e\pipeline_replay feeds them to core's pose
         // history).
         const std::vector<Pose>& Poses() const { return poses_; }
         const std::vector<Prediction>& Predictions() const { return predictions_; }

@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// stage_replay: runs core's frame pipeline offline, without the tool, the fake runtime or the GPU,
+// pipeline_replay: runs core's frame pipeline offline, without the tool, the fake runtime or the GPU,
 // on e2e's replays of real sessions, on synthetic motion and on OBS frame traces: the whole pipeline
 // with any mix of stages, or one stage alone. Deterministic and quick (vr_mirror\e2e\README.md, "Stage
 // replay").
@@ -42,7 +42,7 @@
 #include "replay_poses.h"
 #include "runs.h"
 
-using namespace stage_replay;
+using namespace pipeline_replay;
 
 namespace {
 
@@ -390,13 +390,13 @@ namespace {
 
     void PrintUsage() {
         printf(
-            "usage: stage_replay.exe --golden FILE [--replays DIR]\n"
-            "       stage_replay.exe --pipeline [--<stage> <kind> ...] [--zoom Z] [--strength S] "
+            "usage: pipeline_replay.exe --golden FILE [--replays DIR]\n"
+            "       pipeline_replay.exe --pipeline [--<stage> <kind> ...] [--zoom Z] [--strength S] "
             "[--ticks HZ] [--input NAME ...] [--replay FILE ...] [--eye L,R,U,D] [--dump FILE]\n"
-            "       stage_replay.exe --stage drawn_pose <replay .csv> [--show FIRST-LAST] [--dump FILE] "
+            "       pipeline_replay.exe --stage drawn_pose <replay .csv> [--show FIRST-LAST] [--dump FILE] "
             "[--delays A,B,...] [--drawn_pose K]\n"
-            "       stage_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]\n"
-            "       stage_replay.exe --stage arrival_timing [--arrival_timing K] [--trace TICKS PIMAX ...]\n"
+            "       pipeline_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]\n"
+            "       pipeline_replay.exe --stage arrival_timing [--arrival_timing K] [--trace TICKS PIMAX ...]\n"
         );
     }
 

@@ -44,8 +44,8 @@ A new term goes here, and into the table of every README that uses it.
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
 | fake runtime | The stand-in for Pimax's client library (`vr_mirror\e2e\fake_pvr\`) that the e2e tests use in place of a headset and a game |
 | replay | A real session played back through the fake runtime: its head poses, the runtime's predictions, and every game frame at its real arrival time and with the slot it was really drawn for |
-| stage replay | `stage_replay.exe`. It runs the pipeline's stages offline, without the mirror app, the fake runtime or the GPU |
-| golden file | The file `stage_replay --golden` writes: every output of the pipeline over a fixed set of inputs, to compare byte for byte |
+| pipeline replay | `pipeline_replay.exe`. It runs the pipeline's stages offline, without the mirror app, the fake runtime or the GPU |
+| golden file | The file `pipeline_replay --golden` writes: every output of the pipeline over a fixed set of inputs, to compare byte for byte |
 | data folder | The folder `SIMOPTIX_DATA` names, outside the repo, where analyses of recordings are kept |
 
 ## Outside terms

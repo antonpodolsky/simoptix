@@ -70,7 +70,7 @@ At 0 nothing is smoothed. Each implementation returns the followed image's pose,
 the edge like any view. Instant restarts its filter, and Look-ahead asks for no window and keeps its delay.
 The e2e scenario `no_smoothing` checks it.
 
-At 1 every output is byte for byte the one before the setting (`stage_replay --golden`).
+At 1 every output is byte for byte the one before the setting (`pipeline_replay --golden`).
 
 **Thread:** the host's output thread (OBS's graphics thread, the mirror app's main thread). Per-frame
 allocation stops once the look-ahead's buffers have grown.

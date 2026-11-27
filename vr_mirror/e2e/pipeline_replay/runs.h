@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The runs stage_replay offers (runs_*.cpp), and the host emulation they and the golden dump share:
+// The runs pipeline_replay offers (runs_*.cpp), and the host emulation they and the golden dump share:
 // RunHost drives a Pipeline over an input as one of the hosts would (the mirror app's window, or the OBS
 // plugin's ticks). Each run prints its results and returns the number of failures (or -1 when an
 // input can't be read).
@@ -17,7 +17,7 @@
 #include "pipeline/pipeline_config.h"
 #include "replay_poses.h"
 
-namespace stage_replay {
+namespace pipeline_replay {
 
     // LMU's left eye on the Dream Air, as the fake reports it (vr_mirror\e2e\fake_pvr), its 2 degree cant
     // included.

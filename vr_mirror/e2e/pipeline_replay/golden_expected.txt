@@ -1,4 +1,4 @@
-# The SHA-256 of each run of `stage_replay --golden`, and its label. Written by
+# The SHA-256 of each run of `pipeline_replay --golden`, and its label. Written by
 # golden_compare.py --write-expected. The Pipeline output check compares with it.
 678412a6aad9328350dd349b589669a6b84e7cde76ecf267c5d823ed26ad857a queued_late_frames smoothing=1 zoom=1.20 host=window
 0be499785fa361c90fdd99e861fe5a40860ada9447cd1eeb8642e243d39fe9fb queued_late_frames smoothing=1 zoom=1.20 host=ticks

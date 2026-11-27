@@ -1,21 +1,21 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Compares stage_replay's golden file (--golden) run by run, with another golden file or with the
+"""Compares pipeline_replay's golden file (--golden) run by run, with another golden file or with the
 expected output in golden_expected.txt.
 
 A golden file holds every output of the pipeline over a fixed set of runs. A run starts at its
 `# <input> <settings>` line. golden_expected.txt, beside this script, holds each run's SHA-256 and
 label, so that a change in any run's output is caught without keeping the 26 MB file in the repo.
 
-golden_expected.txt is the output of stage_replay as GitHub's runners build it. Another compiler
+golden_expected.txt is the output of pipeline_replay as GitHub's runners build it. Another compiler
 rounds some values in the last bits differently, so a golden file built elsewhere can differ from it
 with nothing changed. A change that is meant takes the golden_expected.txt that the failed Pipeline
 output run uploads, and commits it with the change.
 
 Usage:
-  python -I vr_mirror\\e2e\\stage_replay\\golden_compare.py <before> <after> [--markdown FILE]
-  python -I vr_mirror\\e2e\\stage_replay\\golden_compare.py --expected <golden> [--markdown FILE]
-  python -I vr_mirror\\e2e\\stage_replay\\golden_compare.py --write-expected <golden>
+  python -I vr_mirror\\e2e\\pipeline_replay\\golden_compare.py <before> <after> [--markdown FILE]
+  python -I vr_mirror\\e2e\\pipeline_replay\\golden_compare.py --expected <golden> [--markdown FILE]
+  python -I vr_mirror\\e2e\\pipeline_replay\\golden_compare.py --write-expected <golden>
 
 The first compares two golden files, as the refactor guard of .agents\\skills\\dev\\reference\\e2e.md
 does. The second compares a golden file with golden_expected.txt, as the Pipeline output check on
@@ -75,7 +75,7 @@ def write_expected(golden_path):
     runs, order = read_runs(golden_path)
 
     with open(EXPECTED, "w", encoding="utf-8", newline="\n") as file:
-        file.write("# The SHA-256 of each run of `stage_replay --golden`, and its label. Written by\n")
+        file.write("# The SHA-256 of each run of `pipeline_replay --golden`, and its label. Written by\n")
         file.write("# golden_compare.py --write-expected. The Pipeline output check compares with it.\n")
 
         for label in order:
@@ -96,10 +96,10 @@ def first_difference(before, after):
 def report(changed, added, removed, total, what):
     """The report's lines, and whether nothing changed. `changed` holds (label, detail) pairs."""
     if not changed and not added and not removed:
-        return [f"stage_replay --golden: identical to {what}, all {total} runs."], True
+        return [f"pipeline_replay --golden: identical to {what}, all {total} runs."], True
 
     lines = [
-        f"stage_replay --golden: {len(changed)} of {total} runs changed against {what}, "
+        f"pipeline_replay --golden: {len(changed)} of {total} runs changed against {what}, "
         f"{len(added)} new, {len(removed)} gone."
     ]
     lines += [f"- changed: `{label}`{detail}" for label, detail in changed]
@@ -144,7 +144,7 @@ def compare_expected(golden_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compares stage_replay golden files, run by run.")
+    parser = argparse.ArgumentParser(description="Compares pipeline_replay golden files, run by run.")
     parser.add_argument("files", nargs="*")
     parser.add_argument(
         "--expected", action="store_true", help="compare one golden file with golden_expected.txt"

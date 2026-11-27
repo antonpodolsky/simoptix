@@ -10,7 +10,7 @@
 // later frames are judged (LagFilter), so PoseOf can change until the frame is shown.
 //
 // Logic only: frames, thumbnails and predicted poses come in as parameters; it knows nothing about
-// D3D, PVR or threads. adapters\d3d\drawn_pose_feed feeds it from the GPU; vr_mirror\e2e\stage_replay
+// D3D, PVR or threads. adapters\d3d\drawn_pose_feed feeds it from the GPU; vr_mirror\e2e\pipeline_replay
 // (--stage drawn_pose) from a replay. Its judgements are shared between the feeding thread and
 // the output thread under mutex_, held only to copy a few values.
 #pragma once

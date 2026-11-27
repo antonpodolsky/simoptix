@@ -28,7 +28,7 @@ int FixedDelayStep(int shown, const double* due, int count, double tick);
 // frames shown holds each until the next comes (up to two display periods, 33 ms at 60 Hz), and the
 // picker's copy delay is at most 45 ms. The forecast passes over a frame only after that. With Instant
 // a frame is due sooner, and a copy running late there made the picker show a frame the forecast had
-// passed over (stage_replay, findings\pipeline.md).
+// passed over (pipeline_replay, findings\pipeline.md).
 constexpr double kFixedDelayCopyDoneS = 0.1;
 
 class FixedDelayAhead : public ShowForecast {

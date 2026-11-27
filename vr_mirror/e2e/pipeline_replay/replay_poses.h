@@ -1,6 +1,6 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The inputs stage_replay runs the pipeline on: a replay of a real session (vr_mirror\e2e\replay\*.csv: head
+// The inputs pipeline_replay runs the pipeline on: a replay of a real session (vr_mirror\e2e\replay\*.csv: head
 // poses, the runtime's per-slot predictions, game frames with the lag they were really drawn with) or
 // a synthetic motion spec (vr_mirror\e2e\fake_game\fake_game_motion.h, perfect predictions), and ReplayPoses,
 // a PoseSource over one: it feeds core's PoseHistory in time order up to the moment a host draws, as
@@ -19,7 +19,7 @@
 #include "fake_game_motion.h"
 #include "fake_pvr_replay.h"
 
-namespace stage_replay {
+namespace pipeline_replay {
 
     constexpr double kPeriod = 1.0 / 90;  // the fake's and the Dream Air's display
 

@@ -22,7 +22,7 @@
 #include "runs.h"
 #include "scores.h"
 
-namespace stage_replay {
+namespace pipeline_replay {
 
     // The Pimax game eye.
     const EyeInfo kEye = {1.195f, 1.173f, 0.984f, 0.984f, {0, 0.0175f, 0, 0.9998f}, true};

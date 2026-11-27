@@ -40,7 +40,7 @@ The rules for includes, file names and the build lists are in the dev skill
 | `common\rot.h` | Quaternion maths (`Quat`, `Slerp`, `LookRotation`, `ToMatrix`, small rotations as rotation vectors) |
 | `common\game_frame.h` | A game frame's record (`GameFrame`) and the game eye's geometry (`EyeInfo`) |
 | `common\settings.h` | VR Mirror's settings (smoothing, zoom, the drawn pose method), with `VisitSettings` for loading, saving and the UI |
-| `common\pose_source.h` | Where the pipeline gets head poses and the runtime's predictions per display slot. The interface is implemented by `PimaxSource` live and by recorded poses in `vr_mirror\e2e\stage_replay` |
+| `common\pose_source.h` | Where the pipeline gets head poses and the runtime's predictions per display slot. The interface is implemented by `PimaxSource` live and by recorded poses in `vr_mirror\e2e\pipeline_replay` |
 | `common\pose_history.h` | The recent head poses and the predictions per display slot, with their lookups: a slot's own, or interpolated between slots (logic) |
 | `common\clock_sync.h` | The offset between the Pimax runtime's clock and the performance counter (logic) |
 | `common\arrival_stats.h` | The game's frame rate over 3 s windows and the timing noise the arrival timing removed, for the log (logic) |

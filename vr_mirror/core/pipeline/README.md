@@ -2,7 +2,7 @@
 
 The pipeline turns a game frame into the stabilized view. It has five stages, in the order the data
 flows. Each stage is an interface with one or more implementations. They can be swapped, replayed
-alone (`vr_mirror\e2e\stage_replay`) or mixed through the builder. The folder numbers give the order.
+alone (`vr_mirror\e2e\pipeline_replay`) or mixed through the builder. The folder numbers give the order.
 
 ## Terms
 
@@ -111,5 +111,5 @@ heads, the window's predictions.
 No stage includes another. The smoothing calls the image room, which is stateless geometry beside
 the stages. A stage gets its inputs as plain data and returns plain data, and nothing specific to one
 method crosses an interface. A new implementation of a stage touches only its own files, plus one value
-in `pipeline_config.h` and one `case` in `pipeline_builder.cpp`. `stage_replay` (`vr_mirror\e2e\`) runs
+in `pipeline_config.h` and one `case` in `pipeline_builder.cpp`. `pipeline_replay` (`vr_mirror\e2e\`) runs
 it alone or mixed with the others, and hosts follow `ConfigFor`.

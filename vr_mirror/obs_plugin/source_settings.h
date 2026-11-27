@@ -24,7 +24,7 @@ namespace source_settings {
     constexpr int kNoSmoothingLevel = 0, kLightestStrengthLevel = 1;
     constexpr int kTunedStrengthLevel = 5, kMaxStrengthLevel = 10;
     constexpr int kDefaultStrengthLevel = 3;  // a factor of 0.5
-    // Measured with stage_replay at zoom 1.25: at strength 2 Look-ahead still never stopped at an edge on the
+    // Measured with pipeline_replay at zoom 1.25: at strength 2 Look-ahead still never stopped at an edge on the
     // racing motion; at 3 it did on 2.8% of its frames, and its jitter rose from 0.001 to 0.33 deg, because
     // it sees only half a second ahead (findings\obs_plugin.md).
     constexpr float kMinStrength = 0.25f, kMaxStrength = 2.0f;
