@@ -113,7 +113,8 @@ for the agents that read those files. Change the rules here, never in those file
     after every edit.
   - Checks in the headset or in OBS come last. Tell the user exactly what to look at.
 - **Git instead of backups.**
-  - Make one small commit per change. The subject is `Area: what changed` and the body says why.
+  - Make one small commit per change. The subject is `type(scope): what changed` and the body says
+    why.
   - Sign off every commit with `git commit -s`, the maintainer's and every agent's (step 6).
   - An agent ends every commit message with the attribution line its own instructions give, if any.
   - Never commit build output, captures or local `.ini` files, or binaries the build can make (OBS's
@@ -799,7 +800,7 @@ Record what each start of the game showed in `findings\openxr.md`.
 ## 6. Commit
 
 - Commit each finished change on its own, without being asked.
-- The subject is `Area: what changed`. The body says why. An agent ends the message with the
+- The subject is `type(scope): what changed`. The body says why. An agent ends the message with the
   attribution line its own instructions give, if any. Write the message by the pull-requests skill
   ("Commit messages"), and check a branch's messages before pushing it.
 - Commit with `git commit -s`, the maintainer and every agent alike. It adds a `Signed-off-by:` line
@@ -840,7 +841,7 @@ Record what each start of the game showed in `findings\openxr.md`.
   | Docs | `check_docs.py` |
   | Public text | `check_public_text.py` on every file and on the pull request's commits |
   | Pipeline output | `stage_replay --golden` against the expected output in `vr_mirror\e2e\stage_replay\golden_expected.txt`, run by run. Any change fails it, and the run uploads the new golden file and its `golden_expected.txt` ("Tests", "The pipeline's expected output") |
-  | Changelog | The type label and the Changelog section as a release reads them (`release.py --check-pr`) |
+  | Changelog | The type label and the Changelog section as a release reads them, and the title's form and type (`release.py --check-pr`) |
   | Description | `check_public_text.py` on the description |
 
   `.github\workflows\checks.yml` holds the first six, which also run on each push to `main`. Build
@@ -864,8 +865,8 @@ Record what each start of the game showed in `findings\openxr.md`.
   the local files test, and the checks in OBS and in the headset are still done by hand, as steps 3 to
   5 say.
 - **Write the pull request by the pull-requests skill** (`.agents\skills\pull-requests\SKILL.md`): its
-  title, its description from the template, which covers this change only, and its one type label,
-  which feeds the changelog. The release script refuses a release while a pull request since the last
+  title (`type(scope): what changed`), its description from the template, which covers this change
+  only, and its one type label, which feeds the changelog. Issues take the same labels. The release script refuses a release while a pull request since the last
   one has no type label.
 - **The pull request names the issues it closes and the issues it works on.** Before writing it, look
   through the open issues (`gh issue list --state open`) and read the "Done when" of each one the

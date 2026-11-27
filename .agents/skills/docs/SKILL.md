@@ -207,13 +207,14 @@ assumes.
 reader. It has one section per release, newest first, in the Keep a Changelog format.
 
 - **Its lines are written in the pull request,** in the Changelog section of its description, with
-  one label for their heading: `added`, `changed`, `fixed`, `removed` or `security`. The release
+  one label for their heading: `feature` (Added), `change` (Changed), `bug` (Fixed), `removal`
+  (Removed) or `security` (Security). The release
   script copies them into `CHANGELOG.md` at a release. Don't edit `CHANGELOG.md` in any other pull
   request.
 - **Every change users notice gets lines, in the same pull request,** the way a README moves with the
   code. Users notice what they see, set, install or run, and how well it works. A pull request whose
-  change only contributors notice is labelled `internal` and has none: tests, refactors,
-  contributors' docs, the skills, the build, findings.
+  change only contributors notice is labelled `documentation` or `maintenance` and has none: tests,
+  refactors, contributors' docs, the skills, the build, findings.
 - **One to three lines per pull request,** each a bullet (`- `) with one change. Say what changed for
   the user, with its numbers and conditions, in the words of the root README. Use the names the user
   sees: the sources, the settings, the files they run or open.
@@ -224,7 +225,7 @@ reader. It has one section per release, newest first, in the Keep a Changelog fo
 |---|---|---|
 | Build: each DLL carries the version in its version resource | A commit subject, for developers | Windows shows SimOptix's version in each plugin's Properties, under Details |
 | Fixed the install | Doesn't say what was wrong, or for whom | `build.bat install` makes the plugin's folders on a PC that has none |
-| Refactored the frame ring into its own file | Users notice nothing. Label it `internal`, with no lines | (no line) |
+| Refactored the frame ring into its own file | Users notice nothing. Label it `maintenance`, with no lines | (no line) |
 
 ## Findings and reference files
 
@@ -308,5 +309,6 @@ them)". A clean run is not the end. Read the rest yourself.
 - [ ] The matching README, `CONTRIBUTING.md` and the dev skill changed together (dev skill, "Docs move
       with the code")
 - [ ] A change users notice has one to three lines in its pull request's Changelog section and one
-      type label. Any other pull request is labelled `internal` ("The changelog")
-- [ ] The commit subject is `Docs: what changed`
+      type label. Any other pull request is labelled `documentation` or `maintenance` ("The
+      changelog")
+- [ ] The commit subject is `docs(<scope>): what changed`
