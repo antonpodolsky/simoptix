@@ -352,8 +352,9 @@ already merged, and settings saved with an older name.
 
 ## Talk in plain words
 
-Everything the user reads (messages, plans, questions, recaps, READMEs) must be understandable at first
-read, without decoding.
+Everything the user reads (messages, plans, questions, recaps, the root README and the plugin READMEs)
+must be understandable at first read, without decoding. The skills and the docs for contributors use
+the technical terms instead (docs skill, "Docs for contributors use the technical term").
 
 - Use short, everyday sentences, one idea each. Say what happens, in the user's terms: "the G-meter
   gets the car's readings from 0.5 s ago", not "consumers get the samples up to the shown moment".

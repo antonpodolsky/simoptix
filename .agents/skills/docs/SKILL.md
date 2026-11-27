@@ -26,6 +26,15 @@ It doesn't try to sound good.
   would have to work out what is meant.
 - **Use the reader's own terms.** An OBS plugin adds a **source**. Pimax Play's setting is **Render
   Quality**. Never write around a word the reader uses every day.
+- **Docs for contributors use the technical term.** That is every level below the plugin READMEs in
+  "Who reads what" (below), the skills included. They name each thing by its standard term in git,
+  GitHub, Windows, Direct3D, C++ or the tool in question. A figure of speech, an everyday paraphrase or
+  a word of the writer's own never stands in for it:
+  - "the app sends the agent a message", not "the agent hears from the app"
+  - "a squash merge", not "GitHub folds the branch into one commit"
+  - "the render thread blocks on the mutex", not "the render thread waits its turn"
+
+  A term the reader of that level may not know gets a row in a terms table (rule 2). It isn't replaced.
 - **Keep a professional tone.** State a rule as what the project does or requires, in a neutral
   sentence, with its reason. No slogans or blunt commands as a bold lead ("Never touch the game"),
   and no dismissive asides ("There are no unit tests, and none are wanted").
@@ -281,6 +290,8 @@ them)". A clean run is not the end. Read the rest yourself.
 
 - [ ] Each changed sentence states its facts in the plainest words: plain verbs, things named, the
       reader's own terms ("State the facts, plainly")
+- [ ] In the skills and the docs for contributors, each thing has its technical term, never a figure
+      of speech or a paraphrase ("State the facts, plainly")
 - [ ] The tone is professional: no slogans, blunt commands as bold leads, or dismissive asides
 - [ ] Only what the maintainer pointed at changed, and their wording is used as given
 - [ ] No semicolons outside code blocks, inline code and legal text (script)
