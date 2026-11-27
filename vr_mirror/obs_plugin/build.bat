@@ -7,7 +7,7 @@ rem mirror_view.cpp with the effect in warp_effect.cpp, its empty state by empty
 rem ..\..\shared\text_raster.cpp, its text by empty_state_text.cpp and the facts on it by setup_facts.cpp
 rem with video_memory.cpp, its frames
 rem copied by frame_ring.cpp, its frame source started and stopped by session_worker.cpp, the audio kept
-rem in step with its view by audio_sync.cpp), and its race
+rem in step with its view by audio_sync.cpp, the game's sound by auto_sync\*.cpp), and its race
 rem auto-record (race_auto_record\race_recorder.cpp decides when, race_auto_record\auto_record.cpp tells
 rem OBS), the lap recorder for the demo (lap_recorder\: lap_finder.cpp finds the lap, lap_video.cpp encodes it,
 rem lap_recorder.cpp runs both), plus the frame sources (..\frame_sources\pimax, openxr and demo, each
@@ -42,6 +42,9 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_S
    plugin.cpp source_settings.cpp mirror_view.cpp video_memory.cpp setup_facts.cpp warp_effect.cpp ^
    empty_state.cpp empty_state_text.cpp frame_ring.cpp session_worker.cpp ^
    audio_sync.cpp ^
+   auto_sync\auto_sync.cpp auto_sync\auto_sync_values.cpp auto_sync\audio_tap.cpp auto_sync\tracking_grid.cpp ^
+   auto_sync\sync_setup.cpp ^
+   auto_sync\hover_sync_measure.cpp auto_sync\hover_highlight.cpp auto_sync\hover_tick.cpp auto_sync\hover_tally.cpp ^
    race_auto_record\race_recorder.cpp race_auto_record\auto_record.cpp ^
    lap_recorder\lap_finder.cpp lap_recorder\lap_video.cpp lap_recorder\lap_recorder.cpp ^
    ..\..\shared\shared_memory.cpp ..\..\shared\program_delay.cpp ..\..\shared\crash_dump.cpp ^

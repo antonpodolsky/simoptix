@@ -341,6 +341,11 @@ void MirrorView::StartStop() {
         statStart_ = 0;  // a new 10 s stretch of stats (LogStats)
         statTicks_ = statRepeats_ = statJumps_ = statNoFrame_ = statHeld_ = 0;
         KeepReportedFacts();
+
+        if (frameSource_ == gameSource_.get()) {
+            autoSync_.Start();
+        }
+
         blog(LOG_INFO, "[simoptix_vr_mirror] started (source shown): %s", frameSource_->Name());
     } else if (!run && state == SessionWorker::kRunning) {
         StopSession(wanted_ ? "switching between the game and the demo" : "source hidden");
@@ -370,6 +375,7 @@ void MirrorView::StopSession(const char* why) {
 
     if (started_) {
         ToggleTrace(false);
+        autoSync_.Stop();
         started_ = false;
         warpSlot_ = -1;
         obs_enter_graphics();

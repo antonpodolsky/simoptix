@@ -4,7 +4,7 @@ rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds the fake PVR runtime (bin\libPVRClient64.dll), the fake game with the OpenXR layer's
 rem frames (bin\fake_openxr.exe), the e2e runner (bin\e2e_runner.exe), the local files test
 rem (bin\local_files_e2e.exe) with its fake game that loads the layer's DLL
-rem (bin\fake_layer_game\Le Mans Ultimate.exe), and
+rem (bin\fake_layer_game\Le Mans Ultimate.exe), the auto sync test (bin\auto_sync_e2e.exe), and
 rem the stage replay (bin\stage_replay.exe: the pipeline and its stages offline, the drawn pose's
 rem replay simulation included).
 setlocal
@@ -22,11 +22,13 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /LD /Fo:obj\ ^
 if not exist obj\fake_openxr mkdir obj\fake_openxr
 cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /Fo:obj\fake_openxr\ ^
    /I..\.. /I..\core /Ifake_game /I..\..\third_party\openxr ^
-   fake_openxr\fake_openxr.cpp fake_openxr\fake_openxr_layer.cpp fake_game\fake_game_image.cpp ^
+   fake_openxr\fake_openxr.cpp fake_openxr\fake_openxr_layer.cpp fake_openxr\fake_openxr_recording.cpp ^
+   fake_openxr\fake_openxr_sound.cpp ^
+   fake_game\fake_game_image.cpp ^
    ..\frame_sources\openxr\openxr_layer_frames.cpp ..\frame_sources\openxr\openxr_publisher.cpp ^
    ..\frame_sources\openxr\openxr_layer_timing.cpp ..\frame_sources\openxr\openxr_frame_timing.cpp ^
    ..\..\shared\log.cpp /Fe:bin\fake_openxr.exe ^
-   /link d3d11.lib dxgi.lib d3dcompiler.lib winmm.lib || exit /b 1
+   /link d3d11.lib dxgi.lib d3dcompiler.lib winmm.lib ole32.lib || exit /b 1
 
 rem The runner captures windows with the Windows SDK's C++/WinRT. A C++/WinRT that includes C++20's
 rem <coroutine> gets C++20, because under C++17 it includes <experimental/coroutine>, which MSVC 14.51
@@ -47,6 +49,13 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /DUNICODE /D_UNICODE /Fo:obj\loca
    local_files\local_files_e2e.cpp local_files\local_files_obs.cpp local_files\local_files_folder.cpp ^
    runner\tool_process.cpp ^
    /Fe:bin\local_files_e2e.exe /link user32.lib || exit /b 1
+
+if not exist obj\auto_sync_e2e mkdir obj\auto_sync_e2e
+cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /DUNICODE /D_UNICODE /Fo:obj\auto_sync_e2e\ ^
+   /I..\.. /I..\core /Irunner /Ilocal_files ^
+   auto_sync_e2e\auto_sync_e2e.cpp local_files\local_files_obs.cpp local_files\local_files_folder.cpp ^
+   runner\tool_process.cpp ^
+   /Fe:bin\auto_sync_e2e.exe /link user32.lib || exit /b 1
 
 if not exist obj\fake_layer_game mkdir obj\fake_layer_game
 if not exist bin\fake_layer_game mkdir bin\fake_layer_game

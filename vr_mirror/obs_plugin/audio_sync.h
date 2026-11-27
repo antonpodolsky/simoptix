@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // AudioSync: keeps every audio source in step with the VR Mirror source's view, which runs ProgramDelay
 // behind the game (look-ahead smoothing): each audio source's sync offset becomes its own offset plus
-// that delay. LMU's sound keeps its own offset (-120 ms: it trails the view), so it ends up that
-// much earlier than the rest, without this knowing which source it is.
+// that delay. The game's sound gets a correction on top, once auto sync has found which source it is
+// and how far its sound is out of step with the view (auto_sync\auto_sync.h). Its own offset is then
+// best left at 0.
 //
 // The shift each source got is kept in its private settings, which OBS saves with the scene, so a
 // source's own offset is always its current offset minus that shift: it comes back exactly when the
@@ -16,10 +17,14 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 namespace AudioSync {
     void Start();  // obs_module_load
     void Stop();   // obs_module_unload (offsets stay as they are: each source carries its shift)
+    // Any thread: the audio source named `name` carries the game's sound, which needs `correctionS` on
+    // top of the view's delay while there is one.
+    void SetGameSound(const std::string& name, double correctionS);
 }
 
 // Logic: the sync offset (ns) a source gets for `shift`, from its `current` offset and the shift it

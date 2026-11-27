@@ -27,6 +27,8 @@ project settings set `context.fileName` to `AGENTS.md`.
 | fake runtime | The stand-in for Pimax's client library that the e2e tests use in place of a headset and a game |
 | replay | A real session played back through the fake runtime: its head poses, the runtime's predictions, and every game frame at its real arrival time |
 | stage replay | `stage_replay.exe`. It runs the pipeline's stages offline, without the mirror app, the fake runtime or the GPU |
+| data folder | The folder `SIMOPTIX_DATA` names, outside the repo, where analyses of recordings are kept |
+| auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
 
 ## Before you start
 
@@ -81,7 +83,7 @@ and fail on any warning, run
 |---|---|---|
 | `vr_mirror\core\`, `vr_mirror\frame_sources\pimax\` | Both plugins, `vr_mirror\mirror_app\build.bat`, `vr_mirror\e2e\build.bat` | Yes |
 | `shared\` | The same, and `shared\telemetry\games\lmu\fake\build.bat` for a telemetry change, and `vr_mirror\frame_sources\openxr\build.bat` for `shared\local_files.*` | If the mirror app or the tests use the file. The local files test for `shared\local_files.*` and the crash dump |
-| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins | The local files test for the Debug setting's trace files. Otherwise no. Check in OBS (below) |
+| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins | The local files test for the Debug setting's trace files. The auto sync test for `vr_mirror\obs_plugin\auto_sync\`. Otherwise no. Check in OBS (below) |
 | `vr_mirror\mirror_app\` | `vr_mirror\mirror_app\build.bat` | Yes, for a change in behaviour |
 | `vr_mirror\e2e\` | `vr_mirror\e2e\build.bat` | The scenarios that changed |
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`, which checks the declarations against Pimax's headers. Without the SDK it says so and skips | Yes |
@@ -119,6 +121,11 @@ OpenXR layer write under `%LOCALAPPDATA%\simoptix`: the Debug setting's traces, 
 layer's logs. It runs the built plugins in a private copy of OBS, and the built layer in a fake game.
 Build both plugins, the layer and `vr_mirror\e2e\build.bat` first, and close OBS and LMU. It takes about
 a minute, and its first run copies OBS (466 MB).
+
+The auto sync test (`vr_mirror\e2e\bin\auto_sync_e2e.exe`) checks auto sync in the built plugin, in a
+private copy of OBS, with a fake game that plays a cut of a real recording of LMU's menus. The cut
+stays in the data folder, so it runs only where it is. Run it after a change to `vr_mirror\obs_plugin\auto_sync\`.
+It takes about half a minute, and its sound is heard. Play no other sound meanwhile: it drowns the ticks.
 
 The stage replay (`vr_mirror\e2e\bin\stage_replay.exe`) runs in about a second. Use it to find out why
 a scenario fails, and to check that a refactor changes nothing (`.agents\skills\dev\reference\e2e.md`).
@@ -205,14 +212,14 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   issue its own line, because in `Fixes #12, #27` GitHub closes only #12. `Part of #<number>` names an
   issue the change works on and leaves open.
 - GitHub checks each pull request, and a failing check fails it: Build (every part, with no warnings),
-  Format (clang-format and ruff), Docs, Public text and Pipeline output (the stage replay's output
+  Format (clang-format and ruff), Docs, Public text, Pipeline output (the stage replay's output
   against `vr_mirror\e2e\stage_replay\golden_expected.txt`), in `.github\workflows\checks.yml`. A pull
-  request that changes only Markdown files skips Build and Pipeline output, because no build reads
-  them, and runs the other checks. Changelog checks the label and the Changelog section the way a
+  request that changes only Markdown files skips Build and Pipeline output, because no build reads them,
+  and runs the other checks. Changelog checks the label and the Changelog section the way a
   release reads them, and Description the description's public text, each time either changes
   (`.github\workflows\pull_request.yml`). The Changelog section ends the description, so nothing goes
   after it. GitHub's runners have no LMU, no Pimax SDK, no headset and no graphics card, so the e2e
-  suite and the local files test run only by hand (Test, above). Say in the pull request what you checked by hand.
+  suite, the local files test and the auto sync test run only by hand (Test, above). Say in the pull request what you checked by hand.
 - Give the pull request one label, which decides whether it goes into `CHANGELOG.md`:
   - If users notice the change, label it `added`, `changed`, `fixed`, `removed` or `security`. Then
     write one to three lines in the Changelog section of its description. Write them for a VR sim
