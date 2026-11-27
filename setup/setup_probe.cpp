@@ -17,8 +17,20 @@ namespace {
         return FindEmbeddedFile(resource, &file, &error) && HasSameBytes(path, file);
     }
 
-    // The part's DLL decides whether it is installed. It is the same build only when its manifest is
-    // the same too, so a copy with a missing or older manifest counts as different.
+    bool HasSameDataFiles(const Part& part) {
+        for (size_t i = 0; i < part.dataFileCount; ++i) {
+            const DataFile& file = part.dataFiles[i];
+
+            if (!IsSameAsEmbedded(PluginDataFilePath(part, file), file.resource)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // The part's DLL decides whether it is installed. It is the same build only when its manifest and
+    // its data files are the same too, so a copy with a missing or older one counts as different.
     InstalledCopy CompareCopy(const Part& part, const std::wstring& dll, const std::wstring& manifest) {
         if (!FileExists(dll)) {
             return InstalledCopy::kNone;
@@ -26,7 +38,8 @@ namespace {
 
         const bool sameDll = IsSameAsEmbedded(dll, part.dllResource);
         const bool sameManifest = IsSameAsEmbedded(manifest, part.manifestResource);
-        return sameDll && sameManifest ? InstalledCopy::kSame : InstalledCopy::kDifferent;
+        const bool sameData = HasSameDataFiles(part);
+        return sameDll && sameManifest && sameData ? InstalledCopy::kSame : InstalledCopy::kDifferent;
     }
 
     PluginLayout OtherLayout(PluginLayout layout) {

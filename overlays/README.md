@@ -27,10 +27,10 @@ this out from the delay alone, not by looking at the view. Without VR Mirror the
 
 | Folder | What |
 |---|---|
-| `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources), the DLL's version resource (`version.rc`) and `build.bat` |
+| `obs_plugin\` | The OBS module (`plugin.cpp` registers the sources), the DLL's version resource (`version.rc`), `build.bat`, and the icons OBS shows beside the sources (`data\icons\`, one SVG for OBS's dark themes and one for its light themes) |
 | `gmeter\` | The G-meter: the source (`gmeter_source.cpp`), its two themes (`meter_theme.h`: Chrono in `meter_chrono.*`, OLED in `meter_oled.*`), the dot both draw (`meter_dot.*`), the values it draws (`meter_view.h`), and its image layers, embedded by `gmeter.rc` from `design\` |
 | `performance\` | The performance overlay: the source (`performance_source.cpp`), its Chrono and OLED themes (`performance_theme.*`), what each cell shows (`performance_view.*`), and its image layers, embedded by `performance.rc` from `design\`. The frame times it reads are in `shared\performance\` |
-| `common\` | What any overlay can reuse: shapes (`meter_draw.*`), labels (`meter_text.*`), image layers (`meter_image.*`), the box on the canvas that keeps an overlay drawn at its shown size and places a new one (`overlay_box.*`), and the 1:1 properties preview (`properties_preview.*`). Text is rasterised by `shared	ext_raster.*`, which VR Mirror uses too |
+| `common\` | What any overlay can reuse: shapes (`meter_draw.*`), labels (`meter_text.*`), image layers (`meter_image.*`), the box on the canvas that keeps an overlay drawn at its shown size and places a new one (`overlay_box.*`), and the 1:1 properties preview (`properties_preview.*`). Text is rasterised by `shared\text_raster.*`, which VR Mirror uses too |
 
 The demo lap that the G-meter can play without the game is in `shared\telemetry\demo_lap.*`, beside the
 telemetry it stands in for.
@@ -40,8 +40,9 @@ telemetry it stands in for.
 1. With OBS closed, run `build.bat install` in `obs_plugin\`. The root `README.md` lists what the build
    needs. The script builds the plugin and copies it to
    `C:\ProgramData\obs-studio\plugins\simoptix_overlays\bin\64bit`. It also copies the plugin's
-   `manifest.json` to `data` beside `bin`. OBS 32 reads the plugin's name and version from it. If you use the VR Mirror plugin,
-   install it from the same build.
+   `manifest.json` to `data` beside `bin`. OBS 32 reads the plugin's name and version from it. It
+   copies the sources' icons to `data\icons`, and OBS 32.2 and later show them beside the sources. If
+   you use the VR Mirror plugin, install it from the same build.
 2. In OBS, add a **SimOptix: G-Meter Overlay** or a **SimOptix: Performance Overlay** source.
 
 Reading LMU needs its telemetry headers from the game's folder at build time, because their licence

@@ -2,7 +2,8 @@
 rem Copyright (C) 2026 Anton Podolsky
 rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds SimOptix Setup, bin\simoptix_setup.exe, one file that carries VR Mirror, Overlays and the
-rem OpenXR layer inside it, each with its manifest (setup.rc), and installs them. setup_main.cpp starts
+rem OpenXR layer inside it, each with its manifest and the plugins with their sources' icons
+rem (setup.rc), and installs them. setup_main.cpp starts
 rem it, setup_window.cpp is its window and setup_look.cpp draws it, setup_status.cpp decides from what
 rem setup_probe.cpp reads, and setup_install.cpp and setup_uninstall.cpp make the changes, through
 rem setup_payload.cpp, setup_signature.cpp, setup_registry.cpp and setup_system.cpp. setup_places.cpp

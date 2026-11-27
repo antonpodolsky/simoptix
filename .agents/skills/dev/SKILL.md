@@ -571,10 +571,11 @@ committed.
 `build.bat install` in `vr_mirror\obs_plugin\` and in `overlays\obs_plugin\` builds each plugin and
 copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`. It also copies the
 `manifest.json` that the build wrote into its own `bin` folder, with the version filled in, to the
-plugin's `data` folder beside `bin`, where OBS 32 and later read it. OBS must be closed, because it
-holds the DLLs. Install both from one build, because the telemetry both read checks that they match.
+plugin's `data` folder beside `bin`, where OBS 32 and later read it, and the sources' icons from the
+plugin's own `data\icons` folder to `data\icons` there. OBS must be closed, because it holds the DLLs.
+Install both from one build, because the telemetry both read checks that they match.
 Plugins that SimOptix Setup installed belong to the administrators, and `build.bat install` then stops
-with "cannot install". Copy the two files of each plugin from its `bin` folder with administrator
+with "cannot install". Copy each plugin's DLL, `manifest.json` and icons to those folders with administrator
 rights instead (a PowerShell script started with `Start-Process -Verb RunAs`, which Windows asks the
 user to allow), and check the version in the installed `manifest.json`.
 

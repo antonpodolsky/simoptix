@@ -102,8 +102,9 @@ To build:
 1. Close OBS.
 2. Run `vr_mirror\obs_plugin\build.bat install` and `overlays\obs_plugin\build.bat install`. Each
    builds its plugin and copies it to OBS's plugin folder
-   (`C:\ProgramData\obs-studio\plugins\<its name>`): the DLL to `bin\64bit`, and `manifest.json` with
-   the plugin's name and version to `data`. Install both from one build, because they share the game's
+   (`C:\ProgramData\obs-studio\plugins\<its name>`): the DLL to `bin\64bit`, `manifest.json` with the
+   plugin's name and version to `data`, and its sources' icons to `data\icons`. OBS 32.2 and later show
+   those icons beside the sources. Install both from one build, because they share the game's
    data and check that they match. If SimOptix Setup installed the plugins, their files belong to the
    administrators, and the script stops with "cannot install": run it from a command prompt opened as
    administrator.

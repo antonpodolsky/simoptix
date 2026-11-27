@@ -92,7 +92,8 @@ and fail on any warning, run
 
 The two plugins are `vr_mirror\obs_plugin\build.bat` and `overlays\obs_plugin\build.bat`. With the
 argument `install`, each also copies its DLL to `C:\ProgramData\obs-studio\plugins\<its name>\bin\64bit`,
-and its `manifest.json`, which OBS 32 reads for the plugin's name and version, to `data` beside it.
+its `manifest.json`, which OBS 32 reads for the plugin's name and version, to `data` beside it, and its
+sources' icons from its `data\icons` folder to `data\icons` there.
 OBS must be closed, because it holds the DLLs. Install both from the same build, because the telemetry
 they share checks that they match. Plugins that SimOptix Setup installed belong to the administrators:
 the install then stops with "cannot install", and it has to run as administrator.
