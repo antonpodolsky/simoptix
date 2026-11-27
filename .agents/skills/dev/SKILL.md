@@ -275,6 +275,13 @@ for the agents that read those files. Change the rules here, never in those file
   - Run it at the end of a change to `shared\local_files.*`, the crash dump, the frame trace's files or
     the layer's log, and give such a change a case there.
   - It takes about a minute. OBS and LMU must be closed. Its first run copies OBS (466 MB).
+- **The auto sync test (`vr_mirror\e2e\bin\auto_sync_e2e.exe`):** the real, built OBS plugin in a private
+  copy of OBS, with a fake game that plays a cut of a real recording of LMU's menus from the data folder.
+  It checks what auto sync settles at (`vr_mirror\e2e\README.md`, "The auto sync test").
+  - Run it at the end of a change to `vr_mirror\obs_plugin\auto_sync\`, or to the fakes it uses.
+  - It takes about half a minute, and its sound is heard. OBS and LMU must be closed, no other sound
+    may play (it drowns the ticks), and nobody should use the PC meanwhile, so ask the user before
+    running it.
 - **What gets a scenario:**
   - New behaviour in the pipeline gets a scenario, or a new measure in an existing one.
   - A pipeline bug gets a scenario that reproduces it before the fix, when the fake runtime can produce
@@ -542,7 +549,7 @@ committed.
 |---|---|---|
 | `vr_mirror\core\`, `vr_mirror\frame_sources\pimax\` | Both plugins (step 4), `vr_mirror\mirror_app\build.bat`, `vr_mirror\e2e\build.bat` | Yes |
 | `shared\` | The same, and `shared\telemetry\games\lmu\fake\build.bat` for a telemetry change, and `vr_mirror\frame_sources\openxr\build.bat` for `shared\local_files.*` | If the mirror app or e2e use the file. The local files test for `shared\local_files.*` and the crash dump |
-| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins (step 4) | The local files test for the frame trace's files. Otherwise no. Verify as in step 5 |
+| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins (step 4) | The local files test for the frame trace's files. The auto sync test for `vr_mirror\obs_plugin\auto_sync\`. Otherwise no. Verify as in step 5 |
 | `vr_mirror\mirror_app\` | `vr_mirror\mirror_app\build.bat` (if `simoptix_vr_mirror.exe` is running, build `simoptix_vr_mirror_dev.exe` instead) | Yes, for behaviour changes |
 | `vr_mirror\e2e\` | `vr_mirror\e2e\build.bat` | The scenarios that changed |
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`: the layout check, on a PC with Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`. `PVR_SDK` names another `Include` folder. Without the SDK it says so and skips | Yes |
@@ -845,12 +852,12 @@ Record what each start of the game showed in `findings\openxr.md`.
   | Description | `check_public_text.py` on the description |
 
   `.github\workflows\checks.yml` holds the first six, which also run on each push to `main`. Build
-  builds once and uploads what it built. Pipeline output waits for it and runs those files, so it
-  tests what Build built, and is skipped when Build fails or is skipped.
+  builds once and uploads what it built. Pipeline output waits for it and runs those files, so it tests
+  what Build built, and is skipped when Build fails or is skipped.
 
   On a pull request that changes only Markdown files (`*.md`, anywhere in the repo), Build and Pipeline
-  output are skipped, because no build reads those files. Any other changed file runs both, the
-  workflows and the scripts in `.agents\skills\` included. Format, Docs and Public text run on every
+  output are skipped, because no build reads those files. Any other changed file runs
+  them, the workflows and the scripts in `.agents\skills\` included. Format, Docs and Public text run on every
   pull request, and a push to `main` runs every check. GitHub counts a skipped check as passed.
 
   `.github\workflows\pull_request.yml` holds Changelog and Description, which also run each time the

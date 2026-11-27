@@ -15,6 +15,9 @@ using Microsoft::WRL::ComPtr;
 
 namespace {
 
+    // A frame this long after the one before starts the game's frames again (FrameStarts).
+    constexpr double kStartGapS = 2.0;
+
     // A frame as the forecast sees it: it is asked before any copy.
     StoredFrame Stored(const GameFrame& f) {
         return {true, f.serial, f.time, f.smoothTime, f.slotTime, 0, f.synced};
@@ -83,6 +86,8 @@ bool FrameRing::Start(FrameSource* source) {
 
     TakeNewDrawnPose();
     feed_.Init(device_.Get());
+    greys_.Init(device_.Get(), false, kGreyWidth, kGreyHeight, 4);
+    greysPendingCount_ = 0;
 
     if (!wake_) {
         wake_.Reset(CreateEventW(nullptr, FALSE, FALSE, nullptr));
@@ -121,6 +126,7 @@ void FrameRing::Stop() {
 
     feed_.Reset();
     feed_.Release();  // its images were made on this device, released below
+    greys_ = Thumbnailer();
     if (source_) {
         source_->ReleaseImages();  // ...and the source's, opened on it
     }
@@ -197,7 +203,7 @@ void FrameRing::Run() {
         if (source_->FrameEvent()) {
             wait[n++] = source_->FrameEvent();
         }
-        WaitForMultipleObjects(n, wait, FALSE, WaitMs(copying || feed_.Busy()));
+        WaitForMultipleObjects(n, wait, FALSE, WaitMs(copying || feed_.Busy() || greysPendingCount_ > 0));
     }
 
     timeEndPeriod(1);
@@ -224,6 +230,10 @@ void FrameRing::Arrived(const GameFrame& f) {
 
     if (!held_) {
         CopyAndFeed(f);
+    }
+
+    if (hasPrevious_ && f.time - previous_.time >= kStartGapS) {
+        frameStarts_++;
     }
 
     previous_ = f;
@@ -277,6 +287,10 @@ bool FrameRing::TakeTickRecord() {
 void FrameRing::CopyAndFeed(const GameFrame& f) {
     const int slot = Copy(f);
     const float whole[4] = {0, 0, 1, 1};
+
+    if (slot >= 0 && slots_[slot].View() && greysOn_) {
+        MakeGrey(slot, f);
+    }
 
     if (slot >= 0 && slots_[slot].View()) {
         feed_.Submit(
@@ -400,6 +414,7 @@ void FrameRing::ShrinkTo(int want) {
 // (its own thumbnail and patches are ready ~1 ms after its copy), with Look-ahead about half a
 // second later, by when the frames after it have been looked at too. Copy thread.
 void FrameRing::Look() {
+    ReadGreys();
     feed_.Poll(context_.Get(), source_->RecordedPredictions(), source_->Eye(), source_->Period());
     const CallStats t = feed_.TakeLookTime();
     if (t.count == 0) {
@@ -450,4 +465,62 @@ bool FrameRing::CheckCopies() {
     }
 
     return pending;
+}
+
+// Queues a small grey copy of slot `slot`'s image (frame `f`), with the head pose the frame was drawn
+// with: the one the frame source says, else its arrival slot's. Copy thread.
+void FrameRing::MakeGrey(int slot, const GameFrame& f) {
+    Quat pose;
+    const double drawnFor = f.drawnSlot > 0 ? f.drawnSlot : f.slotTime;
+
+    if (greysPendingCount_ == kGreysPending
+        || !source_->RecordedPredictions().PredictedHeadAt(drawnFor, &pose)) {
+        return;
+    }
+
+    const int64_t
+        ticket = greys_.Make(context_.Get(), slots_[slot].View(), kGreyArea, source_->Eye().encodedTwice);
+
+    if (ticket < 0) {
+        return;
+    }
+
+    greysPending_[greysPendingCount_++] = {ticket, f.smoothTime, pose};
+}
+
+// Keeps the grey copies the GPU has finished, in order. Skipped while auto sync copies them out: the
+// next pass reads them. Copy thread.
+void FrameRing::ReadGreys() {
+    while (greysPendingCount_ > 0) {
+        const GreyPending& first = greysPending_[0];
+        std::vector<float>& values = greysKept_[greyNext_].values;
+
+        {
+            std::unique_lock<std::mutex> lock(greyMutex_, std::try_to_lock);
+
+            if (!lock.owns_lock() || !greys_.Read(context_.Get(), first.ticket, &values)) {
+                return;
+            }
+
+            greysKept_[greyNext_].time = first.time;
+            greysKept_[greyNext_].pose = first.pose;
+            greyNext_ = (greyNext_ + 1) % kGreyKept;
+        }
+
+        std::move(greysPending_ + 1, greysPending_ + greysPendingCount_, greysPending_);
+        greysPendingCount_--;
+    }
+}
+
+void FrameRing::CopyGreys(double from, double to, std::vector<GreyFrame>* out) {
+    std::lock_guard<std::mutex> lock(greyMutex_);
+    out->clear();
+
+    for (int i = 0; i < kGreyKept; i++) {
+        const GreyFrame& grey = greysKept_[(greyNext_ + i) % kGreyKept];
+
+        if (grey.time >= from && grey.time <= to && !grey.values.empty()) {
+            out->push_back(grey);
+        }
+    }
 }

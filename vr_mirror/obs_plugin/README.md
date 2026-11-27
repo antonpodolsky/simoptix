@@ -22,6 +22,7 @@ The two sources show the same view. They differ in where the game's image comes 
 | client mirror | A feature of the Pimax runtime. It gives other programs a half-size copy of the left eye image the game draws, and a signal for each new frame |
 | game eye | The eye image a source works from. The Pimax source's is the client mirror's half-size copy of the left eye. The OpenXR source's is the left eye at full size |
 | output delay | How far the view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden |
+| auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
 | display slot | One of the regular moments at which the headset shows a new image, one per refresh (90 per second at 90 Hz). The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
 | game behind | The game's GPU has fallen behind and queues up to two frames. Each arrives one or two display slots after the slot it was drawn for |
 | slot check | How the Pimax source finds the slot a late frame was really drawn for: it compares small thumbnails of consecutive frames |
@@ -170,13 +171,78 @@ About 2 s after the first game frame, the OBS log says the delay the source sett
   start lights and ends after the finish, as the recorded video shows them.
 - **The sound.** While the source is shown, the plugin adds the delay to every audio source's own Sync
   Offset (Edit → Advanced Audio Properties), and takes it off again when the source is hidden.
-  - Keep each audio source's own offset as it is. A game whose sound trails its image needs an offset
-    of its own.
+  - Keep each audio source's own offset as it is. Set the game's own offset to 0: auto sync moves the
+    game's sound by what it measured (below).
   - The OBS log says how far the sources were shifted ("audio sync: 2 audio sources now ... ms on top
     of their own offsets").
   - Each audio source remembers the shift it got, saved with the scene. So its own offset comes back
     exactly, also after OBS was closed with the source shown.
   - Changing an offset while it is shifted changes the source's own offset by as much.
+
+### Auto sync
+
+The output delay, about half a second with Look-ahead, applies to every audio source as soon as the
+source knows it. The game's sound reaches OBS late by an amount of its own, which auto sync measures in
+LMU's menus and adds on top. That is one way of measuring it, and others can sit beside it
+(`auto_sync\sync_measure.h`).
+
+The G-meter and race auto-record follow the output delay alone. The game draws each frame a little after
+the physics step it shows, so they run slightly ahead of the view.
+
+**How it measures:**
+- **Most of LMU's menu items** light up and tick when the pointer comes onto them.
+- **While you aren't driving,** the source looks in each audio source's sound for ticks: sounds whose
+  high frequencies rise by 25 dB or more within a few milliseconds. For each tick, it looks in the frames
+  from 0.4 s before to 0.1 s after it for the frame in which a small part of the menu lit up while the
+  rest held still. The menu stays put in the headset's tracking space, so turning the head doesn't count.
+  The time from that frame to the tick is the audio source's lag.
+- **The game's sound** is the audio source whose ticks come at the same lag, within 30 ms, three times.
+  Clicks, music and voices make sharp sounds too, and the image often changes before them, but not at the
+  same lag each time. Until three agree, the game's sound keeps the value from before. Then that source
+  is moved back by its lag, on top of the output delay.
+- **It needs** LMU's menus in view, the pointer moved over a few items, and the game's sound in an audio
+  source of the scene.
+
+**When it measures, and when it stops:**
+- **It starts once the game's frames run,** about 3 s after the first (the source reads their rate
+  over 3 s), in each OBS session.
+- **After 5 ticks that agree,** the value is settled, and auto sync stops measuring. It is kept in
+  `auto_sync.json` in VR Mirror's OBS config folder, one entry per source type (Pimax or OpenXR), and the
+  next OBS session starts with it. After 60 ticks without 5 that agree, it stops with what it has.
+- **It measures again when what the value depends on changes:** the game's frame rate (held for 6 s) or
+  the size of its image, its frames starting again after 2 s or more without one (a restart of the game
+  or of its VR session), OBS's audio sources or their settings, or Windows' default output device. A
+  change while it measures starts the measuring over. The value from before applies until a new one
+  settles.
+- **What it costs:** while it measures, a small grey copy of each frame on the copy thread, and the last
+  2 s of each audio source's sound. It works on a thread of its own, at below-normal priority, every
+  250 ms. Once settled, it only reads the setup every 2 s.
+
+The OBS log says when it starts and what it found:
+
+```
+auto sync: measuring, with 2 audio sources
+auto sync: a tick in 'Application Audio Capture (BETA)' at 0.61 s (46 dB), ... ms after its highlight: a step of 30.4 against the median 0.2 of 46 frames; the next 1.0, ... ms before the tick
+auto sync: a tick in 'Application Audio Capture (BETA)' at 0.22 s (67 dB), with no highlight before it: the frames held only from 204 ms before the tick to 1574 ms after the tick
+auto sync now, after 3 ticks: 'Application Audio Capture (BETA)' has them ... ms after (3 agree), so it moves ... ms
+audio sync: 'Application Audio Capture (BETA)' ... ms more (the game's sound, auto sync)
+auto sync done, after 7 ticks: 'Application Audio Capture (BETA)' has them ... ms after (5 agree), so it moves ... ms
+...
+auto sync: measuring again (the game's frame rate, 90 to 72 changed), with 2 audio sources
+```
+
+A tick line comes for each tick heard: when, in seconds since the measuring started, and how far its high
+frequencies rose. Then its lag after the frame that lit up most, that frame's step in grey levels against
+the median step around it, and the frame with the next biggest step. Or, "with no highlight before it",
+and why:
+- The frames around the tick aren't all held: the grey copies had only just started, or the frames
+  stopped.
+- Fewer than 3 frames were there.
+- The biggest step is under 4 grey levels.
+- The biggest step is under 6 times the median step.
+
+A "now" line comes each time the value moves by a millisecond or more, and the "done" line once it is
+settled. A "measuring again" line says what changed.
 
 ### Zoom
 

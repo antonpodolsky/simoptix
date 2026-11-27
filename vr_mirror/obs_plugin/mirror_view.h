@@ -38,6 +38,7 @@
 #include <vector>
 
 #include "adapters/system/trace_writer.h"
+#include "auto_sync/auto_sync.h"
 #include "common/clock_sync.h"
 #include "common/footprint.h"
 #include "common/settings.h"
@@ -133,6 +134,9 @@ private:
     // OBS's show/hide set `wanted_`; the graphics thread asks the session worker to start and stop
     // (StartStop), never waiting for it.
     SessionWorker session_{nullptr, &ring_};
+    // Measures how the game's sound lines up with the view, while the game's frames run. Destroyed before the
+    // ring and the frame source it reads.
+    AutoSync autoSync_{gameSource_.get(), &ring_};
     std::atomic<bool> wanted_{false};
     std::atomic<bool> demoWanted_{false}, lapWanted_{false};
     std::atomic<bool> telemetryHeld_{false};  // for the lap recorder (Telemetry::Acquire)

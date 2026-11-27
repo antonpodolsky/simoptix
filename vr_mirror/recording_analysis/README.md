@@ -22,6 +22,7 @@ closer at one moment. They need the trace that the Pimax source's **Debug** sett
 | display slot | One of the regular moments at which the headset shows a new image, one per refresh (90 per second at 90 Hz). The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
 | tick | One time OBS draws a frame of its output |
 | frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
+| auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
 
 ## Files
 
@@ -50,6 +51,8 @@ closer at one moment. They need the trace that the Pimax source's **Debug** sett
 | `moment.py` | One moment frame by frame: the trace's rows and the frame source's rows for those frames. These are the runtime's arrival rows with the Pimax source, and the layer's rows with the OpenXR source |
 | `aligned_diff.py` | The road's change between frames with the cockpit lined up (frozen or skipped game frames) |
 | `frozen_check.py` | The video-only repeat detector's finds checked against the trace |
+| `sync_check.py` | How well the G-meter and the game's sound line up with the view, from LMU's HUD dial in the recording: its pedal arc against the G-meter's bars, and its gear changes against the engine's pitch drops |
+| `export_menu_cut.py` | A cut of a recording of LMU's menus for the auto sync test: every frame with its camera, and the sound where OBS captured it |
 
 ## How the whole-recording analysis measures
 
