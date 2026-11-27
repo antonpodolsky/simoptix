@@ -49,13 +49,16 @@ the branch changes against `main`, why, what was verified and what wasn't. These
   the subject of the pull request's commit on `main`.
   - **The type** is one of those its label allows ("The label", below): `feat`, `fix`, `perf`,
     `docs`, `refactor`, `test`, `build`, `ci`, `chore` or `style`.
-  - **The scope** is the name of the folder that holds the change: a part's (`overlays`, `pipeline`,
-    `openxr`, `e2e`, `telemetry`, `setup`) or a skill's (`dev`, `pull-requests`). A change to the
-    folders of one name in several parts takes that name (`obs_plugin`). A change across parts, or to
-    the files at the repo's root, takes `repo`.
+  - **The scope** is the part the change is about, by its folder's name: a part's (`vr_mirror`,
+    `overlays`, `pipeline`, `openxr`, `e2e`, `stage_replay`, `telemetry`, `setup`) or a skill's
+    (`dev`, `pull-requests`). The READMEs, `CONTRIBUTING.md` and the skills that change with it
+    leave the scope as it is. A change to the folders of one name in several parts takes that name
+    (`obs_plugin`). A release's pull request takes `release`.
+  - **No scope stands for the whole repo,** because it would say nothing. A change about several
+    parts takes the one it is mostly about, or is split in two.
   - **What changed** starts in lower case, unless it starts with a name (`G-meter`, `OBS`).
   - With one commit, the title is that commit's subject. With several, it says what they do
-    together: `feat(repo): one place names SimOptix's files and keeps the newest 10 of each kind`.
+    together: `feat(shared): one place names SimOptix's files and keeps the newest 10 of each kind`.
   - The Changelog check on GitHub fails a title of another form, or with a type its label doesn't
     allow (`release.py --check-pr`).
 - **The description** follows the template (`.github\pull_request_template.md`):
@@ -168,6 +171,7 @@ done.
 | I've left a note in the shared notes folder | The agent's notes | (delete) |
 | Tested on a recording from last night at Spa | A session's date, a track | Tested on one recording, OpenXR Mirror on Look-ahead |
 | `Fix stuff` | No type, no scope, says nothing | `fix(telemetry): the reader keeps LMU while the game is in its menus` |
+| `feat(repo): auto sync puts the game's sound in step with the view` | `repo` says nothing. The change is about VR Mirror, and its docs changed with it | `feat(vr_mirror): auto sync puts the game's sound in step with the view` |
 | `Telemetry: the reader keeps LMU while the game is in its menus` | No type | `fix(telemetry): the reader keeps LMU while the game is in its menus` |
 | `feat(telemetry): the reader keeps LMU while the game is in its menus`, labelled `bug` | The label `bug` takes the type `fix` | `fix(telemetry): ...` |
 
