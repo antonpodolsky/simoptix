@@ -48,24 +48,28 @@ Bump the version only in a release's pull request, by what changed for users sin
 `CHANGELOG.md` is the one document that holds history, written for users: the root README's reader,
 a VR sim racer (docs skill, "The changelog"). It changes only at a release, by the release script.
 
-Its lines come from the pull requests. Each one carries exactly one type label:
+Its lines come from the pull requests. Each one carries exactly one type label, the same labels
+issues take. The label also decides the types the pull request's title may start with
+(pull-requests skill, "The label"):
 
-| Label | The pull request | Its description's Changelog section |
-|---|---|---|
-| `added` | Adds something users notice: a source, a setting, a game, a headset | One to three lines, each starting with `- ` |
-| `changed` | Changes what users see, set or install, or how well it works | The same |
-| `fixed` | Fixes something users noticed | The same |
-| `removed` | Removes something users had | The same |
-| `security` | Fixes a security problem | The same |
-| `internal` | Changes nothing users notice: tests, refactors, contributors' docs, the skills, the build, findings | Empty |
+| Label | The pull request | Its heading in `CHANGELOG.md` | Its description's Changelog section |
+|---|---|---|---|
+| `feature` | Adds something users notice: a source, a setting, a game, a headset | Added | One to three lines, each starting with `- ` |
+| `change` | Changes what users see, set or install, or how well it works | Changed | The same |
+| `bug` | Fixes something users noticed | Fixed | The same |
+| `deprecation` | Marks something users have to be removed in a later release. It still works | Deprecated | The same |
+| `removal` | Removes something users had | Removed | The same |
+| `security` | Fixes a security problem | Security | The same |
+| `documentation` | Changes only contributors' docs, the skills or findings | None | Empty |
+| `maintenance` | Changes nothing users notice: tests, refactors, the build, the checks, a release | None | Empty |
 
-A change to a README that users read, such as a corrected install step, is `changed`. A release's own
-pull request is `internal`. A pull request with changes of two types takes the type of the one users
-notice most, or is split in two. The template (`.github\pull_request_template.md`) has the section. An
-agent opens the pull request with `gh pr create --label <label> --body-file <file>`.
+A change to a README that users read, such as a corrected install step, is `change`. A release's own
+pull request is `maintenance`. A pull request with changes of two types takes the type of the one
+users notice most, or is split in two. The template (`.github\pull_request_template.md`) has the
+section. An agent opens the pull request with `gh pr create --label <label> --body-file <file>`.
 
-`.github\release.yml` leaves the `internal` pull requests out of the list of merged pull requests
-that GitHub can add under a release's notes.
+`.github\release.yml` leaves the `documentation` and `maintenance` pull requests out of the list of
+merged pull requests that GitHub can add under a release's notes.
 
 ## The release script
 
@@ -84,7 +88,7 @@ its link, and prints it.
 It refuses and changes nothing when:
 - a pull request has no type label, or more than one
 - a user-facing pull request has no Changelog lines, more than three, or a line that isn't a bullet
-- an `internal` pull request has Changelog lines
+- a `documentation` or `maintenance` pull request has Changelog lines
 - no pull request has a change for users
 - `CHANGELOG.md` already has a section for the version in `version.txt`, or `version.txt` isn't after the
   newest release tag
@@ -99,7 +103,7 @@ It lists the commits that came from no pull request and leaves them out.
 | `--prs <file>` | Read the pull requests from a file that `gh pr list --state merged --json number,title,body,labels,mergeCommit,url` wrote |
 | `--notes` | Print the notes of the version in `version.txt` from `CHANGELOG.md` again, and change nothing |
 | `--notes-file <file>` | Also write the notes to a file, in UTF-8. PowerShell's `>` would write UTF-16 |
-| `--check-pr <number>` | Check one pull request's label and Changelog section as a release would, print the lines a release takes from it, and change nothing. The checks on GitHub run it on each pull request, each time its description or label changes |
+| `--check-pr <number>` | Check one pull request's label and Changelog section as a release would, and its title's form and type (pull-requests skill, "The title"). Print the lines a release takes from it, and change nothing. The checks on GitHub run it on each pull request, each time its title, description or label changes |
 
 ## Making a release
 
@@ -110,8 +114,8 @@ Work in a worktree from `main` (`SKILL.md`, step 0), named `release_v<version>`.
    or the Changelog section of its description. Then choose the bump ("When to bump").
 2. Write the new version into `version.txt`. Run `python -I .agents\skills\dev\release.py`, and read the
    section it wrote.
-3. Commit `version.txt` and `CHANGELOG.md` as `Release: v<version>`, and open the pull request with the
-   same title and the label `internal`. Merge it after its checks.
+3. Commit `version.txt` and `CHANGELOG.md` as `chore(repo): release v<version>`, and open the pull
+   request with the same title and the label `maintenance`. Merge it after its checks.
 4. Tag the merged commit on GitHub's `main`, annotated, and push the tag:
 
    ```
@@ -158,7 +162,7 @@ Work in a worktree from `main` (`SKILL.md`, step 0), named `release_v<version>`.
    folder and its sources' icons in `data\icons`. `SimOptixOpenXRLayer-<version>.zip` holds the layer and its manifest in `bin\`, beside `install.ps1`,
    `uninstall.ps1` and `uninstall.bat`. It refuses when a file's version isn't exactly the release's,
    or when the layer or setup isn't validly signed. `--generate-notes` adds GitHub's list of the
-   merged pull requests under the notes, without the `internal` ones.
+   merged pull requests under the notes, without the `documentation` and `maintenance` ones.
 
 The first release, 0.1.0, is the exception to steps 1 and 2. The pull requests before it carry no
 labels, and `version.txt` already says 0.1.0. Label them first, or write its section of `CHANGELOG.md` by

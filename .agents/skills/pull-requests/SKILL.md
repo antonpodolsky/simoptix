@@ -31,8 +31,9 @@ the branch changes against `main`, why, what was verified and what wasn't. These
 
 ## Commit messages
 
-- **The subject** is `Area: what changed`, written for developers: `Overlays: the G-meter's live G
-  moved up 1 px`. The area is the part's name (`Pipeline`, `OpenXR layer`, `Docs`, `Dev skill`).
+- **The subject** is `type(scope): what changed`, in the form of the pull request's title ("The
+  title", below), written for developers: `fix(overlays): the G-meter's live G moved up 1 px`. Each
+  commit takes the type of its own change.
 - **The body** says why: the problem, why the change solves it this way, and what was checked, with
   numbers. Wrap it at about 72 columns.
 - **The sign-off and the attribution** are in the dev skill, step 6: `git commit -s`, and the
@@ -44,9 +45,19 @@ the branch changes against `main`, why, what was verified and what wasn't. These
 
 ## The pull request
 
-- **The title** is `Area: what changed`, like a commit subject. With one commit, it is that commit's
-  subject. With several, it says what they do together: `SimOptix files: one place names them and
-  keeps the newest 10 of each kind`.
+- **The title** is `type(scope): what changed`, in the form of Conventional Commits. GitHub makes it
+  the subject of the pull request's commit on `main`.
+  - **The type** is one of those its label allows ("The label", below): `feat`, `fix`, `perf`,
+    `docs`, `refactor`, `test`, `build`, `ci`, `chore` or `style`.
+  - **The scope** is the name of the folder that holds the change: a part's (`overlays`, `pipeline`,
+    `openxr`, `e2e`, `telemetry`, `setup`) or a skill's (`dev`, `pull-requests`). A change to the
+    folders of one name in several parts takes that name (`obs_plugin`). A change across parts, or to
+    the files at the repo's root, takes `repo`.
+  - **What changed** starts in lower case, unless it starts with a name (`G-meter`, `OBS`).
+  - With one commit, the title is that commit's subject. With several, it says what they do
+    together: `feat(repo): one place names SimOptix's files and keeps the newest 10 of each kind`.
+  - The Changelog check on GitHub fails a title of another form, or with a type its label doesn't
+    allow (`release.py --check-pr`).
 - **The description** follows the template (`.github\pull_request_template.md`):
   - **What changed and why:** first the issues it closes and works on, one line each ("The issues it
     closes", below). Then the problem in a sentence or two, and a bullet per change, each with a bold
@@ -62,12 +73,24 @@ the branch changes against `main`, why, what was verified and what wasn't. These
     for one.
 - **Plain words.** Short sentences with one idea each, and no semicolons. Code names and paths are
   fine where the reviewer needs them.
-- **The label.** Every pull request takes exactly one type label, which decides whether it goes into
-  `CHANGELOG.md` (`reference\release.md`, "The changelog, from each pull request"):
-  - A change users notice gets `added`, `changed`, `fixed`, `removed` or `security`, and one to three
-    lines in the description's Changelog section.
-  - Any other change gets `internal` and an empty Changelog section: tests, refactors, contributors'
-    docs, the skills, the build, findings.
+- **The label.** Every pull request takes exactly one type label. Issues take the same labels
+  (issues skill, "Labels"). The label decides whether the pull request goes into `CHANGELOG.md`, and
+  under which heading (`reference\release.md`, "The changelog, from each pull request"). It also
+  decides the types its title may start with:
+
+  | Label | The pull request | Title types | Changelog |
+  |---|---|---|---|
+  | `feature` | Adds something users notice: a source, a setting, a game, a headset | `feat` | Added |
+  | `change` | Changes what users see, set or install, or how well it works | `feat`, `perf`, `docs` | Changed |
+  | `bug` | Fixes something users noticed | `fix` | Fixed |
+  | `deprecation` | Marks something users have to be removed in a later release. It still works | `feat` | Deprecated |
+  | `removal` | Removes something users had | `feat`, `refactor` | Removed |
+  | `security` | Fixes a security problem | `fix` | Security |
+  | `documentation` | Changes only contributors' docs, the skills or findings | `docs` | None |
+  | `maintenance` | Changes nothing users notice: tests, refactors, the build, the checks, a release | `refactor`, `test`, `build`, `ci`, `chore`, `perf`, `style` | None |
+
+  - A change users notice gets one to three lines in the description's Changelog section.
+  - A pull request labelled `documentation` or `maintenance` has an empty Changelog section.
 
 ## The issues it closes
 
@@ -144,11 +167,14 @@ done.
 | **Next step:** once the installer is on `main`, it should show the version | A plan, and work on another branch | (delete, and tell the maintainer in chat) |
 | I've left a note in the shared notes folder | The agent's notes | (delete) |
 | Tested on a recording from last night at Spa | A session's date, a track | Tested on one recording, OpenXR Mirror on Look-ahead |
-| `Fix stuff` | No area, says nothing | `Telemetry: the reader keeps LMU while the game is in its menus` |
+| `Fix stuff` | No type, no scope, says nothing | `fix(telemetry): the reader keeps LMU while the game is in its menus` |
+| `Telemetry: the reader keeps LMU while the game is in its menus` | No type | `fix(telemetry): the reader keeps LMU while the game is in its menus` |
+| `feat(telemetry): the reader keeps LMU while the game is in its menus`, labelled `bug` | The label `bug` takes the type `fix` | `fix(telemetry): ...` |
 
 ## Checklist before posting
 
-- [ ] The title is `Area: what changed`
+- [ ] The title is `type(scope): what changed`, with a type its label allows, and each commit
+      subject has the same form
 - [ ] The open issues were checked. Each one the change closes has its own `Fixes #<number>` line,
       and each it works on a `Part of #<number>` line. `closingIssuesReferences` lists exactly the
       `Fixes` lines once it is posted
@@ -156,7 +182,7 @@ done.
 - [ ] No personal information, nothing about the maintainer's PC, nothing of how the work went, no
       plans
 - [ ] What was verified has numbers. What wasn't is named, with a reason about the change
-- [ ] One type label, and Changelog lines only with a user-facing label
+- [ ] One type label, and Changelog lines only with a label that has a Changelog heading
 - [ ] The Changelog section ends the description, and no line names the tool or agent that wrote it.
       `python -I .agents\skills\dev\release.py --check-pr <number>` passes once it is posted
 - [ ] `check_public_text.py` run on what each commit staged, on the description and on the branch's

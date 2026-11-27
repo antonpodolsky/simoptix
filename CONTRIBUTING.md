@@ -187,8 +187,9 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 
 ## Commits and pull requests
 
-- Make one small commit per change. The subject is `Area: what changed` (for example `Overlays: the
-  G-meter's live G moved up 1 px`), and the body says why.
+- Make one small commit per change. The subject is `type(scope): what changed` (for example
+  `fix(overlays): the G-meter's live G moved up 1 px`), and the body says why. The pull request's
+  title has the same form ("The title" in `.agents\skills\pull-requests\SKILL.md`).
 - Docs move with the code. When behaviour, settings or files change, update the matching README in the
   same commit. READMEs describe what the project is and does. How to work on it, and the rules, go here
   and in `.agents\skills\dev\`. Write docs by `.agents\skills\docs\SKILL.md`, and run its check script
@@ -209,17 +210,20 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   against `vr_mirror\e2e\stage_replay\golden_expected.txt`), in `.github\workflows\checks.yml`. A pull
   request that changes only Markdown files skips Build and Pipeline output, because no build reads
   them, and runs the other checks. Changelog checks the label and the Changelog section the way a
-  release reads them, and Description the description's public text, each time either changes
+  release reads them, and the title's form and type. Description checks the description's public
+  text. Both run each time the title, the description or the label changes
   (`.github\workflows\pull_request.yml`). The Changelog section ends the description, so nothing goes
   after it. GitHub's runners have no LMU, no Pimax SDK, no headset and no graphics card, so the e2e
   suite and the local files test run only by hand (Test, above). Say in the pull request what you checked by hand.
-- Give the pull request one label, which decides whether it goes into `CHANGELOG.md`:
-  - If users notice the change, label it `added`, `changed`, `fixed`, `removed` or `security`. Then
-    write one to three lines in the Changelog section of its description. Write them for a VR sim
-    racer, in plain words with no code names, as `.agents\skills\docs\SKILL.md` says ("The
-    changelog").
-  - If only contributors notice it (tests, refactors, contributors' docs, the skills, the build),
-    label it `internal`, and leave the Changelog section empty.
+- Give the pull request one label, which decides whether it goes into `CHANGELOG.md` and the types
+  its title may start with. Issues take the same labels.
+  - If users notice the change, label it `feature`, `change`, `bug`, `deprecation`, `removal` or
+    `security`. Then write one to three lines in the Changelog section of its description. Write
+    them for a VR sim racer, in plain words with no code names, as `.agents\skills\docs\SKILL.md`
+    says ("The changelog").
+  - If only contributors notice it, label it `documentation` (contributors' docs, the skills,
+    findings) or `maintenance` (tests, refactors, the build, the checks), and leave the Changelog
+    section empty.
 - Keep personal information out of everything public: every file in the repo, commit messages, branch
   names, pull requests, issues and comments. That means recording names, dates and times (of your
   sessions and of your work on the code alike), tracks, cars and local paths. Git and GitHub keep every version.
@@ -232,7 +236,7 @@ SimOptix has one version for all its parts, in `version.txt` at the repo's root,
 build carries it, and a build that isn't a release adds the commits since the last one
 (`0.1.0+12.gabc1234`). The maintainer makes the releases.
 
-1. In a "Release: v<version>" pull request, bump `version.txt` and run
+1. In a "chore(repo): release v<version>" pull request, bump `version.txt` and run
    `python -I .agents\skills\dev\release.py`. It writes the release's section of `CHANGELOG.md` from
    the labels and Changelog sections of the pull requests since the last release.
 2. After it merges, tag the merge commit on `main` as `v<version>`, annotated.

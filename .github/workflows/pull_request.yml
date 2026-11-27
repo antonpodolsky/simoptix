@@ -1,7 +1,9 @@
 # Copyright (C) 2026 Anton Podolsky
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Checks a pull request's description and label each time they change, not only when its code does:
-#   Changelog    the type label and the Changelog section as a release reads them (release.py --check-pr)
+# Checks a pull request's title, description and label each time they change, not only when its code
+# does:
+#   Changelog    the type label and the Changelog section as a release reads them, and the title's form
+#                and type (release.py --check-pr)
 #   Description  check_public_text.py on the description
 # The builds and the other checks are in checks.yml. No job has a secret.
 # A push to the pull request cancels the run of the commit it replaces. Every other run finishes, in a
