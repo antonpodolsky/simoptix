@@ -886,9 +886,15 @@ Record what each start of the game showed in `findings\openxr.md`.
 
   The pull-requests skill ("The issues it closes") has the form GitHub needs, and the check after
   posting.
-- **After the merge, an agent cleans up without being asked.** An agent that watches its pull request
-  with Auto-fix (pull-requests skill, "Opening a pull request", step 6) gets a message from Claude
-  Code's desktop app when the pull request is merged. Then it cleans up, in this order:
+- **After the merge, the agent that opened the pull request cleans up.** Claude Code's desktop app
+  sends the agent no message when a pull request is merged. Auto-fix sends one only for a failed
+  check, a merge conflict or a review comment (pull-requests skill, "Opening a pull request", step 6),
+  and the app turns Auto-fix off at the merge. So the cleanup starts in one of two ways:
+  - The user says the pull request is merged.
+  - The user tells the agent to merge it. The agent merges it with `gh pr merge <number> --squash`
+    once every check passes, and only on the user's word.
+
+  Then the agent cleans up in the same turn, in this order:
   1. Check that GitHub merged it: `gh pr view <number> --json state,headRefOid` says `MERGED`. The
      branch's tip must be that `headRefOid`. If the branch has commits the pull request doesn't have,
      stop and tell the user.
@@ -905,7 +911,6 @@ Record what each start of the game showed in `findings\openxr.md`.
      the branch, until a fetch with `--prune` deletes it.
   6. Bring the local `main` up. If `main` is checked out in the main folder and that folder's tracked
      files are clean, run `git -C <main folder> merge --ff-only origin/main`. Otherwise leave it.
-  7. Stop watching the pull request: turn Auto-fix off for it.
 
   Then tell the user what was removed, and anything left in place with the reason.
 - Until the remote exists, there are two cases:
