@@ -43,6 +43,10 @@ namespace {
         return file.good();
     }
 
+    fs::path SceneCollectionPath(const fs::path& dir) {
+        return dir / "config" / "obs-studio" / "basic" / "scenes" / (std::string(kName) + ".json");
+    }
+
     std::string Read(const fs::path& path) {
         std::ifstream file(path, std::ios::binary);
         std::stringstream text;
@@ -50,9 +54,11 @@ namespace {
         return text.str();
     }
 
-    // A source as the scene collection holds it: its name, its type's id and its settings (JSON).
+    // A source as the scene collection holds it: its name, its type's id, its settings (JSON) and its own
+    // sync offset.
     struct SceneSource {
         std::string name, type, settings;
+        int64_t syncNs = 0;
     };
 
     // One source in the scene's list of items, and in the collection's list of sources.
@@ -62,17 +68,17 @@ namespace {
                   + "\",\"visible\":true,\"locked\":false,\"id\":" + std::to_string(id)
                   + ",\"pos\":{\"x\":0.0,\"y\":0.0},\"scale\":{\"x\":1.0,\"y\":1.0},\"rot\":0.0,\"align\":5}";
         *list += ",{\"name\":\"" + name + "\",\"uuid\":\"" + Uuid(id) + "\",\"id\":\"" + source.type
-                 + "\",\"versioned_id\":\"" + source.type
-                 + "\",\"enabled\":true,\"settings\":" + source.settings + "}";
+                 + "\",\"versioned_id\":\"" + source.type + "\",\"enabled\":true,\"sync\":"
+                 + std::to_string(source.syncNs) + ",\"settings\":" + source.settings + "}";
     }
 
     // A scene that shows each source in `sources` at the canvas's top left, with Debug on, Instant
     // smoothing (no output delay) and race auto-record off, and Desktop Audio if asked.
-    std::string SceneCollection(const std::vector<std::string>& sources, bool desktopAudio) {
+    std::string SceneCollection(const ObsRun& run) {
         std::string items, list;
         int id = 0;
 
-        for (const std::string& source : sources) {
+        for (const std::string& source : run.sources) {
             const SceneSource mirror = {
                 DisplayName(source),
                 source,
@@ -81,10 +87,13 @@ namespace {
             AddSource(++id, mirror, &items, &list);
         }
 
-        if (desktopAudio) {
+        if (run.desktopAudio) {
             AddSource(
                 ++id,
-                {"Desktop Audio", "wasapi_output_capture", "{\"device_id\":\"default\"}"},
+                {"Desktop Audio",
+                 "wasapi_output_capture",
+                 "{\"device_id\":\"default\"}",
+                 run.desktopAudioSyncNs},
                 &items,
                 &list
             );
@@ -126,10 +135,7 @@ namespace {
                                        "1280\r\nOutputCY=720\r\nFPSType=0\r\n"
                                        "FPSCommon=60\r\n[Output]\r\nMode=Simple\r\n"
                              )
-                             && Write(
-                                 scenes / (name + ".json"),
-                                 SceneCollection(run.sources, run.desktopAudio)
-                             );
+                             && Write(SceneCollectionPath(dir), SceneCollection(run));
 
         return written;
     }
@@ -387,4 +393,8 @@ bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string
     }
 
     return true;
+}
+
+std::string SavedSceneCollection(const ObsCopy& obs) {
+    return Read(SceneCollectionPath(obs.dir));
 }

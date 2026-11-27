@@ -147,6 +147,18 @@ This file holds what was measured on the plugin, and what was tried.
     sees every frame, and counts each that comes 2 s or more after the one before.
   - Each check was shown to fail when auto sync was broken: moving the game's sound at the first tick,
     without three that agree, moved it 80 ms first and 109 ms when it stopped, on the menu cut.
+- **The own offset stacked on auto sync's correction** (before this fix). In one OBS session in the game
+  (OpenXR Mirror on Look-ahead, 537 ms delay), LMU's sound kept a −120 ms offset of its own from before
+  auto sync. Auto sync measures the sound as captured, before any offset, and settled at −120 ms, then
+  −134 ms. OBS showed +283 ms (537 − 134 − 120), so the sound came about 120 ms early in both
+  recordings of that session. Since the fix, the game's sound gets the delay and the correction alone,
+  and its own offset comes back when the source is hidden.
+  - The auto sync test gives Desktop Audio −120 ms of its own in its first run, and reads the offset OBS
+    saved. With the fix: −95 ms (a 4 ms delay with Instant, and −99 ms), the own −120 ms kept under the
+    shift. Without it: −216 ms (4, −100 and −120), and the check fails.
+  - The ticks with a highlight in that session came 66 to 141 ms after it, most at 110 to 134 ms. Most
+    ticks found no highlight, as the median step of the frames around them was 3 to 18 grey levels with
+    the head moving.
 - **Not checked yet:** auto sync in the game. Whether a sync offset changed during a recording makes an
   audible glitch. Hovers with the head moving. Whether the menus' sound and a race's sound have the same
   lag. Measuring again on a change of frame rate, image size, OBS's audio sources or Windows' output
