@@ -193,7 +193,8 @@ the physics step it shows, so they run slightly ahead of the view.
 **How it measures:**
 - **Most of LMU's menu items** light up and tick when the pointer comes onto them.
 - **While you aren't driving,** the source looks in each audio source's sound for ticks: sounds whose
-  high frequencies rise by 25 dB or more within a few milliseconds. For each tick, it looks in the frames
+  high frequencies rise by 25 dB or more within a few milliseconds. Audio input devices (Mic/Aux) are
+  left out, because a microphone hears the room and not the game's own sound. For each tick, it looks in the frames
   from 0.4 s before to 0.1 s after it for the frame in which a small part of the menu lit up while the
   rest held still. The menu stays put in the headset's tracking space, so turning the head doesn't count.
   The time from that frame to the tick is the audio source's lag.

@@ -159,6 +159,9 @@ This file holds what was measured on the plugin, and what was tried.
   - The ticks with a highlight in that session came 66 to 141 ms after it, most at 110 to 134 ms. Most
     ticks found no highlight, as the median step of the frames around them was 3 to 18 grey levels with
     the head moving.
+- **A microphone taken for the game's sound** (before this fix). In the same session, one measuring
+  took Mic/Aux for the game's sound after 49 ticks, with 3 agreeing at 391 ms, and moved it by −391 ms.
+  A later measuring took LMU's sound again. Since the fix, audio input devices are not tapped.
 - **Not checked yet:** auto sync in the game. Whether a sync offset changed during a recording makes an
   audible glitch. Hovers with the head moving. Whether the menus' sound and a race's sound have the same
   lag. Measuring again on a change of frame rate, image size, OBS's audio sources or Windows' output

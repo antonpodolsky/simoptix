@@ -1,8 +1,9 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // AudioTap: the last two seconds of each audio source's sound in OBS, mixed to mono, with OBS's own
-// timestamps, so the sound of a moment can be looked at after it. Attach hands OBS a callback for every
-// audio source there is then; OBS calls it on its audio thread with each piece of sound the source
+// timestamps, so the sound of a moment can be looked at after it. Audio input devices (Mic/Aux) are left
+// out: they never carry the game's own sound. Attach hands OBS a callback for every other audio source
+// there is then; OBS calls it on its audio thread with each piece of sound the source
 // delivers, which it copies into that source's buffer and nothing else. Detach takes the callbacks
 // back; OBS returns from that only once none is running.
 //

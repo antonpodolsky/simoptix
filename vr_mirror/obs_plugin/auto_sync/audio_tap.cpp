@@ -4,12 +4,20 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #include "shared/guarded.h"
 
 namespace {
 
     constexpr double kKeptS = 2;
+
+    // OBS's audio input devices (Mic/Aux): a microphone hears the room, never the game's own sound. One
+    // run took a microphone's clicks for the game's sound and moved it by 391 ms.
+    bool IsInputDevice(obs_source_t* source) {
+        const char* id = obs_source_get_unversioned_id(source);
+        return id && strcmp(id, "wasapi_input_capture") == 0;
+    }
 
 }
 
@@ -33,9 +41,13 @@ bool AudioTap::Tapped(void* param, obs_source_t* source) {
     return true;
 }
 
-// Taps `source` if it has sound and there is room.
+// Taps `source` if it has sound, isn't an input device and there is room.
 void AudioTap::Add(obs_source_t* source) {
     if (count_ >= kMaxSources || !(obs_source_get_output_flags(source) & OBS_SOURCE_AUDIO)) {
+        return;
+    }
+
+    if (IsInputDevice(source)) {
         return;
     }
 
