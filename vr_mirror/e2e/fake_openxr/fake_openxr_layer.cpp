@@ -7,6 +7,7 @@
 #include <cstdint>
 
 #include "vr_mirror/frame_sources/openxr/openxr_layer_frames.h"
+#include "vr_mirror/frame_sources/openxr/openxr_layer_log.h"
 #include "vr_mirror/frame_sources/openxr/openxr_layer_timing.h"
 
 namespace {
@@ -46,6 +47,18 @@ namespace {
         return {f.left, f.right, f.up, f.down};
     }
 
+}
+
+bool FakeOpenXrLayer::StartLog() {
+    NoteDllLoaded();
+
+    if (!StartLayerLog()) {
+        return false;
+    }
+
+    FramesOnReader([](bool there, bool debug) { FollowReaderDebug(kFramesReader, there, debug); });
+    TimingOnReader([](bool there, bool debug) { FollowReaderDebug(kTimingReader, there, debug); });
+    return true;
 }
 
 bool FakeOpenXrLayer::Start(
@@ -169,5 +182,11 @@ void FakeOpenXrLayer::EndFrame(const FrameEnd& frame, const std::function<void()
 OpenXrPublisherStats FakeOpenXrLayer::TakeStats() {
     OpenXrPublisherStats stats;
     FramesTakeStats(&stats);
+    return stats;
+}
+
+OpenXrFrameTimingStats FakeOpenXrLayer::TakeTimingStats() {
+    OpenXrFrameTimingStats stats;
+    TimingTakeStats(&stats);  // leaves the zeros while the timing isn't running
     return stats;
 }

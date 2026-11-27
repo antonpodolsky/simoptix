@@ -20,7 +20,7 @@ namespace fs = std::filesystem;
 struct ObsCopy {
     fs::path dir;         // the portable OBS: bin\64bit\obs64.exe and its config folder
     fs::path plugins;     // the plugins of this build, copied for the run
-    fs::path pluginData;  // their (empty) data folders
+    fs::path pluginData;  // their data folders, with the sources' icons as installed
 };
 
 // Copies the installed OBS (OBS_DIR, else C:\Program Files\obs-studio) into `repo`'s
@@ -29,8 +29,9 @@ struct ObsCopy {
 bool PrepareObs(const fs::path& repo, const fs::path& out, ObsCopy* obs, std::string* error);
 
 struct ObsRun {
-    std::vector<std::string> sources;  // the source ids the scene shows
-    bool debug = true;                 // ...each with Debug on, or each with it off
+    std::vector<std::string> sources;   // the source ids the scene shows
+    bool debug = true;                  // ...each with Debug on, or each with it off
+    std::vector<std::string> debugOff;  // ...but these source ids with Debug off
     // Also a Desktop Audio source (the default output device's sound), which logs no start.
     bool desktopAudio = false;
     fs::path localAppData;     // %LOCALAPPDATA% for OBS and the plugins

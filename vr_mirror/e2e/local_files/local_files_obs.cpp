@@ -32,7 +32,16 @@ namespace {
             return "SimOptix: G-Meter Overlay";
         }
 
+        if (id == "simoptix_performance_overlay") {
+            return "SimOptix: Performance Overlay";
+        }
+
         return id.c_str();
+    }
+
+    // Whether source `id` has Debug on in `run`.
+    bool DebugOf(const ObsRun& run, const std::string& id) {
+        return run.debug && std::find(run.debugOff.begin(), run.debugOff.end(), id) == run.debugOff.end();
     }
 
     std::string Uuid(int i) {
@@ -70,23 +79,23 @@ namespace {
                  + "\",\"enabled\":true,\"settings\":" + source.settings + "}";
     }
 
-    // A scene that shows each source in `sources` at the canvas's top left, with Debug on or off
-    // (`debug`), Instant smoothing (no output delay) and race auto-record off, and Desktop Audio if asked.
-    std::string SceneCollection(const std::vector<std::string>& sources, bool debug, bool desktopAudio) {
+    // A scene that shows each source of `run` at the canvas's top left, with Debug on or off as `run` says,
+    // Instant smoothing (no output delay) and race auto-record off, and Desktop Audio if asked.
+    std::string SceneCollection(const ObsRun& run) {
         std::string items, list;
         int id = 0;
 
-        for (const std::string& source : sources) {
+        for (const std::string& source : run.sources) {
             const SceneSource mirror = {
                 DisplayName(source),
                 source,
-                std::string("{\"debug\":") + (debug ? "true" : "false")
+                std::string("{\"debug\":") + (DebugOf(run, source) ? "true" : "false")
                     + ",\"smoothing\":1,\"auto_record\":false}"
             };
             AddSource(++id, mirror, &items, &list);
         }
 
-        if (desktopAudio) {
+        if (run.desktopAudio) {
             AddSource(
                 ++id,
                 {"Desktop Audio", "wasapi_output_capture", "{\"device_id\":\"default\"}"},
@@ -145,10 +154,7 @@ namespace {
                                        "FPSCommon=60\r\n[Output]\r\nMode=Simple\r\n"
                                      + RecordingSettings(run.recordTo)
                              )
-                             && Write(
-                                 scenes / (name + ".json"),
-                                 SceneCollection(run.sources, run.debug, run.desktopAudio)
-                             );
+                             && Write(scenes / (name + ".json"), SceneCollection(run));
 
         return written;
     }
@@ -287,8 +293,20 @@ bool PrepareObs(const fs::path& repo, const fs::path& out, ObsCopy* obs, std::st
     }
 
     fs::create_directories(obs->plugins, ec);
-    fs::create_directories(obs->pluginData / "simoptix_vr_mirror", ec);
-    fs::create_directories(obs->pluginData / "simoptix_overlays", ec);
+
+    // Each plugin's data folder as installed: its sources' icons.
+    for (const char* plugin : {"simoptix_vr_mirror", "simoptix_overlays"}) {
+        const fs::path from = repo / (plugin == std::string("simoptix_vr_mirror") ? "vr_mirror" : "overlays")
+                              / "obs_plugin" / "data";
+        fs::remove_all(obs->pluginData / plugin, ec);
+        fs::create_directories(obs->pluginData / plugin, ec);
+        fs::copy(from, obs->pluginData / plugin, fs::copy_options::recursive, ec);
+
+        if (ec) {
+            *error = "could not copy " + from.string() + ": " + ec.message();
+            return false;
+        }
+    }
 
     const fs::path e2eBin = repo / "vr_mirror" / "e2e" / "bin";
 
@@ -351,21 +369,22 @@ bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string
     const UniqueHandle processHandle(process.hProcess);
     const UniqueHandle threadHandle(process.hThread);
 
-    // Each VR Mirror source with Debug on logs "started (source shown)" once its frame source runs (a
-    // G-meter has no such line). With Debug off it logs nothing, so OBS's window showing up is all there is
+    // Each VR Mirror source with Debug on logs "started (source shown)" once its frame source runs (an
+    // overlay has no such line). With Debug off it logs nothing, so OBS's window showing up is all there is
     // to wait for.
     size_t mirrors = 0;
 
     for (const std::string& id : run.sources) {
-        mirrors += id == "simoptix_pimax_mirror" || id == "simoptix_openxr_mirror" ? 1 : 0;
+        const bool mirror = id == "simoptix_pimax_mirror" || id == "simoptix_openxr_mirror";
+        mirrors += mirror && DebugOf(run, id) ? 1 : 0;
     }
 
     bool sourcesStarted = false;
 
     for (DWORD waited = 0; waited < kStartMs && !sourcesStarted; waited += 250) {
         Sleep(250);
-        sourcesStarted = run.debug ? Count(NewestLog(obs.dir), "started (source shown)") >= mirrors
-                                   : MainWindowOf(process.dwProcessId) != nullptr;
+        sourcesStarted = MainWindowOf(process.dwProcessId) != nullptr
+                         && Count(NewestLog(obs.dir), "started (source shown)") >= mirrors;
     }
 
     if (sourcesStarted && !run.holdUntilLogged.empty()) {

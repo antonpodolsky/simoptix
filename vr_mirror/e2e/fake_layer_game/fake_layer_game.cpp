@@ -25,15 +25,15 @@ namespace {
     constexpr const char* kOtherLayerName = "XR_APILAYER_SIMOPTIX_another";
     constexpr DWORD kLogWriteMs = 500;  // time for the layer's own thread to write its log before the exit
 
-    // The loader's first call, for the layer named `name`: true if the layer accepted it.
-    bool Handshake(HMODULE layer, const char* name) {
+    // The loader's first call, for the layer named `name`: what the layer answered.
+    XrResult Handshake(HMODULE layer, const char* name) {
         const auto negotiate = reinterpret_cast<PFN_xrNegotiateLoaderApiLayerInterface>(
             GetProcAddress(layer, "xrNegotiateLoaderApiLayerInterface")
         );
 
         if (!negotiate) {
             printf("the layer has no xrNegotiateLoaderApiLayerInterface\n");
-            return false;
+            return XR_ERROR_FUNCTION_UNSUPPORTED;
         }
 
         XrNegotiateLoaderInfo info = {};
@@ -50,14 +50,7 @@ namespace {
         request.structVersion = XR_API_LAYER_INFO_STRUCT_VERSION;
         request.structSize = sizeof(request);
 
-        const XrResult r = negotiate(&info, name, &request);
-
-        if (XR_FAILED(r)) {
-            printf("the layer refused the handshake: %d\n", static_cast<int>(r));
-            return false;
-        }
-
-        return true;
+        return negotiate(&info, name, &request);
     }
 
 }
@@ -77,11 +70,16 @@ int wmain(int argc, wchar_t** argv) {
         return 1;
     }
 
-    if (handshake && !Handshake(layer, kLayerName)) {
-        return 1;
+    if (handshake) {
+        const XrResult r = Handshake(layer, kLayerName);
+
+        if (XR_FAILED(r)) {
+            printf("the layer refused the handshake: %d\n", static_cast<int>(r));
+            return 1;
+        }
     }
 
-    if (wrongName && Handshake(layer, kOtherLayerName)) {
+    if (wrongName && XR_SUCCEEDED(Handshake(layer, kOtherLayerName))) {
         printf("the layer accepted a handshake for another layer\n");
         return 1;
     }

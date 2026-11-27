@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <functional>
 
+#include "vr_mirror/frame_sources/openxr/openxr_frame_timing.h"
 #include "vr_mirror/frame_sources/openxr/openxr_publisher.h"
 #include "vr_mirror/frame_sources/openxr/openxr_share.h"
 
@@ -34,6 +35,11 @@ public:
     };
 
     ~FakeOpenXrLayer() { Stop(); }
+
+    // The layer's own log, started as the layer starts it in LMU (openxr_layer_entry.cpp): in
+    // %LOCALAPPDATA%\simoptix, written while a reader of the frames or of the frame times has Debug on
+    // (openxr_layer_log.h). Once, before Start; false if it couldn't start.
+    static bool StartLog();
 
     // The game's session begins: the layer starts publishing. `clock` converts a performance-counter
     // value to XrTime, as the runtime's xrConvertWin32PerformanceCounterToTimeKHR does.
@@ -62,6 +68,8 @@ public:
 
     // The layer's numbers since the last call.
     OpenXrPublisherStats TakeStats();
+    // The frame timing's numbers since the last call: the frames timed for the performance overlay.
+    OpenXrFrameTimingStats TakeTimingStats();
 
 private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> images_[kImages];

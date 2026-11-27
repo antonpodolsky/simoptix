@@ -18,9 +18,13 @@
 //  - no_debug: the Pimax source with the fake runtime's game, and a G-meter, with Debug off, recorded by
 //    OBS. No notes file beside the recording, no frame trace, no VR Mirror or Overlays line in OBS's log but
 //    the versions, and no telemetry line.
-//  - openxr_game: the OpenXR source with fake_openxr.exe's game. The settings and the eye are logged, and
-//    one new trace, _ticks and _openxr, has rows, as in pimax_game. Of it and 10 older traces, the newest
-//    10 are left.
+//  - openxr_game, openxr_no_debug, openxr_overlay_debug, openxr_mirror_debug: the OpenXR source and a
+//    performance overlay with fake_openxr.exe's game, which runs the layer's own log. Both with Debug on,
+//    both off, only the overlay's on, only VR Mirror's on. The fake game's log shows that both read.
+//    Each plugin logs as its own Debug says, and nothing but its version with it off. With VR Mirror's on,
+//    the settings and the eye are logged, and one new trace, _ticks and _openxr, has rows, as in
+//    pimax_game: of it and 10 older traces, the newest 10 are left. With it off, there is no trace. The
+//    layer writes one log, with the line of each reader that has Debug on, and none with both off.
 //  - layer: the layer's DLL loaded into "Le Mans Ultimate.exe", with and without the loader's handshake.
 //    No VR Mirror reads its frames, so none says it has Debug on, and neither start leaves a log. Then a
 //    handshake for another layer, which the layer refuses: that failure is written whatever Debug says, in
@@ -176,7 +180,7 @@ namespace {
     // What VR Mirror logs about what a source (its frame source's `name`) runs with: the settings as the
     // scene has them (Instant smoothing), and the game's eye once its frames came (`withEye`).
     void CheckSetupLogged(const std::string& log, const std::string& name, bool withEye) {
-        const bool settings = log.find("settings (" + name + "): smoothing=1 zoom=") != std::string::npos;
+        const bool settings = log.find("settings (" + name + "): smoothing=1 ") != std::string::npos;
         Check(settings, "OBS's log has the settings (" + name + ")");
 
         const bool eye = log.find("eye (" + name + "): left ") != std::string::npos;
@@ -187,7 +191,7 @@ namespace {
     void CheckTraceSetup(const fs::path& ticks) {
         const std::vector<std::string> lines = Lines(ticks);
         Check(!lines.empty() && StartsWith(lines[0], "stamp,"), "its first line is the column header");
-        Check(HasLineStarting(lines, "#settings,smoothing=1 zoom="), "it has the settings");
+        Check(HasLineStarting(lines, "#settings,smoothing=1 "), "it has the settings");
         Check(HasLineStarting(lines, "#eye,left "), "it has the game's eye");
     }
 
@@ -290,7 +294,7 @@ namespace {
         bool settings = false, eye = false, trace = false;
 
         for (const std::string& line : notes) {
-            settings = settings || line.find(name + ": settings: smoothing=1 zoom=") != std::string::npos;
+            settings = settings || line.find(name + ": settings: smoothing=1 ") != std::string::npos;
             eye = eye || line.find(name + ": eye: left ") != std::string::npos;
             trace = trace || line.find(name + ": frame trace: ") != std::string::npos;
         }
@@ -480,19 +484,30 @@ namespace {
         Check(log.find("telemetry: ") == std::string::npos, "no telemetry line, with Debug off");
     }
 
-    void OpenXrGame(const ObsCopy& obs, const fs::path& repo, const fs::path& out) {
-        printf("openxr_game\n");
-        const Case c = MakeCase(out, "openxr_game");
-        SeedTraces(c, kKept);
+    // The lines of the newest layer log that wasn't seeded.
+    std::vector<std::string> NewestLayerLog(const Case& c) {
+        const std::vector<std::wstring> logs = TimedFiles(c.simoptix, L"openxr_frame_source", L".log");
 
-        // The fake game runs before OBS starts and until it has closed.
+        if (logs.empty() || logs.back().compare(0, 28, L"openxr_frame_source_20260101") == 0) {
+            return {};
+        }
+
+        return Lines(c.simoptix / logs.back());
+    }
+
+    // The fake OpenXR game, with the layer's own log in this case's %LOCALAPPDATA%, and OBS with `run`'s
+    // sources meanwhile. The fake game runs before OBS starts and until it has closed. False if OBS didn't
+    // run (the reason is checked).
+    bool
+    RunOpenXrCase(const ObsCopy& obs, const fs::path& repo, const Case& c, ObsRun run, std::string* log) {
         const fs::path scenario = c.dir / "fake_openxr.cfg";
         const std::wstring stopEvent = L"Local\\SimOptix.LocalFilesE2E.Stop."
-                                       + std::to_wstring(GetCurrentProcessId());
+                                       + std::to_wstring(GetCurrentProcessId()) + L"."
+                                       + c.dir.filename().wstring();
         // A quarter of the default image's sides: the test checks files, not speed, and on a machine
         // with no graphics card the full-size image left the layer's copies pending (at about 4 fps).
-        const std::string text = "log=" + (c.dir / "fake_openxr.log").string()
-                                 + "\nstop_event=" + Narrow(stopEvent) + "\nwidth=1271\nheight=1042\n";
+        const std::string text = "log=" + (c.dir / "fake_openxr.log").string() + "\nstop_event="
+                                 + Narrow(stopEvent) + "\nwidth=1271\nheight=1042\nlayer_log=1\n";
         Touch(scenario, text.c_str());
         FakeGameProcess game;
 
@@ -501,29 +516,151 @@ namespace {
                 repo / "vr_mirror" / "e2e" / "bin" / "fake_openxr.exe",
                 scenario,
                 stopEvent,
-                &game
+                &game,
+                {L"LOCALAPPDATA=" + c.appData.wstring()}
             )) {
             Check(false, "the fake game (fake_openxr.exe) started");
             StopFakeGame(game);
+            return false;
+        }
+
+        run.localAppData = c.appData;
+        run.fakePvrScenario = FakePvrScenario(c, 1e6);
+        const bool ran = RunObsCase(obs, c, run, log);
+        StopFakeGame(game);
+        return ran;
+    }
+
+    // From the fake OpenXR game's log: VR Mirror copied the layer's frames, and the performance overlay had
+    // the layer time them, whatever either logged.
+    void CheckSourcesRead(const Case& c) {
+        size_t copied = 0, timed = 0;
+
+        for (const std::string& line : Lines(c.dir / "fake_openxr.log")) {
+            unsigned frames = 0, n = 0;
+
+            if (sscanf_s(line.c_str(), "# frame source: %u frames, %u copied", &frames, &n) == 2) {
+                copied += n;
+            }
+
+            if (sscanf_s(line.c_str(), "# frame timing: %u frames timed", &n) == 1) {
+                timed += n;
+            }
+        }
+
+        Check(copied > 0, "VR Mirror read the layer's frames (" + std::to_string(copied) + " copied)");
+        Check(timed > 0, "the performance overlay read their times (" + std::to_string(timed) + " timed)");
+    }
+
+    // The layer's log while VR Mirror (Debug `mirrorDebug`) and the performance overlay (`overlayDebug`) read
+    // the layer: none while both have Debug off, else one, with the line of each reader that has Debug on,
+    // logged as it came. The layer drops its lines while only readers with Debug off are there, and which
+    // reader comes first isn't fixed, so the load line is sure to be first only while both have Debug on.
+    void CheckLayerLog(const Case& c, bool mirrorDebug, bool overlayDebug) {
+        const size_t logs = TimedFiles(c.simoptix, L"openxr_frame_source", L".log").size();
+
+        if (!mirrorDebug && !overlayDebug) {
+            Check(logs == 0, "no layer log, with both readers' Debug off (" + std::to_string(logs) + ")");
             return;
+        }
+
+        const std::vector<std::string> lines = NewestLayerLog(c);
+        Check(logs == 1 && !lines.empty(), "one layer log (" + std::to_string(logs) + ")");
+
+        if (mirrorDebug && overlayDebug) {
+            Check(
+                !lines.empty() && lines[0].find("loaded into process") != std::string::npos,
+                "...starting with the load line"
+            );
+        }
+
+        if (mirrorDebug) {
+            Check(
+                HasLine(lines, "frame source: VR Mirror reads the frames"),
+                "...with VR Mirror reading the frames"
+            );
+        }
+
+        if (overlayDebug) {
+            Check(
+                HasLine(lines, "frame timing: SimOptix reads the game's frame times"),
+                "...with the performance overlay reading their times"
+            );
+        }
+    }
+
+    // The performance overlay's lines in OBS's log with Debug on (`debug`), and none but the version with it
+    // off.
+    void CheckPerformanceLogged(const std::string& log, bool debug) {
+        if (!debug) {
+            CheckOnlyVersionLogged(log, "[simoptix_overlays] ", "Overlays");
+            return;
+        }
+
+        Check(
+            log.find("[simoptix_overlays] Performance Overlay: drawn at ") != std::string::npos
+                && log.find("[simoptix_overlays] performance: reading the game's frame times")
+                       != std::string::npos,
+            "OBS's log has the performance overlay's lines, with Debug on"
+        );
+    }
+
+    // The OpenXR source and a performance overlay with the fake OpenXR game, VR Mirror's Debug
+    // `mirrorDebug` and the overlay's `overlayDebug`. Each plugin logs as its own Debug says. The layer's
+    // log is written while either has Debug on. With VR Mirror's on, the settings and the eye are logged,
+    // and one new trace, _ticks and _openxr, has rows, as in pimax_game: of it and 10 older traces, the
+    // newest 10 are left. With it off, there is no trace.
+    void OpenXrCase(
+        const ObsCopy& obs,
+        const fs::path& repo,
+        const fs::path& out,
+        const char* name,
+        bool mirrorDebug,
+        bool overlayDebug
+    ) {
+        printf("%s\n", name);
+        const Case c = MakeCase(out, name);
+
+        if (mirrorDebug) {
+            SeedTraces(c, kKept);
         }
 
         ObsRun run;
-        run.sources = {"simoptix_openxr_mirror"};
-        run.localAppData = c.appData;
-        run.fakePvrScenario = FakePvrScenario(c, 1e6);
-        run.holdUntilLogged = kTraceLogged;
-        std::string log;
-        const bool ran = RunObsCase(obs, c, run, &log);
-        StopFakeGame(game);
+        run.sources = {"simoptix_openxr_mirror", "simoptix_performance_overlay"};
+        run.debug = mirrorDebug || overlayDebug;
 
-        if (!ran) {
+        if (!mirrorDebug) {
+            run.debugOff.push_back("simoptix_openxr_mirror");
+        }
+
+        if (!overlayDebug) {
+            run.debugOff.push_back("simoptix_performance_overlay");
+        }
+
+        if (mirrorDebug) {
+            run.holdUntilLogged = kTraceLogged;
+        } else {
+            run.holdMs = 8000;  // from OBS's window: both sources start and read
+        }
+
+        std::string log;
+
+        if (!RunOpenXrCase(obs, repo, c, run, &log)) {
             return;
         }
 
-        CheckSetupLogged(log, "OpenXR layer", true);
-        CheckNewTrace(c, log, L"_openxr.csv");
-        CheckTracesKept(c, kKept);
+        if (mirrorDebug) {
+            CheckSetupLogged(log, "OpenXR layer", true);
+            CheckNewTrace(c, log, L"_openxr.csv");
+            CheckTracesKept(c, kKept);
+        } else {
+            Check(TimedFiles(c.traces, L"trace", L".csv").empty(), "no frame trace, with Debug off");
+            CheckOnlyVersionLogged(log, "[simoptix_vr_mirror] ", "VR Mirror");
+        }
+
+        CheckPerformanceLogged(log, overlayDebug);
+        CheckSourcesRead(c);
+        CheckLayerLog(c, mirrorDebug, overlayDebug);
     }
 
     // Runs the fake game with the layer in it, with `appData` as its %LOCALAPPDATA% and the game's `option`
@@ -565,17 +702,6 @@ namespace {
         }
 
         return code == 0;
-    }
-
-    // The lines of the newest layer log that wasn't seeded.
-    std::vector<std::string> NewestLayerLog(const Case& c) {
-        const std::vector<std::wstring> logs = TimedFiles(c.simoptix, L"openxr_frame_source", L".log");
-
-        if (logs.empty() || logs.back().compare(0, 28, L"openxr_frame_source_20260101") == 0) {
-            return {};
-        }
-
-        return Lines(c.simoptix / logs.back());
     }
 
     void Layer(const fs::path& repo, const fs::path& out) {
@@ -663,7 +789,10 @@ int wmain() {
     NoGame(obs, out);
     PimaxGame(obs, out);
     NoDebug(obs, out);
-    OpenXrGame(obs, repo, out);
+    OpenXrCase(obs, repo, out, "openxr_game", true, true);
+    OpenXrCase(obs, repo, out, "openxr_no_debug", false, false);
+    OpenXrCase(obs, repo, out, "openxr_overlay_debug", false, true);
+    OpenXrCase(obs, repo, out, "openxr_mirror_debug", true, false);
     Layer(repo, out);
 
     printf(

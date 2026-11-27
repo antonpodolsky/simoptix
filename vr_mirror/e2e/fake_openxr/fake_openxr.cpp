@@ -37,6 +37,9 @@
 //    sample `menu_sound_after` seconds after the plan's start) plays through Windows' default output device
 //    `menu_sound_lag_ms` late (fake_openxr_sound.h). Once the event named by `restart_event` is set, the
 //    game restarts: its frames and sound stop for `restart_s`, and the cut plays again from its start.
+//  - The layer's own log (`layer_log=1`), for the local files test: started as the layer starts it in LMU,
+//    in %LOCALAPPDATA%\simoptix, so it follows the Debug of the sources that read the frames and the frame
+//    times. Without it, the layer's lines go to the console.
 //
 // Configuration: the file named by SIMOPTIX_FAKE_OPENXR_SCENARIO (key=value lines). Its log (key `log`) has
 // the true head motion and every frame drawn, in fake_pvr's format, so the runner measures both fakes
@@ -131,6 +134,7 @@ namespace {
         std::string menuSound;                  // empty: silent
         double menuSoundAfter = 0, menuSoundLagMs = 0, menuSoundRate = 48000;
         double restartS = 3;
+        bool layerLog = false;
 
         bool Load() {
             char path[MAX_PATH] = {};
@@ -194,6 +198,7 @@ namespace {
             restartS = num("restart_s", restartS);
             menuSoundLagMs = num("menu_sound_lag_ms", 0);
             menuSoundRate = num("menu_sound_rate", menuSoundRate);
+            layerLog = num("layer_log", 0) != 0;
             return true;
         }
     };
@@ -241,6 +246,11 @@ namespace {
 
             if (!config_.restartEvent.empty()) {
                 restart_.Reset(OpenEventA(SYNCHRONIZE, FALSE, config_.restartEvent.c_str()));
+            }
+
+            if (config_.layerLog && !FakeOpenXrLayer::StartLog()) {
+                fprintf(stderr, "fake_openxr: the layer's log didn't start\n");
+                return false;
             }
 
             period_ = 1.0 / config_.refreshHz;
@@ -305,6 +315,7 @@ namespace {
                     GameLoop();
                 }
 
+                LogStats();  // the stretch since the last 10 s
                 layer_.Stop();
             }
 
@@ -501,6 +512,7 @@ namespace {
 
         void LogStats() {
             const OpenXrPublisherStats s = layer_.TakeStats();
+            const OpenXrFrameTimingStats t = layer_.TakeTimingStats();
             std::lock_guard<std::mutex> lock(logMutex_);
 
             if (log_) {
@@ -512,6 +524,7 @@ namespace {
                     s.readerBusy,
                     s.copyPending
                 );
+                fprintf(log_, "# frame timing: %u frames timed\n", t.frames);
             }
         }
 
