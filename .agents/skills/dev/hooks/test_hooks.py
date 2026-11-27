@@ -22,20 +22,54 @@ ALLOWED = 0
 
 # (hook, tool, command, expected exit code)
 CASES = (
-    # heredoc
+    # unquoted heredoc
     ("check_shell_command.py", "Bash", "python - <<EOF\nprint('vr_mirror\\\\auto_sync')\nEOF", BLOCKED),
-    ("check_shell_command.py", "Bash", "python - <<'EOF'\nprint('vr_mirror\\auto_sync')\nEOF", BLOCKED),
     ("check_shell_command.py", "Bash", "cat <<-EOF > notes.txt\n\tC:\\Program Files\nEOF", BLOCKED),
-    ("check_shell_command.py", "Bash", 'cat << "EOF"\na\\b\nEOF', BLOCKED),
-    ("check_shell_command.py", "Bash", "python - <<<'print(\"a\\\\b\")'", BLOCKED),
     ("check_shell_command.py", "Bash", "git commit -s -F - <<EOF\nfix(dev): shared\\build\nEOF", BLOCKED),
-    ("check_shell_command.py", "Bash", "cat <<'EOF' > notes.txt\nplain text\nEOF", ALLOWED),
+    ("check_shell_command.py", "Bash", "python - <<<\"print('a\\\\b')\"", BLOCKED),
+    ("check_shell_command.py", "Bash", "cat <<EOF > notes.txt\nplain text\nEOF", ALLOWED),
     ("check_shell_command.py", "Bash", "echo $((1<<3)) shared\\build", ALLOWED),
+    # quoted heredoc
+    (
+        "check_shell_command.py",
+        "Bash",
+        "python - <<'EOF'\nopen('vr_mirror/obs_plugin/auto_sync.cpp')\nEOF",
+        ALLOWED,
+    ),
+    ("check_shell_command.py", "Bash", "python - <<'EOF'\nprint(\"done\\n\")\nEOF", ALLOWED),
+    (
+        "check_shell_command.py",
+        "Bash",
+        "python - <<'EOF'\nprint('shared\\\\build\\\\version.bat')\nEOF",
+        ALLOWED,
+    ),
+    (
+        "check_shell_command.py",
+        "Bash",
+        "git commit -s -F - <<'EOF'\nfix(dev): shared\\build\\version.bat\nEOF",
+        ALLOWED,
+    ),
+    ("check_shell_command.py", "Bash", 'cat << "EOF"\na\\b\nEOF', ALLOWED),
+    # Windows path in Python
+    (
+        "check_shell_command.py",
+        "Bash",
+        "python - <<'EOF'\nopen('vr_mirror\\obs_plugin\\auto_sync.cpp')\nEOF",
+        BLOCKED,
+    ),
+    (
+        "check_shell_command.py",
+        "Bash",
+        'python3 - <<"EOF"\nimport os\nos.listdir("C:\\Program Files")\nEOF',
+        BLOCKED,
+    ),
+    ("check_shell_command.py", "Bash", "py - <<\\EOF\nopen('shared\\build\\x.txt')\nEOF", BLOCKED),
+    ("check_shell_command.py", "Bash", "python - <<<'open(\"shared\\build\\x.txt\")'", BLOCKED),
     # python -c
     ("check_shell_command.py", "Bash", "python -c \"print('a\\\\b')\"", BLOCKED),
     ("check_shell_command.py", "Bash", "python -I -c \"open('shared\\\\log.cpp')\"", BLOCKED),
     ("check_shell_command.py", "PowerShell", "py -3 -c \"print('shared\\x')\"", BLOCKED),
-    ("check_shell_command.py", "PowerShell", 'tools\\python\\python.exe -c "print(1)"', BLOCKED),
+    ("check_shell_command.py", "PowerShell", 'tools\\python\\python.exe -c "print(1)"', ALLOWED),
     ("check_shell_command.py", "Bash", "python3 -c 'print(1)'", ALLOWED),
     ("check_shell_command.py", "PowerShell", "python -I .agents\\skills\\docs\\check_docs.py", ALLOWED),
     ("check_shell_command.py", "Bash", "ruff check -c shared\\x", ALLOWED),

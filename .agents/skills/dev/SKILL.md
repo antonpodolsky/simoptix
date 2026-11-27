@@ -507,13 +507,17 @@ One convention, everywhere. Check every new name against it, and rename what bre
 - Edit code with your agent's file-editing tools, not with shell commands.
 - **Don't write files with PowerShell `Set-Content`, `Out-File` or `Get-Content -Raw`.** Windows
   PowerShell 5.1 adds a byte-order mark and garbles non-ASCII text (an en dash comes out as `â€“`).
-- **Don't put code containing backslashes in bash heredocs or `python -c`.** The escapes get mangled.
-  Bash turns two backslashes into one, and Python then reads a backslash in front of `auto_sync` as an
-  escape, so the path holds a control character.
-  This holds for any script or text run from the shell, a two-line check as much as a commit message.
-  Write a script file with a file-editing tool and run that instead. In Python, write a Windows path
-  with forward slashes or as a raw string (`r"shared\build"`).
-- In Claude Code, a hook blocks the commands that break these two rules (`reference\hooks.md`).
+- **Quote a heredoc's end marker, and write paths in code with forward slashes.** This holds for any
+  script or text run from the shell, a two-line check as much as a commit message.
+  - Bash turns two backslashes into one in a heredoc whose end marker isn't quoted (`<<EOF`). With
+    the marker quoted (`<<'EOF'`), bash passes the text as written.
+  - Python reads a backslash in a string as an escape: in front of `auto_sync` it makes a control
+    character. Windows and Python accept forward slashes (`vr_mirror/obs_plugin`).
+  - Don't pass code that holds a backslash with `python -c`. Bash changes backslashes in double
+    quotes, and Windows PowerShell 5.1 splits a quoted argument that holds double quotes. Pass the code
+    in a heredoc with a quoted end marker instead (`python - <<'EOF'`).
+  - Code that needs backslashes goes in a script file, written with a file-editing tool.
+- In Claude Code, a hook blocks the commands that break these rules (`reference\hooks.md`).
 - Files in the working copy use LF line endings. `.gitattributes` checks every text file out with LF,
   on Windows too. Keep them that way.
 

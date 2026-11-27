@@ -10,7 +10,17 @@ them.
 
 | Hook | Runs before | Blocks |
 |---|---|---|
-| `hooks\check_shell_command.py` | Each call of the Bash and PowerShell tools | A bash heredoc or `python -c` whose text holds a backslash, and `Set-Content` or `Out-File` (step 2, "Edit") |
+| `hooks\check_shell_command.py` | Each call of the Bash and PowerShell tools | The commands that break the rules of step 2, "Edit" (below) |
+
+`check_shell_command.py` blocks:
+- a heredoc or here-string with an unquoted end marker (`<<EOF`) that holds a backslash
+- `python -c` with a backslash in its code
+- Python code in a quoted heredoc (`<<'EOF'`) with a Windows path in backslashes: a drive letter, or
+  two folders (`shared\build\version.bat`)
+- `Set-Content` or `Out-File` at the start of a statement or a pipeline stage
+
+A path with one backslash (`shared\build`) looks the same as an escape such as a newline, so
+the hook lets it run. For that case the rule is in the skill alone.
 
 ## How they run
 
@@ -31,7 +41,8 @@ command that writes a file with `Set-Content`. A rule that needs judgment stays 
 
 1. Write the rule in the skills first. The hook enforces a rule the skills state, and its message
    names where.
-2. Add it to the hook's `RULES`: a pattern that matches the command, and the reason the agent reads.
+2. Add it to the hook's `RULES`: the patterns that all match a command that breaks it, and the reason
+   the agent reads.
    The reason says what goes wrong and what to do instead, in one or two sentences.
 3. Match the command as it is run, not a mention of it. `git grep "Set-Content"` names the cmdlet and
    runs `git`, so the pattern for `Set-Content` matches it only at the start of a statement or a

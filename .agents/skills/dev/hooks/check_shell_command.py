@@ -8,10 +8,13 @@ and what to do instead. Exit code 0 lets the call run. Any other exit code is an
 itself, which Claude Code shows before it runs the call.
 
 The rules, and the commands each blocks:
-- heredoc: a bash heredoc or here-string that holds a backslash. Bash turns a doubled backslash into
-  one, and Python then reads a backslash and the letter after it as an escape.
-- python -c: Python code on the command line that holds a backslash, for the same reason, and because
-  Windows PowerShell 5.1 splits a quoted argument that holds double quotes.
+- unquoted heredoc: a heredoc or here-string whose end marker isn't quoted, and that holds a backslash.
+  Bash turns two backslashes into one there.
+- python -c: Python code on the command line that holds a backslash. Bash changes backslashes in double
+  quotes, and Windows PowerShell 5.1 splits a quoted argument that holds double quotes.
+- Windows path in Python: Python code in a quoted heredoc with a Windows path in backslashes, such as
+  a drive letter or two folders. Python reads a backslash in a string as an escape. A path with one
+  backslash looks like an escape such as a newline, so the hook can't tell it from one.
 - PowerShell writes: Set-Content and Out-File, which in Windows PowerShell 5.1 add a byte-order mark and
   garble non-ASCII text.
 
@@ -27,48 +30,64 @@ from dataclasses import dataclass
 
 BLOCK = 2
 
-FILE_INSTEAD = (
-    "Write the script or the text to a file in the scratch folder with the file-editing tool, and run "
-    "or pass that file: python -I <file>, git commit -s -F <file>, gh pr create --body-file <file>."
-)
+BACKSLASH = re.compile(r"\\")
+# <<EOF, <<-EOF, << EOF, and a here-string that isn't in single quotes (<<<"text").
+UNQUOTED_HEREDOC = re.compile(r"<<-?[ \t]*[A-Za-z_]|<<<[ \t]*(?!')")
+# <<'EOF', <<"EOF", <<\EOF, and a here-string in single quotes (<<<'text').
+QUOTED_HEREDOC = re.compile(r"<<-?[ \t]*(?:'|\"|\\)[A-Za-z_]|<<<[ \t]*'")
+# python, python3 or py, with or without a folder and .exe.
+PYTHON = re.compile(r"(?i)(?:^|[\s;&|(\\/])(?:python3?|py)(?:\.exe)?\b")
+# The same, with its options up to -c, and a backslash after it.
+PYTHON_C_BACKSLASH = re.compile(r"(?is)(?:^|[\s;&|(\\/])(?:python3?|py)(?:\.exe)?(?:\s+-[\w.]+)*?\s+-c\b.*\\")
+# A drive letter or two folders (shared\build\x), each with one backslash. Python's own doubled
+# backslashes (shared\\build) don't match.
+WINDOWS_PATH = re.compile(r"(?<![\w\\])[A-Za-z]:\\(?!\\)|(?<![\w.\\-])[\w.-]+\\[\w.-]+\\[\w.-]+")
+# The cmdlet at the start of a statement or a pipeline stage, not a mention of it in a string.
+POWERSHELL_WRITE = re.compile(r"(?im)(?:^|[|;{(]|&&)\s*(?:Set-Content|Out-File)\b")
+
+FORWARD_SLASHES = "Write paths with forward slashes (vr_mirror/obs_plugin), which Windows and Python accept."
 
 
 @dataclass(frozen=True)
 class Rule:
     name: str
-    pattern: re.Pattern
-    needs_backslash: bool
+    # The command breaks the rule when every pattern matches.
+    patterns: tuple
     reason: str
 
 
 RULES = (
     Rule(
-        name="heredoc",
-        # <<EOF, <<-EOF, << 'EOF', <<"EOF" and the here-string <<<.
-        pattern=re.compile(r"<<<|<<-?\s*['\"]?[A-Za-z_]"),
-        needs_backslash=True,
+        name="unquoted heredoc",
+        patterns=(UNQUOTED_HEREDOC, BACKSLASH),
         reason=(
-            "This command has a heredoc that holds a backslash. Bash turns a doubled backslash into one, "
-            "and Python or the shell then reads a backslash and the letter after it as an escape: the "
-            "\\a in \\auto_sync becomes a control character. " + FILE_INSTEAD
+            "This command has a heredoc with an unquoted end marker, and it holds a backslash. Bash turns "
+            "two backslashes into one there, and Python then reads a backslash in front of a name as an "
+            "escape: in front of auto_sync it makes a control character. Quote the end marker (<<'EOF'), "
+            "so bash passes the text as written. " + FORWARD_SLASHES
         ),
     ),
     Rule(
         name="python -c",
-        # python, python3 or py, with or without a folder and .exe, and its options up to -c.
-        pattern=re.compile(r"(?i)(?:^|[\s;&|(\\/])(?:python3?|py)(?:\.exe)?(?:\s+-[\w.]+)*?\s+-c\b"),
-        needs_backslash=True,
+        patterns=(PYTHON_C_BACKSLASH,),
         reason=(
-            "This command passes Python code that holds a backslash with python -c. The shell and Python "
-            "both read backslashes as escapes, and Windows PowerShell 5.1 splits a quoted argument that "
-            "holds double quotes. " + FILE_INSTEAD
+            "This command passes Python code that holds a backslash with python -c. Bash changes "
+            "backslashes in double quotes, and Windows PowerShell 5.1 splits a quoted argument that holds "
+            "double quotes. Pass the code in a heredoc with a quoted end marker (python - <<'EOF'). "
+            + FORWARD_SLASHES
+        ),
+    ),
+    Rule(
+        name="Windows path in Python",
+        patterns=(PYTHON, QUOTED_HEREDOC, WINDOWS_PATH),
+        reason=(
+            "This command runs Python code with a Windows path in backslashes. Python reads a backslash in "
+            "a string as an escape: in front of auto_sync it makes a control character. " + FORWARD_SLASHES
         ),
     ),
     Rule(
         name="PowerShell writes",
-        # The cmdlet at the start of a statement or a pipeline stage, not a mention of it in a string.
-        pattern=re.compile(r"(?im)(?:^|[|;{(]|&&)\s*(?:Set-Content|Out-File)\b"),
-        needs_backslash=False,
+        patterns=(POWERSHELL_WRITE,),
         reason=(
             "This command writes a file with Set-Content or Out-File. Windows PowerShell 5.1 adds a "
             "byte-order mark and garbles non-ASCII text (an en dash comes out as three other characters). "
@@ -79,16 +98,7 @@ RULES = (
 
 
 def broken_rules(command):
-    broken = []
-
-    for rule in RULES:
-        if rule.needs_backslash and "\\" not in command:
-            continue
-
-        if rule.pattern.search(command):
-            broken.append(rule)
-
-    return broken
+    return [rule for rule in RULES if all(pattern.search(command) for pattern in rule.patterns)]
 
 
 def read_command(args):
