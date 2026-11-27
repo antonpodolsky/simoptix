@@ -53,8 +53,14 @@ class OpenXrPublisher {
 public:
     // The runtime's time (XrTime, ns) for performance-counter moment `counter`; false if it can't say.
     using ClockReading = bool (*)(void* context, int64_t counter, int64_t* time);
+    // Whether VR Mirror reads the frames (`there`), and with its Debug setting on (`debug`): told once at
+    // each change, from the publisher's thread, and as gone when the publisher stops.
+    using ReaderNews = void (*)(bool there, bool debug);
 
     ~OpenXrPublisher() { Stop(); }
+
+    // Who hears the reader's news (the layer's log). Before Start.
+    void SetReaderNews(ReaderNews news) { news_ = news; }
 
     // The game's D3D11 session started (the game's thread): makes the shared memory and starts the
     // publisher's own thread. `clock` reads the runtime's clock (any thread). False, with nothing made,
@@ -117,6 +123,7 @@ private:
     bool multithreaded_ = true;  // the device may be used from the publisher's thread
     ClockReading clock_ = nullptr;
     void* clockContext_ = nullptr;
+    ReaderNews news_ = nullptr;
     UniqueHandle mapping_, event_, stop_, reader_;
     MappedView<openxr_share::Header> header_;
     int64_t frequency_ = 1;  // performance-counter ticks per second

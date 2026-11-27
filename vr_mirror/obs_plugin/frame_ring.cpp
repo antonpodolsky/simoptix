@@ -97,12 +97,15 @@ bool FrameRing::Start(FrameSource* source) {
     hasPrevious_ = held_ = false;
 
     running_ = true;
-    thread_ = std::thread([this] {
+    const std::atomic<bool>* logGate = CurrentLogGate();  // it logs as the thread starting it does
+    thread_ = std::thread([this, logGate] {
+        const ScopedLogGate gate(logGate);
+
         // An exception escaping a thread would end OBS on the spot; log it and stop copying.
         try {
             Run();
         } catch (...) {
-            CoreLog("copy thread stopped by an unexpected error");
+            CoreLogError("copy thread stopped by an unexpected error");
         }
     });
 

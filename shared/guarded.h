@@ -19,7 +19,7 @@ auto Guarded(const char* what, F&& body) -> decltype(body()) {
         return body();
     } catch (...) {
         if (!logged.exchange(true)) {
-            CoreLog("%s stopped by an unexpected error", what);
+            CoreLogError("%s stopped by an unexpected error", what);
         }
         return Result();
     }

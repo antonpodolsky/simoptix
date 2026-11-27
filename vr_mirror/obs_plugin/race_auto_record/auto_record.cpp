@@ -5,7 +5,10 @@
 #include <windows.h>
 #include <obs-module.h>
 
+#include <algorithm>
+#include <atomic>
 #include <mutex>
+#include <vector>
 
 #include "race_recorder.h"
 #include "shared/log.h"
@@ -23,7 +26,8 @@ namespace {
         // Enable and Disable (UI thread).
         std::mutex users;
         int count = 0;
-        bool on = false;  // the tick callback is added and the reader held
+        bool on = false;                              // the tick callback is added and the reader held
+        std::vector<const std::atomic<bool>*> debug;  // the Debug setting of each source it is on for
         // Set before the tick callback is added, then only read.
         VoidFn start = nullptr, stop = nullptr;
         BoolFn active = nullptr;
@@ -34,6 +38,8 @@ namespace {
         bool logged = false;  // loggedKind and loggedPhase hold what was logged last
         SessionKind loggedKind = SessionKind::Other;
         SessionPhase loggedPhase = SessionPhase::Unknown;
+        std::atomic<bool> logging{false};    // one of its sources has Debug on: this thread's log gate
+        std::atomic<bool> heldDebug{false};  // ...as told to the telemetry (Telemetry::HoldDebug)
     };
 
     // Never destroyed, like the telemetry reader.
@@ -49,6 +55,24 @@ namespace {
         TheState().stop();
     }
 
+    // Whether one of the sources it is on for has Debug on. The list is only skipped, never waited for,
+    // while the UI thread changes it: the answer comes again at the next step.
+    bool AnyDebug(State& st, bool previous) {
+        std::unique_lock<std::mutex> lock(st.users, std::try_to_lock);
+
+        if (!lock.owns_lock()) {
+            return previous;
+        }
+
+        for (const std::atomic<bool>* debug : st.debug) {
+            if (debug->load()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     void Tick(void*, float) {
         State& st = TheState();
 
@@ -59,6 +83,13 @@ namespace {
             return;
         }
         st.nextStep = now + kStepEvery;
+        st.logging = AnyDebug(st, st.logging);
+        const ScopedLogGate gate(&st.logging);
+
+        // The telemetry it holds logs while one of its sources has Debug on.
+        if (st.heldDebug.exchange(st.logging) != st.logging) {
+            Telemetry::HoldDebug(st.logging);
+        }
 
         const SessionState session = Telemetry::SessionAt(now);
         if (session.connected && session.t > 0
@@ -90,9 +121,10 @@ namespace {
 
 }
 
-void AutoRecord::Enable() {
+void AutoRecord::Enable(const std::atomic<bool>* debug) {
     State& st = TheState();
     std::lock_guard<std::mutex> g(st.users);
+    st.debug.push_back(debug);
     if (st.count++ > 0) {
         return;
     }
@@ -105,7 +137,7 @@ void AutoRecord::Enable() {
 
         if (!st.start || !st.stop || !st.active) {
             st.start = nullptr;
-            CoreLog("LMU race auto-record: OBS's frontend API isn't there, so races can't be recorded");
+            CoreLogError("LMU race auto-record: OBS's frontend API isn't there, so races can't be recorded");
             return;
         }
     }
@@ -113,19 +145,39 @@ void AutoRecord::Enable() {
     st.recorder.Reset();
     st.nextStep = 0;
     st.logged = false;
+
+    // Its source's Debug, before the telemetry's reader starts, so its first pass logs as Debug says. Tick
+    // follows it from then on. This source is the only one in the list.
+    st.logging = debug->load();
+    st.heldDebug = st.logging.load();
+    if (st.heldDebug) {
+        Telemetry::HoldDebug(true);
+    }
+
     Telemetry::Acquire();
     obs_add_tick_callback(Tick, nullptr);
     st.on = true;
     CoreLog("LMU race auto-record: on");
 }
 
-void AutoRecord::Disable() {
+void AutoRecord::Disable(const std::atomic<bool>* debug) {
     State& st = TheState();
     std::lock_guard<std::mutex> g(st.users);
+    const auto found = std::find(st.debug.begin(), st.debug.end(), debug);
+
+    if (found != st.debug.end()) {
+        st.debug.erase(found);
+    }
+
     if (st.count == 0 || --st.count > 0 || !st.on) {
         return;
     }
     obs_remove_tick_callback(Tick, nullptr);
+
+    if (st.heldDebug.exchange(false)) {
+        Telemetry::HoldDebug(false);
+    }
+
     Telemetry::Release();
     st.on = false;
     CoreLog("LMU race auto-record: off");

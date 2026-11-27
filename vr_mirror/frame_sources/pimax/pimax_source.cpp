@@ -110,12 +110,15 @@ bool PimaxSource::Start(std::string* error) {
     running_ = true;
     clock_.Reset();
     clockValid_ = false;
-    thread_ = std::thread([this] {
+    const std::atomic<bool>* logGate = CurrentLogGate();  // it logs as the thread starting it does
+    thread_ = std::thread([this, logGate] {
+        const ScopedLogGate gate(logGate);
+
         // An exception escaping a thread would end OBS on the spot; log it and stop polling.
         try {
             PollThread();
         } catch (...) {
-            CoreLog("Pimax: the poll thread stopped by an unexpected error");
+            CoreLogError("Pimax: the poll thread stopped by an unexpected error");
         }
     });
 
@@ -536,11 +539,11 @@ bool PimaxSource::CopyImage(
     return true;
 }
 
-uint64_t PimaxSource::TakeStats(double seconds, void (*line)(const char*)) {
+uint64_t PimaxSource::TakeStats(double seconds, StatsLineSink* lines) {
     int found = 0, missing = 0;
     TakePredictionStats(&found, &missing);
     const PvrFootprint f = TakeFootprint();
-    if (!line) {
+    if (!lines) {
         return f.wakeups;
     }
     char text[160];
@@ -552,7 +555,7 @@ uint64_t PimaxSource::TakeStats(double seconds, void (*line)(const char*)) {
         missing
     );
 
-    line(text);
+    lines->Line(text);
     std::string calls;
     uint64_t count = 0;
     double total = 0;
@@ -573,7 +576,7 @@ uint64_t PimaxSource::TakeStats(double seconds, void (*line)(const char*)) {
         calls.c_str()
     );
 
-    line(all.c_str());
+    lines->Line(all.c_str());
     return f.wakeups;
 }
 

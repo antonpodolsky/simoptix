@@ -45,7 +45,7 @@ namespace openxr_share {
     // so the reader opens the memory at once rather than at its next look (once a second).
     constexpr const wchar_t* kSessionEvent = L"Local\\SimOptix.OpenXR.FrameSource.Session";
     constexpr uint32_t kMagic = 0x46584F53;  // "SOXF"
-    constexpr uint32_t kVersion = 2;
+    constexpr uint32_t kVersion = 3;
     constexpr int kTextures = 3;
     constexpr int kRecords = 256;  // about 2.8 s of frames at 90 Hz
 
@@ -126,6 +126,9 @@ namespace openxr_share {
         // The reader's side.
         std::atomic<int64_t> readerSigned;  // performance counter of the reader's last sign; 0: no reader
         std::atomic<uint32_t> readerBusy;   // byte k: how many readers are reading texture k (ReaderCount)
+        // 1 while the reader has its Debug setting on, written with each sign: the layer logs only then
+        // (openxr_layer_log.h). With two readers, the last to sign.
+        std::atomic<uint32_t> readerDebug;
 
         // The layer's side, besides the frames.
         std::atomic<int64_t> layerSigned;    // performance counter of the layer's last sign

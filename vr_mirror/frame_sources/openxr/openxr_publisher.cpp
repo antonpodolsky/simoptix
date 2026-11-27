@@ -114,7 +114,7 @@ bool OpenXrPublisher::Start(ID3D11Device* device, ClockReading clock, void* cloc
         try {
             Run();
         } catch (...) {
-            CoreLog("frame source: its thread stopped by an unexpected error");
+            CoreLogError("frame source: its thread stopped by an unexpected error");
         }
     });
 
@@ -132,7 +132,7 @@ bool OpenXrPublisher::OpenSharedMemory(bool* existed) {
     ));
 
     if (!mapping_) {
-        CoreLog("frame source: shared memory not made (%lu): no frames for VR Mirror", GetLastError());
+        CoreLogError("frame source: shared memory not made (%lu): no frames for VR Mirror", GetLastError());
         return false;
     }
 
@@ -147,7 +147,7 @@ bool OpenXrPublisher::OpenSharedMemory(bool* existed) {
     stop_.Reset(CreateEventW(nullptr, TRUE, FALSE, nullptr));
 
     if (!header_ || !event_ || !reader_ || !stop_) {
-        CoreLog("frame source: shared memory not mapped (%lu): no frames for VR Mirror", GetLastError());
+        CoreLogError("frame source: shared memory not mapped (%lu): no frames for VR Mirror", GetLastError());
         Stop();
         return false;
     }
@@ -211,6 +211,11 @@ void OpenXrPublisher::Stop() {
     if (thread_.joinable()) {
         thread_.join();
     }
+
+    if (news_) {
+        news_(false, false);  // no reader of this session's frames any more
+    }
+
     if (header_) {
         header_->state.store(openxr_share::kEnded);
         header_->textureGeneration.store(0);
@@ -241,16 +246,25 @@ bool OpenXrPublisher::ReaderThere(int64_t now) const {
 // a reader that is there, and makes or lets go of the textures.
 void OpenXrPublisher::Run() {
     int64_t readerSeen = 0;
-    bool readerWas = false;
+    bool readerWas = false, debugWas = false;
     const HANDLE wake[2] = {stop_.Get(), reader_.Get()};
     while (WaitForMultipleObjects(2, wake, FALSE, 500) != WAIT_OBJECT_0) {
         const int64_t now = Counter();
         header_->layerSigned.store(now);
         const bool there = ReaderThere(now);
+        const bool debug = there && header_->readerDebug.load() != 0;
+
+        // The news first: the line below is logged as the reader's Debug now says.
+        if (news_ && (there != readerWas || debug != debugWas)) {
+            news_(there, debug);
+        }
+
         if (there != readerWas) {
             CoreLog("frame source: VR Mirror %s", there ? "reads the frames" : "stopped reading");
-            readerWas = there;
         }
+
+        readerWas = there;
+        debugWas = debug;
 
         if (!there) {
             if (state_ == kReady && readerSeen
@@ -330,7 +344,7 @@ bool OpenXrPublisher::MakeTextures() {
     }
 
     if (!t.texture[0]) {
-        CoreLog("frame source: shared textures %ux%u (format %u) not made", w, h, unsigned(game));
+        CoreLogError("frame source: shared textures %ux%u (format %u) not made", w, h, unsigned(game));
         return false;
     }
 

@@ -9,6 +9,10 @@ namespace {
 
 }
 
+void TimingOnReader(OpenXrFrameTiming::ReaderNews news) {
+    g_timing.SetReaderNews(news);
+}
+
 void TimingSessionCreated(const XrSessionCreateInfo& info) {
     ID3D11Device* device = nullptr;
 

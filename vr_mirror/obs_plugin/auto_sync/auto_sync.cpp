@@ -12,6 +12,7 @@
 #include "adapters/d3d/frame_source.h"
 #include "auto_sync_values.h"
 #include "hover_sync_measure.h"
+#include "shared/log.h"
 #include "shared/telemetry/qpc_clock.h"
 #include "shared/telemetry/telemetry.h"
 #include "vr_mirror/obs_plugin/audio_sync.h"
@@ -34,9 +35,14 @@ namespace {
 
 }
 
-AutoSync::AutoSync(FrameSource* source, FrameRing* ring) : source_(source), ring_(ring) {
+AutoSync::AutoSync(FrameSource* source, FrameRing* ring, const std::atomic<bool>* debug)
+    : source_(source),
+      ring_(ring),
+      debug_(debug) {
     wake_.Reset(CreateEventW(nullptr, FALSE, FALSE, nullptr));
     thread_ = std::thread([this] {
+        const ScopedLogGate gate(debug_);  // it logs as the view's Debug setting says
+
         // An exception escaping a thread would end OBS on the spot; log it and stop measuring.
         try {
             Run();
@@ -60,6 +66,7 @@ AutoSync::~AutoSync() {
 
 void AutoSync::Start() {
     if (!holding_.exchange(true)) {
+        FollowDebug();
         ::Telemetry::Acquire();
     }
 
@@ -75,7 +82,18 @@ void AutoSync::Stop() {
 
 void AutoSync::ReleaseTelemetry() {
     if (holding_.exchange(false)) {
+        FollowDebug();
         ::Telemetry::Release();
+    }
+}
+
+// Tells the telemetry whether it is held with Debug on (Telemetry::HoldDebug): before it is asked for, so the
+// reader's first pass follows it, before it is let go, and when Debug changes. Each change is told once.
+void AutoSync::FollowDebug() {
+    const bool hold = holding_ && debug_->load();
+
+    if (telemetryDebug_.exchange(hold) != hold) {
+        ::Telemetry::HoldDebug(hold);
     }
 }
 
@@ -170,9 +188,8 @@ void AutoSync::Begin(const SyncSetup& setup, const std::string& change) {
     SyncInputs& inputs = *this;
     measure_ = std::make_unique<HoverSyncMeasure>(values_, inputs, QpcNow());
     measuring_ = true;
-    blog(
-        LOG_INFO,
-        "[simoptix_vr_mirror] auto sync: measuring%s%s%s, with %d audio source%s",
+    CoreLog(
+        "auto sync: measuring%s%s%s, with %d audio source%s",
         change.empty() ? "" : " again (",
         change.c_str(),
         change.empty() ? "" : " changed)",
@@ -201,13 +218,13 @@ void AutoSync::Step() {
     const SyncStep step = measure_->Step(QpcNow(), *this);
 
     for (const std::string& line : step.found) {
-        blog(LOG_INFO, "[simoptix_vr_mirror] auto sync: %s", line.c_str());
+        CoreLog("auto sync: %s", line.c_str());
     }
 
     if (step.moved) {
         values_ = step.values;
         Apply(values_);
-        blog(LOG_INFO, "[simoptix_vr_mirror] auto sync now, %s", step.state.c_str());
+        CoreLog("auto sync now, %s", step.state.c_str());
     }
 
     if (step.done) {
@@ -219,7 +236,7 @@ void AutoSync::Step() {
 // it changes.
 void AutoSync::Finish(const SyncStep& step) {
     SaveAutoSyncValues(sourceName_.c_str(), values_);
-    blog(LOG_INFO, "[simoptix_vr_mirror] auto sync done, %s", step.state.c_str());
+    CoreLog("auto sync done, %s", step.state.c_str());
 
     {
         std::lock_guard<std::mutex> lock(g_settledMutex);

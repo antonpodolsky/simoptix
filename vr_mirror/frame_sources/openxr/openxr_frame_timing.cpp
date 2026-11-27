@@ -57,7 +57,7 @@ bool OpenXrFrameTiming::Start(ID3D11Device* device) {
     }
 
     if (!header_) {
-        CoreLog("frame timing: shared memory not made (%lu): no performance overlay", GetLastError());
+        CoreLogError("frame timing: shared memory not made (%lu): no performance overlay", GetLastError());
         mapping_.Reset();
         return false;
     }
@@ -131,7 +131,12 @@ void OpenXrFrameTiming::Stop() {
         CoreLog("frame timing: stopped with the session");
     }
 
+    if (news_) {
+        news_(false, false);  // no reader of this session's frame times any more
+    }
+
     active_ = false;
+    debugWas_ = false;
 
     for (Slot& s : slots_) {
         s = Slot();
@@ -263,6 +268,14 @@ void OpenXrFrameTiming::FrameEnded(bool succeeded) {
     FinishSlots();
 
     const bool there = ReaderThere(Counter());
+    const bool debug = there && header_->readerDebug.load() != 0;
+
+    // The news first: the line below is logged as the reader's Debug now says.
+    if (news_ && (there != active_.load() || debug != debugWas_)) {
+        news_(there, debug);
+    }
+
+    debugWas_ = debug;
 
     if (there != active_.load()) {
         CoreLog(

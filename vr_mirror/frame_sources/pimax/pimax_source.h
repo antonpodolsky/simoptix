@@ -166,7 +166,7 @@ public:
     uint64_t ThreadCycles() override { return PollThreadCycles(); }
     // The 10 s lines: the predicted poses found and missing, and every call into the Pimax runtime by
     // kind (and resets them); returns the poll thread's passes.
-    uint64_t TakeStats(double seconds, void (*line)(const char*)) override;
+    uint64_t TakeStats(double seconds, StatsLineSink* lines) override;
 
     // Last-resort cleanup from crash/exit handlers: just switch the mirror off.
     static void EmergencyDisable() { PvrMirror::EmergencyDisable(); }

@@ -60,12 +60,15 @@ void LapRecorder::Start(FrameRing* ring, FrameSource* source) {
     state_ = static_cast<int>(State::kWaiting);
     running_ = true;
 
-    thread_ = std::thread([this] {
+    const std::atomic<bool>* logGate = CurrentLogGate();  // it logs as the thread starting it does
+    thread_ = std::thread([this, logGate] {
+        const ScopedLogGate gate(logGate);
+
         // An exception escaping a thread would end OBS on the spot; log it and give the lap up.
         try {
             Run();
         } catch (...) {
-            CoreLog("recorded lap: the recorder stopped by an unexpected error");
+            CoreLogError("recorded lap: the recorder stopped by an unexpected error");
             video_.Abort();
             state_ = static_cast<int>(State::kFailed);
         }
@@ -348,7 +351,7 @@ void LapRecorder::Save() {
 }
 
 void LapRecorder::Fail(const char* why) {
-    CoreLog("recorded lap: not recorded: %s", why);
+    CoreLogError("recorded lap: not recorded: %s", why);  // the properties send the user here
     video_.Abort();
     DeleteFileW(videoPath_.c_str());
     state_ = static_cast<int>(State::kFailed);

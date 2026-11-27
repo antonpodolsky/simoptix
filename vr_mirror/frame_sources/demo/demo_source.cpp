@@ -104,12 +104,15 @@ bool DemoSource::Start(std::string* error) {
     ResetEvent(stop_.Get());
     running_ = true;
 
-    thread_ = std::thread([this] {
+    const std::atomic<bool>* logGate = CurrentLogGate();  // it logs as the thread starting it does
+    thread_ = std::thread([this, logGate] {
+        const ScopedLogGate gate(logGate);
+
         // An exception escaping a thread would end OBS on the spot; log it and stop playing.
         try {
             Run();
         } catch (...) {
-            CoreLog("demo: the demo thread stopped by an unexpected error");
+            CoreLogError("demo: the demo thread stopped by an unexpected error");
         }
     });
 
@@ -312,7 +315,7 @@ bool DemoSource::OpenVideo(ID3D11Device* device) {
     std::string error;
 
     if (!video_.Open(videoPath_, lap_.width, lap_.height, device, &error)) {
-        CoreLog("demo: %s", error.c_str());
+        CoreLogError("demo: %s", error.c_str());
         failedDevice_ = device;
         return false;
     }
@@ -355,7 +358,7 @@ bool DemoSource::Ready(int index) {
 
         if (!video_.Next(&sample, &t, &end)) {
             if (!end) {
-                CoreLog("demo: the lap's video could not be decoded");
+                CoreLogError("demo: the lap's video could not be decoded");
             }
 
             break;
@@ -385,7 +388,7 @@ bool DemoSource::Seek(int index) {
 
     // Half a period early: the key frame at the frame itself, not the next.
     if (!video_.SeekTo(lap_.frames[index].t - start.t - 0.5 * period_.load())) {
-        CoreLog("demo: the lap's video could not be played from %.1f s", lap_.frames[index].t);
+        CoreLogError("demo: the lap's video could not be played from %.1f s", lap_.frames[index].t);
         return false;
     }
 
@@ -442,12 +445,12 @@ uint64_t DemoSource::ThreadCycles() {
     return ::ThreadCycles(thread_);
 }
 
-uint64_t DemoSource::TakeStats(double seconds, void (*line)(const char*)) {
+uint64_t DemoSource::TakeStats(double seconds, StatsLineSink* lines) {
     const uint64_t wakeups = wakeups_.exchange(0), laps = laps_.exchange(0);
     const uint64_t arrived = framesArrived_.load(), frames = arrived - statArrived_;
     statArrived_ = arrived;
 
-    if (!line) {
+    if (!lines) {
         return wakeups;
     }
 
@@ -462,6 +465,6 @@ uint64_t DemoSource::TakeStats(double seconds, void (*line)(const char*)) {
         static_cast<unsigned long long>(laps)
     );
 
-    line(text);
+    lines->Line(text);
     return wakeups;
 }

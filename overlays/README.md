@@ -137,6 +137,10 @@ Rebuilding the four highest values and the live G at once takes 0.3–0.6 ms on 
   The demo works with or without the game running. It isn't saved, so it is off again when OBS
   restarts. Starting or stopping it clears the tail and the highest values, so demo numbers never mix
   with real ones. The lap is in `shared\telemetry\demo_lap.cpp`.
+- **Debug:** the G-meter writes its lines to the OBS log, and the telemetry writes its own while the
+  G-meter is shown (`shared\telemetry\README.md`). With Debug off, the plugin writes its version when
+  OBS loads it, and a line only when something fails, such as "overlay image ... couldn't be read
+  from the plugin".
 
 Everything else is fixed in the code (`gmeter_source.cpp`, the constants at its top):
 - The dot shows the force the driver feels.
@@ -151,15 +155,15 @@ Add it to the scene above the VR Mirror source.
   1920x1080 and 400 on 2560x1440. At 1080 its box sits 16 px from the right edge and 11 from the
   bottom. Move or resize it like any overlay.
 - It always draws itself at the size it is shown on the canvas, so it stays sharp at any size. When the
-  canvas changes, OBS keeps it in proportion. The OBS log says the size it draws at ("drawn at 400 x
-  400 px").
+  canvas changes, OBS keeps it in proportion. With Debug on, the OBS log says the size it draws at
+  ("drawn at 400 x 400 px").
 - While you drag its size, it shows the last build stretched and rebuilds 0.3 s after the drag stops.
 - Leave its scale filtering at **Disable** and leave it uncropped. OBS draws a cropped or filtered item
   at its base size first (300 px) and then stretches that.
 - Its **Properties** window resizes itself when it opens, whatever size it was left at. The preview
   then shows the meter at exactly its size on the canvas (1:1), and again if that size changes while
-  the window is open. The window moves up or left if it would leave the screen. The log says
-  "properties preview ... (1:1)". OBS doesn't tell a source which window shows its properties. So the
+  the window is open. The window moves up or left if it would leave the screen. With Debug on, the log
+  says "properties preview ... (1:1)". OBS doesn't tell a source which window shows its properties. So the
   plugin takes the window OBS activates as it opens them, with the source's name in its title. This
   works in any OBS language.
 
@@ -197,7 +201,8 @@ The OpenXR API layer times the game's frames, and only while a Performance Overl
 The source signs in a small piece of shared memory (`shared\performance\performance_share.h`), and the
 layer stops timing 1.5 s after it stops signing. While it times, the layer reads the clock three times
 per frame and puts two timestamps in the game's graphics queue (`vr_mirror\frame_sources\openxr\README.md`).
-The plugin logs when it finds the layer's frame times ("performance: reading the game's frame times").
+With Debug on, the plugin logs when it finds the layer's frame times ("performance: reading the game's
+frame times").
 
 ### How it is drawn
 
@@ -210,6 +215,9 @@ so they don't shift as the numbers change.
 ### Properties
 
 - **Theme:** **Chrono** or **OLED**. Chrono is the default.
+- **Debug:** the performance overlay writes its lines to the OBS log, and the OpenXR layer writes its
+  own log while the overlay reads its frame times (`vr_mirror\frame_sources\openxr\README.md`). With
+  Debug off, the plugin writes its version when OBS loads it, and a line only when something fails.
 
 ### Placing it in a scene
 
@@ -217,8 +225,8 @@ so they don't shift as the numbers change.
   109 px on 1920x1080. Its bezel's right edge sits 47 px from the canvas's right edge, in line with the
   G-meter's rim, and its top 42 px from the top. Move or resize it like any overlay.
 - It draws itself at the size it is shown on the canvas, and OBS keeps it in proportion when the canvas
-  changes, as for the G-meter. The OBS log says the size it draws at ("Performance Overlay: drawn at
-  416 x 218 px").
+  changes, as for the G-meter. With Debug on, the OBS log says the size it draws at ("Performance
+  Overlay: drawn at 416 x 218 px").
 - Its box has room for the shadow round the bezel, more below than above.
 - Leave its scale filtering at **Disable** and leave it uncropped, as for the G-meter.
 
@@ -229,4 +237,5 @@ both plugins share (`shared\telemetry\README.md`). One reader serves the whole o
 while something needs it: a G-meter on screen, or race auto-record switched on.
 
 The plugin that runs the telemetry reader logs the reader's footprint every 10 s while it is connected
-to a game, with that plugin's tag ("footprint: telemetry thread (Le Mans Ultimate) ...").
+to a game, with that plugin's tag ("footprint: telemetry thread (Le Mans Ultimate) ..."). It does so
+while something that holds the telemetry has Debug on (`shared\telemetry\README.md`).

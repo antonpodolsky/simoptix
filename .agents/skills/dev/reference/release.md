@@ -26,7 +26,7 @@ commit whose `version.txt` says 0.2.0.
 | Each plugin's `manifest.json` (`build.bat` writes it into `bin\`, `build.bat install` copies it to the plugin's `data` folder) | The full string as `version`. OBS 32.2.2 keeps it and shows it nowhere (`findings\obs_plugin.md`, "OBS's plugin manifest") |
 | The layer's manifest in `bin\` | `implementation_version`, one decimal number: major × 1000000 + minor × 1000 + patch, so 0.2.0 is 2000. The OpenXR loader skips a layer whose number isn't a whole number |
 | The OBS log | `[simoptix_vr_mirror] loaded, version 0.2.0`, and the same for `[simoptix_overlays]` |
-| The layer's log | `XR_APILAYER_SIMOPTIX_frame_source 0.2.0 loaded into Le Mans Ultimate.exe, ...` |
+| The layer's log, written while an OpenXR Mirror source has Debug on | `XR_APILAYER_SIMOPTIX_frame_source 0.2.0 loaded into Le Mans Ultimate.exe, ...` |
 | SimOptix Setup (`setup\`) | Its own version in the exe's version resource, after its window's title, and as `DisplayVersion` in its entry in Windows' installed apps. Each row shows the installed part's version, read from that DLL's version resource |
 
 The version names a build for people, and decides nothing at run time. Whether parts fit together is

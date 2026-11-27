@@ -25,6 +25,9 @@ void FramesSessionCreated(
 );
 
 void FramesSessionDestroyed();
+// Who hears whether VR Mirror reads the frames, and with Debug on (OpenXrPublisher::ReaderNews): the
+// layer's log. Before the first session.
+void FramesOnReader(OpenXrPublisher::ReaderNews news);
 void FramesSwapchainCreated(XrSwapchain swapchain, const XrSwapchainCreateInfo& info);
 void FramesSwapchainDestroyed(XrSwapchain swapchain);
 // What xrEnumerateSwapchainImages filled in (`count` images of the type in `images`).

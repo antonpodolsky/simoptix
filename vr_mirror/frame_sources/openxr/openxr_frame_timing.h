@@ -37,7 +37,14 @@ struct OpenXrFrameTimingStats {
 
 class OpenXrFrameTiming {
 public:
+    // Whether a reader reads the frame times (`there`), and with its Debug setting on (`debug`): told once
+    // at each change, from the thread that ends frames, and as gone when the session ends.
+    using ReaderNews = void (*)(bool there, bool debug);
+
     ~OpenXrFrameTiming() { Stop(); }
+
+    // Who hears the reader's news (the layer's log). Before Start.
+    void SetReaderNews(ReaderNews news) { news_ = news; }
 
     // The game's D3D11 session started (the game's thread): makes the shared memory and the GPU queries.
     // False, with nothing made, if the memory can't be made.
@@ -86,6 +93,8 @@ private:
     UniqueHandle mapping_;
     MappedView<performance_share::Header> header_;
     int64_t frequency_ = 1;  // performance-counter ticks per second
+    ReaderNews news_ = nullptr;
+    bool debugWas_ = false;  // the thread that ends frames: the reader's Debug as last told
 
     // Set by the thread that ends frames, read by the others.
     std::atomic<bool> active_{false};     // a reader is there: time the frames

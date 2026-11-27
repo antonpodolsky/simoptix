@@ -61,8 +61,12 @@ public:
     );
     ~MirrorView();
 
-    // Core's settings, and Debug (the frame-number stamp and the frame trace together).
+    // Core's settings, and Debug (the frame-number stamp, the frame trace and the source's log lines).
     void SetSettings(const MirrorSettings& settings, bool debug);
+    // Its Debug setting, as the gate of the threads working for it (ScopedLogGate, shared\log.h), and
+    // whether any VR Mirror source has Debug on (for what all sources share, such as the audio's delay).
+    const std::atomic<bool>* DebugFlag() const { return &debug_; }
+    static bool AnyDebug();
 
     // Plays the newest recorded lap in place of the game (not saved: off when OBS starts).
     void SetDemo(bool on) { demoWanted_ = on; }
@@ -103,6 +107,7 @@ private:
     void FollowVideoSettings();
     bool FollowSource(SessionWorker::State state);
     void FollowLap();
+    void FollowTelemetryDebug();
     bool WaitsForGame() const;
     EmptyText EmptyTextNow();
     void StopSession(const char* why);
@@ -110,6 +115,7 @@ private:
     void KeepReportedFacts();
     void FollowDialogOpened();
     void ToggleTrace(bool on);
+    void LogEye();
     PipelineConfig ConfigOf() const;
     void FeedDrawnPose();
     void RestartDelay();
@@ -122,8 +128,8 @@ private:
     void OpenSlotTexture(const FrameRing::SlotInfo& slot);
     void SetImageNeed();
     void StartFootprint();
-    void LogFootprint(double seconds);
-    void LogStats(uint64_t tickNs);
+    void TraceFootprint(double seconds);
+    void TraceStats(uint64_t tickNs);
     void DrawStamp();
     void DestroyTextures();
 
@@ -134,12 +140,16 @@ private:
     // OBS's show/hide set `wanted_`; the graphics thread asks the session worker to start and stop
     // (StartStop), never waiting for it.
     SessionWorker session_{nullptr, &ring_};
+    // The Debug setting: set on the UI thread, read by every thread's log gate. Before the members whose
+    // threads log by it.
+    std::atomic<bool> debug_{false};
     // Measures how the game's sound lines up with the view, while the game's frames run. Destroyed before the
-    // ring and the frame source it reads.
-    AutoSync autoSync_{gameSource_.get(), &ring_};
+    // ring, the frame source it reads and the Debug setting it logs by.
+    AutoSync autoSync_{gameSource_.get(), &ring_, &debug_};
     std::atomic<bool> wanted_{false};
     std::atomic<bool> demoWanted_{false}, lapWanted_{false};
-    std::atomic<bool> telemetryHeld_{false};  // for the lap recorder (Telemetry::Acquire)
+    std::atomic<bool> telemetryHeld_{false};   // for the lap recorder (Telemetry::Acquire)
+    std::atomic<bool> telemetryDebug_{false};  // ...with Debug on, as told to it (FollowTelemetryDebug)
     LapRecorder recorder_;
     std::atomic<bool> lapRecorded_{false};          // a lap is recorded (FindLap)
     EmptyState emptyState_;                         // graphics thread
@@ -153,6 +163,7 @@ private:
     uint64_t framesAtStart_ = 0;  // graphics thread: FrameSource::FramesArrived() when it started
 
     MirrorSettings settings_;
+    std::string loggedSettings_;  // UI thread: the settings as last logged (SetSettings)
     // The OBS canvas's base size: written each tick on the graphics thread (FollowVideoSettings), read
     // by OBS from any thread (Width, Height).
     std::atomic<uint32_t> width_{2560}, height_{1440};
@@ -188,11 +199,16 @@ private:
         TraceWriter* writer = nullptr;
         void Line(const char* line) override { writer->Printf("%s\n", line); }
     } tickTraceSink_;
+    // The frame source's 10 s stats lines into the same trace, as `#stats,` lines (TakeStats).
+    struct TraceStatsLines : StatsLineSink {
+        TraceWriter* writer = nullptr;
+        void Line(const char* line) override { writer->Printf("#stats,%s\n", line); }
+    } traceStats_;
 
     int statTicks_ = 0, statRepeats_ = 0, statJumps_ = 0, statNoFrame_ = 0, statHeld_ = 0;
     double statStart_ = 0;     // source time the current 10 s stretch of stats began (0: not yet)
     uint64_t statFrames_ = 0;  // FrameSource::FramesArrived() then
-    // Footprint (LogFootprint): the threads' cycle counts and the timestamp counter at the start of
+    // Footprint (TraceFootprint): the threads' cycle counts and the timestamp counter at the start of
     // the stretch, and the graphics thread's time in Prepare per tick (seconds).
     uint64_t footClock_ = 0, footPoll_ = 0, footCopy_ = 0;
     DurationSamples prepareTimes_;

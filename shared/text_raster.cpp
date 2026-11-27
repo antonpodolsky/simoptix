@@ -24,7 +24,7 @@ namespace {
                     __uuidof(IDWriteFactory2),
                     reinterpret_cast<IUnknown**>(&f)
                 ))) {
-                CoreLog("G-Meter Overlay: DirectWrite 2 isn't available: meter labels won't be drawn");
+                CoreLogError("G-Meter Overlay: DirectWrite 2 isn't available: meter labels won't be drawn");
                 f = nullptr;
             }
 

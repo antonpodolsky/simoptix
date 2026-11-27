@@ -23,8 +23,9 @@ struct ToolProcess {
 bool Launch(const fs::path& dir, const fs::path& exe, const fs::path& scenarioFile, ToolProcess* out);
 void Close(ToolProcess& p);
 
-// fake_openxr.exe from `exe`, in `dir`, with its settings (`scenarioFile`), its output to fake_openxr.out;
-// it runs until StopFakeGame sets the event the settings name (`stopEvent`, made here).
+// fake_openxr.exe from `exe`, in `dir`, with its settings (`scenarioFile`), its output to fake_openxr.out,
+// and this program's environment with each NAME=value of `set` in place of the same name's; it runs until
+// StopFakeGame sets the event the settings name (`stopEvent`, made here).
 struct FakeGameProcess {
     PROCESS_INFORMATION pi = {};
     UniqueHandle stop;
@@ -35,7 +36,8 @@ bool LaunchFakeGame(
     const fs::path& exe,
     const fs::path& scenarioFile,
     const std::wstring& stopEvent,
-    FakeGameProcess* out
+    FakeGameProcess* out,
+    const std::vector<std::wstring>& set = {}
 );
 
 void StopFakeGame(FakeGameProcess& p);

@@ -158,7 +158,7 @@ void PvrMirror::OpenSignal(PvrSession& session, CallStats& config, bool logFailu
     UniqueHandle server(serverPid ? OpenProcess(PROCESS_DUP_HANDLE, FALSE, serverPid) : nullptr);
     if (!server) {
         if (logFailures) {
-            CoreLog(
+            CoreLogError(
                 "cannot open pi_server for handle duplication (%lu); buffer sync disabled\n",
                 GetLastError()
             );
@@ -179,7 +179,7 @@ void PvrMirror::OpenSignal(PvrSession& session, CallStats& config, bool logFailu
             DUPLICATE_SAME_ACCESS
         )) {
         if (logFailures) {
-            CoreLog(
+            CoreLogError(
                 "sync event 0 (0x%llx) not available (%lu)\n",
                 static_cast<unsigned long long>(h),
                 GetLastError()

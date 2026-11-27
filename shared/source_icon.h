@@ -23,7 +23,7 @@ inline const char* FindSourceIcon(const char* file) {
     char* found = obs_module_file(path);
 
     if (!found && !logged.exchange(true)) {
-        CoreLog("source icon %s not found in the plugin's data folder: OBS shows its own icon", path);
+        CoreLogError("source icon %s not found in the plugin's data folder: OBS shows its own icon", path);
     }
 
     return found;

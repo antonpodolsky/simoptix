@@ -59,7 +59,7 @@ void DrawnPoseFeed::Release() {
 bool DrawnPoseFeed::InitImages() {
     if (needs_.thumbnail && !thumbs_.Ready()) {
         if (!thumbs_.Init(device_.Get(), true)) {
-            CoreLog("drawn pose: no thumbnails, frames keep their arrival slot's pose");
+            CoreLogError("drawn pose: no thumbnails, frames keep their arrival slot's pose");
             return false;
         }
 
@@ -77,7 +77,7 @@ bool DrawnPoseFeed::InitImages() {
         return true;
     }
     if (!patches_.Init(device_.Get(), false, w, h, l.samples)) {
-        CoreLog("drawn pose: no patches, frames keep the slot check's pose");
+        CoreLogError("drawn pose: no patches, frames keep the slot check's pose");
         return false;
     }
 

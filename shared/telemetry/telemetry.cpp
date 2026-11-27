@@ -35,6 +35,19 @@ void Telemetry::Release() {
     }
 }
 
+void Telemetry::HoldDebug(bool on) {
+    std::atomic<int32_t>& debugUsers = TheTelemetryArea()->debugUsers;
+
+    if (on) {
+        debugUsers.fetch_add(1);
+        return;
+    }
+
+    int32_t n = debugUsers.load();
+    while (n > 0 && !debugUsers.compare_exchange_weak(n, n - 1)) {
+    }
+}
+
 void Telemetry::Shutdown() {
     TelemetryReader::Shutdown();
 }

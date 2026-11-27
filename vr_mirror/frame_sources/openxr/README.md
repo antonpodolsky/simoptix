@@ -89,13 +89,19 @@ certificate, with SHA-256 and a timestamp, and installed with `install.ps1`.
     unknown.
   - With nobody reading, the layer only checks at the end of each frame whether the overlay signed.
 - **In LMU, it writes one log per game start,**
-  `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`. The newest 10 logs are kept. When a
-  game start reaches OpenXR, the layer deletes the oldest beyond 10. Its log says how many it deleted.
-- **The log's first line says that Windows loaded the DLL into LMU,** before any OpenXR step. In LMU
-  started without Easy Anti-Cheat, a game start with no new log means the DLL was never loaded. A log
-  with this line alone means OpenXR never called the layer. With Easy Anti-Cheat, the signed layer
-  loaded and worked but wrote no log. Why is not known. There, VR Mirror's OBS log shows that the layer
-  runs in the game.
+  `%LOCALAPPDATA%\simoptix\openxr_frame_source_<date>_<time>.log`, while a source that reads the layer
+  has **Debug** on: an OpenXR Mirror source, which reads its frames, or a performance overlay, which
+  reads its frame times. Until a source reads, the layer keeps its lines in memory. It writes them while
+  a source reading has Debug on, and drops them while the sources reading have it off. When the last
+  one stops, its Debug decides until the next one reads. A game start that no source reads leaves no
+  log.
+- **Failures are always written,** whatever Debug says: a refused handshake, a session or swapchain
+  the runtime didn't make, or shared memory the layer couldn't make.
+- **The newest 10 logs are kept.** When the layer makes a log, it deletes the oldest beyond 10. Its log
+  says how many it deleted.
+- **The log's first line says that Windows loaded the DLL into LMU,** before any OpenXR step. With Easy
+  Anti-Cheat, the signed layer loaded and worked but wrote no log. Why is not known. There, VR Mirror's
+  OBS log, with Debug on, shows that the layer runs in the game.
 - **After that line, the log holds:**
   - the layer's version, when OpenXR first calls it
     (`XR_APILAYER_SIMOPTIX_frame_source 0.1.0 loaded into Le Mans Ultimate.exe, ...`)

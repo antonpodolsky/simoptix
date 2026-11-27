@@ -87,7 +87,7 @@ and fail on any warning, run
 |---|---|---|
 | `vr_mirror\core\`, `vr_mirror\frame_sources\pimax\` | Both plugins, `vr_mirror\mirror_app\build.bat`, `vr_mirror\e2e\build.bat` | Yes |
 | `shared\` | The same, and `shared\telemetry\games\lmu\fake\build.bat` for a telemetry change, and `vr_mirror\frame_sources\openxr\build.bat` for `shared\local_files.*` | If the mirror app or the tests use the file. The local files test for `shared\local_files.*` and the crash dump |
-| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins | The local files test for the Debug setting's trace files. The auto sync test for `vr_mirror\obs_plugin\auto_sync\`. Otherwise no. Check in OBS (below) |
+| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins | The local files test for the Debug setting's trace files, what a plugin logs with Debug on or off, the settings and eye lines, or the file beside a recording. The auto sync test for `vr_mirror\obs_plugin\auto_sync\`. Otherwise no. Check in OBS (below) |
 | `vr_mirror\mirror_app\` | `vr_mirror\mirror_app\build.bat` | Yes, for a change in behaviour |
 | `vr_mirror\e2e\` | `vr_mirror\e2e\build.bat` | The scenarios that changed |
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`, which checks the declarations against Pimax's headers. Without the SDK it says so and skips | Yes |
@@ -122,7 +122,9 @@ way OBS does and measures what a viewer would see.
 
 The local files test (`vr_mirror\e2e\bin\local_files_e2e.exe`) checks the files the plugins and the
 OpenXR layer write under `%LOCALAPPDATA%\simoptix`: the Debug setting's traces, crash dumps and the
-layer's logs. It runs the built plugins in a private copy of OBS, and the built layer in a fake game.
+layer's logs. It also checks the settings and the game's eye in OBS's log and the trace, which lines
+OBS's log has with Debug on and off, and the file beside a recording. It runs the built plugins in a private copy of OBS, and the built layer in a fake
+game.
 Build both plugins, the layer and `vr_mirror\e2e\build.bat` first, and close OBS and LMU. It takes about
 a minute, and its first run copies OBS (466 MB).
 

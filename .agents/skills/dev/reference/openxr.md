@@ -20,7 +20,8 @@ near the game.
 - It behaves like LMU: the same name and extensions, a D3D11 session, one image buffer per eye in the
   game's format and usage, and five seconds of frames. It clears the left eye to a colour that encodes
   the frame's number.
-- Meanwhile it reads what the layer publishes, as VR Mirror does, on a device of its own.
+- Meanwhile it reads what the layer publishes, as VR Mirror does with Debug on, on a device of its
+  own. So the layer writes its log.
 - It fails unless:
   - every frame record holds what it submitted
   - nearly every frame after the first copy was copied
@@ -32,8 +33,8 @@ near the game.
   file.
 - It needs the headset on, with its VR software running as the active OpenXR runtime.
   - Measured with Pimax's runtime and no headset: it stopped at `xrGetSystem` (−35,
-    `XR_ERROR_FORM_FACTOR_UNAVAILABLE`) and said so. The log then showed only the handshake and the
-    instance (`findings\openxr.md`, "The check program").
+    `XR_ERROR_FORM_FACTOR_UNAVAILABLE`) and said so (`findings\openxr.md`, "The check program"). Then
+    nothing reads the layer's frames, so the layer writes no log.
   - Measured with Meta's runtime and a Quest 3 connected but not worn, through the same OpenXR calls in
     VR Mirror's headset test: `xrGetSystem` found the headset, and the session then stayed idle for
     30 s (`findings\obs_plugin.md`, "The empty state's facts"). The check program itself hasn't been
@@ -124,9 +125,10 @@ Test a signed DLL cheapest first, and stop at the first step where the game does
    went cleanly.
 
 Where to look after each start:
-- **VR Mirror's OBS log** (`%APPDATA%\obs-studio\logs`), with an OpenXR Mirror source shown: "the
-  layer runs in the game", the layer's textures opened, and the frames per 10 s. With Easy Anti-Cheat
-  the layer wrote no log of its own, so this is the evidence that it loaded.
+- **VR Mirror's OBS log** (`%APPDATA%\obs-studio\logs`), with an OpenXR Mirror source shown with
+  **Debug** on: "the layer runs in the game" and the layer's textures opened. Its frames per 10 s are in
+  the source's frame trace. With Easy Anti-Cheat the layer wrote no log of its own, so this is the
+  evidence that it loaded. The layer writes its log only while that source has Debug on.
 - **Easy Anti-Cheat's launcher log**, in `%APPDATA%\EasyAntiCheat\` under the game's folder:
   "Easy Anti-Cheat successfully loaded in-game".
 - **Windows' System log**, event 26: an "Untrusted system file" popup names a refused DLL.

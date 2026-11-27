@@ -292,21 +292,30 @@ Each run's files, OBS's log among them, are in `out\auto_sync\<run>\`.
 ## The local files test
 
 `bin\local_files_e2e.exe` checks the frame traces, crash dumps and OpenXR layer logs that SimOptix
-keeps in `%LOCALAPPDATA%\simoptix`. It runs the plugins and the layer as built, with
+keeps in `%LOCALAPPDATA%\simoptix`. It also checks the settings and the game's eye in the OBS log and
+the frame trace, which lines the OBS log has with Debug on and off, and the file beside a recording. It runs the plugins and the layer as built, with
 `%LOCALAPPDATA%` pointed at a test folder that already holds older files of each kind.
 - **The plugins** run in OBS 32.2.2, in a copy of the installed OBS in `out\obs_portable\`, made on the
   first run. The copy runs in OBS's portable mode, with settings of its own made fresh for each run.
   It loads the plugins from this build and no installed plugin, so the user's own OBS stays as it was.
   The Pimax source reads the fake runtime, which sits beside the copy's `obs64.exe`.
 - **The layer** runs in `bin\fake_layer_game\Le Mans Ultimate.exe`. The fake game loads the layer's DLL
-  and makes the OpenXR loader's first call to it, without a runtime or a headset.
+  and makes the OpenXR loader's first call to it, without a runtime or a headset. Nothing reads the
+  layer's frames, so no VR Mirror source tells the layer it has Debug on.
+- **The layer's log with readers** runs in `fake_openxr.exe`, which runs the layer's frame code and
+  starts the layer's own log as the layer does in LMU (`layer_log=1`). Its log shows that VR Mirror
+  copied the frames and the performance overlay had them timed, whatever either logged.
 
 | Case | What runs | Checks |
 |---|---|---|
-| `no_game` | OBS with both sources and Debug on. The fake runtime runs with no game | No frame trace. Of 12 older crash dumps, the newest 8 are left once the plugins have loaded |
-| `pimax_game` | The Pimax source with the fake runtime's game | One new trace, both its files with rows. Of it and 12 older traces, the newest 10 are left, each older one gone with all its files |
-| `openxr_game` | The OpenXR source with `fake_openxr.exe` | One new trace, both its files with rows. Of it and 10 older traces, the newest 10 are left |
-| `layer` | The fake game three times: with the first OpenXR call, without it, and with it again | Each start has its own log, which starts with the load line. Of 12 older logs and the new ones, the newest 10 are left after each start with the call. The layer's logs of older names stay |
+| `no_game` | OBS with both sources and Debug on. The fake runtime runs with no game | No frame trace. The OBS log has each source's settings and no eye. Of 12 older crash dumps, the newest 8 are left once the plugins have loaded |
+| `pimax_game` | The Pimax source with the fake runtime's game, and a G-meter, recorded by OBS from its start | The OBS log has the settings and the eye. One new trace, both its files with rows, the column header first and then the settings and the eye. Of it and 12 older traces, the newest 10 are left, each older one gone with all its files. Beside the recording, a file with the version, the settings, the eye and the trace. The OBS log has the G-meter's lines, and the telemetry's from the reader's first pass |
+| `no_debug` | The Pimax source with the fake runtime's game, and a G-meter, with Debug off, recorded by OBS from its start | No file beside the recording, no frame trace, no line of either plugin in the OBS log but its version, and no telemetry line |
+| `openxr_game` | The OpenXR source and a performance overlay with `fake_openxr.exe`, both with Debug on | The OBS log has the settings and the eye, and the performance overlay's lines. One new trace, both its files with rows, the column header first and then the settings and the eye. Of it and 10 older traces, the newest 10 are left. One layer log, starting with the load line, with both readers' lines |
+| `openxr_no_debug` | The same, both with Debug off | No frame trace, no line of either plugin in the OBS log but its version, and no layer log |
+| `openxr_overlay_debug` | The same, with only the performance overlay's Debug on | No frame trace and no VR Mirror line but its version. The OBS log has the performance overlay's lines. One layer log, with the overlay's line |
+| `openxr_mirror_debug` | The same, with only VR Mirror's Debug on | As `openxr_game` for VR Mirror, and no Overlays line but its version. One layer log, with VR Mirror's line |
+| `layer` | The fake game three times: with the first OpenXR call, without it, and with a call for another layer, which the layer refuses | The first two starts leave no log. The refusal is a failure, so the third writes a log that starts with it, without the lines Debug holds back. Of 12 older logs and the new one, the newest 10 are left. The layer's logs of older names stay |
 
 Each case also checks that files of other names stay. OBS and LMU must be closed. A run takes about a
 minute, and the first run takes longer while it copies OBS. Each case's files, OBS's log among them, are
@@ -319,7 +328,7 @@ in `out\local_files\<case>\`.
 | `build.bat` | Builds the fake runtime, the fake OpenXR game, the runner, the local files test with its fake game, the auto sync test and `stage_replay` into `bin\` |
 | `fake_game\` | What `fake_pvr\` and `fake_openxr\` share: the head motion (`fake_game_motion.h`) and the game's image (`fake_game_image.*`: the direction codes or the cockpit, stored as the faked source stores it) |
 | `fake_layer_game\` | `Le Mans Ultimate.exe`: the fake game that loads the real OpenXR layer's DLL, for the local files test |
-| `fake_openxr\` | `fake_openxr.exe`: the fake game with the OpenXR layer's frames, through the layer's own frame code (`fake_openxr_layer.*` makes the game's calls into it). Without its render thread, the layer also times its frames for the performance overlay while the overlay reads. For the auto sync test, it plays a cut of a real recording (`fake_openxr_recording.*`) and its sound (`fake_openxr_sound.*`) |
+| `fake_openxr\` | `fake_openxr.exe`: the fake game with the OpenXR layer's frames, through the layer's own frame code (`fake_openxr_layer.*` makes the game's calls into it). Without its render thread, the layer also times its frames for the performance overlay while the overlay reads. For the local files test, it runs the layer's own log. For the auto sync test, it plays a cut of a real recording (`fake_openxr_recording.*`) and its sound (`fake_openxr_sound.*`) |
 | `local_files\` | `local_files_e2e.exe`: the local files test. Its cases (`local_files_e2e.cpp`), its copy of OBS (`local_files_obs.*`), and the older files it makes and the files it reads (`local_files_folder.*`) |
 | `fake_pvr\` | `libPVRClient64.dll`: the fake PVR runtime and game, with replays of real sessions (`fake_pvr_replay.h`) and their real thumbnails (`fake_pvr_thumbs.h`) |
 | `runner\` | `e2e_runner.exe`: the scenarios (`scenarios.*`), running the mirror app (`tool_process.*`), capturing its window (`capture.h`, `patches.h`), the measures (`analysis.*`), and the comparison with Instant (`compare.*`) |

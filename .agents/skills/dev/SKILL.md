@@ -274,9 +274,12 @@ commands that break a rule here (`reference\hooks.md`).
 - **The local files test (`vr_mirror\e2e\bin\local_files_e2e.exe`):** the real, built OBS plugins run
   in a private copy of OBS, and the real OpenXR layer in a fake game. It checks the files they write
   under `%LOCALAPPDATA%\simoptix`: when each is made, its name, and that only the newest of each kind
-  are kept (`vr_mirror\e2e\README.md`, "The local files test").
-  - Run it at the end of a change to `shared\local_files.*`, the crash dump, the frame trace's files or
-    the layer's log, and give such a change a case there.
+  are kept. It also checks the settings and the game's eye in OBS's log and the frame trace, which
+  lines OBS's log has with Debug on and off, and the file beside a recording (`vr_mirror\e2e\README.md`,
+  "The local files test").
+  - Run it at the end of a change to `shared\local_files.*`, the crash dump, the frame trace's files,
+    the layer's log, what a plugin logs with Debug on or off, the settings and eye lines or the file
+    beside a recording, and give such a change a case or a check there.
   - It takes about a minute. OBS and LMU must be closed. Its first run copies OBS (466 MB).
 - **The auto sync test (`vr_mirror\e2e\bin\auto_sync_e2e.exe`):** the real, built OBS plugin in a private
   copy of OBS, with a fake game that plays a cut of a real recording of LMU's menus from the data folder.
@@ -324,7 +327,7 @@ commands that break a rule here (`reference\hooks.md`).
     logging and `local_files.*`) by the OpenXR layer and its check program.
   - The e2e suite passes, if `vr_mirror\core\` or `vr_mirror\mirror_app\` changed.
   - The local files test passes, if what a plugin or the layer writes under `%LOCALAPPDATA%\simoptix`
-    changed.
+    changed, or the settings and eye lines, or the file beside a recording.
   - Say what wasn't run or checked.
 
 ## Correct, never easiest
@@ -563,7 +566,7 @@ committed.
 |---|---|---|
 | `vr_mirror\core\`, `vr_mirror\frame_sources\pimax\` | Both plugins (step 4), `vr_mirror\mirror_app\build.bat`, `vr_mirror\e2e\build.bat` | Yes |
 | `shared\` | The same, and `shared\telemetry\games\lmu\fake\build.bat` for a telemetry change, and `vr_mirror\frame_sources\openxr\build.bat` for `shared\local_files.*` | If the mirror app or e2e use the file. The local files test for `shared\local_files.*` and the crash dump |
-| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins (step 4) | The local files test for the frame trace's files. The auto sync test for `vr_mirror\obs_plugin\auto_sync\`. Otherwise no. Verify as in step 5 |
+| `vr_mirror\obs_plugin\`, `overlays\` | Both plugins (step 4) | The local files test for the frame trace's files, what a plugin logs with Debug on or off, the settings and eye lines, or the file beside a recording. The auto sync test for `vr_mirror\obs_plugin\auto_sync\`. Otherwise no. Verify as in step 5 |
 | `vr_mirror\mirror_app\` | `vr_mirror\mirror_app\build.bat` (if `simoptix_vr_mirror.exe` is running, build `simoptix_vr_mirror_dev.exe` instead) | Yes, for behaviour changes |
 | `vr_mirror\e2e\` | `vr_mirror\e2e\build.bat` | The scenarios that changed |
 | `vr_mirror\frame_sources\pimax\pvr_interface.h` | As for `vr_mirror\frame_sources\pimax\`, then `vr_mirror\frame_sources\pimax\check\build.bat`: the layout check, on a PC with Pimax's public PC SDK 1.26.1 (`pvr_windows_sdk_setup.exe` from developer.pimax.com) in `C:\Program Files\Pimax\Sdk`. `PVR_SDK` names another `Include` folder. Without the SDK it says so and skips | Yes |
@@ -700,8 +703,8 @@ are the G-meter's, and apply to it the same way.
     difference (the live G landed halfway).
   - Example: the live G sits 0.5 design px above its window's box (the inner shadow) and 0.8 right of
     it.
-- **Smoothness and timing:** use the plugin's 10 s stats in the OBS log, or frame-by-frame analysis of a
-  recording.
+- **Smoothness and timing:** use the plugin's 10 s stats, which a source with Debug on writes into its
+  frame trace as `#stats,` lines (OBS's log in older builds), or frame-by-frame analysis of a recording.
   - **A whole recording:** `python -I vr_mirror\recording_analysis\analyse_recording.py
     "<recording>.mp4"`. It finds the recording's OBS log and frame trace, and measures the cockpit's
     jumps. It lines the video up with the trace, and lists the timing events (`summary.txt` in its
@@ -744,9 +747,9 @@ build, then fix.
   scripts. `episodes.py` lists what the plugin re-timed in a recording (from the OBS log and the trace,
   with video times and frame timing). `window.py` lines a stretch of video up with the trace by the
   stamp and says which lag the cockpit motion supports. Extend them rather than starting over.
-- **Find the moment:** in the OBS log, the 10 s stats (repeats, game fps) and the "game behind" lines
-  (frames judged and re-timed by the slot check). Video time is the log time minus `==== Recording
-  Start`.
+- **Find the moment:** in the frame trace's `#stats,` lines (OBS's log in older builds), the 10 s stats
+  (repeats, game fps) and the "game behind" lines (frames judged and re-timed by the slot check). Video
+  time is the log time minus `==== Recording Start`.
 - **Line up video and trace** (`window.py` does this): decode the stamp (top-left, 15 squares of 16x16
   px, bit 0 first, white = 1) from each video frame. It is the `stamp` column of `_ticks.csv` and wraps
   every 32768 ticks (6 min), so pick the occurrence by time. Map frames by their own stamp, because OBS

@@ -68,7 +68,7 @@ namespace {
 
     void LogFailure(const char* call, XrResult r, std::atomic<uint32_t>& count) {
         if (count.fetch_add(1) < kMaxFailuresLogged) {
-            CoreLog("%s failed: %d", call, static_cast<int>(r));
+            CoreLogError("%s failed: %d", call, static_cast<int>(r));
         }
     }
 
@@ -184,7 +184,7 @@ namespace {
         XrResult r = g_next.createSession(instance, info, session);
         try {
             if (XR_FAILED(r) || !info) {
-                CoreLog("session not created: %d", static_cast<int>(r));
+                CoreLogError("session not created: %d", static_cast<int>(r));
                 return r;
             }
 
@@ -262,7 +262,7 @@ namespace {
         XrResult r = g_next.createSwapchain(session, info, swapchain);
         try {
             if (XR_FAILED(r) || !info) {
-                CoreLog("swapchain not created: %d", static_cast<int>(r));
+                CoreLogError("swapchain not created: %d", static_cast<int>(r));
                 return r;
             }
 

@@ -4,6 +4,10 @@
 // VisitSettings, so a setting added here appears everywhere with the same key.
 #pragma once
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdio>
+
 struct MirrorSettings {
     // The values of `smoothing`. Scenes saved with the dropped 3, a second behind, read as Look-ahead.
     static constexpr int kSmoothingOff = 0;
@@ -38,4 +42,25 @@ void VisitSettings(MirrorSettings& s, F&& f) {
     f("smoothing_strength", s.strength);
     f("zoom", s.zoom);
     f("drawn_pose", s.drawnPose);
+}
+
+// Every setting as "key=value", separated by spaces ("smoothing=2 zoom=1.32 drawn_pose=1"), for the log,
+// the frame trace and the file beside a recording. What doesn't fit `size` is cut off.
+inline void DescribeSettings(MirrorSettings s, char* text, size_t size) {
+    size_t used = 0;
+    text[0] = 0;
+
+    VisitSettings(s, [&](const char* key, auto& value) {
+        if (used + 1 < size) {
+            const int n = std::snprintf(
+                text + used,
+                size - used,
+                "%s%s=%g",
+                used ? " " : "",
+                key,
+                static_cast<double>(value)
+            );
+            used = n > 0 ? std::min(size - 1, used + static_cast<size_t>(n)) : used;
+        }
+    });
 }

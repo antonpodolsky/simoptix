@@ -76,11 +76,14 @@ bool OpenXrSource::Start(std::string* error) {
 
     ResetEvent(stop_.Get());
     running_ = true;
-    thread_ = std::thread([this] {
+    const std::atomic<bool>* logGate = CurrentLogGate();  // it logs as the thread starting it does
+    thread_ = std::thread([this, logGate] {
+        const ScopedLogGate gate(logGate);
+
         try {
             Run();
         } catch (...) {
-            CoreLog("OpenXR: the reader thread stopped by an unexpected error");
+            CoreLogError("OpenXR: the reader thread stopped by an unexpected error");
         }
     });
 
@@ -139,6 +142,7 @@ bool OpenXrSource::OpenShare() {
     }
 
     layerEvent_.Reset(OpenEventW(SYNCHRONIZE, FALSE, openxr_share::kNewImageEvent));
+    header_->readerDebug.store(CoreLogWanted() ? 1 : 0);  // the source's Debug setting, as this thread's gate
     header_->readerSigned.store(Counter());  // signed before the layer looks: it makes its textures now
     if (UniqueHandle reader(OpenEventW(EVENT_MODIFY_STATE, FALSE, openxr_share::kReaderEvent)); reader) {
         SetEvent(reader.Get());
@@ -375,6 +379,7 @@ void OpenXrSource::Run() {
 
         openxr_share::Header& h = *header_;
         const int64_t counter = Counter();
+        h.readerDebug.store(CoreLogWanted() ? 1 : 0);  // this thread's gate is the source's Debug setting
         h.readerSigned.store(counter);
         const double now = double(counter) / frequency_;
         if (h.state.load() != openxr_share::kRunning) {
@@ -548,11 +553,11 @@ uint64_t OpenXrSource::ThreadCycles() {
     return ::ThreadCycles(thread_);
 }
 
-uint64_t OpenXrSource::TakeStats(double seconds, void (*line)(const char*)) {
+uint64_t OpenXrSource::TakeStats(double seconds, StatsLineSink* lines) {
     const uint64_t wakeups = wakeups_.exchange(0), lost = lost_.exchange(0), gone = images_.TakeGone();
     const uint64_t arrived = framesArrived_.load(), frames = arrived - statArrived_;
     statArrived_ = arrived;
-    if (!line) {
+    if (!lines) {
         return wakeups;
     }
     char text[200];
@@ -568,6 +573,6 @@ uint64_t OpenXrSource::TakeStats(double seconds, void (*line)(const char*)) {
         static_cast<unsigned long long>(gone)
     );
 
-    line(text);
+    lines->Line(text);
     return wakeups;
 }

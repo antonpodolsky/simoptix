@@ -12,6 +12,10 @@
 #include "openxr_d3d11.h"
 #include "openxr_frame_timing.h"
 
+// Who hears whether the performance overlay reads the frame times, and with Debug on
+// (OpenXrFrameTiming::ReaderNews): the layer's log. Before the first session.
+void TimingOnReader(OpenXrFrameTiming::ReaderNews news);
+
 // The game's thread.
 void TimingSessionCreated(const XrSessionCreateInfo& info);
 void TimingSessionDestroyed();

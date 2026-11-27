@@ -89,7 +89,7 @@ public:
     const char* ThreadName() const override { return "demo thread"; }
     uint64_t ThreadCycles() override;
     // The 10 s line: frames handed out, and laps played.
-    uint64_t TakeStats(double seconds, void (*line)(const char*)) override;
+    uint64_t TakeStats(double seconds, StatsLineSink* lines) override;
 
 private:
     // A frame handed out: its record, and its index in the lap.

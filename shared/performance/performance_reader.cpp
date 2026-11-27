@@ -40,6 +40,9 @@ const PerformanceReading& PerformanceReader::Read() {
     }
 
     if (header_) {
+        header_->readerDebug.store(
+            CoreLogWanted() ? 1 : 0
+        );  // the overlay's Debug setting, as this thread's gate
         header_->readerSigned.store(counter);
     }
 
@@ -77,7 +80,9 @@ bool PerformanceReader::Open(double now) {
     if (header->magic != performance_share::kMagic || header->version != performance_share::kVersion
         || header->size != sizeof(performance_share::Header)) {
         if (!loggedLayout_) {
-            CoreLog("performance: the layer's memory has another layout: install the layer from this build");
+            CoreLogError(
+                "performance: the layer's memory has another layout: install the layer from this build"
+            );
             loggedLayout_ = true;
         }
 

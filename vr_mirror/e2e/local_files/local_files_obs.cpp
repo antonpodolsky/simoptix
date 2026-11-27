@@ -28,7 +28,20 @@ namespace {
             return "SimOptix: OpenXR Mirror";
         }
 
+        if (id == "simoptix_gmeter_overlay") {
+            return "SimOptix: G-Meter Overlay";
+        }
+
+        if (id == "simoptix_performance_overlay") {
+            return "SimOptix: Performance Overlay";
+        }
+
         return id.c_str();
+    }
+
+    // Whether source `id` has Debug on in `run`.
+    bool DebugOf(const ObsRun& run, const std::string& id) {
+        return run.debug && std::find(run.debugOff.begin(), run.debugOff.end(), id) == run.debugOff.end();
     }
 
     std::string Uuid(int i) {
@@ -66,22 +79,23 @@ namespace {
                  + "\",\"enabled\":true,\"settings\":" + source.settings + "}";
     }
 
-    // A scene that shows each source in `sources` at the canvas's top left, with Debug on, Instant
-    // smoothing (no output delay) and race auto-record off, and Desktop Audio if asked.
-    std::string SceneCollection(const std::vector<std::string>& sources, bool desktopAudio) {
+    // A scene that shows each source of `run` at the canvas's top left, with Debug on or off as `run` says,
+    // Instant smoothing (no output delay) and race auto-record off, and Desktop Audio if asked.
+    std::string SceneCollection(const ObsRun& run) {
         std::string items, list;
         int id = 0;
 
-        for (const std::string& source : sources) {
+        for (const std::string& source : run.sources) {
             const SceneSource mirror = {
                 DisplayName(source),
                 source,
-                "{\"debug\":true,\"smoothing\":1,\"auto_record\":false}"
+                std::string("{\"debug\":") + (DebugOf(run, source) ? "true" : "false")
+                    + ",\"smoothing\":1,\"auto_record\":false}"
             };
             AddSource(++id, mirror, &items, &list);
         }
 
-        if (desktopAudio) {
+        if (run.desktopAudio) {
             AddSource(
                 ++id,
                 {"Desktop Audio", "wasapi_output_capture", "{\"device_id\":\"default\"}"},
@@ -98,7 +112,20 @@ namespace {
                + list + "]}";
     }
 
-    // OBS's settings for one run: no first-run questions, a 1280x720 canvas at 60 fps, and the scene.
+    // Where OBS records (`recordTo`, if set): a short MKV with the software encoder, which every machine
+    // has.
+    std::string RecordingSettings(const fs::path& recordTo) {
+        if (recordTo.empty()) {
+            return "";
+        }
+
+        // With forward slashes, as OBS writes its own: its settings file reads a backslash as an escape.
+        return "[SimpleOutput]\r\nFilePath=" + recordTo.generic_string()
+               + "\r\nRecFormat2=mkv\r\nRecQuality=Stream\r\nStreamEncoder=x264\r\n";
+    }
+
+    // OBS's settings for one run: no first-run questions, no question on closing while it records, a
+    // 1280x720 canvas at 60 fps, where it records, and the scene.
     bool WriteSettings(const fs::path& dir, const ObsRun& run) {
         const fs::path config = dir / "config" / "obs-studio";
         const fs::path profile = config / "basic" / "profiles" / kName;
@@ -115,8 +142,8 @@ namespace {
                              )  // 32.2.2: no "what's new"
                              && Write(
                                  config / "user.ini",
-                                 "[General]\r\nFirstRun=true\r\n[Basic]\r\nProfile=" + name
-                                     + "\r\nProfileDir=" + name + "\r\nSceneCollection=" + name
+                                 "[General]\r\nFirstRun=true\r\nConfirmOnExit=false\r\n[Basic]\r\nProfile="
+                                     + name + "\r\nProfileDir=" + name + "\r\nSceneCollection=" + name
                                      + "\r\nSceneCollectionFile=" + name + ".json\r\n"
                              )
                              && Write(
@@ -125,11 +152,9 @@ namespace {
                                      + "\r\n[Video]\r\nBaseCX=1280\r\nBaseCY=720\r\nOutputCX="
                                        "1280\r\nOutputCY=720\r\nFPSType=0\r\n"
                                        "FPSCommon=60\r\n[Output]\r\nMode=Simple\r\n"
+                                     + RecordingSettings(run.recordTo)
                              )
-                             && Write(
-                                 scenes / (name + ".json"),
-                                 SceneCollection(run.sources, run.desktopAudio)
-                             );
+                             && Write(scenes / (name + ".json"), SceneCollection(run));
 
         return written;
     }
@@ -268,8 +293,20 @@ bool PrepareObs(const fs::path& repo, const fs::path& out, ObsCopy* obs, std::st
     }
 
     fs::create_directories(obs->plugins, ec);
-    fs::create_directories(obs->pluginData / "simoptix_vr_mirror", ec);
-    fs::create_directories(obs->pluginData / "simoptix_overlays", ec);
+
+    // Each plugin's data folder as installed: its sources' icons.
+    for (const char* plugin : {"simoptix_vr_mirror", "simoptix_overlays"}) {
+        const fs::path from = repo / (plugin == std::string("simoptix_vr_mirror") ? "vr_mirror" : "overlays")
+                              / "obs_plugin" / "data";
+        fs::remove_all(obs->pluginData / plugin, ec);
+        fs::create_directories(obs->pluginData / plugin, ec);
+        fs::copy(from, obs->pluginData / plugin, fs::copy_options::recursive, ec);
+
+        if (ec) {
+            *error = "could not copy " + from.string() + ": " + ec.message();
+            return false;
+        }
+    }
 
     const fs::path e2eBin = repo / "vr_mirror" / "e2e" / "bin";
 
@@ -304,6 +341,10 @@ bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string
     std::wstring
         command = L"\"" + exe.wstring()
                   + L"\" --portable --disable-shutdown-check --disable-updater --disable-missing-files-check";
+
+    if (!run.recordTo.empty()) {
+        command += L" --startrecording";
+    }
     STARTUPINFOW startup = {sizeof(startup)};
     PROCESS_INFORMATION process = {};
 
@@ -328,12 +369,22 @@ bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string
     const UniqueHandle processHandle(process.hProcess);
     const UniqueHandle threadHandle(process.hThread);
 
-    // Each source logs "started (source shown)" once its frame source runs.
+    // Each VR Mirror source with Debug on logs "started (source shown)" once its frame source runs (an
+    // overlay has no such line). With Debug off it logs nothing, so OBS's window showing up is all there is
+    // to wait for.
+    size_t mirrors = 0;
+
+    for (const std::string& id : run.sources) {
+        const bool mirror = id == "simoptix_pimax_mirror" || id == "simoptix_openxr_mirror";
+        mirrors += mirror && DebugOf(run, id) ? 1 : 0;
+    }
+
     bool sourcesStarted = false;
 
     for (DWORD waited = 0; waited < kStartMs && !sourcesStarted; waited += 250) {
         Sleep(250);
-        sourcesStarted = Count(NewestLog(obs.dir), "started (source shown)") >= run.sources.size();
+        sourcesStarted = MainWindowOf(process.dwProcessId) != nullptr
+                         && Count(NewestLog(obs.dir), "started (source shown)") >= mirrors;
     }
 
     if (sourcesStarted && !run.holdUntilLogged.empty()) {

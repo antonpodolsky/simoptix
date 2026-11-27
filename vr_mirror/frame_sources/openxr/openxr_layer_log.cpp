@@ -16,22 +16,46 @@
 
 namespace {
 
-    constexpr int kMaxLines = 64;    // lines waiting for the writer; the layer logs a few per minute
+    constexpr int kMaxLines = 64;    // lines waiting; the layer logs a few per minute
+    constexpr int kMaxHeld = 48;     // ...of them held before a reader says: the rest is room for failures
     constexpr int kLineChars = 320;  // with the time of day in front
+
+    // What happens to a line that isn't a failure, set by what the readers say.
+    enum Mode : int {
+        kHold,   // no reader yet: kept in memory until one says
+        kWrite,  // a reader there has Debug on (or the last one had, when none is there)
+        kDrop,   // the readers there have Debug off (or the last one had)
+    };
 
     struct Lines {
         int count = 0;
+        bool failure[kMaxLines] = {};  // written whatever the mode
         char text[kMaxLines][kLineChars];
     };
 
-    // Lines waiting to be written. The game's threads add with try_lock only; the writer takes them all
-    // at once with a brief lock (a copy of at most 20 KB).
+    // The readers' word and the Mode it makes, in one value, so the readers' threads never undo each
+    // other's news: bit 2r says reader r (LayerLogReader) is there, bit 2r + 1 that it has Debug on, and
+    // the bits from kModeShift hold the Mode.
+    constexpr uint32_t kThereBits = 0x5, kDebugBits = 0xA, kModeShift = 4;
+    std::atomic<uint32_t> g_state{kHold << kModeShift};
+
+    int ModeOf(uint32_t state) {
+        return static_cast<int>(state >> kModeShift);
+    }
+
+    int ModeNow() {
+        return ModeOf(g_state.load());
+    }
+
+    // Lines waiting to be written or held. The game's threads add with try_lock only; the writer takes
+    // them with a brief lock (a copy of at most 20 KB).
     std::mutex g_pendingMutex;
     Lines g_pending;
     std::atomic<uint32_t> g_skipped{0};  // lines dropped because the writer was busy or the memory full
-    HANDLE g_wake = nullptr;             // set when a line is added; the writer sleeps on it
+    HANDLE g_wake = nullptr;             // set when there is something to write; the writer sleeps on it
+    bool g_started = false;              // StartLayerLog's work is done
 
-    // This start's log, set once by NoteDllLoaded or StartLayerLog.
+    // This start's log, named once by NoteDllLoaded or the writer.
     wchar_t g_path[MAX_PATH] = {};
 
     // The writer thread's own.
@@ -53,18 +77,24 @@ namespace {
         return true;
     }
 
-    void AddLine(const char* message) {
-        SYSTEMTIME t;
-        GetLocalTime(&t);
-        std::unique_lock<std::mutex> lock(g_pendingMutex, std::try_to_lock);
-        if (!lock.owns_lock() || g_pending.count == kMaxLines) {
-            g_skipped++;
+    // Under g_pendingMutex.
+    void Push(bool failure, const char* text) {
+        g_pending.failure[g_pending.count] = failure;
+        strncpy_s(g_pending.text[g_pending.count], kLineChars, text, _TRUNCATE);
+        g_pending.count++;
+    }
+
+    void Add(bool failure, const char* message) {
+        const int mode = ModeNow();
+        if (!failure && mode == kDrop) {
             return;
         }
-
+        SYSTEMTIME t;
+        GetLocalTime(&t);
+        char line[kLineChars];
         snprintf(
-            g_pending.text[g_pending.count++],
-            kLineChars,
+            line,
+            sizeof(line),
             "%02d:%02d:%02d.%03d  %s",
             t.wHour,
             t.wMinute,
@@ -73,36 +103,98 @@ namespace {
             message
         );
 
+        const int room = failure || mode == kWrite ? kMaxLines : kMaxHeld;
+        std::unique_lock<std::mutex> lock(g_pendingMutex, std::try_to_lock);
+        if (!lock.owns_lock() || g_pending.count >= room) {
+            g_skipped++;
+            return;
+        }
+        Push(failure, line);
         lock.unlock();
-        SetEvent(g_wake);
+
+        if (failure || mode == kWrite) {
+            SetEvent(g_wake);
+        }
+    }
+
+    void AddLine(const char* message) {
+        Add(false, message);
+    }
+
+    void AddFailure(const char* message) {
+        Add(true, message);
     }
 
     void Discard(const char*) {}
 
+    // Under g_pendingMutex: moves the lines to write now into g_writing, keeps the held ones, and lets go
+    // of the dropped ones.
+    void TakeLines(int mode) {
+        g_writing.count = 0;
+        int kept = 0;
+
+        for (int i = 0; i < g_pending.count; i++) {
+            if (g_pending.failure[i] || mode == kWrite) {
+                memcpy(g_writing.text[g_writing.count++], g_pending.text[i], kLineChars);
+            } else if (mode == kHold) {
+                if (kept != i) {
+                    g_pending.failure[kept] = false;
+                    memcpy(g_pending.text[kept], g_pending.text[i], kLineChars);
+                }
+                kept++;
+            }
+        }
+
+        g_pending.count = kept;
+    }
+
+    // The file, made at the first line written: then the oldest logs go, and how many is noted.
+    bool OpenLog(int* deleted) {
+        if (g_file) {
+            return true;
+        }
+        if (!MakePath()) {
+            return false;
+        }
+
+        g_file = _wfsopen(g_path, L"a", _SH_DENYWR);
+        if (!g_file) {
+            return false;
+        }
+
+        *deleted = PruneLocalFiles(LocalFileKind::kLayerLog, 0);
+        return true;
+    }
+
     DWORD WINAPI WriterThread(void*) {
         try {
-            const int deleted = PruneLocalFiles(LocalFileKind::kLayerLog, 0);
-
-            if (deleted > 0) {
-                fprintf(g_file, "(%d older log(s) deleted)\n", deleted);
-            }
-
             uint32_t skippedReported = 0;
+
             for (;;) {
                 WaitForSingleObject(g_wake, INFINITE);
                 {
                     std::lock_guard<std::mutex> lock(g_pendingMutex);
-                    g_writing.count = g_pending.count;
-                    memcpy(g_writing.text, g_pending.text, sizeof(g_writing.text[0]) * g_pending.count);
-                    g_pending.count = 0;
+                    TakeLines(ModeNow());
+                }
+
+                int deleted = 0;
+                if (g_writing.count == 0 || !OpenLog(&deleted)) {
+                    continue;
                 }
 
                 for (int i = 0; i < g_writing.count; i++) {
                     fprintf(g_file, "%s\n", g_writing.text[i]);
                 }
+                if (deleted > 0) {
+                    fprintf(g_file, "(%d older log(s) deleted)\n", deleted);
+                }
                 const uint32_t skipped = g_skipped.load();
                 if (skipped != skippedReported) {
-                    fprintf(g_file, "(%u log line(s) skipped so far: the writer was busy)\n", skipped);
+                    fprintf(
+                        g_file,
+                        "(%u log line(s) skipped so far: the writer was busy or the memory full)\n",
+                        skipped
+                    );
                     skippedReported = skipped;
                 }
 
@@ -110,6 +202,7 @@ namespace {
             }
         } catch (...) {
             SetCoreLog(Discard);
+            SetCoreLogError(Discard);
         }
 
         return 0;
@@ -118,34 +211,19 @@ namespace {
 }
 
 void NoteDllLoaded() {
-    if (!MakePath()) {
-        return;
-    }
+    MakePath();  // named by the load's time
 
-    UniqueHandle f(CreateFileW(
-        g_path,
-        FILE_APPEND_DATA,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        nullptr,
-        OPEN_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        nullptr
-    ));
-
-    if (!f) {
-        return;
-    }
     wchar_t exe[MAX_PATH];
     if (!GetModuleFileNameW(nullptr, exe, MAX_PATH)) {
         exe[0] = L'\0';
     }
     SYSTEMTIME t;
     GetLocalTime(&t);
-    char line[MAX_PATH + 96];  // the program's path tells the game from the check program
-    const int len = snprintf(
+    char line[kLineChars];  // the program's path tells the game from the check program
+    snprintf(
         line,
         sizeof(line),
-        "%04d-%02d-%02d %02d:%02d:%02d.%03d  loaded into process %lu, %ls\r\n",
+        "%04d-%02d-%02d %02d:%02d:%02d.%03d  loaded into process %lu, %ls",
         t.wYear,
         t.wMonth,
         t.wDay,
@@ -157,26 +235,18 @@ void NoteDllLoaded() {
         exe
     );
 
-    DWORD written = 0;
-    if (len > 0) {
-        WriteFile(f.Get(), line, static_cast<DWORD>(len), &written, nullptr);
+    const std::lock_guard<std::mutex> lock(g_pendingMutex);
+    if (g_pending.count < kMaxLines) {
+        Push(false, line);
     }
 }
 
 bool StartLayerLog() {
-    if (g_file) {
+    if (g_started) {
         return true;
     }
     SetCoreLog(Discard);  // never stdout: the game owns it
-
-    if (!MakePath()) {
-        return false;
-    }
-
-    g_file = _wfsopen(g_path, L"a", _SH_DENYWR);  // after NoteDllLoaded's line
-    if (!g_file) {
-        return false;
-    }
+    SetCoreLogError(Discard);
 
     // The writer runs until the game exits, so the DLL must stay loaded that long, even if the OpenXR
     // loader lets go of it when the game destroys its instance.
@@ -189,7 +259,7 @@ bool StartLayerLog() {
         return false;
     }
 
-    g_wake = CreateEventW(nullptr, FALSE, FALSE, nullptr);  // auto-reset
+    g_wake = CreateEventW(nullptr, FALSE, FALSE, nullptr);  // auto-reset; the writer's until the game exits
     if (!g_wake) {
         return false;
     }
@@ -200,6 +270,34 @@ bool StartLayerLog() {
         return false;
     }
 
+    g_started = true;
     SetCoreLog(AddLine);
+    SetCoreLogError(AddFailure);
     return true;
+}
+
+void FollowReaderDebug(LayerLogReader reader, bool there, bool debug) {
+    const int shift = 2 * static_cast<int>(reader);
+    const uint32_t mine = 3u << shift;
+    const uint32_t word = ((there ? 1u : 0u) | (there && debug ? 2u : 0u)) << shift;
+    uint32_t state = g_state.load();
+    uint32_t next = 0;
+
+    // With no reader there, the last one's word stands: the end of a session it read goes the same way.
+    do {
+        const uint32_t readers = (state & (kThereBits | kDebugBits) & ~mine) | word;
+        int mode = ModeOf(state);
+
+        if (readers & kDebugBits) {
+            mode = kWrite;
+        } else if (readers & kThereBits) {
+            mode = kDrop;
+        }
+
+        next = readers | static_cast<uint32_t>(mode) << kModeShift;
+    } while (!g_state.compare_exchange_weak(state, next));
+
+    if (ModeOf(next) != ModeOf(state)) {
+        SetEvent(g_wake);  // the held lines go now
+    }
 }

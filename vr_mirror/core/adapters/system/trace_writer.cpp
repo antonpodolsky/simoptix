@@ -36,7 +36,7 @@ bool TraceWriter::Open(const wchar_t* path, const char* header) {
         try {
             Run();
         } catch (...) {
-            CoreLog("trace writer stopped by an unexpected error");
+            CoreLogError("trace writer stopped by an unexpected error");
         }
     });
 
@@ -65,7 +65,10 @@ void TraceWriter::Close() {
     fclose(file_);
     file_ = nullptr;
     if (dropped) {
-        CoreLog("trace: %llu rows dropped (the disk fell behind)", static_cast<unsigned long long>(dropped));
+        CoreLogError(
+            "trace: %llu rows dropped (the disk fell behind)",
+            static_cast<unsigned long long>(dropped)
+        );
     }
 }
 

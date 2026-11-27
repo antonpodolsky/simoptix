@@ -31,13 +31,16 @@ namespace {
         std::atomic<bool> done{true};  // the thread has finished (or never started): joining it doesn't wait
 
         // Reader thread only.
-        int wakeups = 0;       // passes since the last footprint line
-        double footSince = 0;  // performance-counter seconds; 0: not started
+        std::atomic<bool> logging{false};  // a holder has Debug on: the thread's log gate (FollowDebug)
+        int wakeups = 0;                   // passes since the last footprint line
+        double footSince = 0;              // performance-counter seconds; 0: not started
         uint64_t footClock = 0, footCycles = 0;
 
         // This plugin's mark in the area's `reader`: the address of its Reader, which no other DLL shares.
         int64_t Token() const { return reinterpret_cast<int64_t>(this); }
         bool Wanted(const TelemetryArea* a) const { return !stopped && a->users.load() > 0; }
+        // The thread logs while a holder, in either plugin, has Debug on (Telemetry::HoldDebug). Each pass.
+        void FollowDebug(const TelemetryArea* a) { logging = a->debugUsers.load() > 0; }
 
         void Run(TelemetryArea* a);
         // Reads while something needs telemetry: looks for a game, follows it while it runs.
@@ -98,6 +101,7 @@ namespace {
         CoreLog("telemetry: connected to %s", game->Name());
         GameUpdate u = {};
         while (Wanted(a)) {
+            FollowDebug(a);
             const GameRead read = game->Read(kReadWaitMs, &u);
             if (read == GameRead::Gone) {
                 break;
@@ -125,6 +129,7 @@ namespace {
         GameAdapter* const* games = RegisteredGames(&count);
         bool loggedWaiting = false;
         while (Wanted(a)) {
+            FollowDebug(a);
             GameAdapter* found = nullptr;
             for (size_t i = 0; i < count && !found; i++) {
                 if (games[i]->Open()) {
@@ -209,9 +214,11 @@ void TelemetryReader::Ensure(bool wait) {
     r.done = false;
     CoreLog("telemetry: reader started");
     r.thread = std::thread([&r, a] {
+        const ScopedLogGate gate(&r.logging);
+
         try {
             r.Run(a);
-            CoreLog("telemetry: reader stopped");
+            CoreLog("telemetry: reader stopped");  // as its last pass logged: its holders have let go
         } catch (...) {
             r.stopped = true;
             WriteDisconnected(a);
@@ -219,7 +226,7 @@ void TelemetryReader::Ensure(bool wait) {
             int64_t mine = r.Token();
             a->reader.compare_exchange_strong(mine, 0);
 
-            CoreLog("telemetry: reader stopped by an unexpected error");
+            CoreLogError("telemetry: reader stopped by an unexpected error");
         }
         r.done = true;
     });

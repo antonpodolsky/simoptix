@@ -24,6 +24,7 @@ namespace {
     int64_t g_queued = -1;  // the shift last queued (ns; -1: none yet)
     // The shift the UI task applies (ns), set when it is queued.
     std::atomic<int64_t> g_shift{0};
+    bool (*g_anyDebug)() = nullptr;  // set at Start, then only read: whether to log a change
     // The game's sound (SetGameSound): its source and its correction (ns), and a count of changes the
     // tick callback compares with what it queued.
     std::mutex g_gameMutex;
@@ -76,18 +77,20 @@ namespace {
             &ctx
         );
 
-        if (ctx.changed) {
-            blog(
-                LOG_INFO,
-                "[simoptix_vr_mirror] audio sync: %d audio source%s now %+lld ms on top of their own offsets "
-                "(the view's delay)",
-                ctx.changed,
-                ctx.changed == 1 ? "" : "s",
-                static_cast<long long>(ctx.shift / 1000000)
-            );
+        if (!ctx.changed || !g_anyDebug || !g_anyDebug()) {
+            return;
         }
 
-        if (ctx.changed && ctx.correction != 0) {
+        blog(
+            LOG_INFO,
+            "[simoptix_vr_mirror] audio sync: %d audio source%s now %+lld ms on top of their own offsets "
+            "(the view's delay)",
+            ctx.changed,
+            ctx.changed == 1 ? "" : "s",
+            static_cast<long long>(ctx.shift / 1000000)
+        );
+
+        if (ctx.correction != 0) {
             blog(
                 LOG_INFO,
                 "[simoptix_vr_mirror] audio sync: '%s' %+lld ms more (the game's sound, auto sync)",
@@ -118,7 +121,8 @@ namespace {
 
 }
 
-void AudioSync::Start() {
+void AudioSync::Start(bool (*anyDebug)()) {
+    g_anyDebug = anyDebug;
     obs_add_tick_callback(Tick, nullptr);
 }
 

@@ -128,7 +128,7 @@ void MeterImage::Build(int width, int height) {
     const double start = Seconds();
     std::vector<uint8_t> pixels;
     if (!Render(resource_, width, height, &pixels)) {
-        CoreLog("overlay image %ls couldn't be read from the plugin", resource_);
+        CoreLogError("overlay image %ls couldn't be read from the plugin", resource_);
         failed_ = true;
         return;
     }

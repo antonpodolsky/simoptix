@@ -40,8 +40,9 @@ class FrameSource;
 
 class AutoSync : private SyncInputs {
 public:
-    // Frames from `source`, copied by `ring`: both live until the AutoSync is destroyed.
-    AutoSync(FrameSource* source, FrameRing* ring);
+    // Frames from `source`, copied by `ring`, and the view's Debug setting `debug`, which its thread and the
+    // telemetry it holds log by: all live until the AutoSync is destroyed.
+    AutoSync(FrameSource* source, FrameRing* ring, const std::atomic<bool>* debug);
     AutoSync(const AutoSync&) = delete;
     AutoSync& operator=(const AutoSync&) = delete;
     ~AutoSync() override;
@@ -50,6 +51,8 @@ public:
     void Start();
     // The view stopped: measuring pauses until it starts again.
     void Stop();
+    // The view's Debug setting changed (any thread): the telemetry it holds hears it.
+    void FollowDebug();
 
 private:
     void Run();
@@ -71,10 +74,12 @@ private:
 
     FrameSource* source_;
     FrameRing* ring_;
+    const std::atomic<bool>* debug_;
     UniqueHandle wake_;
     std::atomic<bool> alive_{true};
-    std::atomic<bool> shown_{false};    // Start and Stop
-    std::atomic<bool> holding_{false};  // the telemetry is held (Telemetry::Acquire)
+    std::atomic<bool> shown_{false};           // Start and Stop
+    std::atomic<bool> holding_{false};         // the telemetry is held (Telemetry::Acquire)
+    std::atomic<bool> telemetryDebug_{false};  // ...with Debug on, as told to it (FollowDebug)
 
     // The thread's own.
     bool measuring_ = false;

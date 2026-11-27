@@ -44,6 +44,9 @@ namespace {
         obs_source_t* source = nullptr;
         std::atomic<bool> wanted{false};
         std::atomic<int> choice{static_cast<int>(ThemeChoice::kChrono)};  // set by the UI thread
+        // The Debug setting (UI thread): its log lines, as the gate of the threads working for it
+        // (ScopedLogGate, shared\log.h), and the OpenXR layer's while it reads the layer's frame times.
+        std::atomic<bool> debug{false};
         OverlayBox box{kLayoutWidth, kLayoutHeight, "Performance Overlay"};
 
         // Graphics thread.
@@ -101,13 +104,17 @@ namespace {
 
             obs_property_list_add_string(theme, "Chrono", "chrono");
             obs_property_list_add_string(theme, "OLED", "oled");
+            obs_properties_add_bool(p, "debug", "Debug");
             return p;
         });
     }
 
+    // UI thread: the theme and Debug.
     void Update(void* data, obs_data_t* settings) {
         Guarded("update", [&] {
-            static_cast<PerformanceOverlay*>(data)->choice = static_cast<int>(ThemeOf(settings));
+            PerformanceOverlay* o = static_cast<PerformanceOverlay*>(data);
+            o->choice = static_cast<int>(ThemeOf(settings));
+            o->debug = obs_data_get_bool(settings, "debug");
         });
     }
 
@@ -116,6 +123,7 @@ namespace {
             auto o = std::make_unique<PerformanceOverlay>();
             o->source = source;
             o->choice = static_cast<int>(ThemeOf(settings));
+            o->debug = obs_data_get_bool(settings, "debug");
             o->shapes.reserve(1 << 12);
             return o.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });
@@ -125,6 +133,7 @@ namespace {
         Guarded("destroy", [&] {
             // the one place that frees a PerformanceOverlay
             std::unique_ptr<PerformanceOverlay> o(static_cast<PerformanceOverlay*>(data));
+            const ScopedLogGate gate(&o->debug);  // ends before the overlay is freed
             obs_enter_graphics();
             o->theme.Destroy();
             o->batch.Destroy();
@@ -145,10 +154,13 @@ namespace {
         static_cast<PerformanceOverlay*>(data)->wanted = false;
     }
 
-    // Reads only while shown: the reader's signing is what makes the layer time the game's frames.
+    // Reads only while shown: the reader's signing is what makes the layer time the game's frames. Each
+    // callback logs as the overlay's Debug setting says (shared\log.h): OBS's threads work for every source
+    // in turn. The reader tells the layer that Debug with each sign.
     void VideoTick(void* data, float) {
         Guarded("tick", [&] {
             PerformanceOverlay* o = static_cast<PerformanceOverlay*>(data);
+            const ScopedLogGate gate(&o->debug);
             const double now = QpcNow();
             o->box.Tick(now);
             o->box.Place(o->source, now, DefaultPosition);
@@ -169,6 +181,7 @@ namespace {
     void VideoRender(void* data, gs_effect_t*) {
         Guarded("render", [&] {
             PerformanceOverlay* o = static_cast<PerformanceOverlay*>(data);
+            const ScopedLogGate gate(&o->debug);
 
             if (!o->box.Fit()) {
                 return;

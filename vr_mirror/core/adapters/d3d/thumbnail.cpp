@@ -88,7 +88,7 @@ bool Thumbnailer::Init(ID3D11Device* device, bool color, int width, int height, 
             &psBlob,
             &errors
         ))) {
-        CoreLog(
+        CoreLogError(
             "thumbnail shader: %s",
             errors ? static_cast<const char*>(errors->GetBufferPointer()) : "compile failed"
         );

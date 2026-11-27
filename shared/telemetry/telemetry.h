@@ -26,6 +26,10 @@ public:
     // itself. Neither waits for the reader's thread.
     static void Acquire();
     static void Release();
+    // A holder's Debug setting while it holds the telemetry: true when it holds with Debug on or Debug
+    // turns on, false when Debug turns off or before it releases. Each holder says each change once. The
+    // reader, in either plugin, logs its normal lines only while a holder has Debug on.
+    static void HoldDebug(bool on);
     // This plugin is unloading: stops its reader if it runs (the other plugin then takes over).
     static void Shutdown();
 

@@ -89,16 +89,38 @@ bool LaunchFakeGame(
     const fs::path& exe,
     const fs::path& scenarioFile,
     const std::wstring& stopEvent,
-    FakeGameProcess* out
+    FakeGameProcess* out,
+    const std::vector<std::wstring>& set
 ) {
     out->stop.Reset(CreateEventW(nullptr, TRUE, FALSE, stopEvent.c_str()));
     if (!out->stop) {
         return false;
     }
+
+    // This program's environment, with each NAME=value in `set` in place of the same name's.
+    auto isSet = [&](const std::wstring& entry) {
+        for (const std::wstring& s : set) {
+            const size_t name = s.find(L'=') + 1;
+
+            if (_wcsnicmp(entry.c_str(), s.c_str(), name) == 0) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
     std::wstring env;
     for (wchar_t* e = GetEnvironmentStringsW(); *e; e += wcslen(e) + 1) {
-        env += std::wstring(e) + L'\0';
+        if (!isSet(e)) {
+            env += std::wstring(e) + L'\0';
+        }
     }
+
+    for (const std::wstring& s : set) {
+        env += s + L'\0';
+    }
+
     env += L"SIMOPTIX_FAKE_OPENXR_SCENARIO=" + scenarioFile.wstring() + L'\0';
     env += L'\0';
     SECURITY_ATTRIBUTES sa = {sizeof(sa), nullptr, TRUE};

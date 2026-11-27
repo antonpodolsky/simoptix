@@ -11,7 +11,9 @@
 
 #include "empty_state_text.h"
 #include "pipeline/pipeline_builder.h"
+#include "recording_notes.h"
 #include "shared/local_files.h"
+#include "shared/log.h"
 #include "shared/program_delay.h"
 #include "shared/telemetry/telemetry.h"
 #include "shared/thread_cpu.h"
@@ -27,8 +29,17 @@ namespace {
 
     // A line of the stages' shared report (StatsReport), in OBS's log.
     void LogLine(const char* line) {
-        blog(LOG_INFO, "[simoptix_vr_mirror] %s", line);
+        CoreLog("%s", line);
     }
+
+    std::atomic<int> g_debugViews{0};
+
+    // A report that keeps nothing: the host's copy of the stages' lines, which the pipeline's observer
+    // writes into the frame trace (Pipeline::Report).
+    struct DiscardedStats : StatsReport {
+        void Line(const char*) override {}
+        void Value(const char*, double, int) override {}
+    };  // VR Mirror sources with Debug on (MirrorView::AnyDebug)
 
     void SetVec4(gs_effect_t* e, const char* name, const float* f) {
         vec4 v;
@@ -48,8 +59,9 @@ MirrorView::MirrorView(
       demoSource_(std::make_unique<DemoSource>()),
       frameSource_(gameSource_.get()),
       headsetSteps_(std::move(headsetSteps)) {
+    const ScopedLogGate gate(&debug_);  // it logs as its Debug setting says, from its first line
+    SetSettings(settings, debug);       // first: Debug decides its other lines
     FollowVideoSettings();
-    SetSettings(settings, debug);
     session_.SetSource(frameSource_);
 
     // Before any Start.
@@ -71,11 +83,19 @@ MirrorView::MirrorView(
 }
 
 MirrorView::~MirrorView() {
+    const ScopedLogGate gate(&debug_);  // the threads it stops log as its Debug setting says
+
+    if (debug_) {
+        g_debugViews--;
+    }
+
+    RecordingNotes::Forget(this);
     tickTrace_.Close();
     recorder_.Stop();  // it reads the frame source: before the source stops
     session_.StopNow();
 
     if (telemetryHeld_.exchange(false)) {
+        FollowTelemetryDebug();
         Telemetry::Release();
     }
     obs_enter_graphics();
@@ -88,10 +108,53 @@ MirrorView::~MirrorView() {
     obs_leave_graphics();
 }
 
+// With Debug on, logs the settings when Debug is turned on and whenever they change after (OBS calls this
+// for every change in the properties, Debug's too), into the frame trace if it is open, and for the file
+// beside a recording. Like the trace, these are debugging output: nothing with Debug off.
 void MirrorView::SetSettings(const MirrorSettings& settings, bool debug) {
     settings_ = settings;
     stamp_ = debug;
     trace_ = debug;
+
+    // First, so the lines of this call already follow it (the gate reads debug_ at each line).
+    if (debug != debug_.exchange(debug)) {
+        g_debugViews += debug ? 1 : -1;
+        RecordingNotes::SetDebug(this, frameSource_->Name(), debug);
+        FollowTelemetryDebug();
+        autoSync_.FollowDebug();
+    }
+
+    if (!debug) {
+        loggedSettings_.clear();  // logged again when Debug is turned on
+        return;
+    }
+
+    char text[200];
+    DescribeSettings(settings, text, sizeof(text));
+
+    if (loggedSettings_ == text) {
+        return;
+    }
+
+    loggedSettings_ = text;
+    CoreLog("settings (%s): %s", frameSource_->Name(), text);
+    tickTrace_.Printf("#settings,%s\n", text);
+    RecordingNotes::Note(this, frameSource_->Name(), "settings", text);
+}
+
+bool MirrorView::AnyDebug() {
+    return g_debugViews > 0;
+}
+
+// The game's eye, in the log, the frame trace and for the file beside a recording, when the trace opens:
+// with Debug on and the game's frames there, once per start and per time Debug is turned on. The game
+// draws with one eye while it runs. Graphics thread.
+void MirrorView::LogEye() {
+    char text[160];
+    DescribeEye(frameSource_->Eye(), text, sizeof(text));
+    CoreLog("eye (%s): %s", frameSource_->Name(), text);
+    tickTrace_.Printf("#eye,%s\n", text);
+    RecordingNotes::Note(this, frameSource_->Name(), "eye", text);
 }
 
 // Whether a lap is recorded, for the empty state: it lists the laps' folder, so not per frame.
@@ -137,6 +200,7 @@ void MirrorView::SetRecordLap(bool on) {
 
     // Released on the graphics thread once the recorder has stopped (FollowLap).
     if (on && !telemetryHeld_.exchange(true)) {
+        FollowTelemetryDebug();
         Telemetry::Acquire();
     }
 }
@@ -159,7 +223,7 @@ void MirrorView::FollowVideoSettings() {
         return;
     }
     if (ovi.base_width != width_ || ovi.base_height != height_) {
-        blog(LOG_INFO, "[simoptix_vr_mirror] size %ux%u (the canvas)", ovi.base_width, ovi.base_height);
+        CoreLog("size %ux%u (the canvas)", ovi.base_width, ovi.base_height);
     }
 
     width_ = ovi.base_width;
@@ -171,17 +235,22 @@ void MirrorView::FollowVideoSettings() {
 // warp used: trace_<time>_ticks.csv here (one row per drawn tick) and the frame source's own beside it,
 // if it has one (Pimax: trace_<time>_pimax.csv, head poses, slot predictions, frame arrivals), in
 // %LOCALAPPDATA%\simoptix\traces. LocalFiles names it and keeps the newest traces.
-// Opens with the setting at the game's first frame, and closes with the setting or when the source stops.
-// Graphics thread.
+// Opens with the setting at the game's first frame, once the pipeline's observer is there to write the
+// column header first, and closes with the setting or when the source stops. The settings and the eye
+// follow the header. Graphics thread.
 void MirrorView::ToggleTrace(bool on) {
     if (on == tickTrace_.IsOpen()) {
         return;
+    }
+
+    if (on && pipeline_.Config().observer != ObserverKind::kStampTrace) {
+        return;  // Debug was just ticked: the next Prepare adds the observer
     }
     if (!on) {
         pipeline_.SetTraceSink(nullptr);  // its last row first
         tickTrace_.Close();
         frameSource_->StopTrace();
-        blog(LOG_INFO, "[simoptix_vr_mirror] frame trace closed");
+        CoreLog("frame trace closed");
         return;
     }
 
@@ -202,9 +271,14 @@ void MirrorView::ToggleTrace(bool on) {
         return;
     }
 
-    tickTraceSink_.writer = &tickTrace_;
-    pipeline_.SetTraceSink(&tickTraceSink_);
+    tickTraceSink_.writer = traceStats_.writer = &tickTrace_;
+    pipeline_.SetTraceSink(&tickTraceSink_);  // its observer writes the column header
     const bool own = frameSource_->StartTrace(prefix);
+
+    char settings[200];
+    DescribeSettings(settings_, settings, sizeof(settings));
+    tickTrace_.Printf("#settings,%s\n", settings);
+    LogEye();
 
     // On this thread, timed: it lists one folder and deletes a trace or two.
     const uint64_t t0 = os_gettime_ns();
@@ -213,14 +287,14 @@ void MirrorView::ToggleTrace(bool on) {
 
     char utf8[MAX_PATH * 3];
     WideCharToMultiByte(CP_UTF8, 0, path, -1, utf8, sizeof(utf8), nullptr, nullptr);
-    blog(
-        LOG_INFO,
-        "[simoptix_vr_mirror] frame trace: %s%s; %d older trace(s) deleted in %.2f ms",
+    CoreLog(
+        "frame trace: %s%s; %d older trace(s) deleted in %.2f ms",
         utf8,
         own ? " (and the frame source's own beside it)" : "",
         deleted,
         pruneMs
     );
+    RecordingNotes::Note(this, frameSource_->Name(), "frame trace", utf8);
 }
 
 // The pipeline for the settings and what the frame source reports, with the frame-number stamp and the
@@ -240,7 +314,7 @@ void MirrorView::FeedDrawnPose() {
     }
     fedDrawnPose_ = p.get();
     ring_.SetDrawnPose(p);
-    blog(LOG_INFO, "[simoptix_vr_mirror] drawn pose: %s", NameOf(pipeline_.Config().drawnPose));
+    CoreLog("drawn pose: %s", NameOf(pipeline_.Config().drawnPose));
 }
 
 // Starts measuring the output delay again (the source started, or the smoothing changed): a fresh
@@ -338,7 +412,7 @@ void MirrorView::StartStop() {
         clock_.Reset();
         RestartDelay();  // measure the output delay again
         warpSlot_ = -1;
-        statStart_ = 0;  // a new 10 s stretch of stats (LogStats)
+        statStart_ = 0;  // a new 10 s stretch of stats (TraceStats)
         statTicks_ = statRepeats_ = statJumps_ = statNoFrame_ = statHeld_ = 0;
         KeepReportedFacts();
 
@@ -346,7 +420,7 @@ void MirrorView::StartStop() {
             autoSync_.Start();
         }
 
-        blog(LOG_INFO, "[simoptix_vr_mirror] started (source shown): %s", frameSource_->Name());
+        CoreLog("started (source shown): %s", frameSource_->Name());
     } else if (!run && state == SessionWorker::kRunning) {
         StopSession(wanted_ ? "switching between the game and the demo" : "source hidden");
     }
@@ -360,7 +434,7 @@ bool MirrorView::FollowSource(SessionWorker::State state) {
     if (wanted != frameSource_ && state == SessionWorker::kStopped) {
         frameSource_ = wanted;
         session_.SetSource(frameSource_);
-        blog(LOG_INFO, "[simoptix_vr_mirror] frames from: %s", frameSource_->Name());
+        CoreLog("frames from: %s", frameSource_->Name());
     }
 
     return wanted == frameSource_;
@@ -385,12 +459,7 @@ void MirrorView::StopSession(const char* why) {
 
     session_.Stop();
     SetProgramDelay(0);
-    blog(
-        LOG_INFO,
-        "[simoptix_vr_mirror] stopping (%s): graphics thread done in %.2f ms",
-        why,
-        (os_gettime_ns() - t0) / 1e6
-    );
+    CoreLog("stopping (%s): graphics thread done in %.2f ms", why, (os_gettime_ns() - t0) / 1e6);
 }
 
 // Runs the lap recorder while a lap is asked for and the game's frames come; once it has saved the lap or
@@ -399,7 +468,7 @@ void MirrorView::FollowLap() {
     // The properties window closed: the lap asked for there is given up, unless it is being saved.
     if (lapWanted_ && *emptyViewers_ == 0 && recorder_.Get() != LapRecorder::State::kSaving) {
         lapWanted_ = false;
-        blog(LOG_INFO, "[simoptix_vr_mirror] recorded lap: cancelled, the properties window closed");
+        CoreLog("recorded lap: cancelled, the properties window closed");
     }
 
     const bool want = lapWanted_ && started_ && frameSource_ == gameSource_.get();
@@ -419,7 +488,19 @@ void MirrorView::FollowLap() {
     }
 
     if (!lapWanted_ && !lapStarted_ && telemetryHeld_.exchange(false)) {
+        FollowTelemetryDebug();
         Telemetry::Release();
+    }
+}
+
+// Tells the telemetry whether the view holds it with Debug on (Telemetry::HoldDebug): before the view asks
+// for it, so the reader's first pass follows it, before it lets go, and when Debug changes. Any thread: each
+// change is told once.
+void MirrorView::FollowTelemetryDebug() {
+    const bool hold = telemetryHeld_ && debug_;
+
+    if (telemetryDebug_.exchange(hold) != hold) {
+        Telemetry::HoldDebug(hold);
     }
 }
 
@@ -586,20 +667,15 @@ void MirrorView::Prepare(uint64_t tickNs) {
 void MirrorView::ApplySettingChanges(const PipelineConfig& config) {
     if (int(config.smoothing) != delaySmoothing_) {
         RestartDelay();
-        blog(
-            LOG_INFO,
-            "[simoptix_vr_mirror] smoothing: %s",
-            config.smoothing == SmoothingKind::kLookahead ? "Look-ahead" : "Instant"
-        );
+        CoreLog("smoothing: %s", config.smoothing == SmoothingKind::kLookahead ? "Look-ahead" : "Instant");
     }
 
     // OBS's frame rate changed while the source ran (its video settings reset): the frame picker
     // plans its ticks and sizes the ring from it.
     if (obsFramePeriod_ != delayTickPeriod_) {
         RestartDelay();
-        blog(
-            LOG_INFO,
-            "[simoptix_vr_mirror] OBS at %.2f fps: the output delay is measured again",
+        CoreLog(
+            "OBS at %.2f fps: the output delay is measured again",
             obsFramePeriod_ > 0 ? 1 / obsFramePeriod_ : 0.0
         );
     }
@@ -609,7 +685,7 @@ void MirrorView::ApplySettingChanges(const PipelineConfig& config) {
         // it was before Off.
         loggedStabilize_ = Stabilizes(settings_);
         pipeline_.Reset();
-        blog(LOG_INFO, "[simoptix_vr_mirror] stabilization: %s", loggedStabilize_ ? "on" : "off");
+        CoreLog("stabilization: %s", loggedStabilize_ ? "on" : "off");
     }
 
     ReconfigurePipeline(config, &pipeline_);  // e.g. the debug switch
@@ -621,12 +697,7 @@ void MirrorView::ApplyFixedDelay(FramePicker& picker) {
     // still: its view needs the head's movement after it), and its own numbers for it.
     outDelay_ = picker.OutDelay();
     const double lookahead = SmoothingDelayS(pipeline_.Config().smoothing);
-    blog(
-        LOG_INFO,
-        "[simoptix_vr_mirror] output delay %.1f ms (look-ahead %.0f ms)",
-        outDelay_ * 1000,
-        lookahead * 1000
-    );
+    CoreLog("output delay %.1f ms (look-ahead %.0f ms)", outDelay_ * 1000, lookahead * 1000);
 
     LineStatsReport<void (*)(const char*)> log(LogLine);
     picker.Report(log);
@@ -669,22 +740,21 @@ void MirrorView::StartFootprint() {
     prepareTimes_.Reset();
 }
 
-// The footprint of the last `seconds`: CPU and wake-ups of this source's threads, the graphics
-// thread's time in Prepare per tick, and the frame source's own lines (Pimax: every call into the
-// runtime by kind). (The Overlays plugin logs its LMU telemetry reader's own.) Graphics thread, every
-// 10 s.
-void MirrorView::LogFootprint(double seconds) {
+// The footprint of the last `seconds`, into the frame trace: CPU and wake-ups of this source's threads,
+// the graphics thread's time in Prepare per tick, and the frame source's own lines (Pimax: every call into
+// the runtime by kind). (The Overlays plugin logs its LMU telemetry reader's own.) Graphics thread, every
+// 10 s while the trace is open.
+void MirrorView::TraceFootprint(double seconds) {
     const uint64_t clockCycles = CpuClock() - footClock_;
     const double poll = CpuPercent(frameSource_->ThreadCycles(), footPoll_, clockCycles);
     const double copy = CpuPercent(ring_.ThreadCycles(), footCopy_, clockCycles);
-    const uint64_t sourceWakeups = frameSource_->TakeStats(seconds, LogLine);
+    const uint64_t sourceWakeups = frameSource_->TakeStats(seconds, &traceStats_);
     const int copyWakeups = ring_.TakeWakeups();
     const int ticks = prepareTimes_.Count();
     const double prepareMax = prepareTimes_.Longest(), prepareP99 = prepareTimes_.Quantile(0.99);
-    blog(
-        LOG_INFO,
-        "[simoptix_vr_mirror] footprint: %s %.2f%% CPU (of one core), %.0f wake-ups/s; copy thread "
-        "%.2f%%, %.0f wake-ups/s; graphics thread in Prepare p99 %.3f ms, max %.3f ms (%d ticks)",
+    tickTrace_.Printf(
+        "#stats,footprint: %s %.2f%% CPU (of one core), %.0f wake-ups/s; copy thread "
+        "%.2f%%, %.0f wake-ups/s; graphics thread in Prepare p99 %.3f ms, max %.3f ms (%d ticks)\n",
         frameSource_->ThreadName(),
         poll,
         sourceWakeups / seconds,
@@ -696,9 +766,10 @@ void MirrorView::LogFootprint(double seconds) {
     );
 }
 
-// The 10 s stats, while the source runs (also while no game frame arrives). Graphics thread, once
-// per tick, after Prepare.
-void MirrorView::LogStats(uint64_t tickNs) {
+// The 10 s stats, into the frame trace as `#stats,` lines while it is open (Debug), while the source runs
+// (also while no game frame arrives). Every 10 s the counts start afresh, with the trace open or not.
+// Graphics thread, once per tick, after Prepare.
+void MirrorView::TraceStats(uint64_t tickNs) {
     if (!started_ || !clock_.Valid()) {
         return;
     }
@@ -715,20 +786,21 @@ void MirrorView::LogStats(uint64_t tickNs) {
         // stall in its first seconds would read 90 fps beside hundreds of repeats).
         const uint64_t frames = frameSource_->FramesArrived();
 
-        // Every stage's own numbers (the drawn pose's: frames judged and re-timed, corrections), and
-        // the copy thread's time looking at images with patches.
+        // Every stage's own numbers (the drawn pose's: frames judged and re-timed, corrections): the
+        // pipeline's observer writes them into the trace. And the copy thread's time looking at images
+        // with patches.
         {
-            LineStatsReport<void (*)(const char*)> log(LogLine);
-            pipeline_.Report(log);
-            DrawnPoseFeed::ReportLookTime(ring_.TakeLookTime(), log);
+            DiscardedStats none;
+            pipeline_.Report(none);
+            auto toTrace = [this](const char* line) { tickTrace_.Printf("#stats,%s\n", line); };
+            LineStatsReport<decltype(toTrace)> trace(toTrace);
+            DrawnPoseFeed::ReportLookTime(ring_.TakeLookTime(), trace);
         }
 
-        blog(
-            LOG_INFO,
-            "[simoptix_vr_mirror] %d ticks in %.0f s: %d showed the same game frame again, %d skipped "
-            "ahead, "
+        tickTrace_.Printf(
+            "#stats,%d ticks in %.0f s: %d showed the same game frame again, %d skipped ahead, "
             "%d held the last image (copy late), %d without a frame; game at %.1f fps, %d frames not "
-            "copied (no tick shows them)",
+            "copied (no tick shows them)\n",
             statTicks_,
             tick - statStart_,
             statRepeats_,
@@ -739,7 +811,10 @@ void MirrorView::LogStats(uint64_t tickNs) {
             ring_.TakeSkippedCopies()
         );
 
-        LogFootprint(tick - statStart_);
+        if (tickTrace_.IsOpen()) {
+            TraceFootprint(tick - statStart_);
+        }
+
         statTicks_ = statRepeats_ = statJumps_ = statNoFrame_ = statHeld_ = 0;
         statStart_ = tick;
         statFrames_ = frames;
@@ -772,7 +847,7 @@ void MirrorView::Render() {
         if (started_) {
             prepareTimes_.Add(Seconds(os_gettime_ns() - t0));
         }
-        LogStats(tickNs);
+        TraceStats(tickNs);
     }
 
     if (WaitsForGame()) {

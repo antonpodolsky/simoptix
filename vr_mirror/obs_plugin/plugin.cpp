@@ -25,6 +25,7 @@
 #include "common/settings.h"
 #include "mirror_view.h"
 #include "race_auto_record/auto_record.h"
+#include "recording_notes.h"
 #include "shared/crash_dump.h"
 #include "shared/guarded.h"
 #include "shared/local_files.h"
@@ -87,16 +88,17 @@ namespace {
         obs_weak_source_release(weak);
     }
 
-    // Race auto-record is on while at least one VR Mirror source has it ticked. UI thread.
+    // Race auto-record is on while at least one VR Mirror source has it ticked, and logs while one of
+    // those has Debug on. UI thread.
     void FollowAutoRecord(Source* s, bool on) {
         if (on == s->autoRecord) {
             return;
         }
         s->autoRecord = on;
         if (on) {
-            AutoRecord::Enable();
+            AutoRecord::Enable(s->view->DebugFlag());
         } else {
-            AutoRecord::Disable();
+            AutoRecord::Disable(s->view->DebugFlag());
         }
     }
 
@@ -149,6 +151,7 @@ namespace {
     bool ToggleRecordLap(obs_properties_t*, obs_property_t*, void* data) {
         return Guarded("record lap button", [&]() -> bool {
             MirrorView& view = *static_cast<Source*>(data)->view;
+            const ScopedLogGate gate(view.DebugFlag());
             const bool on = !view.RecordingLap();
             std::wstring stem;
 
@@ -190,6 +193,9 @@ namespace {
     // UI thread: deletes the recorded lap, after asking. Greyed out while it plays or a lap records.
     bool DeleteLap(obs_properties_t*, obs_property_t*, void* data) {
         return Guarded("delete lap button", [&]() -> bool {
+            MirrorView& view = *static_cast<Source*>(data)->view;
+            const ScopedLogGate gate(view.DebugFlag());
+
             if (!Confirm(L"Delete recorded lap", L"Delete the recorded lap? This can't be undone.")) {
                 return false;
             }
@@ -198,8 +204,8 @@ namespace {
                 LocalFileKind::kRecordedLap,
                 LocalFilesKept(LocalFileKind::kRecordedLap)
             );
-            blog(LOG_INFO, "[simoptix_vr_mirror] recorded lap deleted (%d)", deleted);
-            static_cast<Source*>(data)->view->FindLap();
+            CoreLog("recorded lap deleted (%d)", deleted);
+            view.FindLap();
             return false;  // the source's refresh (DemoKey) redraws the buttons, once
         });
     }
@@ -208,6 +214,7 @@ namespace {
     bool ToggleDemo(obs_properties_t*, obs_property_t*, void* data) {
         return Guarded("demo button", [&]() -> bool {
             MirrorView& view = *static_cast<Source*>(data)->view;
+            const ScopedLogGate gate(view.DebugFlag());
             const bool on = !view.DemoOn();
             view.SetDemo(on);
 
@@ -416,7 +423,11 @@ namespace {
     }
 
     obs_properties_t* GetProperties(void* data) {
-        return Guarded("properties", [&] { return MakeProperties(static_cast<Source*>(data)); });
+        return Guarded("properties", [&] {
+            Source* s = static_cast<Source*>(data);
+            const ScopedLogGate gate(s->view->DebugFlag());
+            return MakeProperties(s);
+        });
     }
 
     // A source on frame source `Frames` (PimaxSource, OpenXrSource).
@@ -436,6 +447,7 @@ namespace {
                 st,
                 debug
             );
+            const ScopedLogGate gate(s->view->DebugFlag());
             FollowAutoRecord(s.get(), obs_data_get_bool(settings, "auto_record"));
             return s.release();  // OBS keeps the pointer as a void* until Destroy gives it back
         });
@@ -444,14 +456,18 @@ namespace {
     void Destroy(void* data) {
         Guarded("destroy", [&] {
             std::unique_ptr<Source> s(static_cast<Source*>(data));  // the one place that frees a Source
+            const ScopedLogGate gate(s->view->DebugFlag());         // ends before the source is freed
             FollowAutoRecord(s.get(), false);
             obs_weak_source_release(s->weak);
         });
     }
 
+    // Each callback for one source logs as that source's Debug setting says (shared\log.h): OBS's threads
+    // work for every source in turn.
     void Update(void* data, obs_data_t* settings) {
         Guarded("update", [&] {
             Source* s = static_cast<Source*>(data);
+            const ScopedLogGate gate(s->view->DebugFlag());
             bool debug = false;
             const MirrorSettings st = MirrorSettingsOf(settings, &debug);
             s->view->SetSettings(st, debug);
@@ -482,6 +498,7 @@ namespace {
     void VideoTick(void* data, float) {
         Guarded("tick", [&] {
             Source* s = static_cast<Source*>(data);
+            const ScopedLogGate gate(s->view->DebugFlag());
             s->view->Tick();
 
             // The lap recorder moves on by itself: its buttons follow in the properties, if open.
@@ -496,7 +513,10 @@ namespace {
     }
 
     void VideoRender(void* data, gs_effect_t*) {
-        Guarded("render", [&] { ViewOf(data)->Render(); });
+        Guarded("render", [&] {
+            const ScopedLogGate gate(ViewOf(data)->DebugFlag());
+            ViewOf(data)->Render();
+        });
     }
 
     bool LoadModule() {
@@ -535,7 +555,8 @@ namespace {
         info.create = Create<OpenXrSource>;
         obs_register_source(&info);
 
-        AudioSync::Start();
+        AudioSync::Start(&MirrorView::AnyDebug);
+        RecordingNotes::Start();
         blog(LOG_INFO, "[simoptix_vr_mirror] loaded, version %s", SIMOPTIX_VERSION);
         return true;
     }
@@ -549,6 +570,7 @@ bool obs_module_load(void) {
 void obs_module_unload(void) {
     Guarded("unload", [] {
         AudioSync::Stop();
+        RecordingNotes::Stop();
 
         // The telemetry reader may run in this plugin for Overlays too: stop it before the DLL goes, so
         // Overlays takes it over.

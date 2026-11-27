@@ -8,6 +8,7 @@ auto-record and the lap recorder for VR Mirror's demo read it. Both plugins comp
 
 | Term | Meaning |
 |---|---|
+| auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
 | output delay | How far VR Mirror's view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
 | telemetry model | The one description of the car and the session that every game is turned into (`telemetry_model.h`) |
 
@@ -20,9 +21,14 @@ are.
   plugins open by name (`telemetry_area.*`). The block holds the last 10 s or so of updates. Reading
   holds nothing up: not the game, not the reader, not OBS's drawing.
 - **When it runs.** The block also keeps a tally of what needs telemetry right now. Each G-meter on
-  screen counts one, and race auto-record counts one while it is switched on. The first of these, in
+  screen counts one, and race auto-record counts one while it is switched on. A VR Mirror source counts
+  one while it shows the game, for auto sync, and one while it records a lap. The first of these, in
   either plugin, starts the reader in its own plugin. The reader keeps running while the tally is above
   zero and stops by itself when it reaches zero.
+- **When it logs.** The tally also counts which of those have Debug on: a G-meter with its Debug
+  ticked, a VR Mirror source's auto sync or lap with that source's Debug on, and race auto-record
+  while a source that has it ticked has Debug on. Each says so before it starts the reader. The reader writes its lines to the OBS log only while one of them has
+  Debug on. A failure, such as "telemetry: the other plugin is a different build", is always written.
 - **When its plugin unloads first** (OBS closing), the reader stops. The other plugin starts it again
   the next time it reads, if it still needs it.
 - **Driving sessions** are numbered by the reader, and the number is kept in the shared block. So a new
@@ -31,8 +37,8 @@ are.
   from different builds and disagree, each reads the game on its own and the OBS log says so:
   "telemetry: the other plugin is a different build". Install both from one build.
 
-The OBS log says which plugin runs the reader: "telemetry: reader started" and "telemetry: reader
-stopped", with that plugin's tag (`[simoptix_vr_mirror]` or `[simoptix_overlays]`).
+With Debug on, the OBS log says which plugin runs the reader: "telemetry: reader started" and
+"telemetry: reader stopped", with that plugin's tag (`[simoptix_vr_mirror]` or `[simoptix_overlays]`).
 
 **Why one reader.** LMU's lock on its telemetry lets several readers take turns. LMU's signal for "new
 data" is not documented as waking more than one waiting reader per update, so two readers might each

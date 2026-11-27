@@ -112,6 +112,9 @@ void OpenXrCheckCopies::Poll() {
     if (!header_ || !device_) {
         return;
     }
+    header_->readerDebug.store(
+        1
+    );  // as VR Mirror with Debug on: the layer writes its log, which the check names
     header_->readerSigned.store(Counter());
 
     CheckClock();

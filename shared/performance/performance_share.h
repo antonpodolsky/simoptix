@@ -27,7 +27,7 @@ namespace performance_share {
 
     constexpr const wchar_t* kMappingName = L"Local\\SimOptix.Performance";
     constexpr uint32_t kMagic = 0x46524550;  // "PERF"
-    constexpr uint32_t kVersion = 1;
+    constexpr uint32_t kVersion = 2;
     constexpr int kRecords = 512;  // 2.1 s of frames at 240 Hz, for a reader's 1 s window
 
     // The reader counts as there while it signs within this long (performance-counter seconds).
@@ -55,6 +55,9 @@ namespace performance_share {
         int64_t counterFrequency;  // performance-counter ticks per second, as the layer read it
 
         std::atomic<int64_t> readerSigned;  // performance counter of a reader's last sign; 0: no reader
+        // 1 while the reader has its Debug setting on, written before each sign: the layer logs only then
+        // (openxr_layer_log.h). With two readers, the last to sign.
+        std::atomic<uint32_t> readerDebug;
         std::atomic<uint64_t> written;  // records written: the newest is records[(written - 1) % kRecords]
         Record records[kRecords];
     };

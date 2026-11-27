@@ -20,8 +20,10 @@
 #include <string>
 
 namespace AudioSync {
-    void Start();  // obs_module_load
-    void Stop();   // obs_module_unload (offsets stay as they are: each source carries its shift)
+    // obs_module_load. It logs a change of the offsets only while `anyDebug()` says a VR Mirror source has
+    // Debug on: the offsets follow every source's view, so no one source's Debug decides.
+    void Start(bool (*anyDebug)());
+    void Stop();  // obs_module_unload (offsets stay as they are: each source carries its shift)
     // Any thread: the audio source named `name` carries the game's sound, which needs `correctionS` on
     // top of the view's delay while there is one.
     void SetGameSound(const std::string& name, double correctionS);
