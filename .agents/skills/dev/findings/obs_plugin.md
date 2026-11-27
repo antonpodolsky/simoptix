@@ -300,6 +300,24 @@ What OBS does with the plugin's `manifest.json`. All of it holds for Overlays' m
 - **Enabling and disabling** in the Plugin Manager is remembered by the DLL's name without its
   extension, not by `id`.
 
+## Source icons
+
+How OBS shows the icons the sources give it (`shared\source_icon.h`). All of it holds for both plugins.
+
+- **OBS 32.2.0 added custom source icons.** A source whose `icon_type` is `OBS_ICON_TYPE_CUSTOM`
+  gives OBS one file for dark themes and one for light themes, through `get_dark_icon` and
+  `get_light_icon`. OBS 32.0.2 and 32.1.2 map that type to their generic source icon, with a "TODO" to
+  add custom icons (`OBSBasic::GetSourceIcon` in
+  [OBSBasic_Icons.cpp](https://github.com/obsproject/obs-studio/blob/32.2.0/frontend/widgets/OBSBasic_Icons.cpp),
+  read at each of those tags). On those versions the sources keep OBS's generic icon.
+- **OBS frees the path with `bfree`** and loads the file with `QIcon`, picking it by whether the
+  theme is dark (`OBSBasic::GetCustomIcon`). A null path, or one to a missing file, gives the generic
+  icon. So the sources return `obs_module_file`'s string, which is null when the file is missing.
+- **Checked in OBS 32.2.2's Sources dock**, dark theme, at 1:1: the headset beside OpenXR Mirror, the
+  gauge beside Performance Overlay and the rings beside G-Meter Overlay, next to OBS's own icons. The
+  light theme, the add-source dialog and the other places OBS shows source icons (the toolbar under
+  the preview, Advanced Audio Properties) were not looked at on screen.
+
 ## The demo: recording and playing a lap
 
 How Windows' own video encoder and decoder (Media Foundation) do with the eye images, and how the demo

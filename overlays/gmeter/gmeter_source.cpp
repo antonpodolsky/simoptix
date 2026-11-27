@@ -45,6 +45,7 @@
 #include "properties_preview.h"
 #include "shared/guarded.h"
 #include "shared/log.h"
+#include "shared/source_icon.h"
 #include "shared/telemetry/demo_lap.h"
 #include "shared/telemetry/qpc_clock.h"
 #include "shared/telemetry/telemetry.h"
@@ -179,6 +180,14 @@ namespace {
 
     const char* GetName(void*) {
         return "SimOptix: G-Meter Overlay";
+    }
+
+    const char* GetDarkIcon(void*) {
+        return Guarded("dark icon", [] { return FindSourceIcon("gmeter_dark.svg"); });
+    }
+
+    const char* GetLightIcon(void*) {
+        return Guarded("light icon", [] { return FindSourceIcon("gmeter_light.svg"); });
     }
 
     // ---- Default size and place: the bottom-right corner, in proportion to the canvas: on 1920x1080,
@@ -422,6 +431,10 @@ void RegisterGMeterSource() {
     info.id = "simoptix_gmeter_overlay";
     info.type = OBS_SOURCE_TYPE_INPUT;
     info.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW;
+
+    info.icon_type = OBS_ICON_TYPE_CUSTOM;
+    info.get_dark_icon = GetDarkIcon;
+    info.get_light_icon = GetLightIcon;
 
     info.get_name = GetName;
     info.create = Create;

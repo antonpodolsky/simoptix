@@ -155,7 +155,7 @@ Work in a worktree from `main` (`SKILL.md`, step 0), named `release_v<version>`.
 
    `release_files.ps1` copies setup as `SimOptixSetup-<version>.exe` and makes two zips.
    `SimOptixOBSPlugins-<version>.zip` holds both plugins, laid out as in OBS's plugin folder, each with its `manifest.json` in its own `data`
-   folder. `SimOptixOpenXRLayer-<version>.zip` holds the layer and its manifest in `bin\`, beside `install.ps1`,
+   folder and its sources' icons in `data\icons`. `SimOptixOpenXRLayer-<version>.zip` holds the layer and its manifest in `bin\`, beside `install.ps1`,
    `uninstall.ps1` and `uninstall.bat`. It refuses when a file's version isn't exactly the release's,
    or when the layer or setup isn't validly signed. `--generate-notes` adds GitHub's list of the
    merged pull requests under the notes, without the `internal` ones.

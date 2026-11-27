@@ -25,6 +25,7 @@
 #include "shared/guarded.h"
 #include "shared/log.h"
 #include "shared/performance/performance_reader.h"
+#include "shared/source_icon.h"
 #include "shared/telemetry/qpc_clock.h"
 
 namespace {
@@ -73,6 +74,14 @@ namespace {
 
     const char* GetName(void*) {
         return "SimOptix: Performance Overlay";
+    }
+
+    const char* GetDarkIcon(void*) {
+        return Guarded("dark icon", [] { return FindSourceIcon("performance_dark.svg"); });
+    }
+
+    const char* GetLightIcon(void*) {
+        return Guarded("light icon", [] { return FindSourceIcon("performance_light.svg"); });
     }
 
     void GetDefaults(obs_data_t* s) {
@@ -182,6 +191,10 @@ void RegisterPerformanceSource() {
     info.id = "simoptix_performance_overlay";
     info.type = OBS_SOURCE_TYPE_INPUT;
     info.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW;
+
+    info.icon_type = OBS_ICON_TYPE_CUSTOM;
+    info.get_dark_icon = GetDarkIcon;
+    info.get_light_icon = GetLightIcon;
 
     info.get_name = GetName;
     info.create = Create;
