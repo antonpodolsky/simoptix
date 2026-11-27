@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": ["-I", "${CLAUDE_PROJECT_DIR}/.agents/skills/dev/hooks/check_shell_command.py"]
+          }
+        ]
+      }
+    ]
+  }
+}
