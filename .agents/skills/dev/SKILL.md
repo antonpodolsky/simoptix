@@ -38,6 +38,7 @@ it is here, with the details in files beside this one. Paths below are relative 
 | `reference\mirror_app.md` | The mirror app's build and its use in the tests |
 | `reference\openxr.md` | The OpenXR layer: build, check, sign, install, the Easy Anti-Cheat test |
 | `reference\release.md` | The version and what carries it, when to bump it, the changelog from each pull request, and making a release |
+| `reference\hooks.md` | Claude Code's hooks, which block commands that break these rules, and adding a rule to them |
 | `findings\<part>.md` | What was measured, fixed, and tried and dropped, per part: `obs_plugin`, `frame_sources`, `openxr`, `overlays`, `telemetry`, `mirror_app`, `pipeline`, `e2e`, `recording_analysis` |
 
 The rules for writing docs are in `.agents\skills\docs\SKILL.md`. Read that skill whenever you write or
@@ -58,6 +59,8 @@ anything that is committed, pushed or posted.
 These seven skills in `.agents\skills\` are the instructions for every coding agent. `AGENTS.md`,
 `CLAUDE.md`, `.github\copilot-instructions.md` and the skills in `.claude\skills\` only point at them,
 for the agents that read those files. Change the rules here, never in those files.
+`.claude\settings.json` points Claude Code at the hooks in `hooks\` beside this file, which block
+commands that break a rule here (`reference\hooks.md`).
 
 ## Rules
 
@@ -505,7 +508,12 @@ One convention, everywhere. Check every new name against it, and rename what bre
 - **Don't write files with PowerShell `Set-Content`, `Out-File` or `Get-Content -Raw`.** Windows
   PowerShell 5.1 adds a byte-order mark and garbles non-ASCII text (an en dash comes out as `â€“`).
 - **Don't put code containing backslashes in bash heredocs or `python -c`.** The escapes get mangled.
-  Write a script file with a file-editing tool and run that instead.
+  Bash turns two backslashes into one, and Python then reads a backslash in front of `auto_sync` as an
+  escape, so the path holds a control character.
+  This holds for any script or text run from the shell, a two-line check as much as a commit message.
+  Write a script file with a file-editing tool and run that instead. In Python, write a Windows path
+  with forward slashes or as a raw string (`r"shared\build"`).
+- In Claude Code, a hook blocks the commands that break these two rules (`reference\hooks.md`).
 - Files in the working copy use LF line endings. `.gitattributes` checks every text file out with LF,
   on Windows too. Keep them that way.
 
@@ -848,18 +856,19 @@ Record what each start of the game showed in `findings\openxr.md`.
   | Build | Every part, with no warnings (`shared\build\build_all.ps1`, step 3) |
   | Format | clang-format and ruff, at the versions step 3 names |
   | Docs | `check_docs.py` |
+  | Hooks | `test_hooks.py`: each of Claude Code's hooks on its cases (`reference\hooks.md`) |
   | Public text | `check_public_text.py` on every file and on the pull request's commits |
   | Pipeline output | `stage_replay --golden` against the expected output in `vr_mirror\e2e\stage_replay\golden_expected.txt`, run by run. Any change fails it, and the run uploads the new golden file and its `golden_expected.txt` ("Tests", "The pipeline's expected output") |
   | Changelog | The type label and the Changelog section as a release reads them, and the title's form and type (`release.py --check-pr`) |
   | Description | `check_public_text.py` on the description |
 
-  `.github\workflows\checks.yml` holds the first six, which also run on each push to `main`. Build
+  `.github\workflows\checks.yml` holds the first seven, which also run on each push to `main`. Build
   builds once and uploads what it built. Pipeline output waits for it and runs those files, so it tests
   what Build built, and is skipped when Build fails or is skipped.
 
   On a pull request that changes only Markdown files (`*.md`, anywhere in the repo), Build and Pipeline
   output are skipped, because no build reads those files. Any other changed file runs
-  them, the workflows and the scripts in `.agents\skills\` included. Format, Docs and Public text run on every
+  them, the workflows and the scripts in `.agents\skills\` included. Format, Docs, Hooks and Public text run on every
   pull request, and a push to `main` runs every check. GitHub counts a skipped check as passed.
 
   `.github\workflows\pull_request.yml` holds Changelog and Description, which also run each time the
