@@ -207,8 +207,8 @@ assumes.
 reader. It has one section per release, newest first, in the Keep a Changelog format.
 
 - **Its lines are written in the pull request,** in the Changelog section of its description, with
-  one label for their heading: `feature` (Added), `change` (Changed), `bug` (Fixed), `removal`
-  (Removed) or `security` (Security). The release
+  one label for their heading: `feature` (Added), `change` (Changed), `bug` (Fixed), `deprecation`
+  (Deprecated), `removal` (Removed) or `security` (Security). The release
   script copies them into `CHANGELOG.md` at a release. Don't edit `CHANGELOG.md` in any other pull
   request.
 - **Every change users notice gets lines, in the same pull request,** the way a README moves with the
@@ -288,7 +288,7 @@ them)". A clean run is not the end. Read the rest yourself.
 - [ ] Every coined term of `reference\terms.md` has a row in a terms table at or before its first
       use (script)
 - [ ] `CHANGELOG.md` has the release script's form: each section `## [x.y.z] - YYYY-MM-DD`, newest
-      first, with its link, and only the groups Added, Changed, Fixed, Removed and Security (script)
+      first, with its link, and only the groups Added, Changed, Fixed, Deprecated, Removed and Security (script)
 - [ ] Outside terms used without a table row: needed at this level? (script lists them)
 - [ ] "doesn't", "never", "no longer", "not yet", "for now" lines reviewed against rule 3 (script
       lists them)

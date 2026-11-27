@@ -46,6 +46,7 @@ An issue takes one type label, the same as the pull request that does its work t
 | `feature` | Something new is wanted that users would notice: a source, a setting, a game, a headset |
 | `change` | Something users see, set or install should work differently or better |
 | `bug` | Something works wrong |
+| `deprecation` | Something users have should be marked to be removed in a later release |
 | `removal` | Something users have should be removed |
 | `security` | A security problem |
 | `documentation` | Only contributors' docs, the skills or findings should change |

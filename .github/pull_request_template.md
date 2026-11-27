@@ -15,7 +15,7 @@ checked by hand, with numbers. Say what wasn't checked. -->
 
 <!-- A change a user notices: one to three lines for CHANGELOG.md, each starting with "- ". Write
 them in plain words for a VR sim racer, with no code names. Then add one label: feature, change, bug,
-removal or security.
+deprecation, removal or security.
 A change only contributors notice: leave this section empty and add the label documentation
 (contributors' docs, the skills, findings) or maintenance (tests, refactors, the build, the checks).
 The title is type(scope): what changed, with a type the label allows

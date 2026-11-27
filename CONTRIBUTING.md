@@ -217,10 +217,10 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   suite and the local files test run only by hand (Test, above). Say in the pull request what you checked by hand.
 - Give the pull request one label, which decides whether it goes into `CHANGELOG.md` and the types
   its title may start with. Issues take the same labels.
-  - If users notice the change, label it `feature`, `change`, `bug`, `removal` or `security`. Then
-    write one to three lines in the Changelog section of its description. Write them for a VR sim
-    racer, in plain words with no code names, as `.agents\skills\docs\SKILL.md` says ("The
-    changelog").
+  - If users notice the change, label it `feature`, `change`, `bug`, `deprecation`, `removal` or
+    `security`. Then write one to three lines in the Changelog section of its description. Write
+    them for a VR sim racer, in plain words with no code names, as `.agents\skills\docs\SKILL.md`
+    says ("The changelog").
   - If only contributors notice it, label it `documentation` (contributors' docs, the skills,
     findings) or `maintenance` (tests, refactors, the build, the checks), and leave the Changelog
     section empty.

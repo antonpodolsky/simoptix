@@ -57,6 +57,7 @@ issues take. The label also decides the types the pull request's title may start
 | `feature` | Adds something users notice: a source, a setting, a game, a headset | Added | One to three lines, each starting with `- ` |
 | `change` | Changes what users see, set or install, or how well it works | Changed | The same |
 | `bug` | Fixes something users noticed | Fixed | The same |
+| `deprecation` | Marks something users have to be removed in a later release. It still works | Deprecated | The same |
 | `removal` | Removes something users had | Removed | The same |
 | `security` | Fixes a security problem | Security | The same |
 | `documentation` | Changes only contributors' docs, the skills or findings | None | Empty |

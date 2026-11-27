@@ -6,9 +6,9 @@ GitHub Release's notes. reference\release.md, beside this script, has the whole 
 The release is the version in version.txt. Its changes are the pull requests merged into the commits since
 the newest release tag (v<version>) before HEAD, on the first-parent line, so a patch branch gets only
 its own. Each pull request carries exactly one type label, the labels issues take too:
-  feature, change, bug, removal, security   a change users notice. The lines of its description's
-                                             "Changelog" section go under the label's heading (Added,
-                                             Changed, Fixed, Removed, Security).
+  feature, change, bug, deprecation,        a change users notice. The lines of its description's
+  removal, security                          "Changelog" section go under the label's heading (Added,
+                                             Changed, Fixed, Deprecated, Removed, Security).
   documentation, maintenance                 a change only contributors notice. It is left out.
 The script refuses, and changes nothing, when a pull request has no type label or more than one, when
 a user-facing one has no Changelog lines or more than three, when another one has some, when no pull
@@ -54,6 +54,7 @@ TYPES = {
     "feature": "Added",
     "change": "Changed",
     "bug": "Fixed",
+    "deprecation": "Deprecated",
     "removal": "Removed",
     "security": "Security",
 }
@@ -66,6 +67,7 @@ TITLE_TYPES = {
     "feature": ("feat",),
     "change": ("feat", "perf", "docs"),
     "bug": ("fix",),
+    "deprecation": ("feat",),
     "removal": ("feat", "refactor"),
     "security": ("fix",),
     "documentation": ("docs",),

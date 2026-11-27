@@ -83,6 +83,7 @@ the branch changes against `main`, why, what was verified and what wasn't. These
   | `feature` | Adds something users notice: a source, a setting, a game, a headset | `feat` | Added |
   | `change` | Changes what users see, set or install, or how well it works | `feat`, `perf`, `docs` | Changed |
   | `bug` | Fixes something users noticed | `fix` | Fixed |
+  | `deprecation` | Marks something users have to be removed in a later release. It still works | `feat` | Deprecated |
   | `removal` | Removes something users had | `feat`, `refactor` | Removed |
   | `security` | Fixes a security problem | `fix` | Security |
   | `documentation` | Changes only contributors' docs, the skills or findings | `docs` | None |
