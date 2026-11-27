@@ -11,10 +11,14 @@
 
 #include "pipeline/pipeline_builder.h"
 #include "recording_notes.h"
+#include "setup_facts.h"
 #include "shared/local_files.h"
 #include "shared/log.h"
 #include "shared/program_delay.h"
+#include "shared/telemetry/telemetry.h"
 #include "shared/thread_cpu.h"
+#include "vr_mirror/frame_sources/demo/demo_source.h"
+#include "vr_mirror/frame_sources/demo/recorded_lap.h"
 #include "warp_effect.h"
 
 namespace {
@@ -45,14 +49,21 @@ namespace {
 
 }
 
-MirrorView::MirrorView(std::unique_ptr<FrameSource> frames, const MirrorSettings& settings, bool debug)
-    : frameSource_(std::move(frames)) {
+MirrorView::MirrorView(std::unique_ptr<FrameSource> game, const MirrorSettings& settings, bool debug)
+    : gameSource_(std::move(game)),
+      demoSource_(std::make_unique<DemoSource>()),
+      frameSource_(gameSource_.get()) {
     const ScopedLogGate gate(&debug_);  // it logs as its Debug setting says, from its first line
     SetSettings(settings, debug);       // first: Debug decides its other lines
     FollowVideoSettings();
-    frameSource_->SetArrivalTiming(  // before any Start
-        MakeArrivalTiming(ConfigFor(settings_, OutputClock::kTicks, frameSource_->Report()).arrivalTiming)
-    );
+    session_.SetSource(frameSource_);
+
+    // Before any Start.
+    for (FrameSource* source : {gameSource_.get(), demoSource_.get()}) {
+        source->SetArrivalTiming(
+            MakeArrivalTiming(ConfigFor(settings_, OutputClock::kTicks, source->Report()).arrivalTiming)
+        );
+    }
 
     obs_enter_graphics();
     char* errors = nullptr;
@@ -62,6 +73,7 @@ MirrorView::MirrorView(std::unique_ptr<FrameSource> frames, const MirrorSettings
     }
     bfree(errors);
     obs_leave_graphics();
+    FindLap();
 }
 
 MirrorView::~MirrorView() {
@@ -73,13 +85,20 @@ MirrorView::~MirrorView() {
 
     RecordingNotes::Forget(this);
     tickTrace_.Close();
+    recorder_.Stop();  // it reads the frame source: before the source stops
     session_.StopNow();
+
+    if (telemetryHeld_.exchange(false)) {
+        FollowTelemetryDebug();
+        Telemetry::Release();
+    }
     obs_enter_graphics();
     if (effect_) {
         gs_effect_destroy(effect_);
     }
     effect_ = nullptr;
     DestroyTextures();
+    emptyState_.Destroy();
     obs_leave_graphics();
 }
 
@@ -95,6 +114,7 @@ void MirrorView::SetSettings(const MirrorSettings& settings, bool debug) {
     if (debug != debug_.exchange(debug)) {
         g_debugViews += debug ? 1 : -1;
         RecordingNotes::SetDebug(this, frameSource_->Name(), debug);
+        FollowTelemetryDebug();
     }
 
     if (!debug) {
@@ -128,6 +148,111 @@ void MirrorView::LogEye() {
     CoreLog("eye (%s): %s", frameSource_->Name(), text);
     tickTrace_.Printf("#eye,%s\n", text);
     RecordingNotes::Note(this, frameSource_->Name(), "eye", text);
+}
+
+// Whether a lap is recorded, for the empty state: it lists the laps' folder, so not per frame.
+void MirrorView::FindLap() {
+    std::wstring stem;
+    lapRecorded_ = NewestRecordedLap(&stem);
+}
+
+// Whether the view waits for the game's frames, with the demo not asked for: none since the source started,
+// or none for 2 s (Idle). A tick that only lacks a frame of its own, mid-game, isn't waiting.
+bool MirrorView::WaitsForGame() const {
+    if (demoWanted_) {
+        return false;
+    }
+
+    return frameSource_ != gameSource_.get() || !started_ || gameSource_->FramesArrived() == framesAtStart_
+           || gameSource_->Idle();
+}
+
+namespace {
+
+    // The messages the empty state shows under its rule in place of the facts.
+    EmptyMessage HeadsetUnreadMessage() {
+        return {
+            L"The headset didn't answer",
+            FactTone::kWarning,
+            {L"Turn the headset on",
+             L"Start its VR software (Pimax Play)",
+             L"Close this window and open it again"},
+            L""
+        };
+    }
+
+    EmptyMessage LapFailedMessage() {
+        return {
+            L"The last lap wasn't recorded",
+            FactTone::kWarning,
+            {L"Find why in the OBS log: lines starting \"recorded lap:\"",
+             L"Press \"Record a lap\" to try again"},
+            L""
+        };
+    }
+
+    EmptyMessage RecordingMessage() {
+        return {
+            L"Recording a lap",
+            FactTone::kPlain,
+            {L"Start a practice session in LMU",
+             L"Leave the pits and cross the start/finish line",
+             L"Drive one full lap back to the start/finish line"},
+            L"Entering the pits or pausing the game starts the lap over at the next start/finish line."
+        };
+    }
+
+}
+
+// What the empty state says: why the view is empty (no game frames), then the one next step, which is the
+// game or the recorded lap. Under its rule one thing: the headset's error, else a failed lap's, else the
+// recording's steps while a lap is asked for, else the setup's facts (SetupFacts). It shows only in the
+// properties dialog, whose buttons are below it. Graphics thread.
+EmptyText MirrorView::EmptyTextNow() {
+    EmptyText text;
+    text.title = L"Waiting for the game";
+
+    if (lapWanted_) {
+        text.lines = {L"Start LMU in VR."};
+    } else if (lapRecorded_) {
+        text.lines = {L"Start LMU in VR, or press \"Play recorded lap\" below."};
+    } else {
+        text.lines = {L"Start LMU in VR, or record a lap with \"Record a lap\" below."};
+    }
+
+    SetupFactsInput in;
+    in.headsetUnread = headsetUnread_;
+    in.settings = settings_;
+    in.obs.canvasWidth = width_;
+    in.obs.canvasHeight = height_;
+    in.obs.framePeriod = obsFramePeriod_;
+
+    {
+        std::lock_guard<std::mutex> lock(factsMutex_);
+        in.facts = facts_;
+    }
+
+    if (headsetUnread_ && in.facts.imageWidth == 0) {
+        text.message = HeadsetUnreadMessage();
+    } else if (recorder_.Get() == LapRecorder::State::kFailed) {
+        text.message = LapFailedMessage();
+    } else if (lapWanted_) {
+        text.message = RecordingMessage();
+    } else {
+        text.facts = SetupFacts(in, *gameSource_);
+    }
+
+    return text;
+}
+
+void MirrorView::SetRecordLap(bool on) {
+    lapWanted_ = on;
+
+    // Released on the graphics thread once the recorder has stopped (FollowLap).
+    if (on && !telemetryHeld_.exchange(true)) {
+        FollowTelemetryDebug();
+        Telemetry::Acquire();
+    }
 }
 
 // OBS's graphics context entered.
@@ -251,6 +376,7 @@ void MirrorView::RestartDelay() {
     BuildPipeline(config, &pipeline_);
     FeedDrawnPose();
     FramePicker& picker = *pipeline_.Picker();
+    picker.SetStartCopyDelay(StartCopyDelay());
     picker.Restart(
         SmoothingDelayS(config.smoothing),
         frameSource_->Period(),
@@ -259,7 +385,7 @@ void MirrorView::RestartDelay() {
         frameSource_->CanCopyAfterNextFrame()
     );
     outDelay_ = picker.OutDelay();
-    ring_.SetSlotCount(picker.SlotsInUse());
+    SizeRing();
     // Only a source whose images last until the next frame can skip a copy (Pimax's can't).
     ring_.SetForecast(
         frameSource_->CanCopyAfterNextFrame() ? picker.MakeForecast() : nullptr,
@@ -268,19 +394,69 @@ void MirrorView::RestartDelay() {
     SetImageNeed();
 }
 
+// The copy delay the frame picker starts with: the game's as last measured since OBS started, or what the
+// source knows of its own (the recorded lap's), so the delay barely changes when the picker fixes it. 0: the
+// picker's own guess. Graphics thread.
+double MirrorView::StartCopyDelay() {
+    if (frameSource_ == gameSource_.get()) {
+        std::lock_guard<std::mutex> lock(factsMutex_);
+
+        if (facts_.measured) {
+            return facts_.copyDelay;
+        }
+    }
+
+    return frameSource_->StartCopyDelayS();
+}
+
+// The ring as large as the frame picker needs (it changes when the delay is fixed, or when the display's
+// period is learnt during the warm-up), and while a lap is asked for at least the lap recorder's
+// (LapRecorder::kRingFrames): the recorder takes the lap's frames from the ring once a crossing is known, so
+// it copies nothing before the lap. Closes OBS's handles to the slots the ring frees. Graphics thread.
+void MirrorView::SizeRing() {
+    const int picked = pipeline_.Picker()->SlotsInUse();
+    const int slots = lapWanted_ ? std::max(picked, LapRecorder::kRingFrames) : picked;
+
+    if (slots == ring_.SlotCount()) {
+        return;
+    }
+
+    ring_.SetSlotCount(slots);
+
+    for (int i = slots; i < FrameRing::kMaxSlots; i++) {
+        if (textures_[i]) {
+            gs_texture_destroy(textures_[i]);
+        }
+
+        textures_[i] = nullptr;
+    }
+}
+
 // Starts and stops the frame source as the source is shown and hidden. The session worker does
 // the work on its own thread; the graphics thread only asks, sets up its own per-start state once
 // the session runs, and frees its textures when hidden. Graphics thread, every tick.
 void MirrorView::StartStop() {
+    // First: a stop it asks for must be in the state read below, or this tick would take the session
+    // stopping for one that has started, and miss the report of the start that follows.
+    FollowDialogOpened();
+
     const SessionWorker::State state = session_.Get();
     if (state == SessionWorker::kStopped && session_.TakeFailure()) {
-        wanted_ = false;  // retry when shown again
+        if (frameSource_ == demoSource_.get()) {
+            demoWanted_ = false;  // no lap to play: back to the game
+        } else {
+            wanted_ = false;  // retry when shown again, or when the dialog opens (FollowDialogOpened)
+            headsetUnread_ = true;
+        }
     }
 
-    if (wanted_ && state == SessionWorker::kStopped) {
+    const bool sourceWanted = FollowSource(state);
+    const bool run = wanted_ && sourceWanted;
+
+    if (run && state == SessionWorker::kStopped) {
         RestartDelay();  // the ring sized for the warm-up before the first frame: it is made at this size
         session_.Start();
-    } else if (wanted_ && state == SessionWorker::kRunning && !started_) {
+    } else if (run && state == SessionWorker::kRunning && !started_) {
         started_ = true;
         framesAtStart_ = frameSource_->FramesArrived();
         clock_.Reset();
@@ -288,52 +464,149 @@ void MirrorView::StartStop() {
         warpSlot_ = -1;
         statStart_ = 0;  // a new 10 s stretch of stats (TraceStats)
         statTicks_ = statRepeats_ = statJumps_ = statNoFrame_ = statHeld_ = 0;
-        CoreLog("started (source shown)");
-    } else if (!wanted_ && state == SessionWorker::kRunning) {
-        const uint64_t t0 = os_gettime_ns();
-        if (started_) {
-            ToggleTrace(false);
-            started_ = false;
-            warpSlot_ = -1;
-            obs_enter_graphics();
-            DestroyTextures();
-            obs_leave_graphics();
-        }
-
-        {
-            std::lock_guard<std::mutex> lock(factsMutex_);
-            facts_ = {};
-        }
-
-        session_.Stop();
-        SetProgramDelay(0);
-        CoreLog("stopping (source hidden): graphics thread done in %.2f ms", (os_gettime_ns() - t0) / 1e6);
+        KeepReportedFacts();
+        CoreLog("started (source shown): %s", frameSource_->Name());
+    } else if (!run && state == SessionWorker::kRunning) {
+        StopSession(wanted_ ? "switching between the game and the demo" : "source hidden");
     }
 }
 
-std::string MirrorView::VideoMemory(const MirrorSettings& settings) {
-    MemoryFacts facts;
+// Switches to the frame source asked for (the game's or the demo's) while none runs. Returns whether the
+// one set is the one asked for. Graphics thread.
+bool MirrorView::FollowSource(SessionWorker::State state) {
+    FrameSource* wanted = demoWanted_ ? demoSource_.get() : gameSource_.get();
+
+    if (wanted != frameSource_ && state == SessionWorker::kStopped) {
+        frameSource_ = wanted;
+        session_.SetSource(frameSource_);
+        CoreLog("frames from: %s", frameSource_->Name());
+    }
+
+    return wanted == frameSource_;
+}
+
+void MirrorView::StopSession(const char* why) {
+    const uint64_t t0 = os_gettime_ns();
+
+    // The lap recorder reads the frame source: it stops first (a lap not yet complete is given up).
+    recorder_.Stop();
+    lapStarted_ = false;
+
+    if (started_) {
+        ToggleTrace(false);
+        started_ = false;
+        warpSlot_ = -1;
+        obs_enter_graphics();
+        DestroyTextures();
+        obs_leave_graphics();
+    }
+
+    session_.Stop();
+    SetProgramDelay(0);
+    CoreLog("stopping (%s): graphics thread done in %.2f ms", why, (os_gettime_ns() - t0) / 1e6);
+}
+
+// Runs the lap recorder while a lap is asked for and the game's frames come; once it has saved the lap or
+// failed, the request is done. Graphics thread, every tick.
+void MirrorView::FollowLap() {
+    const bool want = lapWanted_ && started_ && frameSource_ == gameSource_.get();
+
+    if (want && !lapStarted_) {
+        recorder_.Start(&ring_, frameSource_);
+        lapStarted_ = true;
+    } else if (!want && lapStarted_) {
+        recorder_.Stop();
+        lapStarted_ = false;
+    }
+
+    if (lapStarted_ && !recorder_.Running()) {
+        lapStarted_ = false;  // saved or failed: its state says which
+        lapWanted_ = false;
+        FindLap();
+    }
+
+    if (!lapWanted_ && !lapStarted_ && telemetryHeld_.exchange(false)) {
+        FollowTelemetryDebug();
+        Telemetry::Release();
+    }
+}
+
+// Tells the telemetry whether the view holds it with Debug on (Telemetry::HoldDebug): before the view asks
+// for it, so the reader's first pass follows it, before it lets go, and when Debug changes. Any thread: each
+// change is told once.
+void MirrorView::FollowTelemetryDebug() {
+    const bool hold = telemetryHeld_ && debug_;
+
+    if (telemetryDebug_.exchange(hold) != hold) {
+        Telemetry::HoldDebug(hold);
+    }
+}
+
+// What the game source's runtime reported as it started, until the game is measured: the empty state has
+// the headset before the game has run with the source. The game's stay: they are what it really did.
+// Graphics thread.
+void MirrorView::KeepReportedFacts() {
+    if (frameSource_ != gameSource_.get()) {
+        return;
+    }
+
+    const HeadsetReport report = gameSource_->Reported();
+    const MemoryFacts facts = ReportedFacts(report);
+    headsetUnread_ = report.failed;
+    std::lock_guard<std::mutex> lock(factsMutex_);
+
+    if (facts.imageWidth > 0 && !facts_.measured) {
+        facts_ = facts;
+    }
+}
+
+// The properties dialog opened (DialogOpened) with the headset not known yet and no game frames coming:
+// the game source reads it, by starting again (OpenXR's headset test). Graphics thread, every tick.
+void MirrorView::FollowDialogOpened() {
+    if (!dialogOpened_.exchange(false) || frameSource_ != gameSource_.get() || !WaitsForGame()) {
+        return;
+    }
 
     {
         std::lock_guard<std::mutex> lock(factsMutex_);
-        facts = facts_;
+
+        if (facts_.measured || facts_.imageWidth > 0) {
+            return;
+        }
     }
 
-    return VideoMemoryText(facts, settings, *frameSource_);
+    gameSource_->RequestHeadsetTest();
+    headsetUnread_ = false;
+
+    if (started_) {
+        StopSession("reading the headset");
+    } else {
+        wanted_ = true;  // the dialog shows it
+    }
 }
 
-// The facts the video memory line needs, as of this tick: the store's settled size for each
-// smoothing, which the frame picker knows once it has measured its copy delay. Skipped while the UI
-// thread reads them: the next tick's come soon. Graphics thread.
+// The facts the empty state needs, as of this tick: the copy delay the frame picker fixed, the
+// headset's refresh period and the game's eye image; the store is worked out from them. Only the game's:
+// the facts are about the game, and the demo's images are its own size. Until all are measured, those
+// before stay. Skipped while the UI thread reads them: the next tick's come soon. Graphics thread.
 void MirrorView::KeepMemoryFacts(const FramePicker& picker) {
-    const bool canHold = frameSource_->CanCopyAfterNextFrame();
+    if (frameSource_ != gameSource_.get()) {
+        return;
+    }
+
     MemoryFacts facts;
-    facts.running = true;
-    facts.slots[0] = picker.SlotsFor(SmoothingDelayS(SmoothingKind::kInstant), canHold);
-    facts.slots[1] = picker.SlotsFor(SmoothingDelayS(SmoothingKind::kLookahead), canHold);
+    facts.copyDelay = picker.CopyDelayS();
+    facts.hasEye = true;
     facts.eye = frameSource_->Eye();
-    facts.canvasWidth = width_;
-    facts.canvasHeight = height_;
+    facts.period = frameSource_->Period();
+
+    // The game's own image: its copy with no need of the host's (0, 0).
+    facts.measured = facts.copyDelay > 0 && facts.period > 0
+                     && frameSource_->CopySize(0, 0, &facts.imageWidth, &facts.imageHeight);
+
+    if (!facts.measured) {
+        return;
+    }
 
     std::unique_lock<std::mutex> lock(factsMutex_, std::try_to_lock);
 
@@ -345,6 +618,7 @@ void MirrorView::KeepMemoryFacts(const FramePicker& picker) {
 void MirrorView::Tick() {
     FollowVideoSettings();  // also while hidden: OBS lays the source out by its size
     StartStop();
+    FollowLap();
     if (!started_) {
         return;
     }
@@ -393,7 +667,7 @@ void MirrorView::Prepare(uint64_t tickNs) {
         ApplyFixedDelay(picker);
     }
 
-    FollowSlotCount(picker.SlotsInUse());
+    SizeRing();
     SetProgramDelay(picker.OutDelay());
     switch (pick.kind) {
         case PickKind::kRepeat:
@@ -471,22 +745,6 @@ void MirrorView::ApplyFixedDelay(FramePicker& picker) {
     picker.Report(log);
 }
 
-// The ring as large as the frame picker needs (it changes when the delay is fixed, or when the
-// display's period is learnt during the warm-up). Closes OBS's handles to the slots it frees.
-void MirrorView::FollowSlotCount(int slots) {
-    if (slots == ring_.SlotCount()) {
-        return;
-    }
-
-    ring_.SetSlotCount(slots);
-    for (int i = slots; i < FrameRing::kMaxSlots; i++) {
-        if (textures_[i]) {
-            gs_texture_destroy(textures_[i]);
-        }
-        textures_[i] = nullptr;
-    }
-}
-
 void MirrorView::OpenSlotTexture(const FrameRing::SlotInfo& slot) {
     // (Re)open the slot's shared texture on OBS's device.
     if (!textures_[warpSlot_] || textureGen_[warpSlot_] != slot.generation) {
@@ -504,10 +762,13 @@ void MirrorView::OpenSlotTexture(const FrameRing::SlotInfo& slot) {
 // change).
 void MirrorView::SetImageNeed() {
     const float aspect = float(width_) / float(std::max<uint32_t>(1, height_));
-    frameSource_->SetImageNeed(
-        NativeImageWidth(frameSource_->Eye(), settings_, int(width_), aspect),
-        kImageMemory / ring_.SlotCount()
-    );
+    const float
+        native = NativeImageWidth(frameSource_->Eye(), settings_, static_cast<int>(width_.load()), aspect);
+
+    // While a lap is asked for, the images are at least as wide as the lap's video (a source keeps them no
+    // larger than its own).
+    const float need = lapWanted_ ? std::max(native, static_cast<float>(LapRecorder::kWidth)) : native;
+    frameSource_->SetImageNeed(need, kImageMemory / ring_.SlotCount());
 }
 
 // Starts a stretch of footprint stats: the threads' cycle counts so far, and what was counted
@@ -629,6 +890,14 @@ void MirrorView::Render() {
             prepareTimes_.Add(Seconds(os_gettime_ns() - t0));
         }
         TraceStats(tickNs);
+    }
+
+    if (WaitsForGame()) {
+        if (*emptyViewers_ > 0) {
+            emptyState_.Draw(EmptyTextNow(), width_, height_);
+        }
+
+        return;
     }
 
     if (!effect_ || warpSlot_ < 0 || !textures_[warpSlot_]) {

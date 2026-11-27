@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // FixedDelayPicker: the OBS plugin's picking. Each frame is shown a fixed delay after its
 // de-jittered arrival: the copy delay, measured over a short warm-up (the 95th percentile of copy
-// times plus 2 ms, 4-45 ms; 40 ms until then) and then kept (every change would show a frame twice or
-// skip one), plus the smoothing's delay. One frame per tick, in order: the next one unless it is
-// clearly not due yet (4 ms of slack: the clocks slipped, show the current one again), catching up
-// only when two are clearly overdue (FixedDelayStep); when nothing due is ready, the last image
+// times plus 2 ms, 4-45 ms; until then the one the host starts it with, or 40 ms) and then kept (every change
+// would show a frame twice or skip one), plus the smoothing's delay. One frame per tick, in order: the next
+// one unless it is clearly not due yet (4 ms of slack: the clocks slipped, show the current one again),
+// catching up only when two are clearly overdue (FixedDelayStep); when nothing due is ready, the last image
 // again. Once the delay is fixed, the same rule run ahead on the host's ticks says whether a frame
 // will be shown (its forecast, FixedDelayAhead, fed with Record). The store needs the frames within
 // the delay, plus the frames that can arrive before the next tick (the host's tick period can be
@@ -20,6 +20,9 @@
 #include <vector>
 
 #include "pipeline/3_frame_picker/frame_picker.h"
+
+// The shortest and the longest copy delay the picker fixes (s): a copy slower than that is late.
+constexpr double kMinCopyDelayS = 0.004, kMaxCopyDelayS = 0.045;
 
 // Store entries while the delay is being measured: the frames of a display `period` (s) inside
 // the smoothing's delay plus 45 ms for the copy, the frames that can arrive before the host's next
@@ -54,7 +57,9 @@ public:
         bool copiesShownOnly
     ) override;
     Pick Tick(double tick, double period, const StoredFrame* frames, int total) override;
-    double OutDelay() const override { return (copyDelay_ > 0 ? copyDelay_ : 0.040) + smoothingDelay_; }
+    double OutDelay() const override { return CurrentCopyDelay() + smoothingDelay_; }
+    double CopyDelayS() const override { return copyDelay_; }
+    void SetStartCopyDelay(double s) override { startCopyDelay_ = s; }
     int SlotsInUse() const override { return slots_; }
     // With the copy delay it fixed: 0 until then.
     int SlotsFor(double smoothingDelayS, bool copiesShownOnly) const override;
@@ -68,6 +73,8 @@ private:
     // Collects the copy delays seen this tick and, once the warm-up is over, fixes the delay and the
     // store's size.
     void WarmUp(double tick, double period, const StoredFrame* frames, int total);
+    // The copy delay fixed, or the one it starts with: SetStartCopyDelay's, or 40 ms.
+    double CurrentCopyDelay() const;
 
     static constexpr int kMaxOrder = 256;  // store entries ordered per tick (FrameRing has 128)
     // The copies measured, by serial: over the frames a store can span (half a second at 400 Hz).
@@ -76,6 +83,7 @@ private:
     double smoothingDelay_ = 0;
     int maxSlots_ = 128;
     double copyDelay_ = 0, warmStart_ = 0;  // the copy delay (0 until fixed), when the warm-up began
+    double startCopyDelay_ = 0;             // SetStartCopyDelay (0: none)
     std::vector<double> delays_;            // copy ready minus arrival, during warm-up
     uint64_t firstSerial_ = 0;              // the first frame the warm-up measures
     uint64_t measured_[kMeasured] = {};     // each copy measured, at its serial % kMeasured

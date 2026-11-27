@@ -36,7 +36,7 @@ NO_TERM_CHECK = {".agents/skills/docs/SKILL.md"}
 # Coined terms that a document uses only as a name OBS shows (Look-ahead, a choice of VR Mirror's
 # Smoothing). Its reader sees them on screen, so they need no table row there.
 ON_SCREEN_NAMES = {
-    "README.md": {"look-ahead"},
+    "README.md": {"look-ahead", "recorded lap"},  # the latter in "Play recorded lap"
     "CHANGELOG.md": {"look-ahead"},
 }
 

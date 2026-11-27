@@ -112,6 +112,15 @@ namespace {
         return kPvrSuccess;
     }
 
+    float GetFloatConfig(PvrHmd, const char*, float fallback) {
+        return fallback;  // no key the tool reads is set: Render Quality at its default
+    }
+
+    PvrResult FovTextureSize(PvrHmd, PvrEye, PvrFov, float, PvrSize* size) {
+        *size = g_headset->RenderSize();
+        return kPvrSuccess;
+    }
+
     PvrResult HmdStatus(PvrHmd, PvrHmdStatus* out) {
         g_headset->CountCall();
 
@@ -176,6 +185,8 @@ namespace {
         functions.getHmdStatus = HmdStatus;
         functions.getTrackingState = TrackingState;
         functions.getPredictedDisplayTime = PredictedDisplayTime;
+        functions.getFloatConfig = GetFloatConfig;
+        functions.getFovTextureSize = FovTextureSize;
         functions.setIntConfig = SetIntConfig;
         functions.getInt64Config = GetInt64Config;
         return &functions;

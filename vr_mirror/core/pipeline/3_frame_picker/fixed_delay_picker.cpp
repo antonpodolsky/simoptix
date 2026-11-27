@@ -9,6 +9,9 @@
 
 namespace {
 
+    // The copy delay until it is fixed, without one to start with (SetStartCopyDelay).
+    constexpr double kGuessCopyDelayS = 0.040;
+
     // The frames of a display `period` that can arrive before the host's next tick, `tickPeriod`
     // apart (0 if the host has no regular ticks, or ticks at least as often as the display).
     int BetweenTicksSlots(double period, double tickPeriod) {
@@ -30,7 +33,8 @@ namespace {
 
 int WarmupSlots(double smoothingDelayS, double period, double tickPeriod, int maxSlots) {
     return std::clamp(
-        int(std::ceil((0.045 + smoothingDelayS) / period)) + BetweenTicksSlots(period, tickPeriod) + 3,
+        int(std::ceil((kMaxCopyDelayS + smoothingDelayS) / period)) + BetweenTicksSlots(period, tickPeriod)
+            + 3,
         4,
         maxSlots
     );
@@ -156,7 +160,7 @@ void FixedDelayPicker::WarmUp(double tick, double period, const StoredFrame* fra
     if (tick - warmStart_ > 2.0 && delays_.size() > 50) {
         std::sort(delays_.begin(), delays_.end());
         const double p95 = delays_[size_t(delays_.size() * 0.95)];
-        copyDelay_ = std::min(0.045, std::max(0.004, p95 + 0.002));
+        copyDelay_ = std::min(kMaxCopyDelayS, std::max(kMinCopyDelayS, p95 + 0.002));
         fixedP95_ = p95;
         fixedPending_ = true;
 
@@ -174,6 +178,14 @@ void FixedDelayPicker::WarmUp(double tick, double period, const StoredFrame* fra
     }
 }
 
+double FixedDelayPicker::CurrentCopyDelay() const {
+    if (copyDelay_ > 0) {
+        return copyDelay_;
+    }
+
+    return startCopyDelay_ > 0 ? startCopyDelay_ : kGuessCopyDelayS;
+}
+
 Pick FixedDelayPicker::Tick(double tick, double period, const StoredFrame* frames, int total) {
     period_ = period;
 
@@ -188,7 +200,7 @@ Pick FixedDelayPicker::Tick(double tick, double period, const StoredFrame* frame
         shownOnlyFrom_ = 0;
     }
 
-    const double outDelay = (copyDelay_ > 0 ? copyDelay_ : 0.040) + smoothingDelay_;
+    const double outDelay = CurrentCopyDelay() + smoothingDelay_;
 
     // Ready entries in game-frame order.
     int count = 0;

@@ -2,12 +2,15 @@
 rem Copyright (C) 2026 Anton Podolsky
 rem SPDX-License-Identifier: GPL-2.0-or-later
 rem Builds SimOptix: VR Mirror, simoptix_vr_mirror.dll: the OBS source SimOptix: Pimax
-rem Mirror (plugin.cpp, its video memory line by video_memory.cpp; drawn by mirror_view.cpp with
-rem the effect in warp_effect.cpp, its frames
+rem Mirror (plugin.cpp; drawn by mirror_view.cpp with
+rem the effect in warp_effect.cpp, its empty state by empty_state.cpp with ..\..\shared\text_raster.cpp
+rem and the facts on it by setup_facts.cpp with video_memory.cpp, its frames
 rem copied by frame_ring.cpp, its frame source started and stopped by session_worker.cpp, the audio kept
 rem in step with its view by audio_sync.cpp, the file beside each recording by recording_notes.cpp), and
 rem its race auto-record (race_auto_record\race_recorder.cpp decides when, race_auto_record\auto_record.cpp tells
-rem OBS), plus the Pimax frame source (..\frame_sources\pimax, listed in its pimax.rsp), the VR
+rem OBS), the lap recorder for the demo (lap_recorder\: lap_finder.cpp finds the lap, lap_video.cpp encodes it,
+rem lap_recorder.cpp runs both), plus the frame sources (..\frame_sources\pimax, openxr and demo, each
+rem listed in its .rsp), the VR
 rem Mirror's core (..\core, its sources listed in ..\core\build\*.rsp) and ..\..\shared (the view's
 rem delay the plugins share, the crash dump, the files kept in %%LOCALAPPDATA%%\simoptix, and the game's
 rem telemetry listed by
@@ -34,18 +37,20 @@ rc /nologo /i ..\.. /i obj /fo obj\version.res version.rc || exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\core\build\embed_text.ps1 ^
    ..\core\pipeline\5_warp\warp.hlsli obj\warp_hlsli.h kWarpHlsli || exit /b 1
 cl /nologo /std:c++17 /EHsc /O2 /W3 /MD /DUNICODE /D_UNICODE /DNOMINMAX /D_CRT_SECURE_NO_WARNINGS /Fo:obj\ ^
-   /I..\.. /I..\core /I..\..\third_party\obs-32.2.2\libobs /Iobj %TELEMETRY_FLAGS% ^
-   plugin.cpp mirror_view.cpp video_memory.cpp warp_effect.cpp frame_ring.cpp session_worker.cpp ^
+   /I..\.. /I..\core /I..\..\third_party\obs-32.2.2\libobs /I..\..\third_party\openxr /Iobj %TELEMETRY_FLAGS% ^
+   plugin.cpp mirror_view.cpp video_memory.cpp setup_facts.cpp warp_effect.cpp empty_state.cpp frame_ring.cpp ^
+   session_worker.cpp ^
    audio_sync.cpp recording_notes.cpp ^
    race_auto_record\race_recorder.cpp race_auto_record\auto_record.cpp ^
+   lap_recorder\lap_finder.cpp lap_recorder\lap_video.cpp lap_recorder\lap_recorder.cpp ^
    ..\..\shared\shared_memory.cpp ..\..\shared\program_delay.cpp ..\..\shared\crash_dump.cpp ^
-   ..\..\shared\local_files.cpp ^
+   ..\..\shared\local_files.cpp ..\..\shared\text_raster.cpp ^
    %TELEMETRY_FILES% ^
    @..\core\build\common.rsp @..\core\build\pipeline.rsp @..\core\build\adapters.rsp ^
-   @..\frame_sources\pimax\pimax.rsp @..\frame_sources\openxr\openxr.rsp ^
+   @..\frame_sources\pimax\pimax.rsp @..\frame_sources\openxr\openxr.rsp @..\frame_sources\demo\demo.rsp ^
    /LD /Fe:bin\%NAME%.dll ^
    /link obj\version.res obj\obs.lib d3d11.lib dxgi.lib winmm.lib user32.lib d3dcompiler.lib ^
-   dbghelp.lib || exit /b 1
+   dbghelp.lib dwrite.lib mfplat.lib mfreadwrite.lib mfuuid.lib ole32.lib propsys.lib advapi32.lib shell32.lib || exit /b 1
 powershell -NoProfile -ExecutionPolicy Bypass -File ..\..\shared\build\fill_version.ps1 ^
    manifest.json bin\manifest.json || exit /b 1
 rem A line continued with ^ inside the block below runs as a command named " ", so each command

@@ -117,6 +117,7 @@ Pipeline::Update(const MirrorSettings& s, PoseSource& poses, const EyeInfo& eye,
         in.shown = shown;
         in.geometry = g;
 
+        smoothing.SetStrength(s.strength);  // before FillPath: the look-ahead's window follows it
         FillPath(&in, poses, f, r, standIn, dt);
 
         // The view, inside the images: nothing after the smoothing changes it.

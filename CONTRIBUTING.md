@@ -21,7 +21,7 @@ project settings set `context.fileName` to `AGENTS.md`.
 | Term | Meaning |
 |---|---|
 | PVR | Pimax's own name for its client interface: the client library `libPVRClient64.dll` that Pimax Play installs, and the table of functions it hands out. The project's code that wraps it is named after it |
-| frame source | The code that delivers the game's frames and head poses to VR Mirror: the Pimax source or the OpenXR source (`vr_mirror\frame_sources\`) |
+| frame source | The code that delivers the game's frames and head poses to VR Mirror: the Pimax source, the OpenXR source or the demo source (`vr_mirror\frame_sources\`) |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
 | fake runtime | The stand-in for Pimax's client library that the e2e tests use in place of a headset and a game |
@@ -170,6 +170,7 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
 - **Names.**
   - A part's name is its folder's: `frame_sources\pimax\` holds `pimax_source.*` and `PimaxSource`.
   - File names and the names programs see are snake_case with `simoptix_`, and never have hyphens.
+    The one exception is the files on a GitHub Release, such as `SimOptixSetup-<version>.exe`.
   - "PVR" names the code that wraps Pimax's client interface. "Pimax" names the rest: the frame source,
     the headset and Pimax's software.
   - What OBS shows is "SimOptix: <what>", matching the id.

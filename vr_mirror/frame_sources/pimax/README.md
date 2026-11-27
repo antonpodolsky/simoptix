@@ -8,7 +8,7 @@ session of its own. It needs Pimax Play.
 
 | Term | Meaning |
 |---|---|
-| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`) or the OpenXR source (`vr_mirror\frame_sources\openxr\`) |
+| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
 | client mirror | A feature of the Pimax runtime. It gives other programs a half-size copy of the left eye image the game draws, and a signal for each new frame |
@@ -56,7 +56,7 @@ session of its own. It needs Pimax Play.
 | File | What |
 |---|---|
 | `pimax_source.*` | `PimaxSource`: the game's frames and the head pose for a host. Its poll thread ties the three parts below together and runs the pipeline's arrival timing (stage 1) |
-| `pvr_session.*` | The PVR session: loading Pimax's client library and opening the session, re-creating it when another VR app takes over, the call lock and timed runtime calls |
+| `pvr_session.*` | The PVR session: loading Pimax's client library and opening the session, the display, eye and render size it reports, re-creating it when another VR app takes over, the call lock and timed runtime calls |
 | `pvr_mirror.*` | The client mirror: switching it on, the shared texture, the frame signal, and the wait while no game runs |
 | `pvr_interface.h` | The part of Pimax's client interface that VR Mirror uses, declared by the project: the function table of interface version 1.26, the data it fills in, and the constants |
 | `pvr_poses.h` | The recorded head poses and per-slot predictions under their own lock, and the hosts' lookups |
@@ -64,5 +64,5 @@ session of its own. It needs Pimax Play.
 | `check\` | The layout check, a program of its own. Where Pimax's public PC SDK 1.26.1 is installed, `build.bat` builds and runs it. It compares `pvr_interface.h` with Pimax's headers, entry by entry and field by field |
 
 The client mirror's runtime keys (`enable_client_mirror`, `client_mirror_handle`,
-`client_mirror_sync_handle`) are undocumented Pimax internals, so a Pimax Play update could change
-them. The mirror is switched off when a host stops, and also from the crash handler.
+`client_mirror_sync_handle`) and the Render Quality's (`pixels_per_display_pixel_rate`) are undocumented
+Pimax internals, so a Pimax Play update could change them. The mirror is switched off when a host stops, and also from the crash handler.

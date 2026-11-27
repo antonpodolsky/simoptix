@@ -6,6 +6,10 @@
 
 namespace {
 
+    // The runtime's pixel density, which Pimax Play's Render Quality sets: undocumented, as the client
+    // mirror's keys are (it read 1 with Render Quality at 1.0).
+    constexpr const char* kRenderQualityKey = "pixels_per_display_pixel_rate";
+
     // Pimax's client library, loaded once and kept loaded until Close, also after a failed initialise
     // (the next Open then tries again with it).
     HMODULE g_clientDll = nullptr;
@@ -133,7 +137,23 @@ bool PvrSession::Open(std::string* error) {
         );
     }
 
+    ReadRenderSize(hmd);
     return true;
+}
+
+// The left eye image at the Render Quality: the size the runtime gives a game asking for its field of view.
+void PvrSession::ReadRenderSize(PvrHmd hmd) {
+    PvrEyeRenderInfo info = {};
+    PvrSize size = {};
+    renderWidth_ = renderHeight_ = 0;
+    const float quality = pvr_->getFloatConfig(hmd, kRenderQualityKey, 1);
+
+    if (pvr_->getEyeRenderInfo(hmd, kPvrEyeLeft, &info) == kPvrSuccess
+        && pvr_->getFovTextureSize(hmd, kPvrEyeLeft, info.fov, quality, &size) == kPvrSuccess && size.w > 0
+        && size.h > 0) {
+        renderWidth_ = static_cast<uint32_t>(size.w);
+        renderHeight_ = static_cast<uint32_t>(size.h);
+    }
 }
 
 void PvrSession::Close() {

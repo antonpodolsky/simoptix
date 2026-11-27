@@ -76,6 +76,9 @@ public:
     LUID AdapterLuid() const override { return session_.AdapterLuid(); }
     EyeInfo Eye(int eye) const { return session_.Eye(eye); }
     EyeInfo Eye() const override { return session_.Eye(0); }
+    // The session's eye and refresh rate, and the client mirror's size: half the image Pimax renders.
+    HeadsetReport Reported() const override;
+    bool HalvesImages() const override { return true; }
 
     // Opens (or re-opens, if the server re-created it) the shared mirror texture.
     bool OpenTextures(ID3D11Device* device);

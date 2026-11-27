@@ -10,7 +10,7 @@
 //     smoothing 1/2 and zoom 1.2 and 1.5, as the window and as OBS ticks; then single runs with
 //     stabilization switched off and on. A refactor that must not change behaviour reproduces the
 //     file byte for byte.
-//   --pipeline [stage flags] [--zoom Z] [--ticks HZ] [--input NAME ...]: the pipeline with the
+//   --pipeline [stage flags] [--zoom Z] [--strength S] [--ticks HZ] [--input NAME ...]: the pipeline with the
 //     settings' configuration (Look-ahead, the slot check), each stage overridden by its flag:
 //     --arrival_timing grid, --drawn_pose slot_check|arrival_slot|cockpit,
 //     --frame_picker fixed_delay|newest_frame|held_frame, --smoothing instant|lookahead,
@@ -239,6 +239,9 @@ namespace {
             } else if (!strcmp(option, "--zoom")) {
                 options->settings.zoom = float(atof(value));
                 i++;
+            } else if (!strcmp(option, "--strength")) {
+                options->settings.strength = static_cast<float>(atof(value));
+                i++;
             } else if (!strcmp(option, "--ticks")) {
                 options->tickHz = atof(value);
                 i++;
@@ -295,7 +298,8 @@ namespace {
     void PrintUsage() {
         printf(
             "usage: stage_replay.exe --golden FILE [--replays DIR]\n"
-            "       stage_replay.exe --pipeline [--<stage> <kind> ...] [--zoom Z] [--ticks HZ] "
+            "       stage_replay.exe --pipeline [--<stage> <kind> ...] [--zoom Z] [--strength S] [--ticks "
+            "HZ] "
             "[--input NAME ...]\n"
             "       stage_replay.exe --stage drawn_pose <replay .csv> [--show FIRST-LAST] [--dump FILE] "
             "[--delays A,B,...] [--drawn_pose K]\n"

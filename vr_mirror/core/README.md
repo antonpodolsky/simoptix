@@ -13,7 +13,7 @@ counters are in `shared\`, because the Overlays plugin uses them too.
 | game eye | The eye image a frame source delivers. The Pimax source's is a half-size copy of the left eye. The OpenXR source's is the left eye at full size |
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | display slot | One of the regular moments at which the headset shows a new image, one per refresh (90 per second at 90 Hz). The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
-| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`) or the OpenXR source (`vr_mirror\frame_sources\openxr\`) |
+| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
 | slot check | A way to find the drawn pose: it judges from thumbnails which display slot a frame was really drawn for |
 | stamp | The frame number that VR Mirror draws as 15 small squares in the top-left corner of the view, when its Debug setting is on |
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |
@@ -58,7 +58,7 @@ The rules for includes, file names and the build lists are in the dev skill
 | `pipeline\observer\` | Beside the stages: `observer.h` (interface, `FrameRecord`, `TraceSink`), `no_observer.h` (`NoObserver`), `stamp_trace_observer.*` (`StampTraceObserver`: the frame-number stamp and the frame trace) |
 | `pipeline\5_warp\` | Stage 5: `warp.h` (`WarpParams`, interface), `rotation_warp.*` (`RotationWarp`), `warp.hlsli` (the per-pixel warp that a host wraps in its own shader or effect) |
 | `adapters\` | Thin glue for input and output that the pipeline runs on. It makes no decisions |
-| `adapters\d3d\frame_source.h` | `FrameSource`: what a host needs from a frame source (`vr_mirror\frame_sources\`): the frames, the poses, the eye, the clock, and a copy of each eye image into the host's store |
+| `adapters\d3d\frame_source.h` | `FrameSource`: what a host needs from a frame source (`vr_mirror\frame_sources\`): the frames, the poses, the eye, the clock, what the runtime reports of the headset before a game runs, and a copy of each eye image into the host's store |
 | `adapters\d3d\frame_copy.*` | A host's own copy of a frame's eye image: the texture (shared or not, copied or drawn into) and its views. The frame source fills it |
 | `adapters\d3d\thumbnail.*` | Tiny thumbnails for comparing images by content, or several areas side by side (the cockpit patches), read back without flushing |
 | `adapters\d3d\drawn_pose_feed.*` | `DrawnPoseFeed`: makes the images stage 2 looks at (thumbnails and the cockpit patches it asks for) on the GPU, reads them back, and feeds them to stage 2 with the frame source's pose predictions |

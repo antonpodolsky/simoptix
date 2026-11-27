@@ -14,7 +14,7 @@ which each host wraps in its own shader (the mirror app) or effect (the OBS plug
 |---|---|
 | drawn pose | The head pose a game frame was drawn with. Stage 2 of the pipeline answers it for each frame, and the code is named after it |
 | game eye | The eye image a frame source delivers. The Pimax source's is a half-size copy of the left eye. The OpenXR source's is the left eye at full size |
-| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`) or the OpenXR source (`vr_mirror\frame_sources\openxr\`) |
+| frame source | The code that delivers game frames, head poses and timing to VR Mirror: the Pimax source (`vr_mirror\frame_sources\pimax\`), the OpenXR source (`vr_mirror\frame_sources\openxr\`) or the demo source (`vr_mirror\frame_sources\demo\`) |
 | host | A program that runs VR Mirror's pipeline and shows its result: the OBS plugin or the mirror app |
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
 

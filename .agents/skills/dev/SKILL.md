@@ -191,7 +191,8 @@ for the agents that read those files. Change the rules here, never in those file
     device, the render target, settings storage and UI, and when to draw.
   - Telemetry (`shared\telemetry\`): game adapters (`shared\telemetry\games\`) feed one reader per OBS
     process. The reader feeds the overlays (`overlays\gmeter\`, with `overlays\obs_plugin\` as their
-    OBS module) and race auto-record (`vr_mirror\obs_plugin\race_auto_record\`).
+    OBS module), race auto-record (`vr_mirror\obs_plugin\race_auto_record\`) and the lap recorder for
+    the demo (`vr_mirror\obs_plugin\lap_recorder\`).
   - `vr_mirror\e2e\`, `vr_mirror\recording_analysis\`, the fake LMU, the OpenXR layer's check
     program and SimOptix Setup (`setup\`) are standalone programs. Setup carries the plugins' and the
     layer's built DLLs inside it, and includes none of their code.
@@ -414,6 +415,11 @@ One convention, everywhere. Check every new name against it, and rename what bre
   Everything a plugin or the layer writes goes under `%LOCALAPPDATA%\simoptix\` (traces in its
   `traces\`). `shared\local_files.*` names each such file `<kind>_<date>_<time>...` and keeps the newest
   10 of each kind. A new kind of file is added there.
+  - The one exception is the files on a GitHub Release: `SimOptixSetup-<version>.exe`,
+    `SimOptixOBSPlugins-<version>.zip` and `SimOptixOpenXRLayer-<version>.zip`. They are named the way
+    the downloads of Windows programs usually are (`OculusSetup.exe`, `SimHubSetup_<version>.exe`),
+    so people who download them know what each is. The files inside keep their names
+    (`simoptix_setup.exe`, the plugins' DLLs, the layer's).
 - **What OBS shows is "SimOptix: <what>", matching the id.** `simoptix_pimax_mirror` is "SimOptix:
   Pimax Mirror", `simoptix_openxr_mirror` is "SimOptix: OpenXR Mirror", and `simoptix_gmeter_overlay`
   is "SimOptix: G-Meter Overlay".
@@ -426,11 +432,15 @@ One convention, everywhere. Check every new name against it, and rename what bre
   - "Drawn pose" is the head pose a frame was drawn with: the stage (`2_drawn_pose\`, `DrawnPose`),
     the setting `drawn_pose`, and the trace's `drawn_pose` column. It was called the picture pose,
     and the setting `picture_matching`, in older builds.
-  - "Look-ahead" is the smoothing that runs half a second behind the game: the Smoothing setting's
-    choice (2), `SmoothingKind::kLookahead`, `LookaheadSmoothing`, and the e2e runs `<name>_lookahead`.
+  - "Look-ahead" is the smoothing that runs half a second behind the game: the Stabilization Method
+    setting's choice (2), `SmoothingKind::kLookahead`, `LookaheadSmoothing`, and the e2e runs `<name>_lookahead`.
     It was called Smooth (`_smooth`) until #22, beside Smoothest (a second behind, 3,
     `_smoothest`), which was dropped then (`findings\obs_plugin.md`, "Smoothing and zoom"). Findings
     and e2e results from before keep the old names.
+  - The OBS settings Stabilization Method (`stabilization_method`) and Stabilization Strength
+    (`stabilization_strength`) were called Smoothing (`smoothing`) and Strength
+    (`smoothing_strength`) before. The plugin moves a scene's old keys to the new ones. The core's
+    own settings, and the mirror app's ini file, keep `smoothing` and `smoothing_strength`.
   - "Mirror" in a name ("VR Mirror", "Pimax Mirror", `MirrorView`, `vr_mirror\`) is our plugin and its
     sources. "The mirror" or "client mirror" in a sentence means only Pimax's client mirror
     (`PvrMirror`). A sentence that means the plugin says "VR Mirror".
@@ -576,7 +586,7 @@ the size, place and colour of every live part.
   480 px board, centre (240, 240), with angles clockwise from up (as in `meter_draw.h`). Keep those
   constants and the tables in `overlays\gmeter\design\README.md` the same, and change both together.
 - **Text** is drawn live and never put in an image, because it would be shrunk with the image and go
-  soft. DirectWrite (`text_raster.cpp`) rasterises it at the size shown. `meter_text.cpp` makes labels
+  soft. DirectWrite (`shared\text_raster.cpp`) rasterises it at the size shown. `meter_text.cpp` makes labels
   of it, placed by their ink to a fraction of a pixel, with numbers in the font's tabular figures.
   Measure a label change at 1:1 (sharpness, position) before looking in OBS.
 - **Verify** as for any visual change (step 5). Screenshot the OBS preview at 1:1 and measure it
