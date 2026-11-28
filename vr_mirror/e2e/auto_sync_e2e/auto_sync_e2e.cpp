@@ -10,6 +10,10 @@
 // that the game's sound moves by as much as the lags. In the second, once auto sync is done, the game's
 // frames stop for a few seconds, as when LMU restarts, and the menus play again: auto sync measures again,
 // and settles where it did.
+// In the first run, Desktop Audio starts with a user sync offset (the Sync Offset set in OBS, without the
+// plugin's shift) of -120 ms. After each run, the test reads Desktop Audio's sync offset from the scene
+// collection that OBS saved at exit. It must equal the view's delay plus auto sync's correction, without
+// the user sync offset.
 //
 // The cut shows LMU's menus, with cars and tracks, so it stays in the data folder: in the folder
 // AUTO_SYNC_MENU_CUT names, else SIMOPTIX_DATA\auto_sync_menu_cut. Needs OBS installed and a sound output
@@ -51,6 +55,11 @@ namespace {
     constexpr double kMovedToleranceS = 0.01;
 
     constexpr const char* kDone = "[simoptix_vr_mirror] auto sync done, ";
+    constexpr const char* kShifted = "[simoptix_vr_mirror] audio sync: ";
+    constexpr const char*
+        kShiftKey = "simoptix_vr_mirror_sync_shift_ns";  // the plugin's key in each source's private settings
+    constexpr const char* kGameSound = "Desktop Audio";
+    constexpr double kSavedToleranceS = 0.0015;  // the log rounds the delay and the correction to whole ms
 
     int g_failures = 0;
 
@@ -139,7 +148,8 @@ namespace {
     // What auto sync settled at, from its "auto sync done" line.
     struct Settled {
         bool hasSound = false;
-        double soundLag = 0;  // s: the ticks after their highlights
+        double soundLag = 0;     // s: the ticks after their highlights
+        double correctionS = 0;  // s: auto sync's correction of the game's sound
         std::string line;
     };
 
@@ -169,19 +179,132 @@ namespace {
             s.soundLag = ms / 1000;
         }
 
+        const char* moves = strstr(s.line.c_str(), "so it moves ");
+
+        if (moves && sscanf_s(moves, "so it moves %lf ms", &ms) == 1) {
+            s.correctionS = ms / 1000;
+        }
+
         return s;
+    }
+
+    // Reads the delay (ms) from the last "audio sync: ... now +N ms on top of their user sync offsets" line
+    // in `log`. Returns false if the log has no such line.
+    bool ReadDelay(const std::string& log, long long* delayMs) {
+        bool found = false;
+
+        for (size_t at = log.find(kShifted); at != std::string::npos; at = log.find(kShifted, at + 1)) {
+            const size_t end = log.find_first_of("\r\n", at);
+            const std::string line = log.substr(at, end == std::string::npos ? std::string::npos : end - at);
+            const char* now = strstr(line.c_str(), " now ");
+            long long ms = 0;
+
+            if (now && strstr(now, "on top of their user sync offsets")
+                && sscanf_s(now, " now %lld ms", &ms) == 1) {
+                *delayMs = ms;
+                found = true;
+            }
+        }
+
+        return found;
+    }
+
+    // Returns the JSON object of the source named `name` from the scene collection's top-level "sources"
+    // array, as a string. It looks only in that array, because scene items in each scene's "items" array can
+    // have the same name. Returns "" if no source has that name.
+    std::string SavedSource(const std::string& json, const std::string& name) {
+        std::vector<size_t> starts;
+        std::string key;
+        size_t found = 0;  // the nesting depth of the source's object once found, 0 until then
+
+        for (size_t i = 0; i < json.size(); i++) {
+            if (json[i] == '"') {
+                const size_t end = json.find('"', i + 1);
+
+                if (end == std::string::npos) {
+                    return {};
+                }
+
+                const std::string text = json.substr(i + 1, end - i - 1);
+                const size_t next = json.find_first_not_of(" \t\r\n", end + 1);
+
+                if (next != std::string::npos && json[next] == ':') {
+                    key = text;
+                } else if (!found && key == "name" && text == name && starts.size() == 2) {
+                    found = starts.size();
+                }
+
+                i = end;
+            } else if (json[i] == '{') {
+                starts.push_back(i);
+            } else if (json[i] == '}' && !starts.empty()) {
+                if (found && starts.size() == found) {
+                    return json.substr(starts.back(), i - starts.back() + 1);
+                }
+
+                starts.pop_back();
+            }
+        }
+
+        return {};
+    }
+
+    // Reads the integer value of `key` from the JSON object `object`. Returns false if it has no such key.
+    bool ReadNumber(const std::string& object, const std::string& key, long long* value) {
+        const size_t at = object.find("\"" + key + "\"");
+
+        if (at == std::string::npos) {
+            return false;
+        }
+
+        const size_t colon = object.find(':', at);
+        return colon != std::string::npos && sscanf_s(object.c_str() + colon + 1, " %lld", value) == 1;
     }
 
     struct Run {
         const char* name;
         double soundLagMs;
         bool again;  // the game's frames stop and start again after auto sync is done: it measures again
+        long long userOffsetMs;  // Desktop Audio's user sync offset at the start
     };
 
     std::string Ms(double seconds) {
         char text[32];
         snprintf(text, sizeof(text), "%.0f ms", seconds * 1000);
         return text;
+    }
+
+    // Checks the sync offset that OBS saved for the game's sound: it must equal the view's delay plus auto
+    // sync's last correction, and the saved offset minus the plugin's shift must equal the user sync
+    // offset.
+    void CheckSavedOffset(const ObsCopy& obs, const std::string& log, const Settled& last, const Run& run) {
+        long long delayMs = 0, syncNs = 0, shiftNs = 0;
+        const std::string source = SavedSource(SavedSceneCollection(obs), kGameSound);
+        const bool saved = ReadDelay(log, &delayMs) && ReadNumber(source, "sync", &syncNs)
+                           && ReadNumber(source, kShiftKey, &shiftNs);
+
+        if (!saved || !last.hasSound) {
+            Check(
+                false,
+                "the log has the delay, and the saved Desktop Audio has a sync offset and the plugin's shift"
+            );
+            return;
+        }
+
+        const double wantS = static_cast<double>(delayMs) / 1000 + last.correctionS;
+        const double syncS = static_cast<double>(syncNs) / 1e9;
+        Check(
+            std::fabs(syncS - wantS) <= kSavedToleranceS,
+            "Desktop Audio's saved sync offset is " + Ms(syncS) + ": the delay of " + std::to_string(delayMs)
+                + " ms plus the correction of " + Ms(last.correctionS) + ", without its user sync offset of "
+                + std::to_string(run.userOffsetMs) + " ms"
+        );
+
+        Check(
+            syncNs - shiftNs == run.userOffsetMs * 1000000,
+            "Desktop Audio's user sync offset (the saved sync offset minus the plugin's shift) is still "
+                + Ms(static_cast<double>(syncNs - shiftNs) / 1e9)
+        );
     }
 
     // One run: the fake game with the menu cut, and OBS until auto sync is done (twice with `again`).
@@ -256,6 +379,7 @@ namespace {
         ObsRun obsRun;
         obsRun.sources = {"simoptix_openxr_mirror"};
         obsRun.desktopAudio = true;
+        obsRun.desktopAudioSyncNs = run.userOffsetMs * 1000000;
         obsRun.localAppData = dir / "appdata";
         // The fake runtime, which only the Pimax source loads, with no game.
         obsRun.fakePvrScenario = dir / "fake_pvr.cfg";
@@ -288,6 +412,8 @@ namespace {
                 + " after their highlights: the menus' own " + Ms(settled.soundLag - soundLag) + " and the "
                 + Ms(soundLag) + " put in"
         );
+
+        CheckSavedOffset(obs, log, run.again ? ReadSettled(log, 1) : settled, run);
 
         if (run.again) {
             const Settled second = ReadSettled(log, 1);
@@ -343,8 +469,8 @@ int wmain() {
     }
 
     const Run runs[] = {
-        {"sound_0", 0, false},
-        {"sound_60_again", 60, true},
+        {"sound_0", 0, false, -120},
+        {"sound_60_again", 60, true, 0},
     };
     Settled settled[2];
 

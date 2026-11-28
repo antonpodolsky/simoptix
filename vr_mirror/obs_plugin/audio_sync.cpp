@@ -37,7 +37,8 @@ namespace {
         return int64_t(std::llround(ProgramDelay() * 1000)) * 1000000;
     }
 
-    // OBS's UI thread: every audio source to its own offset plus the shift.
+    // OBS's UI thread: sets every audio source's sync offset to its user sync offset plus the shift, and the
+    // game's sound's sync offset to the shift plus auto sync's correction.
     void Apply(void*) {
         struct Ctx {
             int64_t shift;
@@ -46,30 +47,35 @@ namespace {
             int changed;
         } ctx = {g_shift.load(), {}, 0, 0};
 
-        {
+        // When the delay is 0 (the VR Mirror source is hidden), the game's sound gets its user sync offset
+        // back too.
+        if (ctx.shift != 0) {
             std::lock_guard<std::mutex> lock(g_gameMutex);
             ctx.game = g_gameName;
-            ctx.correction = ctx.shift != 0 ? g_gameCorrection : 0;
+            ctx.correction = g_gameCorrection;
         }
 
         obs_enum_sources(
             [](void* p, obs_source_t* source) {
                 auto* c = static_cast<Ctx*>(p);
+
                 if (!(obs_source_get_output_flags(source) & OBS_SOURCE_AUDIO)) {
                     return true;
                 }
+
                 const bool game = !c->game.empty() && c->game == obs_source_get_name(source);
-                const int64_t shift = c->shift + (game ? c->correction : 0);
                 obs_data_t* priv = obs_source_get_private_settings(source);
                 const int64_t applied = obs_data_get_int(priv, kShiftKey);
+                const int64_t current = obs_source_get_sync_offset(source);
+                const int64_t shift = game ? GameSoundShift(current, applied, c->shift + c->correction)
+                                           : c->shift;
+
                 if (applied != shift) {
-                    obs_source_set_sync_offset(
-                        source,
-                        ShiftedSyncOffset(obs_source_get_sync_offset(source), applied, shift)
-                    );
+                    obs_source_set_sync_offset(source, ShiftedSyncOffset(current, applied, shift));
                     obs_data_set_int(priv, kShiftKey, shift);
                     c->changed++;
                 }
+
                 obs_data_release(priv);
                 return true;
             },
@@ -79,7 +85,8 @@ namespace {
         if (ctx.changed) {
             blog(
                 LOG_INFO,
-                "[simoptix_vr_mirror] audio sync: %d audio source%s now %+lld ms on top of their own offsets "
+                "[simoptix_vr_mirror] audio sync: %d audio source%s now %+lld ms on top of their user sync "
+                "offsets "
                 "(the view's delay)",
                 ctx.changed,
                 ctx.changed == 1 ? "" : "s",
@@ -87,11 +94,13 @@ namespace {
             );
         }
 
-        if (ctx.changed && ctx.correction != 0) {
+        if (ctx.changed && !ctx.game.empty()) {
             blog(
                 LOG_INFO,
-                "[simoptix_vr_mirror] audio sync: '%s' %+lld ms more (the game's sound, auto sync)",
+                "[simoptix_vr_mirror] audio sync: '%s' has the game's sound: sync offset %+lld ms, the delay "
+                "plus auto sync's correction of %+lld ms, without its user sync offset",
                 ctx.game.c_str(),
+                static_cast<long long>((ctx.shift + ctx.correction) / 1000000),
                 static_cast<long long>(ctx.correction / 1000000)
             );
         }

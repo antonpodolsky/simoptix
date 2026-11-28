@@ -39,6 +39,7 @@ A new term goes here, and into the table of every README that uses it.
 | edge stop | The smoothing's last resort. It holds the view at 95% of its image room when the smoothing's own planning wasn't enough |
 | output delay | How far VR Mirror's view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden. The G-meter, race auto-record and OBS's audio follow it |
 | auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
+| user sync offset | The Sync Offset the user set for an audio source in OBS, without the shift that VR Mirror adds for the output delay. Every audio source gets its user sync offset plus the delay, except the game's sound, which gets the delay plus auto sync's correction |
 | observer | The debugging code beside the pipeline. It numbers the stamp and writes the frame trace |
 | stamp | The frame number that VR Mirror draws as 15 small squares in the top-left corner of the view, when its Debug setting is on |
 | frame trace | The CSV file that the Debug setting (or the mirror app's `SIMOPTIX_VR_MIRROR_TRACE`) writes, with one row per drawn frame: its poses and timing. With the Pimax source, Debug also writes a second file of head poses, predictions and arrivals. With the OpenXR source, the second file holds the frames the layer published and how the game handed their images over |

@@ -1,15 +1,18 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // AudioSync: keeps every audio source in step with the VR Mirror source's view, which runs ProgramDelay
-// behind the game (look-ahead smoothing): each audio source's sync offset becomes its own offset plus
-// that delay. The game's sound gets a correction on top, once auto sync has found which source it is
-// and how far its sound is out of step with the view (auto_sync\auto_sync.h). Its own offset is then
-// best left at 0.
+// behind the game (look-ahead smoothing). A source's user sync offset is the Sync Offset that the user
+// set in OBS, without the plugin's shift. While the delay isn't 0, each audio source's sync offset is
+// its user sync offset plus the delay. Once auto sync has found the audio source that carries the game's
+// sound (auto_sync\auto_sync.h), that source's sync offset is the delay plus auto sync's correction,
+// and its user sync offset isn't added: auto sync measures the sound before OBS applies any sync offset,
+// so adding the user sync offset would put the sound out of step again.
 //
 // The shift each source got is kept in its private settings, which OBS saves with the scene, so a
-// source's own offset is always its current offset minus that shift: it comes back exactly when the
+// source's user sync offset is always its sync offset minus that shift. It comes back exactly when the
 // delay goes back to 0 (the source hidden), and after OBS was closed with the offsets shifted.
-// The offsets shown in OBS include the shift; changing one there changes the source's own offset.
+// The sync offsets shown in OBS include the shift. Changing one there changes the source's user sync
+// offset by as much.
 //
 // The OBS calls run on OBS's UI thread (a queued task); a tick callback on the graphics thread only
 // checks the delay and the time: on a change of the delay, every 2 s while it isn't 0 (audio sources
@@ -31,4 +34,10 @@ namespace AudioSync {
 // already has (`applied`).
 inline int64_t ShiftedSyncOffset(int64_t current, int64_t applied, int64_t shift) {
     return current - applied + shift;
+}
+
+// Logic: the shift (ns) that sets a source's sync offset to `target`, without its user sync offset.
+// `current` is the source's sync offset now, and `applied` the shift it already has.
+inline int64_t GameSoundShift(int64_t current, int64_t applied, int64_t target) {
+    return target - (current - applied);
 }

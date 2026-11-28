@@ -4,12 +4,20 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #include "shared/guarded.h"
 
 namespace {
 
     constexpr double kKeptS = 2;
+
+    // Whether `source` is an audio input capture (Mic/Aux). A microphone records the room, not the game's
+    // output, so it can't carry the game's sound.
+    bool IsInputDevice(obs_source_t* source) {
+        const char* id = obs_source_get_unversioned_id(source);
+        return id && strcmp(id, "wasapi_input_capture") == 0;
+    }
 
 }
 
@@ -33,9 +41,13 @@ bool AudioTap::Tapped(void* param, obs_source_t* source) {
     return true;
 }
 
-// Taps `source` if it has sound and there is room.
+// Taps `source` if it has sound, isn't an audio input capture, and there is room.
 void AudioTap::Add(obs_source_t* source) {
     if (count_ >= kMaxSources || !(obs_source_get_output_flags(source) & OBS_SOURCE_AUDIO)) {
+        return;
+    }
+
+    if (IsInputDevice(source)) {
         return;
     }
 

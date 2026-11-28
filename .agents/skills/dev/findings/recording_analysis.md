@@ -54,3 +54,26 @@ smoothing 2 (its README). Lower is better in every row.
 - **The stamp check took such a video for one without a stamp.** It asked for most frames to step by
   one tick. It now asks for nearly every frame to step forward by 30 ticks at most, which noise read
   as a stamp doesn't.
+
+## The G-meter and the sound against the view (`sync_check.py`)
+
+- **The template matching locked onto the G-meter's black disc.** The region that `sync_check.py` reads
+  includes the G-meter. The normalised cross-correlation divides by the standard deviation of the window
+  under the template. In the disc's flat black window that is close to 0, so the score reached 130 to
+  4100 instead of at most 1, and the disc won even on the frame the template was cut from. The gear
+  digit was then read from the wrong place in about 7 of 10 frames: 2 minutes of a race gave 122 gear
+  changes, and upshift timings from −68 to +172 ms. Windows with a grey-level standard deviation under 2
+  now score 0. On another 2 minutes, the script then read 16 upshifts and 12 downshifts, and the
+  G-meter's throttle 42 ms ahead of the HUD's (middle half 37 to 44 ms, 8 events).
+- **Most of the run time was the search, not the decoding.** ffmpeg decodes 10 s of a 4K AV1 recording
+  in about 4 s in software, and no faster with `-hwaccel cuda` or `d3d11va`. Four changes brought 2
+  minutes of video from about 15 minutes to 58 s, with identical output: searching around the previous
+  frame's match first, converting only that region to greyscale, reading the RPM arc only on the arc's
+  pixels, and reading the video in 16 parallel processes.
+- **The engine's pitch drop at upshifts** is too scattered to use: middle half −124 to +262 ms from 11 of
+  16 upshifts in 2 minutes, and over two whole races −129 to +247 ms (138 upshifts) and −131 to +267 ms
+  (117).
+- **The engine's sound at throttle lifts:** in 2 minutes there were 6 lifts, and on most of them the
+  engine's band (450 to 3500 Hz) dropped only 3 to 6 dB, so only one was timed. Over two whole races,
+  one gave 14 timed lifts with a middle half 51 ms wide, and the other only 2. The dial was found in 81%
+  and 76% of the frames.

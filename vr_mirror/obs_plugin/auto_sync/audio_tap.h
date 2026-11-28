@@ -6,6 +6,9 @@
 // delivers, which it copies into that source's buffer and nothing else. Detach takes the callbacks
 // back; OBS returns from that only once none is running.
 //
+// Audio input captures (Mic/Aux) are not tapped, because a microphone records the room and not the game's
+// output.
+//
 // Thin glue: what the sound means is AutoSync's business. Attach, Detach, Copy and Name: one thread
 // (AutoSync's); the callbacks: OBS's audio thread. The buffers are made in Attach.
 #pragma once
