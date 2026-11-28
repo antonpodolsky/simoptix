@@ -6,7 +6,7 @@
 #include <cmath>
 #include <cstdio>
 
-namespace stage_replay {
+namespace pipeline_replay {
 
     namespace {
 

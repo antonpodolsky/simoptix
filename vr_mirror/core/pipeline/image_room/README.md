@@ -51,7 +51,7 @@ The glue counts the frames where a smoothing's stop acted (`Smoothed::stopped`,
 - the OBS log's 10 s line "edge limit: N frames"
 - the frame trace's `edge_clamps` and `edge_shift`
 - e2e's "edge limit acted"
-- stage_replay's "edge limit"
+- pipeline_replay's "edge limit"
 
 **Thread:** the output thread. The image room holds no state.
 

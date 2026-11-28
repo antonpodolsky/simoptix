@@ -5,12 +5,12 @@
 // finished, resized as the picker asks, and whether it still holds a frame. As in FrameRing, a new
 // size applies at the next frame's copy: shrinking keeps the newest entries, compacted to the new
 // size, and frees the rest; growing keeps every frame and adds entries as they are first used. For
-// stage_replay's runs; knows nothing about textures.
+// pipeline_replay's runs; knows nothing about textures.
 #pragma once
 
 #include "pipeline/pipeline_types.h"
 
-namespace stage_replay {
+namespace pipeline_replay {
 
     struct FrameStore {
         static constexpr int kMaxSlots = 128;  // FrameRing::kMaxSlots

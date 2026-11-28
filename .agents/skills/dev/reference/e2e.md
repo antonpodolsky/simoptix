@@ -14,7 +14,7 @@ vr_mirror\e2e\build.bat
 ```
 
 It builds the fake runtime (`bin\libPVRClient64.dll`), the fake OpenXR game, `bin\e2e_runner.exe` and
-`bin\stage_replay.exe`.
+`bin\pipeline_replay.exe`.
 
 ```
 vr_mirror\e2e\bin\e2e_runner.exe
@@ -70,9 +70,9 @@ What it runs and checks: `vr_mirror\e2e\README.md`, "The local files test".
 A change to a kind of file, or a new kind, gets a case or a check in `local_files_e2e.cpp` that fails
 on the build before the change.
 
-## The stage replay
+## The pipeline replay
 
-`stage_replay` runs core's frame pipeline offline. `vr_mirror\core\pipeline\pipeline_builder.cpp` builds
+`pipeline_replay` runs core's frame pipeline offline. `vr_mirror\core\pipeline\pipeline_builder.cpp` builds
 the pipeline for each run's settings, and the run needs no mirror app, fake runtime or GPU. It is
 deterministic.
 
@@ -88,7 +88,7 @@ deterministic.
 ### One stage on real inputs: `--stage drawn_pose`
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --stage drawn_pose replay\<name>.csv [--show FIRST-LAST] [--dump FILE] [--delays A,B,...] [--drawn_pose K]
+vr_mirror\e2e\bin\pipeline_replay.exe --stage drawn_pose replay\<name>.csv [--show FIRST-LAST] [--dump FILE] [--delays A,B,...] [--drawn_pose K]
 ```
 
 It replays only the drawn pose stage, on a replay's real thumbnails, slots and pose predictions. The
@@ -111,7 +111,7 @@ the same numbers.
 ### The whole pipeline: `--pipeline`
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --pipeline [--smoothing instant --drawn_pose cockpit ...] [--zoom 1.2] [--strength 1.5] [--ticks 60] [--input NAME ...]
+vr_mirror\e2e\bin\pipeline_replay.exe --pipeline [--smoothing instant --drawn_pose cockpit ...] [--zoom 1.2] [--strength 1.5] [--ticks 60] [--input NAME ...] [--replay FILE ...] [--eye L,R,U,D] [--dump FILE]
 ```
 
 It runs the whole pipeline with any mix of stages. The settings' configuration (Look-ahead, the slot
@@ -130,6 +130,16 @@ check) applies, with any stage replaced by its flag, named after the config's fi
 - The run draws as the mirror app's window, or with `--ticks HZ` as the OBS plugin's ticks, with the
   frames picked by the frame picker.
 - It runs over the replays and motions. `--input NAME` picks some.
+- `--replay FILE` runs over that replay file instead, named by its file name. It may be given more
+  than once. A replay exported from an OpenXR session runs with `--arrival_timing reported
+  --drawn_pose reported`, as the OpenXR source does (`reference\recording_analysis.md`, "A real moment
+  through the pipeline").
+- `--eye L,R,U,D` sets the game's field of view, in degrees from straight ahead, as the OpenXR
+  layer's log gives it. The eye is then not turned against the head. Without it, the run uses the
+  e2e fake's eye.
+- `--dump FILE` writes one line per output: the input's name, the moment the view stands for, the
+  followed, view and image poses (x, y, z, w each), the edge stops and plans so far, and how far the
+  view trails the shown image against its room there (degrees each).
 - The slot check and the cockpit correction are given the replays' true slots' poses (`arrival_slot`:
   the slot each frame arrived for). To replay them on the real thumbnails, use `--stage drawn_pose`.
 
@@ -144,13 +154,13 @@ It scores each input from the pipeline's numbers alone (`scores.*`). Lower is be
 | planned | Outputs where the planning pulled the path in |
 | wrong pose | Outputs warped from a pose more than 0.01° off the one the frame was really drawn with (the replays' true lags, and the motions' exact predictions) |
 
-The baseline of these scores is in `reference\e2e_results.md`, "Stage replay baseline". The whole run
+The baseline of these scores is in `reference\e2e_results.md`, "Pipeline replay baseline". The whole run
 takes about 10 seconds.
 
 ### Every output: `--golden` and the refactor guard
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --golden out\stage_replay\golden_new.txt
+vr_mirror\e2e\bin\pipeline_replay.exe --golden out\pipeline_replay\golden_new.txt
 ```
 
 It writes every output of the pipeline, each float exactly in hex: the 28 numbers of the warp, the head
@@ -171,18 +181,18 @@ stages) must reproduce the build before it byte for byte. Write `golden_main.txt
 compare the two golden files:
 
 ```
-python -I vr_mirror\e2e\stage_replay\golden_compare.py out\stage_replay\golden_main.txt out\stage_replay\golden_new.txt
+python -I vr_mirror\e2e\pipeline_replay\golden_compare.py out\pipeline_replay\golden_main.txt out\pipeline_replay\golden_new.txt
 ```
 
 It names each run that changed, is new or is gone, and exits with 1 when the files differ. A difference
 is a behaviour change until shown otherwise. The e2e suite still decides at the end.
 
-**The expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the SHA-256 of each run
-of the golden file, as GitHub's runners build `stage_replay`. The Pipeline output check on GitHub
+**The expected output.** `vr_mirror\e2e\pipeline_replay\golden_expected.txt` holds the SHA-256 of each run
+of the golden file, as GitHub's runners build `pipeline_replay`. The Pipeline output check on GitHub
 compares with it:
 
 ```
-python -I vr_mirror\e2e\stage_replay\golden_compare.py --expected <golden file>
+python -I vr_mirror\e2e\pipeline_replay\golden_compare.py --expected <golden file>
 ```
 
 A golden file built with another compiler can differ from it in the last bits of some values with
@@ -198,7 +208,7 @@ shows the rounding.
 ### Stage 1 and stage 3 over OBS traces
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --stage arrival_timing [--arrival_timing K] [--trace TICKS PIMAX ...]
+vr_mirror\e2e\bin\pipeline_replay.exe --stage arrival_timing [--arrival_timing K] [--trace TICKS PIMAX ...]
 ```
 
 It runs the arrival timing alone over the traces' frame arrivals. It reports the noise it removes, how
@@ -210,7 +220,7 @@ one the plugin recorded.
 - The small differences come from the plugin's session restarts, which the run doesn't see.
 
 ```
-vr_mirror\e2e\bin\stage_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]
+vr_mirror\e2e\bin\pipeline_replay.exe --stage frame_picker [--frame_picker K] [--trace TICKS FRAMES ...]
 ```
 
 It runs the frame picker as the OBS plugin does: the fixed delay, unless `--frame_picker` names another.
@@ -259,7 +269,9 @@ It runs the frame picker as the OBS plugin does: the fixed delay, unless `--fram
 2. **Export the moment.** Find the moment in the recording, and match its stamped frame numbers to the
    trace's `_ticks.csv`. Cut the matching rows of `_pimax.csv` into a file in `vr_mirror\e2e\replay\`.
    The format is in the header of `queued_late_frames.csv`. `vr_mirror\recording_analysis\` does these
-   steps (`episodes.py`, `window.py`, `export_replay.py`: `reference\recording_analysis.md`).
+   steps (`episodes.py`, `window.py`, `export_replay.py`: `reference\recording_analysis.md`). From an
+   OpenXR session's trace, `export_replay.py` writes each frame's drawn pose as the head pose and the
+   prediction instead, and says so in the file's header.
 3. **Set the lag column.** Each frame's `lag` is the slot it was really rendered for, relative to the
    one the mirror app assigned. It comes from matching the recording's cockpit motion against the
    predictions for each slot. Frames that look normal have lag 0.

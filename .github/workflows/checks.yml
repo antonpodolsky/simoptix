@@ -8,7 +8,7 @@
 #   Docs             check_docs.py
 #   Hooks            test_hooks.py: each of Claude Code's hooks (.agents\skills\dev\hooks\) on its cases
 #   Public text      check_public_text.py on every file and on the pull request's commits
-#   Pipeline output  stage_replay's golden file against vr_mirror\e2e\stage_replay\golden_expected.txt.
+#   Pipeline output  pipeline_replay's golden file against vr_mirror\e2e\pipeline_replay\golden_expected.txt.
 #                    Any change fails it. A change that is meant commits a new golden_expected.txt
 # Build builds once, and uploads what it built. Pipeline output waits for it, and runs those files, so
 # it tests what Build built, and is skipped when it fails or is skipped.
@@ -199,19 +199,19 @@ jobs:
 
       - name: Write golden file
         run: |
-          vr_mirror\e2e\bin\stage_replay.exe --golden "$env:RUNNER_TEMP\golden.txt"
+          vr_mirror\e2e\bin\pipeline_replay.exe --golden "$env:RUNNER_TEMP\golden.txt"
           exit $LASTEXITCODE
 
       - name: Compare with expected
         run: |
-          python -I vr_mirror\e2e\stage_replay\golden_compare.py --expected "$env:RUNNER_TEMP\golden.txt" --markdown $env:GITHUB_STEP_SUMMARY
+          python -I vr_mirror\e2e\pipeline_replay\golden_compare.py --expected "$env:RUNNER_TEMP\golden.txt" --markdown $env:GITHUB_STEP_SUMMARY
           exit $LASTEXITCODE
 
       # What changed, to read, and the golden_expected.txt of this output, to commit if it is meant.
       - name: Write expected
         if: failure()
         run: |
-          python -I vr_mirror\e2e\stage_replay\golden_compare.py --write-expected "$env:RUNNER_TEMP\golden.txt"
+          python -I vr_mirror\e2e\pipeline_replay\golden_compare.py --write-expected "$env:RUNNER_TEMP\golden.txt"
           exit $LASTEXITCODE
 
       - name: Upload golden file
@@ -221,4 +221,4 @@ jobs:
           name: pipeline_output
           path: |
             ${{ runner.temp }}/golden.txt
-            vr_mirror/e2e/stage_replay/golden_expected.txt
+            vr_mirror/e2e/pipeline_replay/golden_expected.txt

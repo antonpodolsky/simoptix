@@ -1,11 +1,12 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The runs stage_replay offers (runs_*.cpp), and the host emulation they and the golden dump share:
+// The runs pipeline_replay offers (runs_*.cpp), and the host emulation they and the golden dump share:
 // RunHost drives a Pipeline over an input as one of the hosts would (the mirror app's window, or the OBS
 // plugin's ticks). Each run prints its results and returns the number of failures (or -1 when an
 // input can't be read).
 #pragma once
 
+#include <cstdio>
 #include <functional>
 #include <string>
 #include <utility>
@@ -16,13 +17,18 @@
 #include "pipeline/pipeline_config.h"
 #include "replay_poses.h"
 
-namespace stage_replay {
+namespace pipeline_replay {
+
+    // LMU's left eye on the Dream Air, as the fake reports it (vr_mirror\e2e\fake_pvr), its 2 degree cant
+    // included.
+    extern const EyeInfo kEye;
 
     // One host run: an input through a pipeline built for `config`.
     struct HostRun {
         const Input* input = nullptr;
         MirrorSettings settings;
         PipelineConfig config;
+        EyeInfo eye = kEye;
         bool ticks = false;  // the OBS plugin's ticks; else the mirror app's window
         double tickHz = 60;
         bool pickByStage = false;  // ticks: the frame picker (stage 3) over a store of copies; else each
@@ -41,19 +47,19 @@ namespace stage_replay {
         int trueLag = 0;  // the slots before its arrival slot it was really drawn for (replays)
     };
 
-    // LMU's left eye on the Dream Air, as the fake reports it (vr_mirror\e2e\fake_pvr), its 2 degree cant
-    // included.
-    extern const EyeInfo kEye;
-
     void RunHost(const HostRun& run, const std::function<void(const HostOutput&)>& output);
 
     // --pipeline: any mix of stages (flags named after PipelineConfig's fields and values) over the
-    // replays or a motion spec, as the window or OBS ticks at `tickHz` (with the frame picker).
+    // replays or a motion spec, as the window or OBS ticks at `tickHz` (with the frame picker), with the
+    // game's eye `eye`. With `dump`, every output's moment, its followed, view and image poses and the
+    // share of its room the view uses go there, one line each.
     int RunPipeline(
         const PipelineConfig& config,
         const MirrorSettings& settings,
+        const EyeInfo& eye,
         const std::vector<const Input*>& inputs,
-        double tickHz
+        double tickHz,
+        FILE* dump
     );
 
     // --stage drawn_pose <replay .csv> [options]: the drawn pose on a replay's real thumbnails, its

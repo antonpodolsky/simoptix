@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Anton Podolsky
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Scores: what a pipeline's output would look like, measured from its numbers alone, for
-// stage_replay --pipeline. Per input: black (the output's corners, warped as warp.hlsli does,
+// pipeline_replay --pipeline. Per input: black (the output's corners, warped as warp.hlsli does,
 // falling outside the shown image), the view's lag behind the image it follows, the view's
 // jitter while the image is still and in small moves, how often the smoothing's stop at the edge
 // and its planning acted, and frames warped from the wrong pose (against the pose the frame was really drawn
@@ -13,7 +13,7 @@
 #include "replay_poses.h"
 #include "runs.h"
 
-namespace stage_replay {
+namespace pipeline_replay {
 
     class Scores {
     public:

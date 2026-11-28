@@ -77,7 +77,7 @@ inline double RotationAngleAtan2(const Quat& a, const Quat& b) {
 // 2 acos of the float dot. The dot is the cosine of half the turn, so a small turn is a gap from 1 that
 // a float holds in steps of 6e-8: turns under 0.04 deg read 0, and the next readings are 0.056 and
 // 0.069 deg. The step is 0.008 deg at 0.1 deg and 0.002 deg at 0.5 deg. Two equal poses that aren't quite
-// unit length read 0.02-0.05 deg apart. The smoothings use it, and stage_replay --golden's expected output is
+// unit length read 0.02-0.05 deg apart. The smoothings use it, and pipeline_replay --golden's expected output is
 // made with it, so moving them to RotationAngleAtan2 changes every golden run.
 inline float RotationAngleAcos(const Quat& a, const Quat& b) {
     const float d = std::fabs(Dot(a, b));
@@ -93,7 +93,7 @@ struct AngleAxis {
 
 // The angle and axis by acos, like RotationAngleAcos: 2 acos(w) of the normalized relative rotation, and
 // the axis from sqrt(1 - w^2), in float. Below about 0.1 deg the angle is as coarse as RotationAngleAcos's,
-// and the axis loses its digits too. The image room uses it, and stage_replay --golden's expected output
+// and the axis loses its digits too. The image room uses it, and pipeline_replay --golden's expected output
 // is made with it.
 inline AngleAxis RotationAngleAxisAcos(const Quat& a, const Quat& b) {
     Quat r = Normalize(Mul(Conj(a), b));

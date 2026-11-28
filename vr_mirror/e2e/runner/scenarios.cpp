@@ -376,13 +376,13 @@ namespace {
 
         if (stem == "queued_late_frames") {
             // Target 4%. Lag 1 and lag 2 look alike in the thumbnails while the head barely moves,
-            // and at two of the queue's three changes they fit "no change" better (stage_replay
+            // and at two of the queue's three changes they fit "no change" better (pipeline_replay
             // --stage frame_matching: 4.3% even with a second of hindsight). Measured 6.9-9.7% (Instant)
             // and 4.4-5.5% (Look-ahead).
             l.instant = 12.0, l.lookahead = 7.0;
         } else if (stem == "false_retiming_featureless_cockpit") {
             // Target 1%, met with hindsight (0.1-0.2%); from the frames before each, the dark
-            // cockpit's noise re-times 1.3-1.9% (stage_replay --stage frame_matching: 1.6%).
+            // cockpit's noise re-times 1.3-1.9% (pipeline_replay --stage frame_matching: 1.6%).
             l.instant = 2.5;
         } else if (stem == "late_frame_same_slot") {
             // One late frame that the arrival timing rounded onto the next frame's slot: the bug is a

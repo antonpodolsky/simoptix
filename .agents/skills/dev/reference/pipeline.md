@@ -14,7 +14,7 @@ The rules that keep stages swappable: `SKILL.md`, "1a. Keep every stage swappabl
    `NameOf` and `Parse`.
 3. **Its line in the builder.** Add one `case` to `Make<Stage>` in `pipeline_builder.cpp`, and list the
    `.cpp` in `vr_mirror\core\build\pipeline.rsp`.
-4. **Try it.** Run it alone, or mixed with the other stages, in `vr_mirror\e2e\stage_replay`
+4. **Try it.** Run it alone, or mixed with the other stages, in `vr_mirror\e2e\pipeline_replay`
    (`--<field> <value>`: the flags parse every value by name, so they need no change). Hosts follow
    `ConfigFor`, which only the settings change.
 5. **Document it.** Add it to the stage's README table. Record what it measured in

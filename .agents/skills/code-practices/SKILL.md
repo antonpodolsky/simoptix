@@ -21,7 +21,7 @@ OBS or the game. The examples come from this repo.
   count. About 60 lines or 4 levels of nesting is a hint to look, not a rule. The paragraphs of a long
   function show where to split it, and a paragraph with its own introducing comment is the first
   candidate to become a function.
-- **A split changes no output.** Compare `stage_replay --golden` byte for byte before and after, as the
+- **A split changes no output.** Compare `pipeline_replay --golden` byte for byte before and after, as the
   dev skill asks for a refactor ("Keep every stage swappable").
 - **Guard clauses first.** Return early for the cases that stop the function, then the main path stays at
   the left. No `else` after a `return`.
@@ -159,7 +159,7 @@ OBS or the game. The examples come from this repo.
   first").
 - **A thread is started in `Start`, stopped and joined in `Stop`,** and `Stop` is safe to call twice.
 - **Time and inputs come in as parameters.** Logic that decides things reads no clock and calls no
-  Win32 or D3D, so `stage_replay` can drive it (dev skill, "Logic apart from I/O").
+  Win32 or D3D, so `pipeline_replay` can drive it (dev skill, "Logic apart from I/O").
 
 ## Python scripts
 
@@ -192,5 +192,5 @@ Read every changed line. No script checks these.
 - [ ] Every thread entry point and every callback a C program calls catches everything
 - [ ] Each thread-owned member says which thread owns it
 - [ ] A change that must not alter behaviour builds every target with no new warnings and keeps
-      `stage_replay --golden` byte for byte the same
+      `pipeline_replay --golden` byte for byte the same
 - [ ] Python: functions and a `main()` guard, no bare `except`

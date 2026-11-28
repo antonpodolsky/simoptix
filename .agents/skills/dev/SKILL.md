@@ -31,7 +31,7 @@ it is here, with the details in files beside this one. Paths below are relative 
 | File | What |
 |---|---|
 | `reference\terms.md` | The terms of this repo, general and coined |
-| `reference\e2e.md` | Running the e2e suite and `stage_replay`, their options, adding a replay of a real session, tuning the fake |
+| `reference\e2e.md` | Running the e2e suite and `pipeline_replay`, their options, adding a replay of a real session, tuning the fake |
 | `reference\e2e_results.md` | The numbers to compare an e2e run with |
 | `reference\recording_analysis.md` | Analysing a recording frame by frame, and reading older traces |
 | `reference\pipeline.md` | Adding an implementation of a pipeline stage |
@@ -192,7 +192,7 @@ commands that break a rule here (`reference\hooks.md`).
       `vr_mirror\mirror_app\build.bat`, `vr_mirror\e2e\build.bat`) each run in a folder beside core,
       so the response files' paths (`..\core\...` and `..\..\shared\log.cpp`) resolve for all of them.
       A new `.cpp` goes into the matching `vr_mirror\core\build\*.rsp`. `pipeline.rsp` holds only pure
-      logic, so `stage_replay` can link it without the PVR or D3D libraries.
+      logic, so `pipeline_replay` can link it without the PVR or D3D libraries.
   - Hosts (`vr_mirror\obs_plugin\`, `vr_mirror\mirror_app\`) are thin glue. They provide the D3D
     device, the render target, settings storage and UI, and when to draw.
   - Telemetry (`shared\telemetry\`): game adapters (`shared\telemetry\games\`) feed one reader per OBS
@@ -209,7 +209,7 @@ commands that break a rule here (`reference\hooks.md`).
   - Logic is maths, filters, state machines, layout, formatting and decisions. It makes no D3D, OBS,
     PVR, Win32 or shared-memory calls. Time and inputs come in as parameters (no
     `QueryPerformanceCounter` inside). That keeps the logic deterministic and reusable, and lets
-    `vr_mirror\e2e\` (its `stage_replay` above all) drive it directly.
+    `vr_mirror\e2e\` (its `pipeline_replay` above all) drive it directly.
   - Adapters stay thin and make no decisions of their own. Examples: the PVR session, the LMU
     shared-memory reader, OBS callbacks, D3D drawing, GDI+ text.
   - Example: the G-meter's smoothing, highest values and session detection are logic. The reader thread
@@ -304,10 +304,10 @@ commands that break a rule here (`reference\hooks.md`).
     Change both together.
 - **Thresholds.** Never loosen a scenario's limits or remove a scenario to get a pass without asking.
   Report failures with their numbers.
-- **The pipeline's expected output.** `vr_mirror\e2e\stage_replay\golden_expected.txt` holds the
-  SHA-256 of each run of `stage_replay --golden`. The Pipeline output check fails on any run that
+- **The pipeline's expected output.** `vr_mirror\e2e\pipeline_replay\golden_expected.txt` holds the
+  SHA-256 of each run of `pipeline_replay --golden`. The Pipeline output check fails on any run that
   differs from it, so no change in the pipeline's output passes unseen.
-  - The file holds the output of `stage_replay` as GitHub's runners build it. Another compiler rounds
+  - The file holds the output of `pipeline_replay` as GitHub's runners build it. Another compiler rounds
     some values in the last bits differently: Visual Studio 2019's build differs in 18 of the 52 runs,
     by at most 8.6e-7, with nothing changed. So compare a local build with the build before it, as
     the refactor guard does (`reference\e2e.md`), and not with this file.
@@ -420,10 +420,10 @@ structure of the code keeps it that way. Check every change against these rules.
   log without knowing the method. Don't add method-specific stats calls to an interface.
 - **Adding a method touches only its own files,** plus one line in the builder and one value in
   `pipeline_config.h` (the steps, per stage, are in `reference\pipeline.md`). If more has to change,
-  fix the interface first, as its own commit with identical output (`vr_mirror\e2e\stage_replay
+  fix the interface first, as its own commit with identical output (`vr_mirror\e2e\pipeline_replay
   --golden`, byte for byte: `reference\e2e.md`, "Refactor guard"). Then add the method.
 - **New methods are tried before they become defaults.** Select them by configuration in
-  `stage_replay` and e2e (never test hooks), and measure them against the default. A default changes
+  `pipeline_replay` and e2e (never test hooks), and measure them against the default. A default changes
   only on measurements that show it is better. Record the numbers, and record a method that lost as
   "Tried and dropped" in `findings\pipeline.md` (or the part's findings file).
 - **When a change touches a stage that breaks these rules,** say so, and fix its interface first if the
@@ -482,6 +482,9 @@ One convention, everywhere. Check every new name against it, and rename what bre
     It was called Smooth (`_smooth`) until #22, beside Smoothest (a second behind, 3,
     `_smoothest`), which was dropped then (`findings\obs_plugin.md`, "Smoothing and zoom"). Findings
     and e2e results from before keep the old names.
+  - "Pipeline replay" is the tool that runs the pipeline offline (`vr_mirror\e2e\pipeline_replay\`,
+    `pipeline_replay.exe`). It was called stage replay (`stage_replay`) until #47. Findings and e2e
+    results from before keep the old name.
   - The OBS settings Stabilization Method (`stabilization_method`) and Stabilization Strength
     (`stabilization_strength`) were called Smoothing (`smoothing`) and Strength
     (`smoothing_strength`) before. The plugin moves a scene's old method key to the new one.
@@ -489,7 +492,7 @@ One convention, everywhere. Check every new name against it, and rename what bre
     `vr_mirror\obs_plugin\source_settings.cpp` turns into the core's strength (0 at 0: no smoothing,
     0.25 at 1, 1 at 5, 2 at 10). In older builds the OBS setting was the strength itself (0.25 to 2),
     and findings from those builds quote that ("Strength 2"). The core's own settings,
-    `stage_replay --strength` and the mirror app's ini file keep the strength itself, as `smoothing`
+    `pipeline_replay --strength` and the mirror app's ini file keep the strength itself, as `smoothing`
     and `smoothing_strength`.
   - "Mirror" in a name ("VR Mirror", "Pimax Mirror", `MirrorView`, `vr_mirror\`) is our plugin and its
     sources. "The mirror" or "client mirror" in a sentence means only Pimax's client mirror
@@ -675,7 +678,7 @@ are the G-meter's, and apply to it the same way.
   - LMU and the mirror app must be closed, and the PC must not be used meanwhile. The 40 runs take
     about 10 minutes. Close Pimax Play too for runs that are compared, because its compositor disturbs
     the timing (`reference\e2e_results.md`).
-  - How to run it, its options and `stage_replay` are in `reference\e2e.md`.
+  - How to run it, its options and `pipeline_replay` are in `reference\e2e.md`.
   - Compare the numbers with the ones in `reference\e2e_results.md`, and update them there when they
     change for a reason.
   - Add or extend a scenario for new pipeline behaviour, or a pipeline bug the fake can reproduce.
@@ -724,6 +727,10 @@ are the G-meter's, and apply to it the same way.
     frames. A repeated game frame shows as the scenery moving exactly with the cockpit. The **frame
     trace** and **frame-number stamp** debug options (`vr_mirror\obs_plugin\README.md`, "Debug: stamp
     and frame trace") match a recording to the poses frame by frame.
+  - **What another setting would have shown:** export a moment of the recording as a replay and run it
+    through the pipeline offline, at the session's own settings first, then at others
+    (`reference\recording_analysis.md`, "A real moment through the pipeline"). Its views at the
+    session's own settings should match the trace before the others are compared.
 - Report numbers, and say what wasn't checked (headset, live telemetry, a real recording).
 
 ## 5a. Replay tests from real sessions
@@ -862,7 +869,7 @@ Record what each start of the game showed in `findings\openxr.md`.
   | Docs | `check_docs.py` |
   | Hooks | `test_hooks.py`: each of Claude Code's hooks on its cases (`reference\hooks.md`) |
   | Public text | `check_public_text.py` on every file and on the pull request's commits |
-  | Pipeline output | `stage_replay --golden` against the expected output in `vr_mirror\e2e\stage_replay\golden_expected.txt`, run by run. Any change fails it, and the run uploads the new golden file and its `golden_expected.txt` ("Tests", "The pipeline's expected output") |
+  | Pipeline output | `pipeline_replay --golden` against the expected output in `vr_mirror\e2e\pipeline_replay\golden_expected.txt`, run by run. Any change fails it, and the run uploads the new golden file and its `golden_expected.txt` ("Tests", "The pipeline's expected output") |
   | Changelog | The type label and the Changelog section as a release reads them, and the title's form and type (`release.py --check-pr`) |
   | Description | `check_public_text.py` on the description |
 

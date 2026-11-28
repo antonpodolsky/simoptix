@@ -143,7 +143,7 @@ of slot.
 The correction is applied after the slot's predicted pose, inside `PoseOf`. A corrected frame keeps
 the slot it was corrected against, not the slot check's later hindsight. While the game keeps up with
 the headset, it makes no patches and corrects nothing. The correction is then the identity, which
-`PredictedPose` leaves out entirely. With the default setting, `stage_replay --golden` is byte for
+`PredictedPose` leaves out entirely. With the default setting, `pipeline_replay --golden` is byte for
 byte main's.
 
 **Cost:** 0.36 ms of the copy thread per frame while it measures (20 patch pairs), plus 40 small tiles

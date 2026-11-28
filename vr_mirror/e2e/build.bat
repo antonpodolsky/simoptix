@@ -5,7 +5,7 @@ rem Builds the fake PVR runtime (bin\libPVRClient64.dll), the fake game with the
 rem frames (bin\fake_openxr.exe), the e2e runner (bin\e2e_runner.exe), the local files test
 rem (bin\local_files_e2e.exe) with its fake game that loads the layer's DLL
 rem (bin\fake_layer_game\Le Mans Ultimate.exe), the auto sync test (bin\auto_sync_e2e.exe), and
-rem the stage replay (bin\stage_replay.exe: the pipeline and its stages offline, the drawn pose's
+rem the pipeline replay (bin\pipeline_replay.exe: the pipeline and its stages offline, the drawn pose's
 rem replay simulation included).
 setlocal
 call "%~dp0..\..\shared\build\vs_env.bat" || exit /b 1
@@ -63,11 +63,11 @@ cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /DUNICODE /D_UNICODE /Fo:obj\fake
    /I..\..\third_party\openxr ^
    fake_layer_game\fake_layer_game.cpp /Fe:"bin\fake_layer_game\Le Mans Ultimate.exe" || exit /b 1
 
-if not exist obj\stage_replay mkdir obj\stage_replay
-cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /Fo:obj\stage_replay\ ^
+if not exist obj\pipeline_replay mkdir obj\pipeline_replay
+cl /nologo /std:c++17 /EHsc /O2 /W3 /DNOMINMAX /Fo:obj\pipeline_replay\ ^
    /I..\.. /I..\core /Ifake_pvr /Ifake_game ^
-   stage_replay\stage_replay.cpp stage_replay\golden.cpp stage_replay\runs_pipeline.cpp ^
-   stage_replay\scores.cpp ^
-   stage_replay\runs_frame_picker.cpp stage_replay\runs_arrival.cpp stage_replay\runs_drawn_pose.cpp ^
+   pipeline_replay\pipeline_replay.cpp pipeline_replay\golden.cpp pipeline_replay\runs_pipeline.cpp ^
+   pipeline_replay\scores.cpp ^
+   pipeline_replay\runs_frame_picker.cpp pipeline_replay\runs_arrival.cpp pipeline_replay\runs_drawn_pose.cpp ^
    @..\core\build\pipeline.rsp ^
-   /Fe:bin\stage_replay.exe /link ole32.lib windowscodecs.lib || exit /b 1
+   /Fe:bin\pipeline_replay.exe /link ole32.lib windowscodecs.lib || exit /b 1

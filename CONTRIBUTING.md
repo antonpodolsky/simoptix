@@ -30,7 +30,7 @@ command that breaks one of the dev skill's rules for the shell, and tells the ag
 | mirror app | `simoptix_vr_mirror.exe`, VR Mirror in a desktop window (`vr_mirror\mirror_app\`). The e2e tests run it |
 | fake runtime | The stand-in for Pimax's client library that the e2e tests use in place of a headset and a game |
 | replay | A real session played back through the fake runtime: its head poses, the runtime's predictions, and every game frame at its real arrival time |
-| stage replay | `stage_replay.exe`. It runs the pipeline's stages offline, without the mirror app, the fake runtime or the GPU |
+| pipeline replay | `pipeline_replay.exe`. It runs the pipeline's stages offline, without the mirror app, the fake runtime or the GPU |
 | data folder | The folder `SIMOPTIX_DATA` names, outside the repo, where analyses of recordings are kept |
 | auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
 
@@ -131,9 +131,10 @@ private copy of OBS, with a fake game that plays a cut of a real recording of LM
 stays in the data folder, so it runs only where it is. Run it after a change to `vr_mirror\obs_plugin\auto_sync\`.
 It takes about half a minute, and its sound is heard. Play no other sound meanwhile: it drowns the ticks.
 
-The stage replay (`vr_mirror\e2e\bin\stage_replay.exe`) runs in about a second. Use it to find out why
-a scenario fails, and to check that a refactor changes nothing (`.agents\skills\dev\reference\e2e.md`).
-`vr_mirror\e2e\stage_replay\golden_expected.txt` holds its expected output, as GitHub builds it, and the
+The pipeline replay (`vr_mirror\e2e\bin\pipeline_replay.exe`) runs in about a second. Use it to find out why
+a scenario fails, to check that a refactor changes nothing, and to see what another setting would have
+shown at a moment of a real recording (`.agents\skills\dev\reference\e2e.md`).
+`vr_mirror\e2e\pipeline_replay\golden_expected.txt` holds its expected output, as GitHub builds it, and the
 Pipeline output check fails on any change to it. When your change is meant to change the output, the
 failed check uploads the new `golden_expected.txt`. Commit it with your change. A build with another
 compiler can differ from the file in the last bits with nothing changed.
@@ -217,10 +218,10 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   issue its own line, because in `Fixes #12, #27` GitHub closes only #12. `Part of #<number>` names an
   issue the change works on and leaves open.
 - GitHub checks each pull request, and a failing check fails it: Build (every part, with no warnings),
-  Format (clang-format and ruff), Docs, Hooks (each hook on its cases), Public text and Pipeline output (the stage replay's output
-  against `vr_mirror\e2e\stage_replay\golden_expected.txt`), in `.github\workflows\checks.yml`. A pull
-  request that changes only Markdown files skips Build and Pipeline output, because no build reads
-  them, and runs the other checks. Changelog checks the label and the Changelog section the way a
+  Format (clang-format and ruff), Docs, Hooks (each hook on its cases), Public text and Pipeline output
+  (the pipeline replay's output against `vr_mirror\e2e\pipeline_replay\golden_expected.txt`), in
+  `.github\workflows\checks.yml`. A pull request that changes only Markdown files skips Build and
+  Pipeline output, because no build reads them, and runs the other checks. Changelog checks the label and the Changelog section the way a
   release reads them, and the title's form and type. Description checks the description's public
   text. Both run each time the title, the description or the label changes
   (`.github\workflows\pull_request.yml`). The Changelog section ends the description, so nothing goes

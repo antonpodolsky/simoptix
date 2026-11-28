@@ -6,7 +6,7 @@
 
 #include "runs.h"
 
-namespace stage_replay {
+namespace pipeline_replay {
 
     namespace {
 
