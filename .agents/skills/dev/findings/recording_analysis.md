@@ -54,3 +54,21 @@ smoothing 2 (its README). Lower is better in every row.
 - **The stamp check took such a video for one without a stamp.** It asked for most frames to step by
   one tick. It now asks for nearly every frame to step forward by 30 ticks at most, which noise read
   as a stamp doesn't.
+
+## The G-meter and the sound against the view (`sync_check.py`)
+
+- **The dial was matched on the G-meter's black disc.** The area read holds the G-meter too, and its
+  disc is flat. The match score divides by how much the grey levels under the template spread, so on the
+  disc it rose far above 1 (130 to 4100) and won, even on the frame the template came from. The gear
+  digit was then read from the wrong place in about 7 of 10 frames, and a 2-minute race stretch gave
+  122 gear changes and upshift timings spread from −68 to +172 ms. Places whose grey levels spread by
+  less than 2 levels now score 0. On another 2 minutes, the HUD then gave 16 upshifts and 12
+  downshifts, and the G-meter's throttle 42 ms ahead of the HUD's (middle half 37 to 44 ms, 8 events).
+- **Its time went into the search, not the video.** ffmpeg decodes 10 s of 4K AV1 in about 4 s in
+  software, and no faster with `-hwaccel cuda` or `d3d11va`. Searching only near the last place, making
+  only that part grey, reading the RPM arc on its own pixels and 16 pieces side by side brought 2
+  minutes from about 15 minutes to 58 s, with every value read the same.
+- **The engine's pitch drop at upshifts** still spread too widely to use on that stretch: +126 ms, middle
+  half −124 to +262 ms, from 11 of 16 upshifts.
+- **The engine's sound at throttle lifts** (new): the same stretch had 6 lifts, and on most of them the
+  engine band (450 to 3500 Hz) fell only 3 to 6 dB, so one lift was timed. Not checked over a whole race.

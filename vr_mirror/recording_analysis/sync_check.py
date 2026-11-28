@@ -19,6 +19,7 @@ read only around the dial and the G-meter. ffmpeg: the one FFMPEG names, else th
 """
 
 import argparse
+import concurrent.futures
 import json
 import os
 import subprocess
@@ -27,7 +28,7 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from trace_common import FFMPEG  # noqa: E402
+from trace_common import FFMPEG
 
 RATE = 48000
 
@@ -43,6 +44,11 @@ DIGIT = (-0.37, -0.92, 0.37, -0.22)
 RPM_RING = (0.9, 1.12)
 # The G-meter's bars: around the groove's radius.
 GROOVE = (0.92, 1.08)
+# How far the dial may move from one frame to the next before the whole area is searched (pixels at half
+# size).
+TRACK_REACH = 40
+# The least spread of grey levels (standard deviation, 0-255) a place needs for the dial to be matched there.
+FLAT_GREY = 2.0
 
 
 def colour_masks(img):
@@ -76,13 +82,36 @@ def ncc_best(image, template):
 
     s1 = box(np.pad(np.cumsum(np.cumsum(image, 0), 1), ((1, 0), (1, 0))))
     s2 = box(np.pad(np.cumsum(np.cumsum(image**2, 0), 1), ((1, 0), (1, 0))))
-    score = corr / np.sqrt(np.maximum(s2 - s1**2 / (th * tw), 1e-6))
+    # A flat area, such as the G-meter's black disc, would divide by almost nothing and score far above
+    # 1: places whose grey levels vary by less than FLAT_GREY score 0.
+    variance = s2 - s1**2 / (th * tw)
+    flat = variance < FLAT_GREY**2 * th * tw
+    score = np.where(flat, 0.0, corr / np.sqrt(np.maximum(variance, 1e-6)))
     y, x = np.unravel_index(np.argmax(score), score.shape)
     return int(x), int(y), float(score[y, x])
 
 
+def track(img, template, near):
+    """As ncc_best on the half-size grey of the RGB frame `img`, searched first within TRACK_REACH of
+    `near` (the place found in the frame before, or None), and over the whole frame when it fits worse
+    than 0.6 there. Only the part searched is made grey: most of the time goes into the search."""
+    if near is not None:
+        th, tw = template.shape
+        x0, y0 = max(0, near[0] - TRACK_REACH), max(0, near[1] - TRACK_REACH)
+        x1 = min(img.shape[1] // 2, near[0] + tw + TRACK_REACH)
+        y1 = min(img.shape[0] // 2, near[1] + th + TRACK_REACH)
+        part = half(grey(img[2 * y0 : 2 * y1, 2 * x0 : 2 * x1].astype(np.float32)))
+        x, y, score = ncc_best(part, template)
+        if score >= 0.6:
+            return x + x0, y + y0, score
+    return ncc_best(half(grey(img.astype(np.float32))), template)
+
+
 def video_size(video):
-    out = subprocess.run([FFMPEG, "-hide_banner", "-i", video], capture_output=True, text=True).stderr
+    # ffmpeg with an input and no output always fails: only what it prints about the input is read.
+    out = subprocess.run(
+        [FFMPEG, "-hide_banner", "-i", video], check=False, capture_output=True, text=True
+    ).stderr
     for line in out.splitlines():
         if "Video:" in line:
             for part in line.replace(",", " ").split():
@@ -154,6 +183,7 @@ def read_frames(args, width, height, fps):
     right, left = groove & (columns > 0), groove & (columns < 0)
 
     rows, digits = [], []
+    near = None  # where the dial's template fitted in the frame before, at half size
     for k, img in enumerate(frames(args.video, args.start, args.seconds, crop)):
         t = args.start + k / fps
 
@@ -161,7 +191,8 @@ def read_frames(args, width, height, fps):
         green, red = colour_masks(g)
         gm_throttle, gm_brake = int((green & right).sum()), int((red & left).sum())
 
-        x, y, score = ncc_best(half(grey(img.astype(np.float32))), template)
+        x, y, score = track(img, template, near)
+        near = (x, y) if score >= 0.6 else None
         cx, cy = 2 * (x + offset[0]), 2 * (y + offset[1])
         found = score >= 0.6 and ring_size < cx < width - ring_size and ring_size < cy < height - ring_size
         hud = [0, 0, 0]
@@ -173,17 +204,31 @@ def read_frames(args, width, height, fps):
                 int(cy) - ring_size : int(cy) + ring_size + 1, int(cx) - ring_size : int(cx) + ring_size + 1
             ]
             # The RPM arc is white, and red near the shift point.
-            bright = (around.min(axis=2) > 175) & (
-                around.max(axis=2).astype(np.int16) - around.min(axis=2) < 45
-            )
-            lit = bright | colour_masks(around)[1]
-            hud = [int(arc_green.sum()), int(arc_red.sum()), int((lit & ring).sum())]
+            on_ring = around[ring]
+            low, high = on_ring.min(axis=1), on_ring.max(axis=1)
+            bright = (low > 175) & (high.astype(np.int16) - low < 45)
+            lit = bright | colour_masks(on_ring)[1]
+            hud = [int(arc_green.sum()), int(arc_red.sum()), int(lit.sum())]
             dx0, dy0, dx1, dy1 = box(DIGIT, cx, cy)
             patch = grey(img[dy0:dy1, dx0:dx1].astype(np.float32)).astype(np.uint8)
             digit[: patch.shape[0], : patch.shape[1]] = patch[: digit.shape[0], : digit.shape[1]]
         rows.append([t, 1 if found else 0, *hud, gm_throttle, gm_brake])
         digits.append(digit)
     return np.array(rows, dtype=np.float64), np.stack(digits)
+
+
+def read_frames_in_pieces(args, width, height, fps, jobs):
+    """As read_frames, with the stretch cut into `jobs` pieces read side by side, each by its own ffmpeg.
+    Each piece looks for the dial over the whole area at its first frame."""
+    piece = args.seconds / jobs
+    pieces = []
+    for i in range(jobs):
+        part = argparse.Namespace(**vars(args))
+        part.start, part.seconds = args.start + i * piece, piece
+        pieces.append(part)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=jobs) as pool:
+        results = list(pool.map(read_frames, pieces, [width] * jobs, [height] * jobs, [fps] * jobs))
+    return np.concatenate([r[0] for r in results]), np.concatenate([r[1] for r in results])
 
 
 def gear_changes(rows, digits, fps):
@@ -242,6 +287,65 @@ def pedal_offsets(rows, fps):
                     if tg is not None and th is not None:
                         offsets.append(tg - th)
             state, last = now, i
+    return offsets
+
+
+def throttle_lifts(t, level, fps):
+    """The throttle lifts in `level` (0-1 per frame): (last frame at or above 0.7, first frame at or below
+    0.15 after it), within 0.6 s. The HUD's arc reads 0.84 to 0.93 at full throttle."""
+    lifts, state, last = [], None, 0
+    for i in range(len(level)):
+        if level[i] <= 0.15 or level[i] >= 0.7:
+            now = "lo" if level[i] <= 0.15 else "hi"
+            if state == "hi" and now == "lo" and i - last <= int(0.6 * fps):
+                lifts.append((last, i))
+            state, last = now, i
+    return lifts
+
+
+def engine_level(x, start, t0, t1):
+    """The engine band's level (dB, 450-3500 Hz) every 2.5 ms over 10 ms windows from t0 to t1 (video
+    time), and its times. None if the sound doesn't cover it."""
+    window, hop = int(0.01 * RATE), int(0.0025 * RATE)
+    first = int((t0 - start) * RATE - window / 2)
+    n = int((t1 - t0) * RATE / hop)
+    if first < 0 or first + n * hop + window > len(x):
+        return None, None
+    idx = first + np.arange(n)[:, None] * hop + np.arange(window)[None, :]
+    spectrum = np.abs(np.fft.rfft(x[idx] * np.hanning(window), axis=1)) ** 2
+    freqs = np.fft.rfftfreq(window, 1 / RATE)
+    band = spectrum[:, (freqs >= 450) & (freqs <= 3500)].sum(axis=1)
+    level = 10 * np.log10(band + 1e-12)
+    times = start + (first + np.arange(n) * hop + window / 2) / RATE
+    return np.convolve(level, np.ones(4) / 4, mode="same"), times
+
+
+def engine_lift_offsets(rows, x, start, fps):
+    """For each throttle lift on the HUD: when the engine's sound fell halfway (in dB) less when the HUD's
+    throttle arc did (s). Lifts whose sound fell less than 6 dB are left out."""
+    t, found = rows[:, 0], rows[:, 1] > 0
+    if not found.any():
+        return []
+    hud = rows[:, 2] / max(np.percentile(rows[found, 2], 99.5), 1)
+    offsets = []
+    for last, i in throttle_lifts(t, hud, fps):
+        w = slice(max(0, last - int(0.3 * fps)), min(len(hud), i + int(0.4 * fps)))
+        if not found[w].all():
+            continue
+        th = crossing(t[w], hud[w], -1, 0.5 * (hud[w][:10].mean() + hud[w][-10:].mean()))
+        if th is None:
+            continue
+        level, times = engine_level(x, start, th - 0.4, th + 0.6)
+        if level is None:
+            continue
+        before = np.median(level[times < th - 0.15])
+        after = np.median(level[times > th + 0.35])
+        if before - after < 6:
+            continue
+        near = times >= th - 0.3
+        ts = crossing(times[near], level[near], -1, 0.5 * (before + after))
+        if ts is not None:
+            offsets.append(ts - th)
     return offsets
 
 
@@ -349,10 +453,20 @@ def main():
     parser.add_argument("--search", type=float, default=350)
     parser.add_argument("--fps", type=float, default=90)
     parser.add_argument("--out")
+    parser.add_argument(
+        "--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2), help="pieces read side by side"
+    )
+    parser.add_argument(
+        "--saved", action="store_true", help="take what an earlier run read from --out instead of the video"
+    )
     args = parser.parse_args()
 
-    width, height = video_size(args.video)
-    rows, digits = read_frames(args, width, height, args.fps)
+    if args.saved:
+        rows = np.load(os.path.join(args.out, "hud_rows.npy"))
+        digits = np.load(os.path.join(args.out, "gear_digits.npy"))
+    else:
+        width, height = video_size(args.video)
+        rows, digits = read_frames_in_pieces(args, width, height, args.fps, args.jobs)
     changes = gear_changes(rows, digits, args.fps)
     x = sound(args.video, args.start - 0.5, args.seconds + 1)
     drops = []
@@ -365,6 +479,12 @@ def main():
     print(f"HUD found in {100 * rows[:, 1].mean():.0f}% of {len(rows)} frames")
     print(summary("G-meter throttle against the HUD's", pedal_offsets(rows, args.fps)))
     print(summary("engine pitch drop against the HUD's next gear (upshifts)", drops))
+    print(
+        summary(
+            "engine sound at throttle lifts against the HUD's",
+            engine_lift_offsets(rows, x, args.start - 0.5, args.fps),
+        )
+    )
     ups = sum(1 for *_, d in changes if d > 0)
     print(f"gear changes on the HUD: {ups} up, {len(changes) - ups} down")
 
