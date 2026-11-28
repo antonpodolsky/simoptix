@@ -172,7 +172,7 @@ python -I export_menu_cut.py "<recording>.mp4" <data folder>\auto_sync_menu_cut 
 It makes the menu cut that the auto sync test plays: a recording of LMU's menus with the pointer moved
 over the items, with Debug on, from the main menu on.
 - The recorded sound was moved by its sync offset, so the cut puts it back: the delay from the log's
-  "audio sync:" line, and the source's own offset (`--own-offset`, -120 ms by default).
+  "audio sync:" line, and the source's user sync offset (`--user-offset`, -120 ms by default).
 - It fits the view's width from how the menu moves as the head turns. Where the head barely turns, it
   says so, and `--tan-w` gives the width fitted on another recording with the same headset and zoom.
 

@@ -54,7 +54,7 @@ This file holds what was measured on the plugin, and what was tried.
 - **The shift, checked in OBS** (no game, so the delay stayed at its warm-up value):
   - with the source shown: LMU's sound −120 → +950 ms, Mic/Aux 0 → +1070 ms
   - with the source hidden: back to −120 and 0 ms
-- **LMU's sound trails the image** by about 120 ms, so it needs about −120 ms of its own Sync Offset
+- **LMU's sound trails the image** by about 120 ms, so it needs a user sync offset of about −120 ms
   (on its Application Audio Capture).
   - Measured on LMU's menu clicks: 113–136 ms between the menu changing on screen (in one
     frame) and the click being heard.
@@ -62,7 +62,7 @@ This file holds what was measured on the plugin, and what was tried.
     capture, not in the image.
   - Not checked: drift over a long session.
 - **Out of step while driving, before auto sync** (#8). One recording, OpenXR Mirror on Look-ahead
-  (544 ms delay), LMU's sound at −120 ms of its own. LMU's HUD dial is drawn into the game's image, so
+  (544 ms delay), LMU's sound with a user sync offset of −120 ms. LMU's HUD dial is drawn into the game's image, so
   its pedal arc and gear number show what the view shows. They were compared frame by frame with the
   G-meter's pedal bars and with the engine's sound. "Ahead" is earlier in the video than the view:
 
@@ -104,7 +104,7 @@ This file holds what was measured on the plugin, and what was tried.
     within about 50 ms at every upshift. Downshifts were too noisy to use. Searched over any drop of 6%
     to 46%, a minute of a crowded race gave about 90 "drops", many as strong as real upshifts, so the
     search looked only near the drop that the telemetry's RPM gave (±4%).
-  - On that race's sound, with its own sync offset (+416 ms) taken out, a drop was found at all 18
+  - On that race's sound, with its sync offset (+416 ms) taken out, a drop was found at all 18
     upshifts, but spread widely: middle half about 71 to 170 ms, from 51 to 378 ms. The drop's size had
     to come from the sound itself, as a recording holds no RPM.
   - Weighing the frequencies near the engine's harmonics at the RPM before the drop made it depend on the
@@ -114,7 +114,7 @@ This file holds what was measured on the plugin, and what was tried.
     from -61 to 375 ms after the telemetry, against 30 ms put in, and the game's sound never settled.
   - So the game's sound is measured at the hovers in LMU's menus instead.
 - **The hovers in LMU's menus.** One recording of the menus (OpenXR Mirror on Look-ahead, a Quest 3,
-  LMU's sound on Application Audio Capture at -120 ms of its own):
+  LMU's sound on Application Audio Capture with a user sync offset of -120 ms):
   - Most items tick and light up when the pointer comes onto them. 21 ticks rose 32 to 52 dB above the 40
     ms before them, in 2 ms frames of the sound's first difference, where the menu's music rose less than
     20 dB. The louder click of a page change came at other lags.
@@ -122,7 +122,7 @@ This file holds what was measured on the plugin, and what was tried.
     weekend's screens it stepped 1 to 2, too little to find without the tick. Looking for highlights first found
     about 6 real hovers of 14, at lags spread from 73 to 121 ms. Looking for the ticks first, then the
     frame before each in which a small part of the menu lit up, gave 106 to 119 ms at 5 hovers in a row.
-  - In the recording, with LMU's -120 ms own offset, the ticks came 15 to 61 ms before their highlights
+  - In the recording, with LMU's user sync offset of -120 ms, the ticks came 15 to 61 ms before their highlights
     (17 of the 21, middle half 20 to 42 ms): LMU's sound trailed its image by about 90 to 110 ms there.
   - That session's frame trace has the same head pose in every tick for 106 s, so the menu didn't move in
     the frames.
@@ -148,13 +148,13 @@ This file holds what was measured on the plugin, and what was tried.
     sees every frame, and counts each that comes 2 s or more after the one before.
   - Each check was shown to fail when auto sync was broken: moving the game's sound at the first tick,
     without three that agree, moved it 80 ms first and 109 ms when it stopped, on the menu cut.
-- **The game's own sync offset was added to auto sync's correction** (fixed in #80). Auto sync measures
-  the sound before OBS applies any sync offset, but the plugin still added the game's own offset to the
-  correction. In one OBS session (OpenXR Mirror on Look-ahead, 537 ms delay), LMU's sound still had the
-  −120 ms offset set by hand before auto sync existed. Auto sync measured −120 ms, and later −134 ms. OBS
+- **The game's user sync offset was added to auto sync's correction** (fixed in #80). Auto sync
+  measures the sound before OBS applies any sync offset, but the plugin still added the game's user
+  sync offset to the correction. In one OBS session (OpenXR Mirror on Look-ahead, 537 ms delay), LMU's
+  sound still had the user sync offset of −120 ms set before auto sync existed. Auto sync measured −120 ms, and later −134 ms. OBS
   then showed +283 ms (537 − 134 − 120), so the sound was about 120 ms early in both race recordings of
-  that session. Since the fix, the game's sound gets only the delay and auto sync's correction. Its own
-  offset is kept, and applies again when the source is hidden.
+  that session. Since the fix, the game's sound gets only the delay and auto sync's correction. Its user
+  sync offset is kept, and applies again when the source is hidden.
   - **Measured in those two race recordings** with `sync_check.py`, which times the engine's sound
     getting quieter at each throttle lift against the HUD's throttle arc. In race A the sound's sync
     offset was 297 ms (537 − 120 − 120), and the sound came 123 ms before the view (middle half 94 to
@@ -165,7 +165,7 @@ This file holds what was measured on the plugin, and what was tried.
     presses), as in the table above.
   - The table above (#8) found LMU's sound about 35 ms after the image in a race. That recording had a
     different setup, and the two haven't been compared.
-  - The auto sync test now starts Desktop Audio with a sync offset of −120 ms in its first run, and
+  - The auto sync test now starts Desktop Audio with a user sync offset of −120 ms in its first run, and
     checks the sync offset that OBS saves. With the fix, OBS saved −95 ms: the 4 ms delay (Instant) plus
     the −99 ms correction. Without the fix it saved −216 ms (4 − 100 − 120), and the check failed.
   - In that session, the ticks that auto sync matched to a highlight came 66 to 141 ms after it, most of

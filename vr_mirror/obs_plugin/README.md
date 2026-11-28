@@ -23,6 +23,7 @@ The two sources show the same view. They differ in where the game's image comes 
 | game eye | The eye image a source works from. The Pimax source's is the client mirror's half-size copy of the left eye. The OpenXR source's is the left eye at full size |
 | output delay | How far the view runs behind the game: about 0.5 s with Look-ahead, none with Instant, and 0 while the source is hidden |
 | auto sync | How a VR Mirror source puts the game's sound in step with its view by itself. It times the ticks of LMU's menus against the items that light up under the pointer |
+| user sync offset | The Sync Offset you set for an audio source, without the output delay that VR Mirror adds to it |
 | display slot | One of the regular moments at which the headset shows a new image, one per refresh (90 per second at 90 Hz). The game draws each frame for one slot, with the head pose the runtime predicted for that slot |
 | game behind | The game's GPU has fallen behind and queues up to two frames. Each arrives one or two display slots after the slot it was drawn for |
 | slot check | How the Pimax source finds the slot a late frame was really drawn for: it compares small thumbnails of consecutive frames |
@@ -169,16 +170,17 @@ About 2 s after the first game frame, the OBS log says the delay the source sett
   It works that moment out from the delay, not by looking at the image.
 - **Record races automatically** starts and stops by that same moment. So the recording starts at the
   start lights and ends after the finish, as the recorded video shows them.
-- **The sound.** While the source is shown, the plugin adds the delay to every audio source's own Sync
-  Offset (Edit → Advanced Audio Properties), and takes it off again when the source is hidden.
-  - Keep each audio source's own offset as it is. The game's sound is the exception: once auto sync has
-    found it (below), its offset is the delay plus what auto sync measured, and the offset you set for it
-    isn't added. Your own offset comes back when the source is hidden.
+- **The sound.** While the source is shown, the plugin adds the delay to the Sync Offset you set for
+  each audio source (Edit → Advanced Audio Properties), and takes it off again when the source is
+  hidden.
+  - Keep the Sync Offset you set for each audio source. The game's sound is the exception: once auto
+    sync has found it (below), its Sync Offset is the delay plus what auto sync measured, and the value
+    you set isn't added. Your value comes back when the source is hidden.
   - The OBS log says how far the sources were shifted ("audio sync: 2 audio sources now ... ms on top
-    of their own offsets").
-  - Each audio source remembers the shift it got, saved with the scene. So its own offset comes back
-    exactly, also after OBS was closed with the source shown.
-  - Changing an offset while it is shifted changes the source's own offset by as much.
+    of their user sync offsets").
+  - Each audio source remembers the shift it got, saved with the scene. So the Sync Offset you set
+    comes back exactly, also after OBS was closed with the source shown.
+  - Changing a Sync Offset while it is shifted changes the value you set by as much.
 
 ### Auto sync
 
@@ -227,7 +229,7 @@ auto sync: measuring, with 2 audio sources
 auto sync: a tick in 'Application Audio Capture (BETA)' at 0.61 s (46 dB), ... ms after its highlight: a step of 30.4 against the median 0.2 of 46 frames; the next 1.0, ... ms before the tick
 auto sync: a tick in 'Application Audio Capture (BETA)' at 0.22 s (67 dB), with no highlight before it: the frames held only from 204 ms before the tick to 1574 ms after the tick
 auto sync now, after 3 ticks: 'Application Audio Capture (BETA)' has them ... ms after (3 agree), so it moves ... ms
-audio sync: 'Application Audio Capture (BETA)' has the game's sound: sync offset ... ms, the delay plus auto sync's correction of ... ms, without its own offset
+audio sync: 'Application Audio Capture (BETA)' has the game's sound: sync offset ... ms, the delay plus auto sync's correction of ... ms, without its user sync offset
 auto sync done, after 7 ticks: 'Application Audio Capture (BETA)' has them ... ms after (5 agree), so it moves ... ms
 ...
 auto sync: measuring again (the game's frame rate, 90 to 72 changed), with 2 audio sources

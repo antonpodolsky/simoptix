@@ -13,11 +13,11 @@ the output's follows from it and the zoom. The fit needs the head to turn: where
 gives the width, as fitted on another recording with the same headset and zoom.
 
 The recorded sound was moved by its sync offset: the view's delay that VR Mirror added (the OBS log's
-"audio sync: ... now +<ms>" line) and the source's own offset (--own-offset, ms). The cut's sound is put
+"audio sync: ... now +<ms>" line) and the source's user sync offset (--user-offset, ms). The cut's sound is put
 back where OBS captured it, on the trace's clock.
 
   python -I export_menu_cut.py "<recording>.mp4" <out folder> [--from 0] [--seconds 40]
-      [--own-offset -120] [--gmeter 3537,1872,133] [--width 384] [--cant 0] [--tan-w 0.825]
+      [--user-offset -120] [--gmeter 3537,1872,133] [--width 384] [--cant 0] [--tan-w 0.825]
 
 It writes menu_cut.csv (what each file holds, line by line), menu.gray (the frames, one after another),
 menu.csv (each frame's time and camera) and sound.f32 (mono, 48 kHz) into the out folder. It needs the
@@ -132,7 +132,7 @@ def main():
     parser.add_argument("out")
     parser.add_argument("--from", dest="start", type=float, default=0.0)
     parser.add_argument("--seconds", type=float, default=None)
-    parser.add_argument("--own-offset", type=float, default=-120)
+    parser.add_argument("--user-offset", type=float, default=-120)
     parser.add_argument("--gmeter", type=lambda s: [float(v) for v in s.split(",")], default=None)
     parser.add_argument("--width", type=int, default=384)
     parser.add_argument("--cant", type=float, default=0.0)
@@ -213,7 +213,7 @@ def main():
     ]
     if not shifts:
         raise SystemExit("no 'audio sync:' line in the OBS log before the cut")
-    sync_offset = (shifts[-1] + args.own_offset) / 1000
+    sync_offset = (shifts[-1] + args.user_offset) / 1000
     print(f"the sound was played out {sync_offset * 1000:+.0f} ms from where OBS captured it")
     sound = sync_check.sound(args.video, args.start, stop - args.start)
     sound.astype(np.float32).tofile(os.path.join(args.out, "sound.f32"))

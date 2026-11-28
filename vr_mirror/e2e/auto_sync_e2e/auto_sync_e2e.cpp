@@ -10,9 +10,10 @@
 // that the game's sound moves by as much as the lags. In the second, once auto sync is done, the game's
 // frames stop for a few seconds, as when LMU restarts, and the menus play again: auto sync measures again,
 // and settles where it did.
-// In the first run, Desktop Audio starts with a sync offset of its own. After each run, the test reads
-// Desktop Audio's sync offset from the scene collection that OBS saved at exit. It must equal the view's
-// delay plus auto sync's correction, without the own offset.
+// In the first run, Desktop Audio starts with a user sync offset (the Sync Offset set in OBS, without the
+// plugin's shift) of -120 ms. After each run, the test reads Desktop Audio's sync offset from the scene
+// collection that OBS saved at exit. It must equal the view's delay plus auto sync's correction, without
+// the user sync offset.
 //
 // The cut shows LMU's menus, with cars and tracks, so it stays in the data folder: in the folder
 // AUTO_SYNC_MENU_CUT names, else SIMOPTIX_DATA\auto_sync_menu_cut. Needs OBS installed and a sound output
@@ -187,8 +188,8 @@ namespace {
         return s;
     }
 
-    // Reads the delay (ms) from the last "audio sync: ... now +N ms on top of their own offsets" line in
-    // `log`. Returns false if the log has no such line.
+    // Reads the delay (ms) from the last "audio sync: ... now +N ms on top of their user sync offsets" line
+    // in `log`. Returns false if the log has no such line.
     bool ReadDelay(const std::string& log, long long* delayMs) {
         bool found = false;
 
@@ -198,7 +199,7 @@ namespace {
             const char* now = strstr(line.c_str(), " now ");
             long long ms = 0;
 
-            if (now && strstr(now, "on top of their own offsets")
+            if (now && strstr(now, "on top of their user sync offsets")
                 && sscanf_s(now, " now %lld ms", &ms) == 1) {
                 *delayMs = ms;
                 found = true;
@@ -264,7 +265,7 @@ namespace {
         const char* name;
         double soundLagMs;
         bool again;  // the game's frames stop and start again after auto sync is done: it measures again
-        long long ownOffsetMs;  // Desktop Audio's own sync offset at the start
+        long long userOffsetMs;  // Desktop Audio's user sync offset at the start
     };
 
     std::string Ms(double seconds) {
@@ -274,7 +275,8 @@ namespace {
     }
 
     // Checks the sync offset that OBS saved for the game's sound: it must equal the view's delay plus auto
-    // sync's last correction, and the saved offset minus the plugin's shift must equal the own offset.
+    // sync's last correction, and the saved offset minus the plugin's shift must equal the user sync
+    // offset.
     void CheckSavedOffset(const ObsCopy& obs, const std::string& log, const Settled& last, const Run& run) {
         long long delayMs = 0, syncNs = 0, shiftNs = 0;
         const std::string source = SavedSource(SavedSceneCollection(obs), kGameSound);
@@ -294,13 +296,13 @@ namespace {
         Check(
             std::fabs(syncS - wantS) <= kSavedToleranceS,
             "Desktop Audio's saved sync offset is " + Ms(syncS) + ": the delay of " + std::to_string(delayMs)
-                + " ms plus the correction of " + Ms(last.correctionS) + ", without its own offset of "
-                + std::to_string(run.ownOffsetMs) + " ms"
+                + " ms plus the correction of " + Ms(last.correctionS) + ", without its user sync offset of "
+                + std::to_string(run.userOffsetMs) + " ms"
         );
 
         Check(
-            syncNs - shiftNs == run.ownOffsetMs * 1000000,
-            "Desktop Audio's own offset (the saved sync offset minus the plugin's shift) is still "
+            syncNs - shiftNs == run.userOffsetMs * 1000000,
+            "Desktop Audio's user sync offset (the saved sync offset minus the plugin's shift) is still "
                 + Ms(static_cast<double>(syncNs - shiftNs) / 1e9)
         );
     }
@@ -377,7 +379,7 @@ namespace {
         ObsRun obsRun;
         obsRun.sources = {"simoptix_openxr_mirror"};
         obsRun.desktopAudio = true;
-        obsRun.desktopAudioSyncNs = run.ownOffsetMs * 1000000;
+        obsRun.desktopAudioSyncNs = run.userOffsetMs * 1000000;
         obsRun.localAppData = dir / "appdata";
         // The fake runtime, which only the Pimax source loads, with no game.
         obsRun.fakePvrScenario = dir / "fake_pvr.cfg";
