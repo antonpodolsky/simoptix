@@ -71,4 +71,7 @@ smoothing 2 (its README). Lower is better in every row.
 - **The engine's pitch drop at upshifts** still spread too widely to use on that stretch: +126 ms, middle
   half −124 to +262 ms, from 11 of 16 upshifts.
 - **The engine's sound at throttle lifts** (new): the same stretch had 6 lifts, and on most of them the
-  engine band (450 to 3500 Hz) fell only 3 to 6 dB, so one lift was timed. Not checked over a whole race.
+  engine band (450 to 3500 Hz) fell only 3 to 6 dB, so one lift was timed. Over a whole race, one race
+  gave 14 lifts with a middle half 51 ms wide, and the other only 2. The dial was found in 81 and 76% of the frames.
+- **The pitch drop over a whole race** spread as widely: middle half −129 to +247 ms from 138 upshifts,
+  and −131 to +267 ms from 117.

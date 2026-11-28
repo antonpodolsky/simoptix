@@ -153,6 +153,15 @@ This file holds what was measured on the plugin, and what was tried.
   −134 ms. OBS showed +283 ms (537 − 134 − 120), so the sound came about 120 ms early in both
   recordings of that session. Since the fix, the game's sound gets the delay and the correction alone,
   and its own offset comes back when the source is hidden.
+  - Measured in that session's two race recordings with `sync_check.py`, the engine's sound falling at
+    each throttle lift against the HUD's throttle arc. Race A (−120 ms of its own and −120 ms from auto
+    sync, so 297 ms with the 537 ms delay): the sound came 123 ms before the view (middle half 94 to
+    145 ms, 14 lifts). So LMU's sound reached OBS about 117 ms after its image in that race (middle half
+    95 to 146 ms), as auto sync measured at the menus (120 and 134 ms). With the fix, the sound would
+    have come about 3 ms before the view. Race B (283 ms) gave 96 ms before the view, from only 2 lifts.
+    The G-meter's throttle ran 38 and 40 ms ahead of the HUD's (88 and 60 events), as before.
+  - The table above (#8) had LMU's sound about 35 ms after its image in a race. That recording's setup
+    differed, and the two were not compared.
   - The auto sync test gives Desktop Audio −120 ms of its own in its first run, and reads the offset OBS
     saved. With the fix: −95 ms (a 4 ms delay with Instant, and −99 ms), the own −120 ms kept under the
     shift. Without it: −216 ms (4, −100 and −120), and the check fails.
