@@ -16,6 +16,10 @@ on their own. Claude Code reads it through `CLAUDE.md`, and finds the skills thr
 at the same skills. Aider reads it when started with `--read AGENTS.md`. Gemini CLI reads it when its
 project settings set `context.fileName` to `AGENTS.md`.
 
+Claude Code also runs the project's hooks, which `.claude\settings.json` lists. A hook blocks a shell
+command that breaks one of the dev skill's rules for the shell, and tells the agent why
+(`.agents\skills\dev\reference\hooks.md`).
+
 ## Terms
 
 | Term | Meaning |
@@ -214,10 +218,10 @@ Say in the pull request what you checked, with numbers, and what you couldn't ch
   issue its own line, because in `Fixes #12, #27` GitHub closes only #12. `Part of #<number>` names an
   issue the change works on and leaves open.
 - GitHub checks each pull request, and a failing check fails it: Build (every part, with no warnings),
-  Format (clang-format and ruff), Docs, Public text and Pipeline output (the pipeline replay's output
-  against `vr_mirror\e2e\pipeline_replay\golden_expected.txt`), in `.github\workflows\checks.yml`. A pull
-  request that changes only Markdown files skips Build and Pipeline output, because no build reads
-  them, and runs the other checks. Changelog checks the label and the Changelog section the way a
+  Format (clang-format and ruff), Docs, Hooks (each hook on its cases), Public text and Pipeline output
+  (the pipeline replay's output against `vr_mirror\e2e\pipeline_replay\golden_expected.txt`), in
+  `.github\workflows\checks.yml`. A pull request that changes only Markdown files skips Build and
+  Pipeline output, because no build reads them, and runs the other checks. Changelog checks the label and the Changelog section the way a
   release reads them, and the title's form and type. Description checks the description's public
   text. Both run each time the title, the description or the label changes
   (`.github\workflows\pull_request.yml`). The Changelog section ends the description, so nothing goes

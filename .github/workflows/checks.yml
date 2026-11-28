@@ -6,6 +6,7 @@
 #   Build            every part, with no warnings (shared\build\build_all.ps1)
 #   Format           clang-format and ruff
 #   Docs             check_docs.py
+#   Hooks            test_hooks.py: each of Claude Code's hooks (.agents\skills\dev\hooks\) on its cases
 #   Public text      check_public_text.py on every file and on the pull request's commits
 #   Pipeline output  pipeline_replay's golden file against vr_mirror\e2e\pipeline_replay\golden_expected.txt.
 #                    Any change fails it. A change that is meant commits a new golden_expected.txt
@@ -14,7 +15,7 @@
 # Build and Pipeline output are skipped on a pull request that changes only Markdown files, which no
 # build reads (the Changes job). GitHub counts a skipped job as passed, also for a required check. A
 # workflow left out by on.pull_request.paths reports nothing, and a required check would wait forever.
-# Format, Docs and Public text run on every pull request, and every job runs on each push to main.
+# Format, Docs, Hooks and Public text run on every pull request, and every job runs on each push to main.
 # The e2e suite isn't here: on GitHub's runners, with no graphics card, the mirror app drew 9.5 to 28.5
 # fps against the 75 to 85 its scenarios ask for (findings\e2e.md). It runs by hand (dev skill, step 5).
 # Nor is the local files test: its OpenXR case gets almost no game frames on the runners (issue #41).
@@ -143,6 +144,21 @@ jobs:
 
       - name: Verify docs
         run: python -I .agents\skills\docs\check_docs.py
+
+  hooks:
+    name: Hooks
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Verify hooks
+        run: python -I .agents\skills\dev\hooks\test_hooks.py
 
   public_text:
     name: Public text
