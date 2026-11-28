@@ -55,7 +55,8 @@ namespace {
 
     constexpr const char* kDone = "[simoptix_vr_mirror] auto sync done, ";
     constexpr const char* kShifted = "[simoptix_vr_mirror] audio sync: ";
-    constexpr const char* kShiftKey = "simoptix_vr_mirror_sync_shift_ns";
+    constexpr const char*
+        kShiftKey = "simoptix_vr_mirror_sync_shift_ns";  // the plugin's key in each source's private settings
     constexpr const char* kGameSound = "Desktop Audio";
     constexpr double kSavedToleranceS = 0.0015;  // the log rounds the delay and the correction to whole ms
 
@@ -146,8 +147,8 @@ namespace {
     // What auto sync settled at, from its "auto sync done" line.
     struct Settled {
         bool hasSound = false;
-        double soundLag = 0;  // s: the ticks after their highlights
-        double soundCorrectionS = 0;
+        double soundLag = 0;     // s: the ticks after their highlights
+        double correctionS = 0;  // s: auto sync's correction of the game's sound
         std::string line;
     };
 
@@ -180,7 +181,7 @@ namespace {
         const char* moves = strstr(s.line.c_str(), "so it moves ");
 
         if (moves && sscanf_s(moves, "so it moves %lf ms", &ms) == 1) {
-            s.soundCorrectionS = ms / 1000;
+            s.correctionS = ms / 1000;
         }
 
         return s;
@@ -188,7 +189,7 @@ namespace {
 
     // Reads the delay (ms) from the last "audio sync: ... now +N ms on top of their own offsets" line in
     // `log`. Returns false if the log has no such line.
-    bool ReadLastDelay(const std::string& log, long long* delayMs) {
+    bool ReadDelay(const std::string& log, long long* delayMs) {
         bool found = false;
 
         for (size_t at = log.find(kShifted); at != std::string::npos; at = log.find(kShifted, at + 1)) {
@@ -213,7 +214,7 @@ namespace {
     std::string SavedSource(const std::string& json, const std::string& name) {
         std::vector<size_t> starts;
         std::string key;
-        size_t foundDepth = 0;
+        size_t found = 0;  // the nesting depth of the source's object once found, 0 until then
 
         for (size_t i = 0; i < json.size(); i++) {
             if (json[i] == '"') {
@@ -228,15 +229,15 @@ namespace {
 
                 if (next != std::string::npos && json[next] == ':') {
                     key = text;
-                } else if (!foundDepth && key == "name" && text == name && starts.size() == 2) {
-                    foundDepth = starts.size();
+                } else if (!found && key == "name" && text == name && starts.size() == 2) {
+                    found = starts.size();
                 }
 
                 i = end;
             } else if (json[i] == '{') {
                 starts.push_back(i);
             } else if (json[i] == '}' && !starts.empty()) {
-                if (foundDepth && starts.size() == foundDepth) {
+                if (found && starts.size() == found) {
                     return json.substr(starts.back(), i - starts.back() + 1);
                 }
 
@@ -263,7 +264,7 @@ namespace {
         const char* name;
         double soundLagMs;
         bool again;  // the game's frames stop and start again after auto sync is done: it measures again
-        long long ownOffsetMs;
+        long long ownOffsetMs;  // Desktop Audio's own sync offset at the start
     };
 
     std::string Ms(double seconds) {
@@ -272,38 +273,31 @@ namespace {
         return text;
     }
 
-    void CheckSavedGameSoundOffset(
-        const ObsCopy& obs,
-        const std::string& log,
-        const Settled& last,
-        const Run& run
-    ) {
+    // Checks the sync offset that OBS saved for the game's sound: it must equal the view's delay plus auto
+    // sync's last correction, and the saved offset minus the plugin's shift must equal the own offset.
+    void CheckSavedOffset(const ObsCopy& obs, const std::string& log, const Settled& last, const Run& run) {
         long long delayMs = 0, syncNs = 0, shiftNs = 0;
         const std::string source = SavedSource(SavedSceneCollection(obs), kGameSound);
-        const bool saved = ReadLastDelay(log, &delayMs) && ReadNumber(source, "sync", &syncNs)
+        const bool saved = ReadDelay(log, &delayMs) && ReadNumber(source, "sync", &syncNs)
                            && ReadNumber(source, kShiftKey, &shiftNs);
 
         if (!saved || !last.hasSound) {
-            Check(
-                false,
-                "the log has the delay, and OBS saved Desktop Audio's sync offset and the plugin's shift"
-            );
+            Check(false, "the game's sound's offset saved, with the delay and the plugin's shift");
             return;
         }
 
-        const double wantS = static_cast<double>(delayMs) / 1000 + last.soundCorrectionS;
+        const double wantS = static_cast<double>(delayMs) / 1000 + last.correctionS;
         const double syncS = static_cast<double>(syncNs) / 1e9;
         Check(
             std::fabs(syncS - wantS) <= kSavedToleranceS,
-            "Desktop Audio's saved sync offset is " + Ms(syncS) + ": the delay " + std::to_string(delayMs)
-                + " ms plus the correction " + Ms(last.soundCorrectionS) + ", without the own offset of "
+            "the game's sound saved at " + Ms(syncS) + ": the delay " + std::to_string(delayMs)
+                + " ms and the correction " + Ms(last.correctionS) + ", without its own "
                 + std::to_string(run.ownOffsetMs) + " ms"
         );
 
         Check(
             syncNs - shiftNs == run.ownOffsetMs * 1000000,
-            "Desktop Audio's own offset is still " + Ms(static_cast<double>(syncNs - shiftNs) / 1e9)
-                + " (the saved sync offset minus the plugin's shift)"
+            "its own offset kept under the plugin's shift: " + Ms(static_cast<double>(syncNs - shiftNs) / 1e9)
         );
     }
 
@@ -413,7 +407,7 @@ namespace {
                 + Ms(soundLag) + " put in"
         );
 
-        CheckSavedGameSoundOffset(obs, log, run.again ? ReadSettled(log, 1) : settled, run);
+        CheckSavedOffset(obs, log, run.again ? ReadSettled(log, 1) : settled, run);
 
         if (run.again) {
             const Settled second = ReadSettled(log, 1);

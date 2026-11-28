@@ -67,8 +67,8 @@ namespace {
                 obs_data_t* priv = obs_source_get_private_settings(source);
                 const int64_t applied = obs_data_get_int(priv, kShiftKey);
                 const int64_t current = obs_source_get_sync_offset(source);
-                const int64_t gameOffset = c->shift + c->correction;
-                const int64_t shift = game ? ShiftReplacingOwnOffset(current, applied, gameOffset) : c->shift;
+                const int64_t shift = game ? GameSoundShift(current, applied, c->shift + c->correction)
+                                           : c->shift;
 
                 if (applied != shift) {
                     obs_source_set_sync_offset(source, ShiftedSyncOffset(current, applied, shift));
@@ -96,8 +96,9 @@ namespace {
         if (ctx.changed && !ctx.game.empty()) {
             blog(
                 LOG_INFO,
-                "[simoptix_vr_mirror] audio sync: '%s' (the game's sound) gets the delay plus auto sync's "
-                "%+lld ms, without its own offset",
+                "[simoptix_vr_mirror] audio sync: '%s' %+lld ms more, without its own offset (the game's "
+                "sound, "
+                "auto sync)",
                 ctx.game.c_str(),
                 static_cast<long long>(ctx.correction / 1000000)
             );

@@ -95,16 +95,16 @@ def ncc_best(image, template):
     return int(x), int(y), float(score[y, x])
 
 
-def track(img, template, previous):
+def track(img, template, near):
     """ncc_best for `template` in the half-size greyscale of the RGB frame `img`. It first searches only
-    within TRACK_REACH of `previous`, the previous frame's match (or None), and searches the whole image
+    within TRACK_REACH of `near`, the previous frame's match (or None), and searches the whole image
     when the best match there scores under 0.6. Only the searched region is converted to greyscale,
     because the search takes most of the time."""
-    if previous is not None:
+    if near is not None:
         th, tw = template.shape
-        x0, y0 = max(0, previous[0] - TRACK_REACH), max(0, previous[1] - TRACK_REACH)
-        x1 = min(img.shape[1] // 2, previous[0] + tw + TRACK_REACH)
-        y1 = min(img.shape[0] // 2, previous[1] + th + TRACK_REACH)
+        x0, y0 = max(0, near[0] - TRACK_REACH), max(0, near[1] - TRACK_REACH)
+        x1 = min(img.shape[1] // 2, near[0] + tw + TRACK_REACH)
+        y1 = min(img.shape[0] // 2, near[1] + th + TRACK_REACH)
         part = half(grey(img[2 * y0 : 2 * y1, 2 * x0 : 2 * x1].astype(np.float32)))
         x, y, score = ncc_best(part, template)
         if score >= 0.6:
@@ -189,7 +189,7 @@ def read_frames(args, width, height, fps):
     right, left = groove & (columns > 0), groove & (columns < 0)
 
     rows, digits = [], []
-    previous = None  # the previous frame's match: (x, y) in the half-size image
+    near = None  # the previous frame's match: (x, y) in the half-size image
     for k, img in enumerate(frames(args.video, args.start, args.seconds, crop)):
         t = args.start + k / fps
 
@@ -197,8 +197,8 @@ def read_frames(args, width, height, fps):
         green, red = colour_masks(g)
         gm_throttle, gm_brake = int((green & right).sum()), int((red & left).sum())
 
-        x, y, score = track(img, template, previous)
-        previous = (x, y) if score >= 0.6 else None
+        x, y, score = track(img, template, near)
+        near = (x, y) if score >= 0.6 else None
         cx, cy = 2 * (x + offset[0]), 2 * (y + offset[1])
         found = score >= 0.6 and ring_size < cx < width - ring_size and ring_size < cy < height - ring_size
         hud = [0, 0, 0]
@@ -464,15 +464,10 @@ def main():
     parser.add_argument("--fps", type=float, default=90)
     parser.add_argument("--out")
     parser.add_argument(
-        "--jobs",
-        type=int,
-        default=max(1, (os.cpu_count() or 2) // 2),
-        help="the number of processes that read the video in parallel",
+        "--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2), help="pieces read side by side"
     )
     parser.add_argument(
-        "--saved",
-        action="store_true",
-        help="read hud_rows.npy and gear_digits.npy from --out instead of the video",
+        "--saved", action="store_true", help="take what an earlier run read from --out instead of the video"
     )
     args = parser.parse_args()
 

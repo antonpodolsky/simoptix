@@ -227,7 +227,7 @@ auto sync: measuring, with 2 audio sources
 auto sync: a tick in 'Application Audio Capture (BETA)' at 0.61 s (46 dB), ... ms after its highlight: a step of 30.4 against the median 0.2 of 46 frames; the next 1.0, ... ms before the tick
 auto sync: a tick in 'Application Audio Capture (BETA)' at 0.22 s (67 dB), with no highlight before it: the frames held only from 204 ms before the tick to 1574 ms after the tick
 auto sync now, after 3 ticks: 'Application Audio Capture (BETA)' has them ... ms after (3 agree), so it moves ... ms
-audio sync: 'Application Audio Capture (BETA)' (the game's sound) gets the delay plus auto sync's ... ms, without its own offset
+audio sync: 'Application Audio Capture (BETA)' ... ms more, without its own offset (the game's sound, auto sync)
 auto sync done, after 7 ticks: 'Application Audio Capture (BETA)' has them ... ms after (5 agree), so it moves ... ms
 ...
 auto sync: measuring again (the game's frame rate, 90 to 72 changed), with 2 audio sources

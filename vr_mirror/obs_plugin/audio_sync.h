@@ -34,9 +34,8 @@ inline int64_t ShiftedSyncOffset(int64_t current, int64_t applied, int64_t shift
     return current - applied + shift;
 }
 
-// Logic: the shift (ns) that sets a source's sync offset to `wanted`, so that its own offset is no longer
-// added.
-inline int64_t ShiftReplacingOwnOffset(int64_t current, int64_t applied, int64_t wanted) {
-    const int64_t own = current - applied;
-    return wanted - own;
+// Logic: the shift (ns) that sets a source's sync offset to `target`, so that its own offset is no longer
+// added. `current` is the source's sync offset now, and `applied` the shift it already has.
+inline int64_t GameSoundShift(int64_t current, int64_t applied, int64_t target) {
+    return target - (current - applied);
 }
