@@ -130,7 +130,8 @@ This file holds what was measured on the plugin, and what was tried.
   - The game's sound settled at 102 ms with the menus' sound as recorded and 166 ms with it 60 ms later
     (moved 64 ms), then at 98 and 167 ms (69 ms), 100 and 166 ms (66 ms), 106 and 166 ms (60 ms), 102 and
     165 ms (63 ms), and 99 and 159 ms (60 ms), each with 5 ticks agreeing. The highlight is timed to the frame (11 ms), so two runs can differ by about
-    that much, close to the test's 10 ms for the move.
+    that much, close to the test's 10 ms for the move. Once it moved 71 ms (98 and 169 ms), and the test
+    failed. The next run moved 60 ms (99 and 159 ms), with the same build.
   - In one run, the first measuring took 31 ticks, against 6 in the next run. On the way it moved the
     game's sound by 396 ms, from 3 ticks about 400 ms after a highlight, and still settled at 100 ms.
   - With other sound playing on the same output device, two runs in a row heard one tick each, rising 25
