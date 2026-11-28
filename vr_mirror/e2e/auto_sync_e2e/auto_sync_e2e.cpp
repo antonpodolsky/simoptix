@@ -282,7 +282,10 @@ namespace {
                            && ReadNumber(source, kShiftKey, &shiftNs);
 
         if (!saved || !last.hasSound) {
-            Check(false, "the game's sound's offset saved, with the delay and the plugin's shift");
+            Check(
+                false,
+                "the log has the delay, and the saved Desktop Audio has a sync offset and the plugin's shift"
+            );
             return;
         }
 
@@ -290,14 +293,15 @@ namespace {
         const double syncS = static_cast<double>(syncNs) / 1e9;
         Check(
             std::fabs(syncS - wantS) <= kSavedToleranceS,
-            "the game's sound saved at " + Ms(syncS) + ": the delay " + std::to_string(delayMs)
-                + " ms and the correction " + Ms(last.correctionS) + ", without its own "
+            "Desktop Audio's saved sync offset is " + Ms(syncS) + ": the delay of " + std::to_string(delayMs)
+                + " ms plus the correction of " + Ms(last.correctionS) + ", without its own offset of "
                 + std::to_string(run.ownOffsetMs) + " ms"
         );
 
         Check(
             syncNs - shiftNs == run.ownOffsetMs * 1000000,
-            "its own offset kept under the plugin's shift: " + Ms(static_cast<double>(syncNs - shiftNs) / 1e9)
+            "Desktop Audio's own offset (the saved sync offset minus the plugin's shift) is still "
+                + Ms(static_cast<double>(syncNs - shiftNs) / 1e9)
         );
     }
 

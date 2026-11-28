@@ -464,10 +464,15 @@ def main():
     parser.add_argument("--fps", type=float, default=90)
     parser.add_argument("--out")
     parser.add_argument(
-        "--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2), help="pieces read side by side"
+        "--jobs",
+        type=int,
+        default=max(1, (os.cpu_count() or 2) // 2),
+        help="number of processes that read the video in parallel",
     )
     parser.add_argument(
-        "--saved", action="store_true", help="take what an earlier run read from --out instead of the video"
+        "--saved",
+        action="store_true",
+        help="read hud_rows.npy and gear_digits.npy from --out instead of the video",
     )
     args = parser.parse_args()
 

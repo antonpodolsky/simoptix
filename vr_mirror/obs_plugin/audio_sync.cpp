@@ -96,10 +96,10 @@ namespace {
         if (ctx.changed && !ctx.game.empty()) {
             blog(
                 LOG_INFO,
-                "[simoptix_vr_mirror] audio sync: '%s' %+lld ms more, without its own offset (the game's "
-                "sound, "
-                "auto sync)",
+                "[simoptix_vr_mirror] audio sync: '%s' has the game's sound: sync offset %+lld ms, the delay "
+                "plus auto sync's correction of %+lld ms, without its own offset",
                 ctx.game.c_str(),
+                static_cast<long long>((ctx.shift + ctx.correction) / 1000000),
                 static_cast<long long>(ctx.correction / 1000000)
             );
         }
