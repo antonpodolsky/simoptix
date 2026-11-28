@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // AudioSync: keeps every audio source in step with the VR Mirror source's view, which runs ProgramDelay
 // behind the game (look-ahead smoothing): each audio source's sync offset becomes its own offset plus
-// that delay. The game's sound gets a correction instead of its own offset, once auto sync has found
-// which source it is and how far its sound is out of step with the view (auto_sync\auto_sync.h): auto
-// sync measures the sound as captured, before any offset, so an own offset would move it out of step
-// again. The game's sound keeps its own offset for when the delay goes back to 0.
+// that delay. Once auto sync has found the audio source that carries the game's sound
+// (auto_sync\auto_sync.h), that source's sync offset is set to the delay plus auto sync's correction,
+// without its own offset. Auto sync measures the sound before OBS applies any sync offset, so adding the
+// own offset would put the sound out of step again.
 //
 // The shift each source got is kept in its private settings, which OBS saves with the scene, so a
 // source's own offset is always its current offset minus that shift: it comes back exactly when the
@@ -34,8 +34,9 @@ inline int64_t ShiftedSyncOffset(int64_t current, int64_t applied, int64_t shift
     return current - applied + shift;
 }
 
-// Logic: the shift (ns) that gives the game's sound the sync offset `target` whatever its own offset, from
-// its `current` offset and the shift it already has (`applied`).
-inline int64_t GameSoundShift(int64_t current, int64_t applied, int64_t target) {
-    return target - (current - applied);
+// Logic: the shift (ns) that sets a source's sync offset to `wanted`, so that its own offset is no longer
+// added.
+inline int64_t ShiftReplacingOwnOffset(int64_t current, int64_t applied, int64_t wanted) {
+    const int64_t own = current - applied;
+    return wanted - own;
 }

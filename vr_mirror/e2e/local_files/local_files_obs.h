@@ -33,10 +33,10 @@ struct ObsRun {
     std::vector<std::string> sources;  // the source ids the scene shows, each with Debug on
     // Also a Desktop Audio source (the default output device's sound), which logs no start.
     bool desktopAudio = false;
-    int64_t desktopAudioSyncNs = 0;  // Desktop Audio's own sync offset
-    fs::path localAppData;           // %LOCALAPPDATA% for OBS and the plugins
-    fs::path fakePvrScenario;        // the fake runtime's settings (SIMOPTIX_FAKE_PVR_SCENARIO)
-    DWORD holdMs = 5000;             // how long OBS runs once every source has started
+    int64_t desktopAudioSyncNs = 0;
+    fs::path localAppData;     // %LOCALAPPDATA% for OBS and the plugins
+    fs::path fakePvrScenario;  // the fake runtime's settings (SIMOPTIX_FAKE_PVR_SCENARIO)
+    DWORD holdMs = 5000;       // how long OBS runs once every source has started
     // When set, OBS first runs until its log has this text (holdUntilMs at most), then holdMs more: the
     // time a frame takes to arrive is the machine's, and isn't what the test checks.
     std::string holdUntilLogged;
@@ -55,7 +55,7 @@ struct ObsRun {
 // within 30 s, or OBS didn't close within 30 s (then it is ended).
 bool RunObs(const ObsCopy& obs, const ObsRun& run, std::string* log, std::string* error);
 
-// The scene collection as OBS saved it when it closed after RunObs, as text.
+// Returns the scene collection JSON that OBS saved at exit, after RunObs closed it.
 std::string SavedSceneCollection(const ObsCopy& obs);
 
 // The program's environment with `set` (NAME=value) in place of the same names, as CreateProcessW takes it.

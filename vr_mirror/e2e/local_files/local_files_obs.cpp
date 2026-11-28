@@ -54,8 +54,7 @@ namespace {
         return text.str();
     }
 
-    // A source as the scene collection holds it: its name, its type's id, its settings (JSON) and its own
-    // sync offset.
+    // A source as the scene collection holds it: its name, its type's id and its settings (JSON).
     struct SceneSource {
         std::string name, type, settings;
         int64_t syncNs = 0;

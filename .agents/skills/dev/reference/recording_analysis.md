@@ -150,17 +150,18 @@ python -I sync_check.py "<recording>.mp4" --from 310 --seconds 120 --hud 2775,14
 - It follows LMU's HUD dial through the stretch and reads its pedal arc, its gear number and its RPM arc,
   and the G-meter's pedal bars. Then it times each throttle lift and press in the G-meter against the
   HUD, the engine's pitch drop at each upshift against the HUD's next gear, and the engine's sound
-  falling at each throttle lift against the HUD's throttle arc. "Later" is later in the video than the
-  view.
+  getting quieter at each throttle lift against the HUD's throttle arc. "Later" is later in the video
+  than the view.
 - `--hud`: the dial's centre in the video's pixels at a time it is in view, and `--hud-radius` the radius
   of its RPM arc. `--gmeter`: the G-meter's centre and the radius of its pedal groove. Measure them on
   a frame of the recording.
-- It reads only the part of the video around the dial and the G-meter, in `--jobs` pieces side by side
-  (half the CPU's threads by default). It looks for the dial near where it was in the frame before. On
-  16 pieces, 2 minutes of a 4K recording take about a minute.
-- `--out` keeps what it read (`hud_rows.npy`, `gear_digits.npy`) and the gear changes
-  (`gear_changes.json`). `--saved` takes what an earlier run kept there instead of reading the video
-  again, in seconds.
+- It reads only the part of the video around the dial and the G-meter. `--jobs` processes read the
+  stretch in parallel, one piece each (half the CPU's logical processors by default). Each frame's search
+  for the dial starts around the previous frame's match. With 16 processes, 2 minutes of a 4K recording
+  take about a minute.
+- `--out` names a folder for what it read (`hud_rows.npy`, `gear_digits.npy`) and the gear changes
+  (`gear_changes.json`). With `--saved`, it reads those files instead of the video, which takes a few
+  seconds.
 - LMU's HUD shows N for a few frames between two gears. A gear change is the digit's changes within 12
   frames of each other: the first frame that changed, and the first showing the next gear.
 

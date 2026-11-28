@@ -7,15 +7,19 @@ throttle, red brake), its gear number and its RPM arc. This script follows the d
 the recording and sets it against the G-meter's pedal bars and against the engine's sound:
 - each throttle lift and press, and each braking, in the G-meter against the HUD
 - each gear change on the HUD against the engine's pitch drop in the sound (upshifts)
+- each throttle lift on the HUD against the engine's sound getting quieter
 "Later" is later in the video than the view shows it, and negative is earlier.
 
   python -I sync_check.py "<recording>.mp4" --from 85 --seconds 90 --hud 2775,1410@300 --hud-radius 173
-      --gmeter 3537,1872,133 [--search 350] [--out <folder>]
+      --gmeter 3537,1872,133 [--search 350] [--out <folder>] [--saved] [--jobs 16]
 
 --hud: the dial's centre in the video's pixels at a time when it is in view (s); --hud-radius: the radius
 of its white RPM arc there. --gmeter: the G-meter's centre and the radius of the groove its pedal bars
 fill, in the video's pixels. --search: how far the dial may move from where it was (pixels); the video is
-read only around the dial and the G-meter. ffmpeg: the one FFMPEG names, else the one on PATH.
+read only around the dial and the G-meter. --out: a folder for what was read (hud_rows.npy,
+gear_digits.npy) and the gear changes (gear_changes.json). --saved: read hud_rows.npy and gear_digits.npy
+from --out instead of the video. --jobs: the number of processes that read the video in parallel (half
+the CPU's logical processors by default). ffmpeg: the one FFMPEG names, else the one on PATH.
 """
 
 import argparse
@@ -44,10 +48,10 @@ DIGIT = (-0.37, -0.92, 0.37, -0.22)
 RPM_RING = (0.9, 1.12)
 # The G-meter's bars: around the groove's radius.
 GROOVE = (0.92, 1.08)
-# How far the dial may move from one frame to the next before the whole area is searched (pixels at half
-# size).
+# The search radius around the previous frame's match, in pixels of the half-size image. When the best
+# match within it scores under 0.6, the whole image is searched.
 TRACK_REACH = 40
-# The least spread of grey levels (standard deviation, 0-255) a place needs for the dial to be matched there.
+# The lowest standard deviation of grey levels (0-255) in a window that template matching scores.
 FLAT_GREY = 2.0
 
 
@@ -82,8 +86,8 @@ def ncc_best(image, template):
 
     s1 = box(np.pad(np.cumsum(np.cumsum(image, 0), 1), ((1, 0), (1, 0))))
     s2 = box(np.pad(np.cumsum(np.cumsum(image**2, 0), 1), ((1, 0), (1, 0))))
-    # A flat area, such as the G-meter's black disc, would divide by almost nothing and score far above
-    # 1: places whose grey levels vary by less than FLAT_GREY score 0.
+    # The score divides by the window's standard deviation. In a flat window, such as the G-meter's black
+    # disc, that is close to 0 and the score goes far above 1, so such windows score 0.
     variance = s2 - s1**2 / (th * tw)
     flat = variance < FLAT_GREY**2 * th * tw
     score = np.where(flat, 0.0, corr / np.sqrt(np.maximum(variance, 1e-6)))
@@ -91,15 +95,16 @@ def ncc_best(image, template):
     return int(x), int(y), float(score[y, x])
 
 
-def track(img, template, near):
-    """As ncc_best on the half-size grey of the RGB frame `img`, searched first within TRACK_REACH of
-    `near` (the place found in the frame before, or None), and over the whole frame when it fits worse
-    than 0.6 there. Only the part searched is made grey: most of the time goes into the search."""
-    if near is not None:
+def track(img, template, previous):
+    """ncc_best for `template` in the half-size greyscale of the RGB frame `img`. It first searches only
+    within TRACK_REACH of `previous`, the previous frame's match (or None), and searches the whole image
+    when the best match there scores under 0.6. Only the searched region is converted to greyscale,
+    because the search takes most of the time."""
+    if previous is not None:
         th, tw = template.shape
-        x0, y0 = max(0, near[0] - TRACK_REACH), max(0, near[1] - TRACK_REACH)
-        x1 = min(img.shape[1] // 2, near[0] + tw + TRACK_REACH)
-        y1 = min(img.shape[0] // 2, near[1] + th + TRACK_REACH)
+        x0, y0 = max(0, previous[0] - TRACK_REACH), max(0, previous[1] - TRACK_REACH)
+        x1 = min(img.shape[1] // 2, previous[0] + tw + TRACK_REACH)
+        y1 = min(img.shape[0] // 2, previous[1] + th + TRACK_REACH)
         part = half(grey(img[2 * y0 : 2 * y1, 2 * x0 : 2 * x1].astype(np.float32)))
         x, y, score = ncc_best(part, template)
         if score >= 0.6:
@@ -108,7 +113,8 @@ def track(img, template, near):
 
 
 def video_size(video):
-    # ffmpeg with an input and no output always fails: only what it prints about the input is read.
+    # ffmpeg exits with an error when it has an input and no output. Only the stream information that it
+    # prints to stderr is used.
     out = subprocess.run(
         [FFMPEG, "-hide_banner", "-i", video], check=False, capture_output=True, text=True
     ).stderr
@@ -183,7 +189,7 @@ def read_frames(args, width, height, fps):
     right, left = groove & (columns > 0), groove & (columns < 0)
 
     rows, digits = [], []
-    near = None  # where the dial's template fitted in the frame before, at half size
+    previous = None  # the previous frame's match: (x, y) in the half-size image
     for k, img in enumerate(frames(args.video, args.start, args.seconds, crop)):
         t = args.start + k / fps
 
@@ -191,8 +197,8 @@ def read_frames(args, width, height, fps):
         green, red = colour_masks(g)
         gm_throttle, gm_brake = int((green & right).sum()), int((red & left).sum())
 
-        x, y, score = track(img, template, near)
-        near = (x, y) if score >= 0.6 else None
+        x, y, score = track(img, template, previous)
+        previous = (x, y) if score >= 0.6 else None
         cx, cy = 2 * (x + offset[0]), 2 * (y + offset[1])
         found = score >= 0.6 and ring_size < cx < width - ring_size and ring_size < cy < height - ring_size
         hud = [0, 0, 0]
@@ -218,8 +224,9 @@ def read_frames(args, width, height, fps):
 
 
 def read_frames_in_pieces(args, width, height, fps, jobs):
-    """As read_frames, with the stretch cut into `jobs` pieces read side by side, each by its own ffmpeg.
-    Each piece looks for the dial over the whole area at its first frame."""
+    """read_frames on `jobs` consecutive pieces of the stretch, run in parallel processes that each start
+    their own ffmpeg, with the results concatenated. Each piece searches the whole image for the dial in
+    its first frame."""
     piece = args.seconds / jobs
     pieces = []
     for i in range(jobs):
@@ -291,8 +298,9 @@ def pedal_offsets(rows, fps):
 
 
 def throttle_lifts(t, level, fps):
-    """The throttle lifts in `level` (0-1 per frame): (last frame at or above 0.7, first frame at or below
-    0.15 after it), within 0.6 s. The HUD's arc reads 0.84 to 0.93 at full throttle."""
+    """The throttle lifts in `level` (the throttle per frame, 0-1), as pairs of frame indexes: the last
+    frame at or above 0.7, and the first frame at or below 0.15 after it, at most 0.6 s later. The HUD's
+    arc can read under 0.85 at full throttle."""
     lifts, state, last = [], None, 0
     for i in range(len(level)):
         if level[i] <= 0.15 or level[i] >= 0.7:
@@ -304,8 +312,9 @@ def throttle_lifts(t, level, fps):
 
 
 def engine_level(x, start, t0, t1):
-    """The engine band's level (dB, 450-3500 Hz) every 2.5 ms over 10 ms windows from t0 to t1 (video
-    time), and its times. None if the sound doesn't cover it."""
+    """The level in dB of the engine's frequency band (450-3500 Hz) from t0 to t1 (video time), in 10 ms
+    Hann windows every 2.5 ms, averaged over 4 windows, and the windows' centre times. (None, None) if the
+    sound doesn't cover t0 to t1."""
     window, hop = int(0.01 * RATE), int(0.0025 * RATE)
     first = int((t0 - start) * RATE - window / 2)
     n = int((t1 - t0) * RATE / hop)
@@ -321,8 +330,9 @@ def engine_level(x, start, t0, t1):
 
 
 def engine_lift_offsets(rows, x, start, fps):
-    """For each throttle lift on the HUD: when the engine's sound fell halfway (in dB) less when the HUD's
-    throttle arc did (s). Lifts whose sound fell less than 6 dB are left out."""
+    """For each throttle lift on the HUD, the time (s) at which the engine band's level fell halfway (in
+    dB) minus the time at which the HUD's throttle arc fell halfway. Negative means the sound came first.
+    Lifts whose level fell by less than 6 dB are skipped."""
     t, found = rows[:, 0], rows[:, 1] > 0
     if not found.any():
         return []
@@ -454,10 +464,15 @@ def main():
     parser.add_argument("--fps", type=float, default=90)
     parser.add_argument("--out")
     parser.add_argument(
-        "--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2), help="pieces read side by side"
+        "--jobs",
+        type=int,
+        default=max(1, (os.cpu_count() or 2) // 2),
+        help="the number of processes that read the video in parallel",
     )
     parser.add_argument(
-        "--saved", action="store_true", help="take what an earlier run read from --out instead of the video"
+        "--saved",
+        action="store_true",
+        help="read hud_rows.npy and gear_digits.npy from --out instead of the video",
     )
     args = parser.parse_args()
 
